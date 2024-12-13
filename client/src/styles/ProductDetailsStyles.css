@@ -1,0 +1,98 @@
+.product-details {
+  margin-top: 100px !important;
+}
+
+.product-details-info {
+  display: flex;
+  flex-direction: column;
+  /* align-items: center; */
+  justify-content: center;
+}
+
+.product-details-info h6 {
+  margin-bottom: 20px !important;
+}
+
+.similar-products .card {
+  background-color: rgba(128, 128, 128, 0.097);
+  width: 18rem;
+}
+
+.similar-products .card-name-price {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.similar-products .card-price {
+  color: green;
+  font-weight: bold;
+}
+.similar-products button {
+  border-radius: 0;
+  width: 100%;
+  border-top-left-radius: 5px;
+  border-bottom-right-radius: 5px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.similar-products .card-text {
+  color: rgb(90, 89, 89);
+}
+
+.similar-products .card img:hover {
+  transform: scale(0.9);
+}
+
+.similar-products .card-img-top {
+  height: 300px !important;
+}
+
+.bulk-products-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.bulk-product-box {
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 15px;
+  width: calc(50% - 7.5px);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.bulk-product-info {
+  margin-bottom: 10px;
+}
+
+.quantity-selector {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.quantity-selector button {
+  width: 30px;
+  height: 30px;
+  border: none;
+  background-color: #f0f0f0;
+  cursor: pointer;
+}
+
+.quantity-selector input {
+  width: 50px;
+  text-align: center;
+  margin: 0 5px;
+}
+
+.bulk-product-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bulk-product-actions input[type="checkbox"] {
+  margin-right: 10px;
+}

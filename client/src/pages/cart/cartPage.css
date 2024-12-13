@@ -1,0 +1,39 @@
+.cart-page {
+    margin: 20px 0;
+  }
+  
+  .cart-summary {
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 10px;
+  }
+  
+  @media (max-width: 768px) {
+    .cart-summary {
+      margin-top: 20px;
+    }
+  
+    .card {
+      flex-direction: column;
+    }
+  
+    .cart-remove-btn {
+      text-align: center;
+      margin-top: 10px;
+    }
+  
+    .row.card {
+      margin-bottom: 20px;
+    }
+  }
+  
+  @media (max-width: 576px) {
+    .cart-summary {
+      padding: 15px;
+    }
+  
+    .cart-remove-btn {
+      margin-top: 10px;
+    }
+  }
+  
