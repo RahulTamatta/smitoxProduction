@@ -157,10 +157,12 @@ const HomePage = () => {
 
   const handleBannerClick = (banner) => {
     if (banner.categoryId) {
-      navigate(`/category/${banner.categoryId.name}`, {
+      navigate(`/category/${banner.subcategoryId.name}`, {
         state: { 
-          selectedSubcategory: banner.subcategoryId.slug || null,
-          fromBanner: true
+          selectedSubcategory: banner.subcategoryId._id || null,
+          fromBanner: true,
+          bannerName:banner._id,
+          slug: banner.subcategoryId.slug,
         }
       });
     } else {
@@ -272,9 +274,10 @@ const HomePage = () => {
         <h1 className="text-center mb-4">All Products</h1>
         <div className="row">
   {products?.map((p) => (
-    <div key={p._id} className="col-lg-4 col-md-4 col-sm-4 col-6 mb-3"> 
-      <ProductCard product={p} />
-    </div>
+  <div key={p._id} className="col-lg-4 col-md-4 col-sm-4 col-6 mb-2">
+  <ProductCard product={p} />
+</div>
+
   ))}
 </div>
 

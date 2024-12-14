@@ -15,6 +15,7 @@ const UserList = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [usersPerPage] = useState(20);
+  const [activeRegularFilter, setActiveRegularFilter] = useState('all');
 
   const styles = {
     headerText: { color: '#1a237e' },
@@ -44,7 +45,7 @@ const UserList = () => {
 
   useEffect(() => {
     filterUsers();
-  }, [users, activeStatusFilter, activeOrderTypeFilter]);
+  }, [users, activeStatusFilter, activeOrderTypeFilter,activeRegularFilter]);
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -68,21 +69,37 @@ const UserList = () => {
     if (activeOrderTypeFilter !== 'all') {
       result = result.filter(user => getOrderType(user.order_type) === activeOrderTypeFilter.toLowerCase());
     }
+    if (activeRegularFilter !== 'all') {
+      result = result.filter(user => user.regular === (activeRegularFilter));
+    }
     setFilteredUsers(result);
     setCurrentPage(1);
   };
+  
 
   const toggleStatus = async (id, currentStatus) => {
     try {
-      const newStatus = currentStatus === '1' ? '0' : '1';
+      const newStatus = currentStatus === 1 ? 0 : 1;
+      console.log(`Current Status: ${currentStatus}`);
+console.log(`New Status: ${newStatus}`);
       await axios.put(`/api/v1/usersLists/users/${id}/status`, { status: newStatus });
+      console.log("user id",id);
       fetchUsers();
     } catch (error) {
       console.error('Error toggling user status:', error);
       setError('Failed to update user status. Please try again.');
     }
   };
-
+  const toggleRegular = async (id, currentRegular) => {
+    try {
+      const newRegular = currentRegular === 1 ? 0 : 1;
+      await axios.put(`/api/v1/usersLists/users/${id}/regular`, { regular: newRegular });
+      fetchUsers();
+    } catch (error) {
+      console.error('Error toggling user regular status:', error);
+      setError('Failed to update user regular status. Please try again.');
+    }
+  };
   const updateOrderType = async (id, orderType) => {
     try {
       await axios.put(`/api/v1/usersLists/users/${id}/order-type`, { order_type: orderType });
@@ -211,28 +228,42 @@ const UserList = () => {
         </h1>
         
         <div style={{ marginBottom: '1.5rem' }}>
-          <h3 style={{ ...styles.headerText, fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-            Status Filter:
-          </h3>
-          <div>
-            <TabButton label="All" isActive={activeStatusFilter === 'all'} onClick={() => setActiveStatusFilter('all')} />
-            <TabButton label="Active" isActive={activeStatusFilter === 'active'} onClick={() => setActiveStatusFilter('active')} />
-            <TabButton label="Blocked" isActive={activeStatusFilter === 'blocked'} onClick={() => setActiveStatusFilter('blocked')} />
-            <TabButton label="Pending" isActive={activeStatusFilter === 'pending'} onClick={() => setActiveStatusFilter('pending')} />
-          </div>
-        </div>
+  <h3 style={{ ...styles.headerText, fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+    Status Filter:
+  </h3>
+  <div>
+    <TabButton label="All" isActive={activeStatusFilter === 'all'} onClick={() => setActiveStatusFilter('all')} />
+    <TabButton label="Active" isActive={activeStatusFilter === 'active'} onClick={() => setActiveStatusFilter('active')} />
+    <TabButton label="Blocked" isActive={activeStatusFilter === 'blocked'} onClick={() => setActiveStatusFilter('blocked')} />
+    <TabButton label="Pending" isActive={activeStatusFilter === 'pending'} onClick={() => setActiveStatusFilter('pending')} />
+  </div>
+</div>
 
-        <div style={{ marginBottom: '1.5rem' }}>
-          <h3 style={{ ...styles.headerText, fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-            Order Type Filter:
-          </h3>
-          <div>
-            <TabButton label="All" isActive={activeOrderTypeFilter === 'all'} onClick={() => setActiveOrderTypeFilter('all')} />
-            <TabButton label="COD" isActive={activeOrderTypeFilter === 'COD'} onClick={() => setActiveOrderTypeFilter('COD')} />
-            <TabButton label="Prepaid" isActive={activeOrderTypeFilter === 'Prepaid'} onClick={() => setActiveOrderTypeFilter('Prepaid')} />
-            <TabButton label="Advance" isActive={activeOrderTypeFilter === 'Advance'} onClick={() => setActiveOrderTypeFilter('Advance')} />
-          </div>
-        </div>
+<div style={{ marginBottom: '1.5rem' }}>
+  <h3 style={{ ...styles.headerText, fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+    Order Type Filter:
+  </h3>
+  <div>
+    <TabButton label="All" isActive={activeOrderTypeFilter === 'all'} onClick={() => setActiveOrderTypeFilter('all')} />
+    <TabButton label="COD" isActive={activeOrderTypeFilter === 'COD'} onClick={() => setActiveOrderTypeFilter('COD')} />
+    <TabButton label="Prepaid" isActive={activeOrderTypeFilter === 'Prepaid'} onClick={() => setActiveOrderTypeFilter('Prepaid')} />
+    <TabButton label="Advance" isActive={activeOrderTypeFilter === 'Advance'} onClick={() => setActiveOrderTypeFilter('Advance')} />
+  </div>
+</div>
+
+<div style={{ marginBottom: '1.5rem' }}>
+  <h3 style={{ ...styles.headerText, fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+    Regular Filter:
+  </h3>
+  <div>
+    <TabButton label="All" isActive={activeRegularFilter === 'all'} onClick={() => setActiveRegularFilter('all')} />
+    <TabButton label="Regular" isActive={activeRegularFilter === 1} onClick={() => setActiveRegularFilter(1)} />
+    <TabButton label="Non-regular" isActive={activeRegularFilter ===0} onClick={() => setActiveRegularFilter(0)} />
+  </div>
+</div>
+
+    
+        
 
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', ...styles.tableBorder }}>
@@ -272,13 +303,23 @@ const UserList = () => {
                   </td>
                   <td style={{ padding: '0.75rem' }}>{user.address || 'N/A'}</td>
                   <td style={{ padding: '0.75rem' }}>
-                    <span style={{
-                      ...styles.statusBadge[user.status],
-                      padding: '0.25rem 0.5rem',
-                      borderRadius: '0.25rem'
-                    }}>
-                      {user.status}
-                    </span>
+                    <button
+                      onClick={() => toggleRegular(user._id, user.regular)}
+                      style={{
+                        ...(user.regular === 1 ? styles.actionButton.success  :styles.actionButton.danger ),
+                        marginRight: '0.5rem',
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '0.25rem',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      {user.regular === 1 ? 'Regular' : 'Non-regular'}
+
+                      {/* {user.status === 'active' ? 'Block' : user.status === 'blocked' ? 'Pending' : 'Activate'} */}
+                    </button>
+               
                   </td>
                   <td style={{ padding: '0.75rem' }}>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -306,7 +347,7 @@ const UserList = () => {
                     <button
                       onClick={() => toggleStatus(user._id, user.status)}
                       style={{
-                        ...(user.status === '1' ? styles.actionButton.danger : styles.actionButton.success),
+                        ...(user.status === 1 ? styles.actionButton.danger : styles.actionButton.success),
                         marginRight: '0.5rem',
                         padding: '0.25rem 0.75rem',
                         borderRadius: '0.25rem',
@@ -315,7 +356,9 @@ const UserList = () => {
                         transition: 'all 0.3s ease'
                       }}
                     >
-                      {user.status === '1' ? 'Block' : 'Activate'}
+                      {user.status === 1 ? 'Block' : 'Activate'}
+
+                      {/* {user.status === 'active' ? 'Block' : user.status === 'blocked' ? 'Pending' : 'Activate'} */}
                     </button>
                     <button
                       onClick={() => openEditModal(user)}
@@ -342,99 +385,229 @@ const UserList = () => {
         {renderPagination()}
 
         {isEditModalOpen && (
-          <div style={{
-            ...styles.modal.overlay,
-            position: 'fixed',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}>
-            <div style={{
-              ...styles.modal.content,
-              padding: '1.5rem',
-              borderRadius: '0.5rem',
-              width: '90%',
-              maxWidth: '500px'
-            }}>
-              <h2 style={{ ...styles.headerText, fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-                Edit User
-              </h2>
-              <form onSubmit={handleEditUser}>
-                {['name', 'email', 'phone', 'address'].map((field) => (
-                  <div key={field} style={{ marginBottom: '1rem' }}>
-                    <label
-                      htmlFor={field}
-                      style={{
-                        display: 'block',
-                        marginBottom: '0.25rem',
-                        color: '#2c3e50',
-                        fontWeight: '500',
-                        textTransform: 'capitalize'
-                      }}
-                    >
-                      {field}
-                    </label>
-                    <input
-                      id={field}
-                      type={field === 'email' ? 'email' : 'text'}
-                      value={editingUser[field]}
-                      onChange={(e) => setEditingUser({ ...editingUser, [field]: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: '0.5rem',
-                        borderRadius: '0.25rem',
-                        border: '1px solid #e0e0e0',
-                        fontSize: '1rem',
-                        transition: 'border-color 0.3s ease',
-                        outline: 'none'
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#1976d2';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#e0e0e0';
-                      }}
-                    />
-                  </div>
-                ))}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
-                  <button 
-                    type="button" 
-                    onClick={closeEditModal} 
-                    style={{
-                      padding: '0.5rem 1rem',
-                      borderRadius: '0.25rem',
-                      border: 'none',
-                      backgroundColor: '#e0e0e0',
-                      color: '#455a64',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      fontWeight: '500'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    style={{
-                      ...styles.actionButton.primary,
-                      padding: '0.5rem 1rem',
-                      borderRadius: '0.25rem',
-                      border: 'none',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      fontWeight: '500'
-                    }}
-                  >
-                    Save changes
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+  <div style={{
+    ...styles.modal.overlay,
+    position: 'fixed',
+    inset: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000
+  }}>
+    <div style={{
+      ...styles.modal.content,
+      padding: '1.5rem',
+      borderRadius: '0.5rem',
+      width: '90%',
+      maxWidth: '500px'
+    }}>
+      <h2 style={{ ...styles.headerText, fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+        Edit User
+      </h2>
+      <form onSubmit={handleEditUser}>
+        {/* User Full Name */}
+        <div style={{ marginBottom: '1rem' }}>
+          <label
+            htmlFor="user_fullname"
+            style={{
+              display: 'block',
+              marginBottom: '0.25rem',
+              color: '#2c3e50',
+              fontWeight: '500',
+              textTransform: 'capitalize'
+            }}
+          >
+            User Full Name
+          </label>
+          <input
+            id="user_fullname"
+            type="text"
+            value={editingUser.user_fullname}
+            onChange={(e) => setEditingUser({ ...editingUser, user_fullname: e.target.value })}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: '0.25rem',
+              border: '1px solid #e0e0e0',
+              fontSize: '1rem',
+              transition: 'border-color 0.3s ease',
+              outline: 'none'
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#1976d2'}
+            onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+          />
+        </div>
+
+        {/* Email ID */}
+        <div style={{ marginBottom: '1rem' }}>
+          <label
+            htmlFor="email_id"
+            style={{
+              display: 'block',
+              marginBottom: '0.25rem',
+              color: '#2c3e50',
+              fontWeight: '500',
+              textTransform: 'capitalize'
+            }}
+          >
+            Email ID
+          </label>
+          <input
+            id="email_id"
+            type="email"
+            value={editingUser.email_id}
+            onChange={(e) => setEditingUser({ ...editingUser, email_id: e.target.value })}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: '0.25rem',
+              border: '1px solid #e0e0e0',
+              fontSize: '1rem',
+              transition: 'border-color 0.3s ease',
+              outline: 'none'
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#1976d2'}
+            onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+          />
+        </div>
+
+        {/* Mobile No */}
+        <div style={{ marginBottom: '1rem' }}>
+          <label
+            htmlFor="mobile_no"
+            style={{
+              display: 'block',
+              marginBottom: '0.25rem',
+              color: '#2c3e50',
+              fontWeight: '500',
+              textTransform: 'capitalize'
+            }}
+          >
+            Mobile No
+          </label>
+          <input
+            id="mobile_no"
+            type="text"
+            value={editingUser.mobile_no}
+            onChange={(e) => setEditingUser({ ...editingUser, mobile_no: e.target.value })}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: '0.25rem',
+              border: '1px solid #e0e0e0',
+              fontSize: '1rem',
+              transition: 'border-color 0.3s ease',
+              outline: 'none'
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#1976d2'}
+            onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+          />
+        </div>
+
+        {/* Address */}
+        <div style={{ marginBottom: '1rem' }}>
+          <label
+            htmlFor="address"
+            style={{
+              display: 'block',
+              marginBottom: '0.25rem',
+              color: '#2c3e50',
+              fontWeight: '500',
+              textTransform: 'capitalize'
+            }}
+          >
+            Address
+          </label>
+          <input
+            id="address"
+            type="text"
+            value={editingUser.address}
+            onChange={(e) => setEditingUser({ ...editingUser, address: e.target.value })}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: '0.25rem',
+              border: '1px solid #e0e0e0',
+              fontSize: '1rem',
+              transition: 'border-color 0.3s ease',
+              outline: 'none'
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#1976d2'}
+            onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+          />
+        </div>
+
+        {/* Pincode */}
+        <div style={{ marginBottom: '1rem' }}>
+          <label
+            htmlFor="pincode"
+            style={{
+              display: 'block',
+              marginBottom: '0.25rem',
+              color: '#2c3e50',
+              fontWeight: '500',
+              textTransform: 'capitalize'
+            }}
+          >
+            Pincode
+          </label>
+          <input
+            id="pincode"
+            type="text"
+            value={editingUser.pincode}
+            onChange={(e) => setEditingUser({ ...editingUser, pincode: e.target.value })}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: '0.25rem',
+              border: '1px solid #e0e0e0',
+              fontSize: '1rem',
+              transition: 'border-color 0.3s ease',
+              outline: 'none'
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#1976d2'}
+            onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+          />
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
+          <button
+            type="button"
+            onClick={closeEditModal}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '0.25rem',
+              border: 'none',
+              backgroundColor: '#e0e0e0',
+              color: '#455a64',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              fontWeight: '500'
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            style={{
+              ...styles.actionButton.primary,
+              padding: '0.5rem 1rem',
+              borderRadius: '0.25rem',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              fontWeight: '500'
+            }}
+          >
+            Save changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
+
+
       </>
     );
   };

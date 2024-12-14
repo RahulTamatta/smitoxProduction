@@ -15,9 +15,13 @@ const CartPage = () => {
   const [clientToken, setClientToken] = useState("");
   const [instance, setInstance] = useState("");
   const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("Braintree");
+  const [paymentMethod, setPaymentMethod] = useState("COD"); // Changed default to COD like Flutter
   const [minimumOrder, setMinimumOrder] = useState(0);
   const [minimumOrderCurrency, setMinimumOrderCurrency] = useState("");
+  const [orderPlacementInProgress, setOrderPlacementInProgress] = useState(false);
+  const [orderErrorMessage, setOrderErrorMessage] = useState("");
+
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -61,33 +65,7 @@ const CartPage = () => {
     }
   };
 
-  const totalPrice = () => {
-    try {
-      let total = 0;
-      if (Array.isArray(cart)) {
-        cart.forEach((item) => {
-          const { product, quantity } = item;
-          let itemPrice = product.price;
-
-          if (product.bulkProducts && product.bulkProducts.length > 0) {
-            const bulkPrice = product.bulkProducts.find(
-              (bp) => quantity >= bp.minimum && quantity <= bp.maximum
-            );
-            if (bulkPrice) {
-              itemPrice = bulkPrice.selling_price_set;
-            }
-          }
-
-          total += itemPrice * quantity;
-        });
-      }
-      return total;
-    } catch (error) {
-      console.log(error);
-      return 0;
-    }
-  };
-
+ 
   const removeCartItem = async (pid) => {
     try {
       await axios.delete(`/api/v1/carts/users/${auth.user._id}/cart`, { data: { productId: pid } });
@@ -152,28 +130,71 @@ const CartPage = () => {
     }
   };
 
-  const handlePayment = async () => {
+  const totalPrice = () => {
     try {
-      setLoading(true);
-      const total = totalPrice();
+      let total = 0;
+      let totalGST = 0;
       
-      if (total < minimumOrder) {
-        toast.error(`Minimum order amount is ${minimumOrderCurrency} ${minimumOrder}`);
-        setLoading(false);
-        return;
-      }
+      if (Array.isArray(cart)) {
+        cart.forEach((item) => {
+          const { product, quantity } = item;
+          let itemPrice = product.price;
+          const gst = product.gst || 0;
+          const unitSet = product.unitSet || 1;
 
-      let payload = {
+          // Bulk pricing logic
+          if (product.bulkProducts && product.bulkProducts.length > 0) {
+            const bulkPrice = product.bulkProducts.find(
+              (bp) => 
+                quantity >= (bp.minimum * unitSet) && 
+                quantity <= (bp.maximum * unitSet)
+            );
+            if (bulkPrice) {
+              itemPrice = bulkPrice.selling_price_set;
+            }
+          }
+
+          // Calculate GST
+          const itemGST = (itemPrice * gst) / 100;
+          const itemTotal = (itemPrice + itemGST) * quantity;
+
+          total += itemTotal;
+          totalGST += itemGST * quantity;
+        });
+      }
+      return total;
+    } catch (error) {
+      console.error("Total calculation error:", error);
+      return 0;
+    }
+  };
+
+  const handlePayment = async () => {
+    const total = totalPrice();
+    
+    if (total < minimumOrder) {
+      toast.error(`Minimum order amount is ${minimumOrderCurrency} ${minimumOrder}`);
+      return;
+    }
+
+    setLoading(true);
+    setOrderPlacementInProgress(true);
+    setOrderErrorMessage("");
+
+    try {
+      // Prepare payload similar to Flutter implementation
+      const payload = {
         products: Array.isArray(cart) ? cart.map(item => ({
           product: item.product._id,
           quantity: item.quantity,
-          price: item.product.price
+          price: item.product.price,
         })) : [],
         paymentMethod,
-        amount: total
+        amount: 0, // Server will calculate final amount
       };
 
-      if (paymentMethod === "Braintree") {
+      // Add nonce for Braintree payments
+      if (paymentMethod === "Braintree" && instance) {
         const { nonce } = await instance.requestPaymentMethod();
         payload.nonce = nonce;
       }
@@ -182,16 +203,20 @@ const CartPage = () => {
       
       if (data.success) {
         await clearCart();
+        toast.success("Order Placed Successfully!");
         navigate("/dashboard/user/orders");
-        toast.success("Order Placed Successfully");
       } else {
+        setOrderErrorMessage(data.message || "Failed to place order");
         toast.error(data.message || "Failed to place order");
       }
     } catch (error) {
-      console.log(error);
-      toast.error(error.response?.data?.message || "Something went wrong");
+      const errorMessage = error.response?.data?.message || "Payment processing failed";
+      setOrderErrorMessage(errorMessage);
+      toast.error(errorMessage);
+      console.error("Payment error:", error);
     } finally {
       setLoading(false);
+      setOrderPlacementInProgress(false);
     }
   };
 
@@ -237,14 +262,13 @@ const CartPage = () => {
                   </div>
                   <div className="col-md-4 col-12">
                     <p>{p.product.name}</p>
-                    <p>{p.product.description?.substring(0, 30) || 'No description available'}</p>
-                    <p>
+                   <p>
                       Price: {minimumOrderCurrency}{" "}
                       {p.product.bulkProducts?.length > 0
                         ? p.product.bulkProducts.find(
                             bp => p.quantity >= bp.minimum && p.quantity <= bp.maximum
                           )?.selling_price_set || p.product.price
-                        : p.product.price} x
+                        : p.product.price} 
                     </p>
                     
                     {/* Quantity Selector */}
@@ -371,18 +395,50 @@ const CartPage = () => {
                 )}
               </div>
             </div>
+            <div className="mb-3">
+              <label className="form-label">Payment Method</label>
+              <select 
+                className="form-select"
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+              >
+                <option value="COD">COD</option>
+                <option value="Braintree">Braintree</option>
+              </select>
+            </div>
+
+            {/* Show DropIn only for Braintree */}
+            {paymentMethod === "Braintree" && clientToken && (
+              <div className="mb-3">
+                <DropIn
+                  options={{
+                    authorization: clientToken,
+                    paypal: { flow: "vault" },
+                  }}
+                  onInstance={(instance) => setInstance(instance)}
+                />
+              </div>
+            )}
+
             <button
               className="btn btn-primary w-100"
               onClick={handlePayment}
-              disabled={loading || totalPrice() < minimumOrder}
+              disabled={
+                loading || 
+                orderPlacementInProgress || 
+                totalPrice() < minimumOrder ||
+                (paymentMethod === "Braintree" && !instance)
+              }
             >
-              {loading ? "Processing..." : "Place Order"}
+              {orderPlacementInProgress ? (
+                <span className="spinner-border spinner-border-sm me-2" />
+              ) : null}
+              {orderPlacementInProgress ? "Processing..." : "Place Order"}
             </button>
-          </div>
+            </div>
         </div>
       </div>
     </Layout>
   );
 };
-
 export default CartPage;

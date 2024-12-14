@@ -31,11 +31,12 @@ const userSchema = new mongoose.Schema(
     },
     status: { 
       type: Number, 
-      enum: ["0", "1", "2"],
-      default: 0  // 0: inactive, 1: active
+      enum: [0, 1, 2],
+      default: 1  // 0: inactive, 1: active
     },
     regular: { 
       type: Number, 
+      enum: [0, 1, 2],
       default: 0  // 0: inactive, 1: active
     },
     flag: { 

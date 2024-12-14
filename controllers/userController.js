@@ -34,17 +34,94 @@ export const toggleUserStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    const updatedUser = await userModel.findByIdAndUpdate(id, { status }, { new: true })
-      .populate('products')
-      .populate('wishlist')
-      .populate('cart.product');
-    res.json({ status: 'success', user: updatedUser });
+    
+    // Validate status value matches enum
+    if (![0, 1,2].includes(status)) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'Invalid status value. Must be 0, 1, or 2' 
+      });
+    }
+
+    // Convert status to Number since schema expects Number
+    const numericStatus = Number(status);
+    
+    const updatedUser = await userModel.findByIdAndUpdate(
+      id,
+      {status:numericStatus},
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      status: 'success',
+      message: 'User status updated successfully',
+      user: updatedUser
+    });
+
   } catch (error) {
-    res.status(500).json({ status: 'error', message: error.message });
+    console.error('Error updating user status:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Error updating user status',
+      error: error.message 
+    });
   }
 };
 
-// Toggle the live product status for a user
+
+export const updateUserRegular = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { regular } = req.body;
+
+    // Validate regular value matches enum
+    if (![0, 1, 2].includes(regular)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid regular value. Must be 0, 1, or 2'
+      });
+    }
+
+    // Convert regular to Number since schema expects Number
+    const numericRegular = Number(regular);
+
+    const updatedUser = await userModel.findByIdAndUpdate(
+      id,
+      { regular: numericRegular },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      status: 'success',
+      message: 'User regular status updated successfully',
+      user: updatedUser
+    });
+
+  } catch (error) {
+    console.error('Error updating user regular status:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Error updating user regular status',
+      error: error.message
+    });
+  }
+};
+
+
 export const toggleLiveProduct = async (req, res) => {
   try {
     const { id } = req.params;

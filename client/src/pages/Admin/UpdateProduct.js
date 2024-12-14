@@ -11,10 +11,16 @@ const UpdateProduct = () => {
   const navigate = useNavigate();
   const params = useParams();
   const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
+  
+  // Product state
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
+  const [subcategory, setSubcategory] = useState("");
+  const [brand, setBrand] = useState("");
   const [quantity, setQuantity] = useState("");
   const [shipping, setShipping] = useState("");
   const [photo, setPhoto] = useState("");
@@ -29,73 +35,46 @@ const UpdateProduct = () => {
   const [stock, setStock] = useState("");
   const [gst, setGst] = useState("");
   const [additionalUnit, setAdditionalUnit] = useState("");
+  const [sku, setSku] = useState("");
+  const [fk_tags, setFkTags] = useState("");
   const [bulkProducts, setBulkProducts] = useState([
     { minimum: "", maximum: "", discount_mrp: "", selling_price_set: "" },
   ]);
-  const [sku, setSku] = useState("");
-  const [fk_tags, setFkTags] = useState("");
-  const [totalsetPrice, setTotalsetPrice] = useState("");
-
-
-// Missing Brand Name section
-const [brands, setBrands] = useState([]);
-const [brand, setBrand] = useState("");
-
-const getAllBrands = async () => {
-  try {
-    const { data } = await axios.get("/api/v1/brand/get-brands");
-    if (data?.success) {
-      setBrands(data?.brands);
-    }
-  } catch (error) {
-    console.error("Error fetching brands:", error);
-    toast.error("Something went wrong in getting brands");
-  }
-};
-
-useEffect(() => {
-  getAllBrands();
-}, []);
-
-const handleBrandChange = (value) => {
-  setBrand(value);
-};
-
 
   // Get single product
   const getSingleProduct = async () => {
     try {
       const { data } = await axios.get(`/api/v1/product/get-product/${params.slug}`);
-      setName(data.product.name);
-      setId(data.product._id);
-      setDescription(data.product.description);
-      setPrice(data.product.price);
-      setQuantity(data.product.quantity);
-      setShipping(data.product.shipping);
-      setCategory(data.product.category._id);
-      setHsn(data.product.hsn);
-      setUnit(data.product.unit);
-      setUnitSet(data.product.unitSet);
-      setPurchaseRate(data.product.purchaseRate);
-      setMrp(data.product.mrp);
-      setPerPiecePrice(data.product.perPiecePrice);
-      setWeight(data.product.weight);
-      setStock(data.product.stock);
-      setGst(data.product.gst);
-      setAdditionalUnit(data.product.additionalUnit);
-      // Set bulk products data
-      setSku(data.product.sku || "");
-      setFkTags(data.product.fk_tags ? data.product.fk_tags.join(", ") : "");
-      setBulkProducts(data.product.bulkProducts || []);
+      if (data?.success) {
+        const product = data.product;
+        setName(product.name || "");
+        setId(product._id || "");
+        setDescription(product.description || "");
+        setPrice(product.price || "");
+        setQuantity(product.quantity || "");
+        setShipping(product.shipping || "");
+        setCategory(product.category?._id || "");
+        setSubcategory(product.subcategory?._id || "");
+        setBrand(product.brand?._id || "");
+        setHsn(product.hsn || "");
+        setUnit(product.unit || "");
+        setUnitSet(product.unitSet || "");
+        setPurchaseRate(product.purchaseRate || "");
+        setMrp(product.mrp || "");
+        setPerPiecePrice(product.perPiecePrice || "");
+        setWeight(product.weight || "");
+        setStock(product.stock || "");
+        setGst(product.gst || "");
+        setAdditionalUnit(product.additionalUnit || "");
+        setSku(product.sku || "");
+        setFkTags(product.fk_tags ? product.fk_tags.join(", ") : "");
+        setBulkProducts(product.bulkProducts || [{ minimum: "", maximum: "", discount_mrp: "", selling_price_set: "" }]);
+      }
     } catch (error) {
       console.log(error);
       toast.error("Error fetching product data");
     }
   };
-  useEffect(() => {
-    getSingleProduct();
-    //eslint-disable-next-line
-  }, []);
 
   // Get all categories
   const getAllCategory = async () => {
@@ -110,12 +89,40 @@ const handleBrandChange = (value) => {
     }
   };
 
+  // Get all brands
+  const getAllBrands = async () => {
+    try {
+      const { data } = await axios.get("/api/v1/brand/get-brands");
+      if (data?.success) {
+        setBrands(data?.brands);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error("Something went wrong in getting brands");
+    }
+  };
+
+  // Get all subcategories
+  const getSubcategories = async () => {
+    try {
+      const { data } = await axios.get("/api/v1/subcategory/get-subcategories");
+      if (data?.success) {
+        setSubcategories(data?.subcategories || []);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error("Something went wrong in getting subcategories");
+    }
+  };
+
   useEffect(() => {
+    getSingleProduct();
     getAllCategory();
+    getAllBrands();
+    getSubcategories();
   }, []);
 
   // Handle bulk product changes
-
   const handleBulkProductChange = (index, e) => {
     const { name, value } = e.target;
     const updatedBulkProducts = [...bulkProducts];
@@ -126,8 +133,8 @@ const handleBrandChange = (value) => {
   
     if (name === "discount_mrp") {
       const discountPercentage = parseFloat(value) / 100;
-      const setPrice = parseFloat(price); // Make sure 'price' state variable exists
-      const netWeightValue = parseFloat(unitSet); // Make sure 'unitSet' state variable exists
+      const setPrice = parseFloat(price);
+      const netWeightValue = parseFloat(unitSet);
       const discountedPrice = setPrice * (1 - discountPercentage);
       updatedBulkProducts[index].selling_price_set = (
         discountedPrice * netWeightValue
@@ -137,12 +144,10 @@ const handleBrandChange = (value) => {
     setBulkProducts(updatedBulkProducts);
   };
 
-
   // Add bulk product row
   const handleAddBulkProduct = () => {
     setBulkProducts([...bulkProducts, { minimum: "", maximum: "", discount_mrp: "", selling_price_set: "" }]);
   };
-
 
   // Remove bulk product row
   const handleRemoveBulkProduct = (index) => {
@@ -155,33 +160,34 @@ const handleBrandChange = (value) => {
     e.preventDefault();
     try {
       const productData = new FormData();
+      
+      // Append all fields only if they have values or are being updated
       productData.append("name", name);
       productData.append("description", description);
       productData.append("price", price);
-      productData.append("sku", sku);
       productData.append("quantity", quantity);
       productData.append("category", category);
+      productData.append("subcategory", subcategory);
+      productData.append("brand", brand);
       productData.append("shipping", shipping);
-      productData.append("hsn", hsn);
-      productData.append("unit", unit);
-      productData.append("unitSet", unitSet);
-      productData.append("purchaseRate", purchaseRate);
-      productData.append("mrp", mrp);
-      productData.append("perPiecePrice", perPiecePrice);
-      productData.append("weight", weight);
-      productData.append("stock", stock);
-      productData.append("gst", gst);
-      productData.append("additionalUnit", additionalUnit);
+      
+      if (hsn !== undefined) productData.append("hsn", hsn);
+      if (unit !== undefined) productData.append("unit", unit);
+      if (unitSet !== undefined) productData.append("unitSet", unitSet);
+      if (purchaseRate !== undefined) productData.append("purchaseRate", purchaseRate);
+      if (mrp !== undefined) productData.append("mrp", mrp);
+      if (perPiecePrice !== undefined) productData.append("perPiecePrice", perPiecePrice);
+      if (weight !== undefined) productData.append("weight", weight);
+      if (stock !== undefined) productData.append("stock", stock);
+      if (gst !== undefined) productData.append("gst", gst);
+      if (additionalUnit !== undefined) productData.append("additionalUnit", additionalUnit);
+      if (sku !== undefined) productData.append("sku", sku);
+      
       const fkTagsArray = fk_tags.split(',').map(tag => tag.trim()).filter(tag => tag !== "");
       productData.append("fk_tags", JSON.stringify(fkTagsArray));
       
-      // Convert bulkProducts to a JSON string
-      bulkProducts.forEach((product, index) => {
-        Object.keys(product).forEach(key => {
-          productData.append(`bulkProducts[${index}][${key}]`, product[key]);
-        });
-      });
-  
+      // Handle bulk products
+      productData.append("bulkProducts", JSON.stringify(bulkProducts));
       
       if (photo) {
         productData.append("photo", photo);
@@ -194,7 +200,7 @@ const handleBrandChange = (value) => {
   
       if (data?.success) {
         toast.success("Product Updated Successfully");
-        // navigate("/dashboard/adminUser/products");
+        navigate("/dashboard/admin/products");
       } else {
         toast.error(data?.message);
       }
@@ -204,37 +210,12 @@ const handleBrandChange = (value) => {
     }
   };
 
-  const [subcategories, setSubcategories] = useState([]);
-const [subcategory, setSubcategory] = useState("");
-
-const getSubcategories = async () => {
-  try {
-    const { data } = await axios.get("/api/v1/subcategory/get-subcategories");
-    if (data?.success) {
-      setSubcategories(data?.subcategories || []);
-    } else {
-      setSubcategories([]);
-    }
-  } catch (error) {
-    console.log(error);
-    toast.error("Something went wrong in getting subcategories");
-    setSubcategories([]);
-  }
-};
-
-useEffect(() => {
-  getSubcategories();
-}, []);
-
-const handleSubcategoryChange = (value) => {
-  setSubcategory(value);
-};
   // Delete product
   const handleDelete = async () => {
     try {
       let answer = window.prompt("Are you sure you want to delete this product?");
       if (!answer) return;
-      const { data } = await axios.delete(`/api/v1/product/delete-product/${id}`);
+      await axios.delete(`/api/v1/product/delete-product/${id}`);
       toast.success("Product Deleted Successfully");
       navigate("/dashboard/admin/products");
     } catch (error) {
@@ -243,7 +224,6 @@ const handleSubcategoryChange = (value) => {
     }
   };
 
- 
   return (
     <Layout title={"Dashboard - Update Product"}>
       <div className="container-fluid m-3 p-3">
@@ -271,50 +251,42 @@ const handleSubcategoryChange = (value) => {
                 ))}
               </Select>
 
-              <div className="mb-3">
-  <label htmlFor="brandSelect" className="form-label">
-    Brand
-  </label>
-  <Select
-    id="brandSelect"
-    bordered={false}
-    placeholder="Select a brand"
-    size="large"
-    showSearch
-    className="form-select mb-3"
-    onChange={handleBrandChange}
-    value={brand}
-  >
-    {brands.map((b) => (
-      <Option key={b._id} value={b._id}>
-        {b.name}
-      </Option>
-    ))}
-  </Select>
-</div>
-<div className="mb-3">
-  <label htmlFor="subcategorySelect" className="form-label">
-    Subcategory
-  </label>
-  <Select
-    id="subcategorySelect"
-    bordered={false}
-    placeholder="Select a subcategory"
-    size="large"
-    showSearch
-    className="form-select mb-3"
-    onChange={handleSubcategoryChange}
-    value={subcategory}
-  >
-    {subcategories.map((sc) => (
-      <Option key={sc._id} value={sc._id}>
-        {sc.name}
-      </Option>
-    ))}
-  </Select>
-</div>
+              <h4>Brand</h4>
+              <Select
+                bordered={false}
+                placeholder="Select a brand"
+                size="large"
+                showSearch
+                className="form-select mb-3"
+                onChange={(value) => setBrand(value)}
+                value={brand}
+              >
+                {brands?.map((b) => (
+                  <Option key={b._id} value={b._id}>
+                    {b.name}
+                  </Option>
+                ))}
+              </Select>
 
-              <h4>Product Photo</h4>
+              <h4>Subcategory</h4>
+              <Select
+                bordered={false}
+                placeholder="Select a subcategory"
+                size="large"
+                showSearch
+                className="form-select mb-3"
+                onChange={(value) => setSubcategory(value)}
+                value={subcategory}
+              >
+                {subcategories?.map((sc) => (
+                  <Option key={sc._id} value={sc._id}>
+                    {sc.name}
+                  </Option>
+                ))}
+              </Select>
+
+              {/* Rest of your form fields remain the same */}
+              {/* ... Photo upload section ... */}
               <div className="mb-3">
                 <label className="btn btn-outline-secondary col-md-12">
                   {photo ? photo.name : "Upload Photo"}
@@ -350,8 +322,9 @@ const handleSubcategoryChange = (value) => {
                 )}
               </div>
 
-              <h4>Product Name</h4>
+              {/* Basic Info Fields */}
               <div className="mb-3">
+                <h4>Product Name</h4>
                 <input
                   type="text"
                   value={name}
@@ -360,38 +333,32 @@ const handleSubcategoryChange = (value) => {
                   onChange={(e) => setName(e.target.value)}
                 />
               </div>
-              <div className="row mb-3">
-      <div className="col-md-4">
-        <h4>SKU</h4>
-        <input
-          type="text"
-          value={sku}
-          className="form-control"
-          onChange={(e) => setSku(e.target.value)}
-          placeholder="Enter SKU"
-        />
-      </div>
-    </div>
 
-    <div className="mb-3">
-      <h4>FK Tags</h4>
-      <input
-        type="text"
-        className="form-control"
-        value={fk_tags}
-        onChange={(e) => setFkTags(e.target.value)}
-        placeholder="Enter FK tags separated by commas"
-      />
-      <small className="text-muted">
-        Enter FK tags separated by commas.
-      </small>
-    </div>
-
-   
-              <h4>Description</h4>
               <div className="mb-3">
-                <textarea
+                <h4>SKU</h4>
+                <input
                   type="text"
+                  value={sku}
+                  placeholder="Enter SKU"
+                  className="form-control"
+                  onChange={(e) => setSku(e.target.value)}
+                />
+              </div>
+
+              <div className="mb-3">
+                <h4>FK Tags</h4>
+                <input
+                  type="text"
+                  value={fk_tags}
+                  placeholder="Enter FK tags separated by commas"
+                  className="form-control"
+                  onChange={(e) => setFkTags(e.target.value)}
+                />
+              </div>
+
+              <div className="mb-3">
+                <h4>Description</h4>
+                <textarea
                   value={description}
                   placeholder="Write a description"
                   className="form-control"
@@ -399,8 +366,9 @@ const handleSubcategoryChange = (value) => {
                 />
               </div>
 
-              <h4>Price</h4>
+              {/* Pricing Fields */}
               <div className="mb-3">
+                <h4>Price</h4>
                 <input
                   type="number"
                   value={price}
@@ -410,68 +378,8 @@ const handleSubcategoryChange = (value) => {
                 />
               </div>
 
-              <h4>Quantity</h4>
               <div className="mb-3">
-                <input
-                  type="number"
-                  value={quantity}
-                  placeholder="Write a quantity"
-                  className="form-control"
-                  onChange={(e) => setQuantity(e.target.value)}
-                />
-              </div>
-{/* 
-              <h4>Shipping</h4>
-              <div className="mb-3">
-                <Select
-                  bordered={false}
-                  placeholder="Select Shipping"
-                  size="large"
-                  showSearch
-                  className="form-select mb-3"
-                  onChange={(value) => setShipping(value)}
-                  value={shipping ? "1" : "0"}
-                >
-                  <Option value="0">No</Option>
-                  <Option value="1">Yes</Option>
-                </Select>
-              </div> */}
-
-              <h4>HSN Code</h4>
-              <div className="mb-3">
-                <input
-                  type="text"
-                  value={hsn}
-                  placeholder="HSN Code"
-                  className="form-control"
-                  onChange={(e) => setHsn(e.target.value)}
-                />
-              </div>
-
-              <h4>Unit</h4>
-              <div className="mb-3">
-                <input
-                  type="text"
-                  value={unit}
-                  placeholder="Unit"
-                  className="form-control"
-                  onChange={(e) => setUnit(e.target.value)}
-                />
-              </div>
-
-              <h4>Net Weight</h4>
-              <div className="mb-3">
-                <input
-                  type="text"
-                  value={unitSet}
-                  placeholder="unitDet"
-                  className="form-control"
-                  onChange={(e) => setUnitSet(e.target.value)}
-                />
-              </div>
-
-              <h4>Purchase Rate</h4>
-              <div className="mb-3">
+                <h4>Purchase Rate</h4>
                 <input
                   type="number"
                   value={purchaseRate}
@@ -481,8 +389,8 @@ const handleSubcategoryChange = (value) => {
                 />
               </div>
 
-              <h4>MRP</h4>
               <div className="mb-3">
+                <h4>MRP</h4>
                 <input
                   type="number"
                   value={mrp}
@@ -492,8 +400,8 @@ const handleSubcategoryChange = (value) => {
                 />
               </div>
 
-              <h4>Per Piece Price</h4>
               <div className="mb-3">
+                <h4>Per Piece Price</h4>
                 <input
                   type="number"
                   value={perPiecePrice}
@@ -503,121 +411,121 @@ const handleSubcategoryChange = (value) => {
                 />
               </div>
 
-              <h4>Weight</h4>
+              {/* Inventory Fields */}
               <div className="mb-3">
+                <h4>Quantity</h4>
                 <input
                   type="number"
-                  value={weight}
-                  placeholder="Weight"
+                  value={quantity}
+                  placeholder="Write a quantity"
                   className="form-control"
-                  onChange={(e) => setWeight(e.target.value)}
+                  onChange={(e) => setQuantity(e.target.value)}
                 />
               </div>
 
-              <h4>Stock</h4>
               <div className="mb-3">
+                <h4>Stock</h4>
                 <input
                   type="number"
                   value={stock}
-                  placeholder="Stock"
+                  placeholder="Enter stock quantity"
                   className="form-control"
                   onChange={(e) => setStock(e.target.value)}
                 />
               </div>
 
-              <h4>GST</h4>
               <div className="mb-3">
+                <h4>GST (%)</h4>
                 <input
                   type="number"
                   value={gst}
-                  placeholder="GST"
+                  placeholder="Enter GST percentage"
                   className="form-control"
                   onChange={(e) => setGst(e.target.value)}
                 />
               </div>
 
-              <h4>Additional Unit</h4>
               <div className="mb-3">
+                <h4>Additional Unit</h4>
                 <input
                   type="text"
                   value={additionalUnit}
-                  placeholder="Additional Unit"
+                  placeholder="Enter additional unit"
                   className="form-control"
                   onChange={(e) => setAdditionalUnit(e.target.value)}
                 />
               </div>
-    
-              <h4>Bulk Products</h4>
-    <div className="mb-3">
-      {bulkProducts.map((product, index) => (
-        <div key={index} className="row mb-2">
-          <div className="col">
-            <input
-              type="number"
-              className="form-control"
-              placeholder="Minimum"
-              name="minimum"
-              value={product?.minimum || ""}
-              onChange={(e) => handleBulkProductChange(index, e)}
-            />
-          </div>
-          <div className="col">
-            <input
-              type="number"
-              className="form-control"
-              placeholder="Maximum"
-              name="maximum"
-              value={product?.maximum || ""}
-              onChange={(e) => handleBulkProductChange(index, e)}
-            />
-          </div>
-          <div className="col">
-            <input
-              type="number"
-              className="form-control"
-              placeholder="Discount MRP"
-              name="discount_mrp"
-              value={product?.discount_mrp || ""}
-              onChange={(e) => handleBulkProductChange(index, e)}
-            />
-          </div>
-          <div className="col">
-            <input
-              type="number"
-              className="form-control"
-              placeholder="Selling Price Set"
-              name="selling_price_set"
-              value={product?.selling_price_set || ""}
-              onChange={(e) => handleBulkProductChange(index, e)}
-            />
-          </div>
-          <div className="col">
-            <button
-              type="button"
-              className="btn btn-danger"
-              onClick={() => handleRemoveBulkProduct(index)}
-            >
-              Remove
-            </button>
-          </div>
-        </div>
-      ))}
-      <button
-        type="button"
-        className="btn btn-success"
-        onClick={handleAddBulkProduct}
-      >
-        Add Bulk Product
-      </button>
-    </div>
+
               <div className="mb-3">
-                <button className="btn btn-primary" onClick={handleUpdate}>
-                  UPDATE PRODUCT
+                <h4>Bulk Products</h4>
+                {bulkProducts.map((product, index) => (
+                  <div key={index} className="row mb-2">
+                    <div className="col">
+                      <input
+                        type="number"
+                        className="form-control"
+                        placeholder="Minimum"
+                        name="minimum"
+                        value={product.minimum}
+                        onChange={(e) => handleBulkProductChange(index, e)}
+                      />
+                    </div>
+                    <div className="col">
+                      <input
+                        type="number"
+                        className="form-control"
+                        placeholder="Maximum"
+                        name="maximum"
+                        value={product.maximum}
+                        onChange={(e) => handleBulkProductChange(index, e)}
+                      />
+                    </div>
+                    <div className="col">
+                      <input
+                        type="number"
+                        className="form-control"
+                        placeholder="Discount MRP %"
+                        name="discount_mrp"
+                        value={product.discount_mrp}
+                        onChange={(e) => handleBulkProductChange(index, e)}
+                      />
+                    </div>
+                    <div className="col">
+                      <input
+                        type="number"
+                        className="form-control"
+                        placeholder="Selling Price Set"
+                        name="selling_price_set"
+                        value={product.selling_price_set}
+                        disabled
+                      />
+                    </div>
+                    <div className="col-auto">
+                      <button
+                        type="button"
+                        className="btn btn-danger"
+                        onClick={() => handleRemoveBulkProduct(index)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="btn btn-success mt-2"
+                  onClick={handleAddBulkProduct}
+                >
+                  Add Bulk Product
                 </button>
               </div>
-              <div className="mb-3">
+
+              <div className="mb-3 d-flex gap-3">
+                <button className="btn btn-primary" onClick={handleUpdate}>
+                  Update Product
+                </button>
                 <button className="btn btn-danger" onClick={handleDelete}>
-                  DELETE PRODUCT
+                  Delete Product
                 </button>
               </div>
             </div>
@@ -626,7 +534,6 @@ const handleSubcategoryChange = (value) => {
       </div>
     </Layout>
   );
-
 };
 
 export default UpdateProduct;

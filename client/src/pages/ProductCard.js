@@ -95,10 +95,12 @@ const ProductCard = ({ product }) => {
           alt={product.name}
           style={{ height: '200px', objectFit: 'fill' }}
         />
-        <div className="card-body d-flex flex-column">
-          <h5 className="card-title product-name" style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>{product.name}</h5>
+       <div className="p-4 flex flex-col h-full">
+          <h5 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+            {product.name}
+          </h5>
           <div className="mt-auto">
-            <h5 className="card-title product-price" style={{ fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.3rem' }}>
+            <h5 className="text-base font-bold text-gray-900 dark:text-white">
               {product.perPiecePrice?.toLocaleString("en-US", {
                 style: "currency",
                 currency: "INR",
@@ -106,12 +108,8 @@ const ProductCard = ({ product }) => {
             </h5>
             {product.mrp && (
               <h6
-                style={{
-                  textDecoration: "line-through",
-                  color: "red",
-                  fontSize: '0.75rem',
-                  marginBottom: '0.2rem'
-                }}
+                className="text-xs text-red-500"
+                style={{ textDecoration: "line-through" }}
               >
                 {product.mrp.toLocaleString("en-US", {
                   style: "currency",

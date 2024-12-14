@@ -161,7 +161,7 @@ export const getSingleProductController = async (req, res) => {
     const product = await productModel
       .findOne({ slug: req.params.slug })
       .select("-photo")
-      .populate("category").populate("brand");
+      .populate("category").populate("subcategory").populate("brand");
     res.status(200).send({
       success: true,
       message: "Single Product Fetched",
@@ -274,37 +274,39 @@ export const updateProductController = async (req, res) => {
 
     // Convert numeric fields to numbers and prepare updated fields
     const updatedFields = {
-      name,
-      description,
-      slug: slugify(name),
-      price: parseFloat(price),
-      category: mongoose.Types.ObjectId(category),
+      name: name,
+      description: description,
+      slug: slugify(name), // Generate a slug from the name
+      price: parseFloat(price), // Convert price to a float
+      category: mongoose.Types.ObjectId(category), // Convert to ObjectId
       subcategory: mongoose.Types.ObjectId(subcategory),
       brand: mongoose.Types.ObjectId(brand),
-      quantity: parseInt(quantity),
-      stock: parseInt(stock) || 0,
-      minimumqty: parseInt(minimumqty),
-      shipping: shipping === "1",
-      hsn,
-      unit,
-      unitSet: parseInt(unitSet),
-      additionalUnit,
-      gst: parseFloat(gst),
-      gstType,
-      purchaseRate: parseFloat(purchaseRate),
-      mrp: parseFloat(mrp),
-      perPiecePrice: parseFloat(perPiecePrice),
-      setPrice: parseFloat(setPrice),
-      weight: parseFloat(weight),
-      allowCOD: allowCOD === "1",
-      returnProduct: returnProduct === "1",
-      userId,
-      isActive: '1', // Default to active
-      variants: JSON.parse(variants || '[]'),
-      sets: JSON.parse(sets || '[]'),
-      sku, // Add SKU
+      quantity: parseInt(quantity), // Convert quantity to integer
+      stock: parseInt(stock) || 0, // Default to 0 if stock is undefined
+      minimumqty: parseInt(minimumqty), // Convert to integer
+      shipping: shipping === "1", // Convert to boolean
+      hsn: hsn, // Directly map hsn
+      unit: unit, // Directly map unit
+      unitSet: parseInt(unitSet), // Convert unitSet to integer
+      additionalUnit: additionalUnit, // Directly map additionalUnit
+      gst: parseFloat(gst), // Convert gst to float
+      gstType: gstType, // Directly map gstType
+      purchaseRate: parseFloat(purchaseRate), // Convert to float
+      mrp: parseFloat(mrp), // Convert to float
+      perPiecePrice: parseFloat(perPiecePrice), // Convert to float
+      setPrice: parseFloat(setPrice), // Convert to float
+      weight: parseFloat(weight), // Convert to float
+      allowCOD: allowCOD === "1", // Convert to boolean
+      returnProduct: returnProduct === "1", // Convert to boolean
+      userId: userId, // Directly map userId
+      isActive: "1", // Default to active
+      variants: JSON.parse(variants || "[]"), // Parse JSON or default to an empty array
+      sets: JSON.parse(sets || "[]"), // Parse JSON or default to an empty array
+      sku: sku, // Directly map sku
+      bulkProducts: JSON.parse(bulkProducts || "[]"), // Parse JSON or default to an empty array
+      fk_tags: JSON.parse(fk_tags || "[]"), // Parse JSON or default to an empty array
     };
-
+    
     // Handle FK Tags
     if (fk_tags) {
       let parsedFkTags = [];

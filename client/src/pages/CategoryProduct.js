@@ -105,7 +105,7 @@ const CategoryProduct = () => {
 
   const filterBySubcategory = (subcategoryId) => {
     setSelectedSubcategory(subcategoryId);
-    fetchProductsByCategoryOrSubcategory(subcategoryId);
+    fetchProductsByCategoryOrSubcategory(params.selectedSubcategory);
   };
 
   const settings = {
@@ -143,7 +143,7 @@ const CategoryProduct = () => {
     <Layout>
       <div className="container mt-3 category">
         <h4 className="text-center" style={{ marginBottom: "1rem" }}>
-          Category - {category?.name}
+        {params.slug}
         </h4>
 
         {/* Conditionally render subcategories slider if not from banner */}

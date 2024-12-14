@@ -9,21 +9,30 @@ const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [auth] = useAuth();
 
+  useEffect(() => {
+    // Fetch orders only when auth.user._id is available
+    if (auth?.user?._id) {
+      getOrders();
+    } else {
+      console.warn("auth.user._id is not available yet");
+    }
+  }, [auth?.user?._id]); // Watch for changes in user ID
+
   const getOrders = async () => {
     try {
-      console.log("Fetching orders...");
-      const { data } = await axios.get("/api/v1/auth/orders");
+      if (!auth?.user?._id) {
+        console.warn("Cannot fetch orders, user ID is undefined.");
+        return;
+      }
+      console.log("Fetching orders for user ID:", auth.user._id);
+
+      const { data } = await axios.get(`/api/v1/auth/orders/${auth.user._id}`);
       console.log("Received orders:", data);
       setOrders(data);
     } catch (error) {
       console.error("Error fetching orders:", error);
     }
   };
-
-  useEffect(() => {
-    console.log("Auth token changed, fetching orders...");
-    if (auth?.token) getOrders();
-  }, [auth?.token]);
 
   return (
     <Layout title={"Your Orders"}>
@@ -34,59 +43,69 @@ const Orders = () => {
           </div>
           <div className="col-md-9">
             <h1 className="text-center">All Orders</h1>
-            {orders?.map((o, i) => (
-              <div className="border shadow" key={o._id}>
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th scope="col">#</th>
-                      <th scope="col">Status</th>
-                      <th scope="col">Buyer</th>
-                      <th scope="col">Date</th>
-                      <th scope="col">Payment</th>
-                      <th scope="col">Total Products</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>{i + 1}</td>
-                      <td>{o?.status}</td>
-                      <td>{o?.buyer?.user_fullname || "N/A"}</td>
-                      <td>{moment(o?.createdAt).format("YYYY-MM-DD")}</td>
-
-                      <td>{o?.payment?.status}</td>
-                      <td>{o?.products?.length}</td>
-                    </tr>
-                  </tbody>
-                </table>
-                <div className="container">
-                  {o?.products?.map((p, j) => (
-                    <div className="row mb-2 p-3 card flex-row" key={p.product._id}>
-                      <div className="col-md-4">
-                        <img
-                          src={`/api/v1/product/product-photo/${p.product._id}`}
-                          className="card-img-top"
-                          alt={p.product.name}
-                          width="100px"
-                          height="100px"
-                        />
-                      </div>
-                      <div className="col-md-8">
-                        <p>Product Name: {p.product.name}</p>
-                        <p>Price per Unit: ₹{p.product.price}</p>
-                        <p>Quantity: {p.quantity}</p>
-                        <p>Total Amount: ₹{p.price}</p>
-                      </div>
+            {orders?.length === 0 ? (
+              <p className="text-center">No orders found.</p>
+            ) : (
+              orders
+                ?.filter((o) => o && o._id) // Ensure valid orders
+                .map((o, i) => (
+                  <div className="border shadow" key={o._id}>
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          <th scope="col">#</th>
+                          <th scope="col">Status</th>
+                          <th scope="col">Buyer</th>
+                          <th scope="col">Date</th>
+                          <th scope="col">Payment</th>
+                          <th scope="col">Total Products</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>{i + 1}</td>
+                          <td>{o?.status || "Unknown"}</td>
+                          <td>{o?.buyer?.user_fullname || "N/A"}</td>
+                          <td>{o?.createdAt ? moment(o.createdAt).format("YYYY-MM-DD") : "N/A"}</td>
+                          <td>{o?.payment?.status || "Unknown"}</td>
+                          <td>{o?.products?.length || 0}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <div className="container">
+                      {o?.products?.map((p, j) => (
+                        <div
+                          className="row mb-2 p-3 card flex-row"
+                          key={p?.product?._id || j}
+                        >
+                          <div className="col-md-4">
+                            <img
+                              src={`/api/v1/product/product-photo/${p?.product?._id}`}
+                              className="card-img-top"
+                              alt={p?.product?.name || "Product"}
+                              width="100px"
+                              height="100px"
+                            />
+                          </div>
+                          <div className="col-md-8">
+                            <p>Product Name: {p?.product?.name || "N/A"}</p>
+                            <p>Price per Unit: ₹{p?.product?.price || "0.00"}</p>
+                            <p>Quantity: {p?.quantity || 0}</p>
+                            <p>Total Amount: ₹{p?.price || "0.00"}</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+                  </div>
+                ))
+            )}
           </div>
         </div>
       </div>
     </Layout>
   );
+  
 };
+
 
 export default Orders;
