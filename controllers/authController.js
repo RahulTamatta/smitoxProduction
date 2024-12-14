@@ -88,7 +88,7 @@ export const verifyOTPAndLoginController = async (req, res) => {
           _id: user._id,
           user_fullname: user.user_fullname,
           email_id: user.email_id,
-          mobile_no: user.phone,
+          mobile_no: user.mobile_no,
           address: user.address,
           role: user.role,
           pincode: user.pincode,
