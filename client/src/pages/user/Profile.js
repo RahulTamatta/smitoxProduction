@@ -4,26 +4,31 @@ import Layout from "./../../components/Layout/Layout";
 import { useAuth } from "../../context/auth";
 import toast from "react-hot-toast";
 import axios from "axios";
+
+
 const Profile = () => {
-  //context
+  // Context
   const [auth, setAuth] = useAuth();
-  //state
+
+  // State
   const [user_fullname, setName] = useState("");
   const [email_id, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mobile_no, setPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [pincode, setPincode] = useState(""); // New pincode state
 
-  //get user data
+  // Get user data
   useEffect(() => {
-    const { email_id, user_fullname, mobile_no, address } = auth?.user;
-    setName(user_fullname);
-    setPhone(mobile_no);
-    setEmail(email_id);
-    setAddress(address);
+    const { email_id, user_fullname, mobile_no, address, pincode } = auth?.user || {};
+    setName(user_fullname || "");
+    setPhone(mobile_no || "");
+    setEmail(email_id || "");
+    setAddress(address || "");
+    setPincode(pincode || ""); // Set pincode value
   }, [auth?.user]);
 
-  // form function
+  // Form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -33,9 +38,10 @@ const Profile = () => {
         password,
         mobile_no,
         address,
+        pincode, // Send pincode in the request
       });
-      if (data?.errro) {
-        toast.error(data?.error);
+      if (data?.error) {
+        toast.error(data.error);
       } else {
         setAuth({ ...auth, user: data?.updatedUser });
         let ls = localStorage.getItem("auth");
@@ -49,6 +55,7 @@ const Profile = () => {
       toast.error("Something went wrong");
     }
   };
+
   return (
     <Layout title={"Your Profile"}>
       <div className="container-fluid m-3 p-3 dashboard">
@@ -66,19 +73,17 @@ const Profile = () => {
                     value={user_fullname}
                     onChange={(e) => setName(e.target.value)}
                     className="form-control"
-                    id="exampleInputEmail1"
                     placeholder="Enter Your Name"
                     autoFocus
                   />
                 </div>
                 <div className="mb-3">
                   <input
-                    type="email_id"
+                    type="email"
                     value={email_id}
                     onChange={(e) => setEmail(e.target.value)}
                     className="form-control"
-                    id="exampleInputEmail1"
-                    placeholder="Enter Your Email "
+                    placeholder="Enter Your Email"
                     disabled
                   />
                 </div>
@@ -88,7 +93,6 @@ const Profile = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="form-control"
-                    id="exampleInputPassword1"
                     placeholder="Enter Your Password"
                   />
                 </div>
@@ -98,7 +102,6 @@ const Profile = () => {
                     value={mobile_no}
                     onChange={(e) => setPhone(e.target.value)}
                     className="form-control"
-                    id="exampleInputEmail1"
                     placeholder="Enter Your Phone"
                   />
                 </div>
@@ -108,11 +111,18 @@ const Profile = () => {
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     className="form-control"
-                    id="exampleInputEmail1"
                     placeholder="Enter Your Address"
                   />
                 </div>
-
+                <div className="mb-3">
+                  <input
+                    type="text"
+                    value={pincode}
+                    onChange={(e) => setPincode(e.target.value)}
+                    className="form-control"
+                    placeholder="Enter Your Pincode"
+                  />
+                </div>
                 <button type="submit" className="btn btn-primary">
                   UPDATE
                 </button>

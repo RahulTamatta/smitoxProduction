@@ -86,7 +86,7 @@ const ProductDetails = () => {
     if (bulk) {
       setTotalPrice(quantity * parseFloat(bulk.selling_price_set));
     } else {
-      setTotalPrice(quantity * parseFloat(product.price || 0));
+      setTotalPrice(quantity * parseFloat(product.perPiecePrice || 0));
     }
   };
 
@@ -96,10 +96,10 @@ const ProductDetails = () => {
       return;
     }
 
-    if (!isPincodeAvailable) {
-      toast.error("Delivery not available for your pincode");
-      return;
-    }
+    // if (!isPincodeAvailable) {
+    //   toast.error("Delivery not available for your pincode");
+    //   return;
+    // }
 
     try {
       const initialQuantity = unitSet;
@@ -434,8 +434,53 @@ const ProductDetails = () => {
               <span style={strikeThroughStyle}>₹{product.mrp}</span>
               ₹{product.perPiecePrice}
             </div>
-            <p>Total Price: ₹{totalPrice.toFixed(2)}</p>
-            <p style={descriptionStyle}>{product.description}</p>
+            <p style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+  <span>Total Price: ₹{totalPrice.toFixed(2)}</span>
+  
+  <div style={quantitySelectorStyle}>
+    <button onClick={() => handleQuantityChange(false)} style={buttonStyle}>-</button>
+    <input
+      type="number"
+      value={displayQuantity}
+      readOnly
+      style={inputStyle}
+    />
+    <button  onClick={() => {
+   if(displayQuantity!=0){ handleQuantityChange(true);}
+   if(displayQuantity==0) {addToCart(); }// Replace with your second function
+  }} style={buttonStyle}>+</button>
+  </div>
+  
+</p>
+
+        {
+          <button
+              onClick={toggleWishlist}
+              style={{
+                ...buttonStyle,
+                backgroundColor: isInWishlist ? '#e47911' : '#f0c14b',
+                color: isInWishlist ? '#ffffff' : '#111111',
+                marginTop: '10px',
+                width: '100%'
+              }}
+            >
+              {isInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
+            </button>}
+
+            {
+  !isPincodeAvailable && (
+    <div style={{ textAlign: 'center', marginTop: '10px' }}>
+      <p style={{ color: 'red', fontSize: '16px', marginBottom: '10px' }}>
+        Service is not available in your area or pincode.
+      </p>
+      <a href="https://wa.me/918291541168" target="_blank" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
+            <i className="fab fa-whatsapp" style={{ fontSize: '30px', marginRight: '8px', color: '#25D366' }}></i>
+            <span style={{ color: '#007bff', fontSize: '16px' }}>Contact Support via WhatsApp</span>
+          </a>
+    </div>
+  )
+}
+
             <h3 style={{ ...headingStyle, fontSize: '20px', marginTop: '20px' }}>Bulk Pricing</h3>
              {product.bulkProducts && product.bulkProducts.length > 0 ? (
                 <table style={tableStyle}>
@@ -480,49 +525,42 @@ const ProductDetails = () => {
               ) : (
                 <p>No bulk pricing available for this product.</p>
               )}
-                     {showQuantitySelector ? (
-            <div style={quantitySelectorStyle}>
-              <button onClick={() => handleQuantityChange(false)} style={buttonStyle}>-</button>
-              <input
-                type="number"
-                value={displayQuantity}
-                readOnly
-                style={inputStyle}
-              />
-              <button onClick={() => handleQuantityChange(true)} style={buttonStyle}>+</button>
-            </div>
-          ) : (
-            <button
-              onClick={addToCart}
-              disabled={!isPincodeAvailable}
-              style={{
-                ...addToCartButtonStyle,
-                backgroundColor: isPincodeAvailable ? '#ffa41c' : '#ccc',
-                cursor: isPincodeAvailable ? 'pointer' : 'not-allowed',
-              }}
-            >
-              ADD TO CART
-            </button>
-          )}
+                     {
+                    //  showQuantitySelector ? 
+                    //  (
+         
+              //   <button
+          //     onClick={addToCart}
+          //     disabled={!isPincodeAvailable}
+          //     style={{
+          //       ...addToCartButtonStyle,
+          //       backgroundColor: isPincodeAvailable ? '#ffa41c' : '#ccc',
+          //       cursor: isPincodeAvailable ? 'pointer' : 'not-allowed',
+          //     }}
+          //   >
+          //     ADD TO CART
+          //   </button>
+          // ) 
+          // :
+          
+          // (
+        
+          // )
+          }
+                  
+                  <h3 style={{ ...headingStyle, fontSize: '20px', marginTop: '20px' }}>Description </h3>
+
+        <p style={{ ...headingStyle, fontSize: '18px', marginTop: '20px'} }>{product.description}</p>
             </div>
    
           
-          {/* Rest of your JSX */}
+  
 
-          <button
-              onClick={toggleWishlist}
-              style={{
-                ...buttonStyle,
-                backgroundColor: isInWishlist ? '#e47911' : '#f0c14b',
-                color: isInWishlist ? '#ffffff' : '#111111',
-                marginTop: '10px',
-                width: '100%'
-              }}
-            >
-              {isInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
-            </button>
           </div>
+
+       
         </div>
+
           <div className="container mt-5">
           <h2 className="text-center mb-4">Products For You</h2>
           <div className="row">

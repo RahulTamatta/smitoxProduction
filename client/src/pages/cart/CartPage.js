@@ -9,25 +9,51 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import "./cartPage.css";
 
+
 const CartPage = () => {
   const [auth] = useAuth();
   const [cart, setCart] = useCart();
   const [clientToken, setClientToken] = useState("");
   const [instance, setInstance] = useState("");
   const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("COD"); // Changed default to COD like Flutter
+  const [paymentMethod, setPaymentMethod] = useState("COD");
   const [minimumOrder, setMinimumOrder] = useState(0);
   const [minimumOrderCurrency, setMinimumOrderCurrency] = useState("");
   const [orderPlacementInProgress, setOrderPlacementInProgress] = useState(false);
   const [orderErrorMessage, setOrderErrorMessage] = useState("");
-
+  const [isPincodeAvailable, setIsPincodeAvailable] = useState(false);
 
   const navigate = useNavigate();
+
+  // New function to get price based on product and quantity
+  const getPriceForProduct = (product, quantity) => {
+    const unitSet = product.unitSet || 1;
+
+    if (product.bulkProducts && product.bulkProducts.length > 0) {
+      const sortedBulkProducts = [...product.bulkProducts]
+        .filter(bp => bp && bp.minimum)
+        .sort((a, b) => b.minimum - a.minimum);
+
+      const applicableBulk = sortedBulkProducts.find(
+        (bp) => quantity >= (bp.minimum * unitSet) && 
+                (!bp.maximum || quantity <= (bp.maximum * unitSet))
+      );
+
+      if (applicableBulk) {
+        return parseFloat(applicableBulk.selling_price_set);
+      }
+    }
+
+    return parseFloat(product.perPiecePrice || product.price || 0);
+  };
 
   useEffect(() => {
     if (auth?.token && auth?.user?._id) {
       getCart();
       fetchMinimumOrder();
+      if (auth?.user?.pincode) {
+        checkPincode(auth.user.pincode);
+      }
       getToken();
     }
   }, [auth?.token, auth?.user?._id]);
@@ -48,7 +74,7 @@ const CartPage = () => {
       const { data } = await axios.get('/api/v1/minimumOrder/getMinimumOrder');
       if (data) {
         setMinimumOrder(data.amount);
-        setMinimumOrderCurrency(data.currency);
+        setMinimumOrderCurrency(data.currency === "rupees" ? "INR" : data.currency);
       }
     } catch (error) {
       console.error('Error fetching minimum order:', error);
@@ -65,7 +91,6 @@ const CartPage = () => {
     }
   };
 
- 
   const removeCartItem = async (pid) => {
     try {
       await axios.delete(`/api/v1/carts/users/${auth.user._id}/cart`, { data: { productId: pid } });
@@ -97,13 +122,11 @@ const CartPage = () => {
 
   const handleQuantityChange = async (productId, newQuantity) => {
     if (newQuantity < 1) {
-      // If quantity becomes less than 1, remove the item
       removeCartItem(productId);
       return;
     }
 
     try {
-      // Update quantity on server
       await axios.post(
         `/api/v1/carts/users/${auth.user._id}/cartq/${productId}`,
         { quantity: newQuantity },
@@ -115,7 +138,6 @@ const CartPage = () => {
         }
       );
 
-      // Update local cart state
       const updatedCart = cart.map(item => 
         item.product._id === productId 
           ? { ...item, quantity: newQuantity }
@@ -134,34 +156,25 @@ const CartPage = () => {
     try {
       let total = 0;
       let totalGST = 0;
-      
+
       if (Array.isArray(cart)) {
         cart.forEach((item) => {
           const { product, quantity } = item;
-          let itemPrice = product.price;
-          const gst = product.gst || 0;
-          const unitSet = product.unitSet || 1;
 
-          // Bulk pricing logic
-          if (product.bulkProducts && product.bulkProducts.length > 0) {
-            const bulkPrice = product.bulkProducts.find(
-              (bp) => 
-                quantity >= (bp.minimum * unitSet) && 
-                quantity <= (bp.maximum * unitSet)
-            );
-            if (bulkPrice) {
-              itemPrice = bulkPrice.selling_price_set;
-            }
-          }
+          const itemPrice = getPriceForProduct(product, quantity);
+          const gst = typeof product.gst === 'number' && !isNaN(product.gst) ? product.gst : 0;
 
-          // Calculate GST
-          const itemGST = (itemPrice * gst) / 100;
-          const itemTotal = (itemPrice + itemGST) * quantity;
+          const validQuantity = typeof quantity === 'number' && quantity > 0 ? quantity : 1;
+
+          const itemGST = gst > 0 ? (itemPrice * gst) / 100 : 0;
+          const itemPriceWithGST = itemPrice + itemGST;
+          const itemTotal = itemPriceWithGST * validQuantity;
 
           total += itemTotal;
-          totalGST += itemGST * quantity;
+          totalGST += itemGST * validQuantity;
         });
       }
+
       return total;
     } catch (error) {
       console.error("Total calculation error:", error);
@@ -169,38 +182,63 @@ const CartPage = () => {
     }
   };
 
+  const checkPincode = async (pincode) => {
+    try {
+      const { data } = await axios.get("/api/v1/pincodes/get-pincodes");
+      if (data.success) {
+        const availablePincodes = data.pincodes.map((pin) => pin.code);
+        if (availablePincodes.includes(pincode.toString())) {
+          setIsPincodeAvailable(true);
+          toast.success("Delivery available for your pincode");
+        } else {
+          setIsPincodeAvailable(false);
+          toast.error("Delivery not available for your pincode");
+        }
+      }
+    } catch (error) {
+      console.log(error);
+      setIsPincodeAvailable(false);
+      toast.error("Error checking pincode");
+    }
+  };
+
   const handlePayment = async () => {
     const total = totalPrice();
-    
+  
+    if (!isPincodeAvailable) {
+      toast.error("Service is not available in your area or pincode.");
+      return;
+    }
+  
     if (total < minimumOrder) {
       toast.error(`Minimum order amount is ${minimumOrderCurrency} ${minimumOrder}`);
       return;
     }
-
+  
     setLoading(true);
     setOrderPlacementInProgress(true);
     setOrderErrorMessage("");
-
+  
     try {
-      // Prepare payload similar to Flutter implementation
       const payload = {
-        products: Array.isArray(cart) ? cart.map(item => ({
-          product: item.product._id,
-          quantity: item.quantity,
-          price: item.product.price,
-        })) : [],
+        products: Array.isArray(cart)
+          ? cart.map(item => ({
+              product: item.product._id,
+              quantity: item.quantity,
+              price: getPriceForProduct(item.product, item.quantity),
+            }))
+          : [],
         paymentMethod,
-        amount: 0, // Server will calculate final amount
+        amount: 0,
       };
-
-      // Add nonce for Braintree payments
+  
       if (paymentMethod === "Braintree" && instance) {
         const { nonce } = await instance.requestPaymentMethod();
         payload.nonce = nonce;
       }
-
+  
       const { data } = await axios.post("/api/v1/product/process-payment", payload);
-      
+  
       if (data.success) {
         await clearCart();
         toast.success("Order Placed Successfully!");
@@ -219,6 +257,7 @@ const CartPage = () => {
       setOrderPlacementInProgress(false);
     }
   };
+  
 
   const handleProductClick = (slug) => {
     navigate(`/product/${slug}`);
@@ -230,7 +269,7 @@ const CartPage = () => {
         <div className="row">
           <div className="col-12">
             <h1 className="text-center bg-light p-2 mb-1">
-              {!auth?.user ? "Hello Guest" : `Hello ${auth?.user?.name}`}
+              {!auth?.user ? "Hello Guest" : `Hello ${auth?.user?.user_fullname}`}
               <p className="text-center">
                 {cart?.length
                   ? `You Have ${cart.length} items in your cart ${
@@ -262,16 +301,11 @@ const CartPage = () => {
                   </div>
                   <div className="col-md-4 col-12">
                     <p>{p.product.name}</p>
-                   <p>
+                    <p>
                       Price: {minimumOrderCurrency}{" "}
-                      {p.product.bulkProducts?.length > 0
-                        ? p.product.bulkProducts.find(
-                            bp => p.quantity >= bp.minimum && p.quantity <= bp.maximum
-                          )?.selling_price_set || p.product.price
-                        : p.product.price} 
+                      {getPriceForProduct(p.product, p.quantity).toFixed(2)}
                     </p>
                     
-                    {/* Quantity Selector */}
                     <div className="d-flex align-items-center" style={{
                       display: 'flex', 
                       alignItems: 'center', 
@@ -280,7 +314,7 @@ const CartPage = () => {
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleQuantityChange(p.product._id, p.quantity -  p.product.unitSet);
+                          handleQuantityChange(p.product._id, p.quantity - p.product.unitSet);
                         }} 
                         style={{
                           padding: '5px 10px',
@@ -326,11 +360,9 @@ const CartPage = () => {
                       </button>
                     </div>
 
-                    <p>Total: {((p.product.bulkProducts?.length > 0
-                        ? p.product.bulkProducts.find(
-                            bp => p.quantity >= bp.minimum && p.quantity <= bp.maximum
-                          )?.selling_price_set || p.product.price
-                        : p.product.price) * p.quantity).toFixed(2)}</p>
+                    <p>
+                      {(getPriceForProduct(p.product, p.quantity) * p.quantity).toFixed(2)}
+                    </p>
                     <button
                       className="btn btn-danger"
                       onClick={(e) => {
@@ -338,7 +370,7 @@ const CartPage = () => {
                         removeCartItem(p.product._id);
                       }}
                     >
-                      Remove
+                      Remove Item
                     </button>
                   </div>
                 </div>
@@ -357,6 +389,7 @@ const CartPage = () => {
               style: "currency",
               currency: minimumOrderCurrency || "INR",
             })}</p>
+
             {totalPrice() < minimumOrder && (
               <p className="text-danger">
                 <AiFillWarning /> Order total is below the minimum order amount
@@ -379,6 +412,19 @@ const CartPage = () => {
                 Please update your address before proceeding with checkout.
               </div>
             )}
+                       {
+  !isPincodeAvailable && (
+    <div style={{ textAlign: 'center', marginTop: '10px' }}>
+      <p style={{ color: 'red', fontSize: '16px', marginBottom: '10px' }}>
+        Service is not available in your area or pincode.
+      </p>
+      <a href="https://wa.me/918291541168" target="_blank" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
+            <i className="fab fa-whatsapp" style={{ fontSize: '30px', marginRight: '8px', color: '#25D366' }}></i>
+            <span style={{ color: '#007bff', fontSize: '16px' }}>Contact Support via WhatsApp</span>
+          </a>
+    </div>
+  )
+}
             <div className="row">
               <div className="col-12">
                 <h5>Payment Options</h5>
@@ -403,11 +449,10 @@ const CartPage = () => {
                 onChange={(e) => setPaymentMethod(e.target.value)}
               >
                 <option value="COD">COD</option>
-                <option value="Braintree">Braintree</option>
+                {/* <option value="Braintree">Braintree</option> */}
               </select>
             </div>
 
-            {/* Show DropIn only for Braintree */}
             {paymentMethod === "Braintree" && clientToken && (
               <div className="mb-3">
                 <DropIn
@@ -420,25 +465,28 @@ const CartPage = () => {
               </div>
             )}
 
-            <button
-              className="btn btn-primary w-100"
-              onClick={handlePayment}
-              disabled={
-                loading || 
-                orderPlacementInProgress || 
-                totalPrice() < minimumOrder ||
-                (paymentMethod === "Braintree" && !instance)
-              }
-            >
-              {orderPlacementInProgress ? (
-                <span className="spinner-border spinner-border-sm me-2" />
-              ) : null}
-              {orderPlacementInProgress ? "Processing..." : "Place Order"}
-            </button>
-            </div>
+<button
+  className="btn btn-primary w-100"
+  onClick={handlePayment}
+  disabled={
+    loading ||
+    orderPlacementInProgress ||
+    totalPrice() < minimumOrder ||
+    !isPincodeAvailable || // Disable button if pincode is not available
+    (paymentMethod === "Braintree" && !instance)
+  }
+>
+  {orderPlacementInProgress ? (
+    <span className="spinner-border spinner-border-sm me-2" />
+  ) : null}
+  {orderPlacementInProgress ? "Processing..." : "Place Order"}
+</button>
+
+          </div>
         </div>
       </div>
     </Layout>
   );
 };
+
 export default CartPage;

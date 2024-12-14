@@ -76,6 +76,26 @@ const Products = () => {
       prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
     );
   };
+  const toggleIsActive = async (productId, newStatus) => {
+    try {
+      const response = await axios.put(`/api/v1/product/updateStatus/products/${productId}`, {
+        isActive: newStatus,
+      });
+      if (response.data.success) {
+        setProducts((prevProducts) =>
+          prevProducts.map((product) =>
+            product._id === productId ? { ...product, isActive: newStatus } : product
+          )
+        );
+        toast.success(`Product status updated to ${newStatus === "1" ? "Active" : "Inactive"}!`);
+      } else {
+        toast.error("Failed to update product status.");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("An error occurred while updating product status.");
+    }
+  };
 
   // Filtered and searched products
   const filteredProducts = products.filter((product) => {
@@ -183,6 +203,7 @@ const Products = () => {
                     />
                   </th>
                   <th className="border p-2">#</th>
+                  <th className="border p-2">Photo</th>
                   <th className="border p-2">Name</th>
                   <th className="border p-2">Category</th>
                   <th className="border p-2">Subcategory</th>
@@ -202,23 +223,40 @@ const Products = () => {
                       />
                     </td>
                     <td className="border p-2 text-center">{indexOfFirstItem + index + 1}</td>
+
+                    <td className="border p-2 text-center">
+                    <img
+  src={`/api/v1/product/product-photo/${p._id}`}
+  alt={p.name}
+  className="border p-2"
+  style={{
+    width: "50px", // Set a fixed width
+    height: "50px", // Set a fixed height
+    objectFit: "cover", // Ensure the image maintains aspect ratio and fits within the box
+    borderRadius: "4px", // Add rounded corners if desired
+  }}
+/>
+
+          </td>
                     <td className="border p-2">{p.name}</td>
+          
+
                     <td className="border p-2">{p.category?.name || "N/A"}</td>
                     <td className="border p-2">{p.subcategory?.name || "N/A"}</td>
                     <td className="border p-2">₹{p.price?.toFixed(2)}</td>
                     <td className="border p-2">{p.stock || 0}</td>
                     <td className="border p-2">
                       <div className="flex justify-center space-x-2">
-                        {p.isActive === "1" ? (
+                      {p.isActive === "1" ? (
                           <button
-                            onClick={() => handleBulkAction("deactivate")}
+                            onClick={() => toggleIsActive(p._id, "0")}
                             className="text-yellow-500 hover:text-yellow-700"
                           >
                             Active
                           </button>
                         ) : (
                           <button
-                            onClick={() => handleBulkAction("activate")}
+                            onClick={() =>toggleIsActive(p._id, "1")}
                             className="text-green-500 hover:text-green-700"
                           >
                             Deactivate
@@ -228,9 +266,9 @@ const Products = () => {
                         <Link to={`/dashboard/admin/product/${p.slug}`}>
                           <Edit className="text-green-500 hover:text-green-700" />
                         </Link>
-                        <button onClick={() => handleBulkAction("delete")}>
+                        {/* <button onClick={() => handleBulkAction("delete")}>
                           <Trash2 className="text-red-500 hover:text-red-700" />
-                        </button>
+                        </button> */}
                       </div>
                     </td>
                   </tr>

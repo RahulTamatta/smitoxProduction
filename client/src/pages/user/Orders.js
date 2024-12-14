@@ -4,6 +4,237 @@ import Layout from "../../components/Layout/Layout";
 import axios from "axios";
 import { useAuth } from "../../context/auth";
 import moment from "moment";
+const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
+  const [order, setOrder] = useState(selectedOrder);
+
+  const calculateSubtotal = () => {
+    return order.products.reduce(
+      (total, product) => total + product.price * product.quantity,
+      0
+    );
+  };
+
+  const calculateGST = () => {
+    return order.products.reduce(
+      (total, product) =>
+        total + (product.price * product.quantity * (product.gst || 0)) / 100,
+      0
+    );
+  };
+
+  const calculateTotal = () => {
+    const deliveryCharges = order.deliveryCharges || 0.0;
+    const codCharges = order.codCharges || 0.0;
+    const discount = order.discount || 0.0;
+
+    return (
+      calculateSubtotal() +
+      calculateGST() +
+      deliveryCharges +
+      codCharges -
+      discount
+    );
+  };
+
+  const calculateAmountPending = () => {
+    const total = calculateTotal();
+    const amountPaid = order.amountPaid || 0;
+    return Math.max(total - amountPaid, 0);
+  };
+
+  const updateProductQuantity = (index, quantity) => {
+    const updatedProducts = [...order.products];
+    updatedProducts[index].quantity = quantity;
+    setOrder({ ...order, products: updatedProducts });
+  };
+
+  const updateProductPrice = (index, price) => {
+    const updatedProducts = [...order.products];
+    updatedProducts[index].price = price;
+    setOrder({ ...order, products: updatedProducts });
+  };
+
+  const updateOrderStatus = (newStatus) => {
+    setOrder({ ...order, status: newStatus });
+  };
+
+  const handleSave = () => {
+    onUpdateOrder(order);
+    onClose();
+  };
+  // const renderStatusButtons = () => {
+  //   switch (order.status) {
+  //     case 'Pending':
+  //       return (
+  //         <div className="status-buttons">
+  //           <button 
+  //             className="btn btn-primary me-2"
+  //             onClick={() => updateOrderStatus('Confirmed')}
+  //           >
+  //             Confirm
+  //           </button>
+  //           <button 
+  //             className="btn btn-danger"
+  //             onClick={() => updateOrderStatus('Cancelled')}
+  //           >
+  //             Cancel
+  //           </button>
+  //         </div>
+  //       );
+  //     case 'Confirmed':
+  //       return (
+  //         <button 
+  //           className="btn btn-success"
+  //           onClick={() => updateOrderStatus('Accepted')}
+  //         >
+  //           Accept
+  //         </button>
+  //       );
+  //     case 'Dispatched':
+  //       return (
+  //         <div className="status-buttons">
+  //           <button 
+  //             className="btn btn-primary me-2"
+  //             onClick={() => updateOrderStatus('Delivered')}
+  //           >
+  //             Delivered
+  //           </button>
+  //           <button 
+  //             className="btn btn-warning"
+  //             onClick={() => updateOrderStatus('Returned')}
+  //           >
+  //             RTO
+  //           </button>
+  //         </div>
+  //       );
+  //     default:
+  //       return null;
+  //   }
+  // };
+  return (
+    <div className="modal" tabIndex="-1" style={{ display: "block" }}>
+      <div className="modal-dialog modal-lg">
+        <div className="modal-content">
+          <div className="modal-header">
+            <h5 className="modal-title">Order Details</h5>
+            <button type="button" className="btn-close" onClick={onClose}></button>
+          </div>
+          <div className="modal-body">
+            <div className="row mb-3">
+              <div className="col-md-6">
+                <p>Order ID: {order._id}</p>
+                {/* <p>Buyer: {order.buyer.name}</p> */}
+                <p>Created At: {moment(order.createdAt).format("ll")}</p>
+              </div>
+            </div>
+
+            <table className="table table-bordered">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Qty</th>
+                  <th>Price</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {order.products.map((product, index) => (
+                  <tr key={product.id}>
+                    <td>
+                      <div className="d-flex align-items-center">
+                        <img
+                             src={`/api/v1/product/product-photo/${product.product._id}`}
+                          alt={product.name}
+                          style={{
+                            width: "40px",
+                            height: "40px",
+                            objectFit: "cover",
+                            marginRight: "10px",
+                          }}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "/path/to/default-image.jpg";
+                          }}
+                        />
+                        {product.product.name}
+                      </div>
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        className="form-control"
+                        value={product.quantity}
+                        onChange={(e) => {
+                          const quantity = parseInt(e.target.value, 10);
+                          updateProductQuantity(index, quantity);
+                        }}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        className="form-control"
+                        value={product.price}
+                        onChange={(e) => {
+                          const price = parseFloat(e.target.value);
+                          updateProductPrice(index, price);
+                        }}
+                      />
+                    </td>
+                    <td>
+                      ₹{(product.price * product.quantity).toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="row mt-3">
+              <div className="col-md-6">
+                <p>
+                  <strong>Subtotal:</strong> ₹{calculateSubtotal().toFixed(2)}
+                </p>
+                <p>
+                  <strong>GST:</strong> ₹{calculateGST().toFixed(2)}
+                </p>
+                <p>
+                  <strong>Delivery Charges:</strong> ₹
+                  {(order.deliveryCharges || 0).toFixed(2)}
+                </p>
+                <p>
+                  <strong>COD Charges:</strong> ₹{(order.codCharges || 0).toFixed(2)}
+                </p>
+                <p>
+                  <strong>Discount:</strong> ₹{(order.discount || 0).toFixed(2)}
+                </p>
+                <p>
+                  <strong>Total:</strong> ₹{calculateTotal().toFixed(2)}
+                </p>
+                <p>
+                  <strong>Amount Paid:</strong> ₹{(order.amountPaid || 0).toFixed(2)}
+                </p>
+                <p>
+                  <strong>Amount Pending:</strong> ₹
+                  {calculateAmountPending().toFixed(2)}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="modal-footer">
+            {/* {renderStatusButtons()} */}
+            <button type="button" className="btn btn-secondary" onClick={onClose}>
+              Close
+            </button>
+            {/* <button type="button" className="btn btn-primary" onClick={handleSave}>
+              Save Changes
+            </button> */}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
@@ -33,6 +264,23 @@ const Orders = () => {
       console.error("Error fetching orders:", error);
     }
   };
+  const [selectedOrder, setSelectedOrder] = useState(null);
+
+  const navigateToOrderDetails = (order) => {
+    setSelectedOrder(order);
+  };
+
+  const handleUpdateOrder = (updatedOrder) => {
+    // Update the order in your orders list
+    const updatedOrders = orders.map(o => 
+      o._id === updatedOrder._id ? updatedOrder : o
+    );
+    setOrders(updatedOrders);
+  };
+
+  const closeOrderModal = () => {
+    setSelectedOrder(null);
+  };
 
   return (
     <Layout title={"Your Orders"}>
@@ -49,7 +297,11 @@ const Orders = () => {
               orders
                 ?.filter((o) => o && o._id) // Ensure valid orders
                 .map((o, i) => (
-                  <div className="border shadow" key={o._id}>
+                  <div 
+                  className="border shadow cursor-pointer" 
+                  key={o._id}
+                  onClick={() => navigateToOrderDetails(o)}
+                >
                     <table className="table">
                       <thead>
                         <tr>
@@ -67,7 +319,7 @@ const Orders = () => {
                           <td>{o?.status || "Unknown"}</td>
                           <td>{o?.buyer?.user_fullname || "N/A"}</td>
                           <td>{o?.createdAt ? moment(o.createdAt).format("YYYY-MM-DD") : "N/A"}</td>
-                          <td>{o?.payment?.status || "Unknown"}</td>
+                          <td>{o?.payment?.paymentMethod || "Unknown"}</td>
                           <td>{o?.products?.length || 0}</td>
                         </tr>
                       </tbody>
@@ -89,9 +341,9 @@ const Orders = () => {
                           </div>
                           <div className="col-md-8">
                             <p>Product Name: {p?.product?.name || "N/A"}</p>
-                            <p>Price per Unit: ₹{p?.product?.price || "0.00"}</p>
+                            {/* <p>Price per Unit: ₹{p?.product?.price || "0.00"}</p> */}
                             <p>Quantity: {p?.quantity || 0}</p>
-                            <p>Total Amount: ₹{p?.price || "0.00"}</p>
+                            {/* <p>Total Amount: ₹{p?.price || "0.00"}</p> */}
                           </div>
                         </div>
                       ))}
@@ -102,6 +354,13 @@ const Orders = () => {
           </div>
         </div>
       </div>
+      {selectedOrder && (
+        <OrderDetailsModal 
+          selectedOrder={selectedOrder}
+          onUpdateOrder={handleUpdateOrder}
+          onClose={closeOrderModal}
+        />
+      )}
     </Layout>
   );
   

@@ -292,7 +292,7 @@ export const forgotPasswordController = async (req, res) => {
 // Update Profile
 export const updateProfileController = async (req, res) => {
   try {
-    const { user_fullname, email_id, password, address, phone } = req.body;
+    const { user_fullname, email_id, password, address, phone, pincode } = req.body; // Include pincode
     const user = await userModel.findById(req.user._id);
 
     if (password && password.length < 6) {
@@ -300,6 +300,7 @@ export const updateProfileController = async (req, res) => {
     }
 
     const hashedPassword = password ? await hashPassword(password) : undefined;
+
     const updatedUser = await userModel.findByIdAndUpdate(
       req.user._id,
       {
@@ -307,6 +308,7 @@ export const updateProfileController = async (req, res) => {
         password: hashedPassword || user.password,
         phone: phone || user.phone,
         address: address || user.address,
+        pincode: pincode || user.pincode, // Update pincode
       },
       { new: true }
     );
@@ -325,6 +327,7 @@ export const updateProfileController = async (req, res) => {
     });
   }
 };
+
 
 export const getOrdersController = async (req, res) => {
   try {
