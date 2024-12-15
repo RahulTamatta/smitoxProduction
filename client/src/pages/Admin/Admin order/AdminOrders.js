@@ -95,17 +95,35 @@ const AdminOrders = () => {
   };
 
   const calculateTotals = () => {
-    if (!selectedOrder || !selectedOrder.products) return { subtotal: 0, gst: 0, total: 0 };
-
+    if (!selectedOrder || !selectedOrder.products) 
+      return { subtotal: 0, gst: 0, total: 0 };
+  
+    console.log("Selected Order:", selectedOrder);
+  
     const subtotal = selectedOrder.products.reduce(
       (acc, product) => acc + Number(product.price) * Number(product.quantity),
       0
     );
-    const gst = subtotal * 0.18; // Assuming 18% GST
-    const total = subtotal + gst + Number(selectedOrder.deliveryCharges || 0) + Number(selectedOrder.codCharges || 0) - Number(selectedOrder.discount || 0);
-
+  
+    const gst = selectedOrder.products.reduce((acc, product) => {
+      console.log("Product GST:", product.gst); // Log GST for each product
+      return acc + (Number(product.price) * Number(product.quantity) * (Number(product.gst) || 0)) / 100;
+    }, 0);
+  
+    console.log("Subtotal:", subtotal, "GST:", gst);
+  
+    const total =
+      subtotal +
+      gst +
+      Number(selectedOrder.deliveryCharges || 0) +
+      Number(selectedOrder.codCharges || 0) -
+      Number(selectedOrder.discount || 0);
+  
+    console.log("Total:", total);
+  
     return { subtotal, gst, total };
   };
+  
 
   const handleAddClick = () => {
     setShowSearchModal(true);

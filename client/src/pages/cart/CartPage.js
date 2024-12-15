@@ -93,8 +93,9 @@ const CartPage = () => {
 
   const removeCartItem = async (pid) => {
     try {
-      await axios.delete(`/api/v1/carts/users/${auth.user._id}/cart`, { data: { productId: pid } });
-      getCart();
+      // Modified to include productId in the URL path instead of request body
+      await axios.delete(`/api/v1/carts/users/${auth.user._id}/cart/${pid}`);
+      getCart(); // Refresh cart after removal
       toast.success("Item removed from cart");
     } catch (error) {
       console.log(error);

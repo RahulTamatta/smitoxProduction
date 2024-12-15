@@ -129,14 +129,15 @@ const getProductName = (product) => {
                                                   onChange={(e) => handleProductChange(index, "quantity", e.target.value)}
                                               />
                                           </td>
-                                     
-                                            <td>
-                                                <Form.Control
-                                                    type="number"
-                                                    value={product.price}
-                                                    onChange={(e) => handleProductChange(index, "price", e.target.value)}
-                                                />
-                                            </td>
+                                          <td>
+  <Form.Control
+    type="number"
+    value={product.price}
+    onChange={(e) => handleProductChange(index, "price", e.target.value)}
+    style={{ width: "100px" }} // Adjust the width as needed
+  />
+</td>
+
                                             <td>₹{(Number(product.price) * Number(product.quantity)).toFixed(2)}</td>
                                             <td>₹{((Number(product.price) * Number(product.quantity)) *product.product.gst).toFixed(2)}</td>
                                             <td>₹{((Number(product.price) * Number(product.quantity)) + ((Number(product.price) * Number(product.quantity)) * product.product.gst)).toFixed(2)}</td>
@@ -322,7 +323,7 @@ const getProductName = (product) => {
               </div>
             )}
             
-            {selectedOrder && selectedOrder.status === "Delivered" && (
+            {selectedOrder && (selectedOrder.status === "Delivered" || selectedOrder.status === "Returned")&& (
               <div>
                 <Button variant="success" onClick={handleDelivered}>
                   Delivered

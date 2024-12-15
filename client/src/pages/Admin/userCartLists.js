@@ -246,7 +246,7 @@ console.log(`New Status: ${newStatus}`);
   <div>
     <TabButton label="All" isActive={activeOrderTypeFilter === 'all'} onClick={() => setActiveOrderTypeFilter('all')} />
     <TabButton label="COD" isActive={activeOrderTypeFilter === 'COD'} onClick={() => setActiveOrderTypeFilter('COD')} />
-    <TabButton label="Prepaid" isActive={activeOrderTypeFilter === 'Prepaid'} onClick={() => setActiveOrderTypeFilter('Prepaid')} />
+    {/* <TabButton label="Prepaid" isActive={activeOrderTypeFilter === 'Prepaid'} onClick={() => setActiveOrderTypeFilter('Prepaid')} /> */}
     <TabButton label="Advance" isActive={activeOrderTypeFilter === 'Advance'} onClick={() => setActiveOrderTypeFilter('Advance')} />
   </div>
 </div>
@@ -323,7 +323,7 @@ console.log(`New Status: ${newStatus}`);
                   </td>
                   <td style={{ padding: '0.75rem' }}>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      {['COD', 'Prepaid', 'Advance'].map((type) => (
+                      {['COD',  'Advance'].map((type) => (
                         <label key={type} style={{ 
                           display: 'flex',
                           alignItems: 'center',
@@ -613,10 +613,10 @@ console.log(`New Status: ${newStatus}`);
   };
 
   return (
-    <Layout title="Dashboard - User List">
+    <Layout title="User List">
       <div style={{
         margin: '1rem',
-        padding: '1rem',
+        paddingTop: '5rem',
         backgroundColor: '#ffffff',
         borderRadius: '0.5rem',
         boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'

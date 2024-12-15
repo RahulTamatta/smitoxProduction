@@ -1,5 +1,6 @@
 import productForYouModel from "../models/productForYouModel.js";
 import productModel from "../models/productModel.js";
+import productForYou from "../models/productForYouModel.js";
 import mongoose from 'mongoose';
 
 export const getProductsForYouController = async (req, res) => {
@@ -12,10 +13,10 @@ export const getProductsForYouController = async (req, res) => {
           return res.status(400).send({ success: false, message: "Invalid category or subcategory ID" });
         }
     
-        const products = await productModel.find({
-          category: categoryId,
-          subcategory: subcategoryId
-        }).populate("category subcategory");
+        const products = await productForYou.find({
+          categoryId: categoryId,     // Changed from category
+          subcategoryId: subcategoryId  // Changed from subcategory
+        }).populate("categoryId subcategoryId");
     
         res.status(200).send({
           success: true,

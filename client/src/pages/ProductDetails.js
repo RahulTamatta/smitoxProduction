@@ -5,8 +5,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useCart } from "../context/cart";
 import { useAuth } from "../context/auth";
 import toast from "react-hot-toast";
-import ProductCard from './ProductCard';
-
+import ProductCard from "./ProductCard";
 
 const ProductDetails = () => {
   const params = useParams();
@@ -24,13 +23,16 @@ const ProductDetails = () => {
   const [displayQuantity, setDisplayQuantity] = useState(0);
   const [showQuantitySelector, setShowQuantitySelector] = useState(false);
   const [productIds, setProductId] = useState();
-
+  const [categoryId, setCategoryId] = useState();
+  const [subcategoryId, setSubcategoryId] = useState();
+  
   useEffect(() => {
     window.scrollTo(0, 0);
-    if (params?.slug) getProduct();
-    getProductsForYou();
-    if (auth?.user?.pincode) {
-      checkPincode(auth.user.pincode);
+    if (params?.slug) {
+      if (auth?.user?.pincode) {
+        checkPincode(auth.user.pincode);
+      }
+      getProduct();
     }
   }, [params?.slug, auth?.user?.pincode]);
 
@@ -41,12 +43,26 @@ const ProductDetails = () => {
     }
   }, [product._id, auth?.user?._id]);
 
+  // New useEffect to handle Products For You fetching
+  useEffect(() => {
+    if (categoryId && subcategoryId) {
+      getProductsForYou();
+    }
+  }, [categoryId, subcategoryId,productsForYou]);
+
   const getProduct = async () => {
     try {
-      const { data } = await axios.get(`/api/v1/product/get-product/${params.slug}`);
-      setProduct(data?.product || {});
+      const { data } = await axios.get(
+        `/api/v1/product/get-product/${params.slug}`
+      );
+
+ if(data.success===true){     setProduct(data?.product || {});
+      setCategoryId(data?.product?.category._id);
+      setSubcategoryId(data?.product?.subcategory._id || {});}
+      console.log("PProduct",data);
+      getProductsForYou();
       setUnitSet(data?.product?.unitSet || 1);
-      setProductId(data?.product?._id);
+    
     } catch (error) {
       console.error(error);
       toast.error("Error fetching product details");
@@ -55,30 +71,36 @@ const ProductDetails = () => {
 
   const getProductsForYou = async () => {
     try {
-      const { data } = await axios.get("/api/v1/productForYou/get-products");
+      const { data } = await axios.get(`/api/v1/productForYou/products/${categoryId}/${subcategoryId}`);
+      
+      // Log the response data for debugging
+      console.log('Response Data:', data);
+  
       if (data?.success) {
-        setProductsForYou(data.banners || []);
+        setProductsForYou(data.products || []);
+        console.log("Ha",data.products);
       }
     } catch (error) {
-      console.error(error);
+      console.error('Error fetching products for you:', error);
       toast.error("Failed to fetch products for you");
     }
   };
+  
 
   const getApplicableBulkProduct = (quantity) => {
     if (!product.bulkProducts || product.bulkProducts.length === 0) return null;
-    
+
     const sortedBulkProducts = [...product.bulkProducts]
-      .filter(bulk => bulk && bulk.minimum)
+      .filter((bulk) => bulk && bulk.minimum)
       .sort((a, b) => b.minimum - a.minimum);
-    
+
     for (let i = 0; i < sortedBulkProducts.length; i++) {
       const bulk = sortedBulkProducts[i];
       if (quantity >= bulk.minimum * unitSet) {
         return bulk;
       }
     }
-    
+
     return null;
   };
 
@@ -105,12 +127,17 @@ const ProductDetails = () => {
       const initialQuantity = unitSet;
       const applicableBulk = getApplicableBulkProduct(initialQuantity);
 
-      const response = await axios.post(`/api/v1/carts/users/${auth.user._id}/cart`, {
-        productId: product._id,
-        quantity: initialQuantity,
-        price: applicableBulk ? parseFloat(applicableBulk.selling_price_set) : parseFloat(product.price),
-        bulkProductDetails: applicableBulk,
-      });
+      const response = await axios.post(
+        `/api/v1/carts/users/${auth.user._id}/cart`,
+        {
+          productId: product._id,
+          quantity: initialQuantity,
+          price: applicableBulk
+            ? parseFloat(applicableBulk.selling_price_set)
+            : parseFloat(product.price),
+          bulkProductDetails: applicableBulk,
+        }
+      );
 
       if (response.data.status === "success") {
         setCart(response.data.cart);
@@ -149,7 +176,7 @@ const ProductDetails = () => {
   const handleQuantityChange = async (increment) => {
     const newQuantity = displayQuantity + (increment ? 1 : -1) * unitSet;
     const updatedQuantity = Math.max(0, newQuantity);
-    
+
     if (updatedQuantity === 0) {
       await removeFromCart(product._id);
       setShowQuantitySelector(false);
@@ -183,9 +210,9 @@ const ProductDetails = () => {
         { quantity },
         {
           headers: {
-            'Authorization': `Bearer ${auth.user.token}`,
-            'Content-Type': 'application/json'
-          }
+            Authorization: `Bearer ${auth.user.token}`,
+            "Content-Type": "application/json",
+          },
         }
       );
 
@@ -200,29 +227,27 @@ const ProductDetails = () => {
 
   const removeFromCart = async (productId) => {
     if (!auth.user._id) return;
-  
-    try {
 
-     
-      const response = await  axios.delete(
+    try {
+      const response = await axios.delete(
         `/api/v1/carts/users/${auth.user._id}/cart/${productId}`,
         {
-          method: 'DELETE',
+          method: "DELETE",
           headers: {
             Authorization: `Bearer ${auth.user.token}`,
           },
         }
       );
-  
+
       if (response.status === 200) {
         toast.success("Item removed from cart");
       } else {
         const responseBody = await response.text();
-        console.error('Error removing item:', responseBody);
+        console.error("Error removing item:", responseBody);
         toast.error("Failed to remove item from cart");
       }
     } catch (error) {
-      console.error('Remove from cart failed:', error.message);
+      console.error("Remove from cart failed:", error.message);
       toast.error("Failed to remove item from cart");
     }
   };
@@ -233,10 +258,10 @@ const ProductDetails = () => {
     try {
       const { data } = await axios.get(
         `/api/v1/carts/users/${auth.user._id}/products/${productId}/quantity`,
-        { 
+        {
           headers: {
-            'Authorization': `Bearer ${auth.user.token}`
-          }
+            Authorization: `Bearer ${auth.user.token}`,
+          },
         }
       );
 
@@ -244,7 +269,7 @@ const ProductDetails = () => {
         const quantity = data.quantity;
         setDisplayQuantity(quantity);
         setShowQuantitySelector(quantity > 0);
-        
+
         const applicableBulk = getApplicableBulkProduct(quantity);
         setSelectedBulk(applicableBulk);
         calculateTotalPrice(applicableBulk, quantity);
@@ -261,15 +286,17 @@ const ProductDetails = () => {
       toast.error("Please log in to manage your wishlist");
       return;
     }
-  
+
     try {
       if (isInWishlist) {
-        await axios.delete(`/api/v1/carts/users/${auth.user._id}/wishlist/${product._id}`);
+        await axios.delete(
+          `/api/v1/carts/users/${auth.user._id}/wishlist/${product._id}`
+        );
         setIsInWishlist(false);
         toast.success("Removed from wishlist");
       } else {
-        await axios.post(`/api/v1/carts/users/${auth.user._id}/wishlist`, { 
-          productId: product._id 
+        await axios.post(`/api/v1/carts/users/${auth.user._id}/wishlist`, {
+          productId: product._id,
         });
         setIsInWishlist(true);
         toast.success("Added to wishlist");
@@ -284,7 +311,9 @@ const ProductDetails = () => {
     if (!auth.user) return;
 
     try {
-      const { data } = await axios.get(`/api/v1/carts/users/${auth.user._id}/wishlist/check/${productId}`);
+      const { data } = await axios.get(
+        `/api/v1/carts/users/${auth.user._id}/wishlist/check/${productId}`
+      );
       setIsInWishlist(data.exists);
     } catch (error) {
       console.error(error);
@@ -292,125 +321,124 @@ const ProductDetails = () => {
     }
   };
 
+  // Styles
+  const containerStyle = {
+    maxWidth: "1200px",
+    margin: "0 auto",
+    padding: "60px",
+    fontFamily: "Arial, sans-serif",
+    backgroundColor: "#f5f5f5",
+    borderRadius: "8px",
+    boxShadow: "0 0 10px rgba(0, 0, 0, 0.1)",
+  };
 
-    // Styles
-    const containerStyle = {
-      maxWidth: '1200px',
-      margin: '0 auto',
-      padding: '50px',
-      fontFamily: 'Arial, sans-serif',
-      backgroundColor: '#f5f5f5',
-      borderRadius: '8px',
-      boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)',
-    };
-  
-    const productDetailStyle = {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '20px',
-      backgroundColor: '#ffffff',
-      borderRadius: '8px',
-      padding: '20px',
-      marginBottom: '20px',
-    };
-  
-    const imageStyle = {
-      flex: '1 1 300px',
-      maxWidth: '500px',
-    };
-  
-    const infoStyle = {
-      flex: '1 1 300px',
-      minWidth: '300px',
-    };
-  
-    const headingStyle = {
-      fontSize: '28px',
-      fontWeight: 'bold',
-      color: '#333',
-      marginBottom: '15px',
-    };
-  
-    const priceStyle = {
-      fontSize: '24px',
-      fontWeight: 'bold',
-      color: '#e47911',
-      marginBottom: '20px',
-    };
-  
-    const strikeThroughStyle = {
-      textDecoration: 'line-through',
-      color: '#888',
-      marginRight: '10px',
-    };
-  
-    const descriptionStyle = {
-      fontSize: '16px',
-      lineHeight: '1.6',
-      color: '#555',
-      marginBottom: '20px',
-      padding: '15px',
-      border: '1px solid #ddd',
-      borderRadius: '8px',
-      backgroundColor: '#f9f9f9',
-    };
-  
-    const quantitySelectorStyle = {
-      display: 'flex',
-      alignItems: 'center',
-      marginBottom: '20px',
-    };
-  
-    const buttonStyle = {
-      padding: '10px 20px',
-      fontSize: '16px',
-      cursor: 'pointer',
-      backgroundColor: '#ffd814',
-      border: 'none',
-      borderRadius: '20px',
-      transition: 'background-color 0.3s',
-    };
-  
-    const addToCartButtonStyle = {
-      ...buttonStyle,
-      backgroundColor: '#ffa41c',
-      color: '#000000',
-      fontWeight: 'bold',
-      width: '100%',
-      marginTop: '20px',
-    };
-  
-    const inputStyle = {
-      width: '50px',
-      textAlign: 'center',
-      margin: '0 10px',
-      padding: '5px',
-      border: '1px solid #ddd',
-      borderRadius: '4px',
-    };
-  
-    const tableStyle = {
-      width: '100%',
-      borderCollapse: 'collapse',
-      marginTop: '20px',
-    };
-  
-    const thTdStyle = {
-      border: '1px solid #ddd',
-      padding: '4px',
-      textAlign: 'left',
-      fontSize: '14px',
-    };
-  
-    if (!product || Object.keys(product).length === 0) {
-      return (
-        <Layout>
-          <div style={containerStyle}>
-            <p>Loading product details...</p>
-          </div>
-        </Layout>
-      );
-    }
+  const productDetailStyle = {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "20px",
+    backgroundColor: "#ffffff",
+    borderRadius: "8px",
+    padding: "20px",
+    marginBottom: "20px",
+  };
+
+  const imageStyle = {
+    flex: "1 1 300px",
+    maxWidth: "500px",
+  };
+
+  const infoStyle = {
+    flex: "1 1 300px",
+    minWidth: "300px",
+  };
+
+  const headingStyle = {
+    fontSize: "28px",
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: "15px",
+  };
+
+  const priceStyle = {
+    fontSize: "24px",
+    fontWeight: "bold",
+    color: "#e47911",
+    marginBottom: "20px",
+  };
+
+  const strikeThroughStyle = {
+    textDecoration: "line-through",
+    color: "#888",
+    marginRight: "10px",
+  };
+
+  const descriptionStyle = {
+    fontSize: "16px",
+    lineHeight: "1.6",
+    color: "#555",
+    marginBottom: "20px",
+    padding: "15px",
+    border: "1px solid #ddd",
+    borderRadius: "8px",
+    backgroundColor: "#f9f9f9",
+  };
+
+  const quantitySelectorStyle = {
+    display: "flex",
+    alignItems: "center",
+    marginBottom: "20px",
+  };
+
+  const buttonStyle = {
+    padding: "10px 20px",
+    fontSize: "16px",
+    cursor: "pointer",
+    backgroundColor: "#ffd814",
+    border: "none",
+    borderRadius: "20px",
+    transition: "background-color 0.3s",
+  };
+
+  const addToCartButtonStyle = {
+    ...buttonStyle,
+    backgroundColor: "#ffa41c",
+    color: "#000000",
+    fontWeight: "bold",
+    width: "100%",
+    marginTop: "20px",
+  };
+
+  const inputStyle = {
+    width: "50px",
+    textAlign: "center",
+    margin: "0 10px",
+    padding: "5px",
+    border: "1px solid #ddd",
+    borderRadius: "4px",
+  };
+
+  const tableStyle = {
+    width: "100%",
+    borderCollapse: "collapse",
+    marginTop: "20px",
+  };
+
+  const thTdStyle = {
+    border: "1px solid #ddd",
+    padding: "4px",
+    textAlign: "left",
+    fontSize: "14px",
+  };
+
+  if (!product || Object.keys(product).length === 0) {
+    return (
+      <Layout>
+        <div style={containerStyle}>
+          <p>Loading product details...</p>
+        </div>
+      </Layout>
+    );
+  }
   return (
     <Layout>
       <div style={containerStyle}>
@@ -422,7 +450,7 @@ const ProductDetails = () => {
               <img
                 src={`/api/v1/product/product-photo/${product._id}`}
                 alt={product.name}
-                style={{ width: '100%', height: 'auto', borderRadius: '8px' }}
+                style={{ width: "100%", height: "auto", borderRadius: "8px" }}
               />
             ) : (
               <p>Loading product image...</p>
@@ -431,175 +459,272 @@ const ProductDetails = () => {
           <div style={infoStyle}>
             <h1 style={headingStyle}>{product.name}</h1>
             <div style={priceStyle}>
-              <span style={strikeThroughStyle}>₹{product.mrp}</span>
-              ₹{product.perPiecePrice}
+              <span style={strikeThroughStyle}>₹{product.mrp}</span>₹
+              {product.perPiecePrice}
             </div>
-            <p style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-  <span>Total Price: ₹{totalPrice.toFixed(2)}</span>
-  
-  <div style={quantitySelectorStyle}>
-    <button onClick={() => handleQuantityChange(false)} style={buttonStyle}>-</button>
-    <input
-      type="number"
-      value={displayQuantity}
-      readOnly
-      style={inputStyle}
-    />
-    <button  onClick={() => {
-   if(displayQuantity!=0){ handleQuantityChange(true);}
-   if(displayQuantity==0) {addToCart(); }// Replace with your second function
-  }} style={buttonStyle}>+</button>
-  </div>
-  
-</p>
-
-        {
-          <button
-              onClick={toggleWishlist}
+            <p
               style={{
-                ...buttonStyle,
-                backgroundColor: isInWishlist ? '#e47911' : '#f0c14b',
-                color: isInWishlist ? '#ffffff' : '#111111',
-                marginTop: '10px',
-                width: '100%'
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
               }}
             >
-              {isInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
-            </button>}
+              <span>Total Price: ₹{totalPrice.toFixed(2)}</span>
+
+              <div style={quantitySelectorStyle}>
+                <button
+                  onClick={() => handleQuantityChange(false)}
+                  style={buttonStyle}
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  value={displayQuantity}
+                  readOnly
+                  style={inputStyle}
+                />
+                <button
+                  onClick={() => {
+                    if (displayQuantity != 0) {
+                      handleQuantityChange(true);
+                    }
+                    if (displayQuantity == 0) {
+                      addToCart();
+                    } // Replace with your second function
+                  }}
+                  style={buttonStyle}
+                >
+                  +
+                </button>
+              </div>
+            </p>
 
             {
-  !isPincodeAvailable && (
-    <div style={{ textAlign: 'center', marginTop: '10px' }}>
-      <p style={{ color: 'red', fontSize: '16px', marginBottom: '10px' }}>
-        Service is not available in your area or pincode.
-      </p>
-      <a href="https://wa.me/918291541168" target="_blank" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
-            <i className="fab fa-whatsapp" style={{ fontSize: '30px', marginRight: '8px', color: '#25D366' }}></i>
-            <span style={{ color: '#007bff', fontSize: '16px' }}>Contact Support via WhatsApp</span>
-          </a>
-    </div>
-  )
-}
+              <button
+                onClick={toggleWishlist}
+                style={{
+                  ...buttonStyle,
+                  backgroundColor: isInWishlist ? "#e47911" : "#f0c14b",
+                  color: isInWishlist ? "#ffffff" : "#111111",
+                  marginTop: "10px",
+                  width: "100%",
+                }}
+              >
+                {isInWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
+              </button>
+            }
 
-            <h3 style={{ ...headingStyle, fontSize: '20px', marginTop: '20px' }}>Bulk Pricing</h3>
-             {product.bulkProducts && product.bulkProducts.length > 0 ? (
-                <table style={tableStyle}>
-                  <thead>
-                    <tr>
-                      <th style={thTdStyle}>Min Qty</th>
-                      <th style={thTdStyle}>Max Qty</th>
-                      <th style={thTdStyle}>Price/set</th>
-                      <th style={thTdStyle}>Total Price</th>
-                      <th style={thTdStyle}>Select</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {product.bulkProducts.map((bulk, index) => {
-                      if (!bulk || !bulk.minimum || !bulk.selling_price_set) {
-                        return null;
-                      }
-                      
-                      const minQty = bulk.minimum * unitSet;
-                      const maxQty = bulk.maximum ? bulk.maximum * unitSet : 'No limit';
-                      const isSelected = selectedBulk && selectedBulk._id === bulk._id;
-                      return (
-                        <tr key={index} style={{ backgroundColor: isSelected ? '#e6f7ff' : 'transparent' }}>
-                          <td style={thTdStyle}>{minQty}</td>
-                          <td style={thTdStyle}>{maxQty}</td>
-                          <td style={thTdStyle}>₹{parseFloat(bulk.selling_price_set).toFixed(2)}</td>
-                          <td style={thTdStyle}>
-                            {isSelected ? `₹${totalPrice.toFixed(2)}` : '-'}
-                          </td>
-                          <td style={thTdStyle}>
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              readOnly
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              ) : (
-                <p>No bulk pricing available for this product.</p>
-              )}
-                     {
-                    //  showQuantitySelector ? 
-                    //  (
-         
+            {!isPincodeAvailable && (
+              <div style={{ textAlign: "center", marginTop: "10px" }}>
+                <p
+                  style={{
+                    color: "red",
+                    fontSize: "16px",
+                    marginBottom: "10px",
+                  }}
+                >
+                  Service is not available in your area or pincode.
+                </p>
+                <a
+                  href="https://wa.me/918291541168"
+                  target="_blank"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    textDecoration: "none",
+                  }}
+                >
+                  <i
+                    className="fab fa-whatsapp"
+                    style={{
+                      fontSize: "30px",
+                      marginRight: "8px",
+                      color: "#25D366",
+                    }}
+                  ></i>
+                  <span style={{ color: "#007bff", fontSize: "16px" }}>
+                    Contact Support via WhatsApp
+                  </span>
+                </a>
+              </div>
+            )}
+
+            <h3
+              style={{ ...headingStyle, fontSize: "20px", marginTop: "20px" }}
+            >
+              Bulk Pricing
+            </h3>
+            {product.bulkProducts && product.bulkProducts.length > 0 ? (
+              <table style={tableStyle}>
+                <thead>
+                  <tr>
+                    <th style={thTdStyle}>Min Qty</th>
+                    <th style={thTdStyle}>Max Qty</th>
+                    <th style={thTdStyle}>Price/set</th>
+                    <th style={thTdStyle}>Total Price</th>
+                    <th style={thTdStyle}>Select</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {product.bulkProducts.map((bulk, index) => {
+                    if (!bulk || !bulk.minimum || !bulk.selling_price_set) {
+                      return null;
+                    }
+
+                    const minQty = bulk.minimum * unitSet;
+                    const maxQty = bulk.maximum
+                      ? bulk.maximum * unitSet
+                      : "No limit";
+
+                    // Automatic selection logic
+                    const autoSelectCondition =
+                      selectedBulk && selectedBulk._id === bulk._id;
+
+                    return (
+                      <tr
+                        key={index}
+                        style={{
+                          backgroundColor: autoSelectCondition
+                            ? "#e6f7ff"
+                            : "transparent",
+                        }}
+                      >
+                        <td style={thTdStyle}>{minQty}</td>
+                        <td style={thTdStyle}>{maxQty}</td>
+                        <td style={thTdStyle}>
+                          ₹{parseFloat(bulk.selling_price_set).toFixed(2)}
+                        </td>
+                        <td style={thTdStyle}>
+                          {autoSelectCondition
+                            ? `₹${totalPrice.toFixed(2)}`
+                            : "-"}
+                        </td>
+                        <td style={thTdStyle}>
+                          <input
+                            type="checkbox"
+                            checked={autoSelectCondition}
+                            readOnly
+                            disabled
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <p>No bulk pricing available for this product.</p>
+            )}
+            {
+              //  showQuantitySelector ?
+              //  (
               //   <button
-          //     onClick={addToCart}
-          //     disabled={!isPincodeAvailable}
-          //     style={{
-          //       ...addToCartButtonStyle,
-          //       backgroundColor: isPincodeAvailable ? '#ffa41c' : '#ccc',
-          //       cursor: isPincodeAvailable ? 'pointer' : 'not-allowed',
-          //     }}
-          //   >
-          //     ADD TO CART
-          //   </button>
-          // ) 
-          // :
-          
-          // (
-        
-          // )
-          }
-                  
-                  <h3 style={{ ...headingStyle, fontSize: '20px', marginTop: '20px' }}>Description </h3>
+              //     onClick={addToCart}
+              //     disabled={!isPincodeAvailable}
+              //     style={{
+              //       ...addToCartButtonStyle,
+              //       backgroundColor: isPincodeAvailable ? '#ffa41c' : '#ccc',
+              //       cursor: isPincodeAvailable ? 'pointer' : 'not-allowed',
+              //     }}
+              //   >
+              //     ADD TO CART
+              //   </button>
+              // )
+              // :
+              // (
+              // )
+            }
 
-        <p style={{ ...headingStyle, fontSize: '18px', marginTop: '20px'} }>{product.description}</p>
-            </div>
-   
-          
-  
+            <h3
+              style={{ ...headingStyle, fontSize: "20px", marginTop: "20px" }}
+            >
+              Description{" "}
+            </h3>
 
+            <p style={{ ...headingStyle, fontSize: "18px", marginTop: "20px" }}>
+              {product.description}
+            </p>
           </div>
+        </div>
+      </div>
 
-       
+      <div className="container mt-5">
+        <h2 className="text-center mb-4">Products For You</h2>
+        <div className="row">
+        {     console.log("Id",productsForYou.productId)}
+        {productsForYou.map((item) => (
+  <div key={item.productId?._id} className="col-lg-4 col-md-4 col-sm-4 col-6 mb-3">
+    <div className="col-md-10 col-sm-6 col-12 mb-3">
+      {!item.productId ? (
+        <div className="card product-card h-100">
+          <div className="card-body d-flex flex-column">
+            <h5 style={{ fontSize: '0.9rem' }}>Product not available</h5>
+          </div>
+        </div>
+      ) : (
+        <div 
+          className="card product-card h-100" 
+          style={{ cursor: 'pointer', position: 'relative' }} 
+          onClick={() => navigate(`/product/${item.productId.slug}`)}
+        >
+      
+          <img
+            src={`/api/v1/product/product-photo/${item.productId}`}
+            className="card-img-top product-image img-fluid"
+            alt={item.productId.name}
+            style={{ height: '200px', objectFit: 'fill' }}
+          />
+          <div className="p-4 flex flex-col h-full">
+            <h5 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+              {item.productId.name}
+            </h5>
+            <div className="mt-auto">
+              <h5 className="text-base font-bold text-gray-900 dark:text-white">
+                {item.productId.perPiecePrice?.toLocaleString("en-US", {
+                  style: "currency",
+                  currency: "INR",
+                }) || "Price not available"}
+              </h5>
+              {item.productId.mrp && (
+                <h6
+                  className="text-xs text-red-500"
+                  style={{ textDecoration: "line-through" }}
+                >
+                  {item.productId.mrp.toLocaleString("en-US", {
+                    style: "currency",
+                    currency: "INR",
+                  })}
+                </h6>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+))}
+
         </div>
 
-          <div className="container mt-5">
-          <h2 className="text-center mb-4">Products For You</h2>
-          <div className="row">
-  {productsForYou
-    .slice(0, 6)
-    .filter(item => item.productId)
-    .map(item => (
-      <div key={item.productId?._id} className="col-lg-4 col-md-4 col-sm-4 col-6 mb-3"> {/* Three columns on small devices */}
-        <ProductCard product={item.productId} />
-      </div>
-    ))}
-</div>
-
-  {productsForYou.length > 10 && (
-    <div className="text-center mt-3">
-      {/* Optional button for viewing more products */}
-      {/* <button 
+        {productsForYou.length > 10 && (
+          <div className="text-center mt-3">
+            {/* Optional button for viewing more products */}
+            {/* <button 
         className="btn btn-primary"
         onClick={() => navigate('/products-for-you')}
       >
         View More
       </button> */}
-    </div>
-  )}
-</div>
-      
-      
-   
+          </div>
+        )}
+      </div>
     </Layout>
   );
 };
 
 export default ProductDetails;
-
-
-
-
-
-
 
 // const ProductDetails = () => {
 //   const params = useParams();
@@ -661,18 +786,18 @@ export default ProductDetails;
 
 //   const getApplicableBulkProduct = (quantity) => {
 //     if (!product.bulkProducts || product.bulkProducts.length === 0) return null;
-    
+
 //     const sortedBulkProducts = [...product.bulkProducts]
 //       .filter(bulk => bulk && bulk.minimum)
 //       .sort((a, b) => b.minimum - a.minimum);
-    
+
 //     for (let i = 0; i < sortedBulkProducts.length; i++) {
 //       const bulk = sortedBulkProducts[i];
 //       if (quantity >= bulk.minimum * unitSet) {
 //         return bulk;
 //       }
 //     }
-    
+
 //     return null;
 //   };
 
@@ -740,7 +865,6 @@ export default ProductDetails;
 //     }
 //   };
 
-
 // function _handleApiError(message, details) {
 //   console.error(`${message}:`, details);
 // } // Define a replacement for _handleApiError
@@ -748,7 +872,7 @@ export default ProductDetails;
 //   const handleQuantityChange = async (increment) => {
 //     const newQuantity = displayQuantity + (increment ? 1 : -1) * unitSet;
 //     const updatedQuantity = Math.max(0, newQuantity);
-    
+
 //     if (updatedQuantity === 0) {
 //       await removeFromCart(product._id);
 //       return;
@@ -801,15 +925,15 @@ export default ProductDetails;
 //       toast.error("Please log in to manage your wishlist");
 //       return;
 //     }
-  
+
 //     try {
 //       if (isInWishlist) {
 //         await axios.delete(`/api/v1/carts/users/${auth.user._id}/wishlist/${product._id}`);
 //         setIsInWishlist(false);
 //         toast.success("Removed from wishlist");
 //       } else {
-//         await axios.post(`/api/v1/carts/users/${auth.user._id}/wishlist`, { 
-//           productId: product._id 
+//         await axios.post(`/api/v1/carts/users/${auth.user._id}/wishlist`, {
+//           productId: product._id
 //         });
 //         setIsInWishlist(true);
 //         toast.success("Added to wishlist");
@@ -832,10 +956,9 @@ export default ProductDetails;
 //     }
 //   };
 
-
 //   async function removeFromCart(productId) {
 //     if (!auth.user._id) return;
-  
+
 //     try {
 //       const response = await fetch(
 //         `https://greenlife-zybe.onrender.com/api/v1/carts/users/${auth.user._id}/cart/${productId}`,
@@ -846,10 +969,10 @@ export default ProductDetails;
 //           },
 //         }
 //       );
-  
+
 //       if (response.status === 200) {
 //         alert("Item removed from cart"); // Equivalent to Fluttertoast
-  
+
 //         // Call here after removing an item
 //         showQuantitySelector = false;
 //         console.log("false", showQuantitySelector);
@@ -861,8 +984,7 @@ export default ProductDetails;
 //       _handleApiError('Remove from cart failed', error.message);
 //     }
 //   }
-  
-  
+
 //   // Note: Ensure variables like userId, _userData, loading, _orderErrorMessage, and showQuantitySelector are declared and managed appropriately in your component's state or context.
 
 //    // Fetch initial quantity for the product in user's cart
@@ -875,7 +997,7 @@ export default ProductDetails;
 //     try {
 //       const { data } = await axios.get(
 //         `/api/v1/carts/users/${auth.user._id}/products/${productI}/quantity`,
-//         { 
+//         {
 //           headers: {
 //             'Authorization': `Bearer ${auth.user.token}`
 //           }
@@ -885,11 +1007,11 @@ export default ProductDetails;
 //       if (data.quantity) {
 //         const quantity = data.quantity;
 //         setDisplayQuantity(quantity);
-        
+
 //         // Determine applicable bulk pricing
 //         const applicableBulk = getApplicableBulkProduct(quantity);
 //         setSelectedBulk(applicableBulk);
-        
+
 //         // Calculate total price
 //         calculateTotalPrice(applicableBulk, quantity);
 //       }
@@ -1072,7 +1194,7 @@ export default ProductDetails;
 //                       if (!bulk || !bulk.minimum || !bulk.selling_price_set) {
 //                         return null;
 //                       }
-                      
+
 //                       const minQty = bulk.minimum * unitSet;
 //                       const maxQty = bulk.maximum ? bulk.maximum * unitSet : 'No limit';
 //                       const isSelected = selectedBulk && selectedBulk._id === bulk._id;
@@ -1127,7 +1249,6 @@ export default ProductDetails;
 //           </div>
 //         </div>
 
-
 //         <div className="container mt-5">
 //           <h2 className="text-center mb-4">Products For You</h2>
 //           <div className="row">
@@ -1144,7 +1265,7 @@ export default ProductDetails;
 //   {productsForYou.length > 10 && (
 //     <div className="text-center mt-3">
 //       {/* Optional button for viewing more products */}
-//       {/* <button 
+//       {/* <button
 //         className="btn btn-primary"
 //         onClick={() => navigate('/products-for-you')}
 //       >

@@ -138,55 +138,40 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
                 </tr>
               </thead>
               <tbody>
-                {order.products.map((product, index) => (
-                  <tr key={product.id}>
-                    <td>
-                      <div className="d-flex align-items-center">
-                        <img
-                             src={`/api/v1/product/product-photo/${product.product._id}`}
-                          alt={product.name}
-                          style={{
-                            width: "40px",
-                            height: "40px",
-                            objectFit: "cover",
-                            marginRight: "10px",
-                          }}
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = "/path/to/default-image.jpg";
-                          }}
-                        />
-                        {product.product.name}
-                      </div>
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        className="form-control"
-                        value={product.quantity}
-                        onChange={(e) => {
-                          const quantity = parseInt(e.target.value, 10);
-                          updateProductQuantity(index, quantity);
-                        }}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        className="form-control"
-                        value={product.price}
-                        onChange={(e) => {
-                          const price = parseFloat(e.target.value);
-                          updateProductPrice(index, price);
-                        }}
-                      />
-                    </td>
-                    <td>
-                      ₹{(product.price * product.quantity).toFixed(2)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
+  {order.products.map((product, index) => (
+    <tr key={product.id}>
+      <td>
+        <div className="d-flex align-items-center">
+          <img
+            src={`/api/v1/product/product-photo/${product.product._id}`}
+            alt={product.name}
+            style={{
+              width: "40px",
+              height: "40px",
+              objectFit: "cover",
+              marginRight: "10px",
+            }}
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = "/path/to/default-image.jpg";
+            }}
+          />
+          {product.product.name}
+        </div>
+      </td>
+      <td>
+        <span>{product.quantity}</span>
+      </td>
+      <td>
+        <span>₹{product.price.toFixed(2)}</span>
+      </td>
+      <td>
+        ₹{(product.price * product.quantity).toFixed(2)}
+      </td>
+    </tr>
+  ))}
+</tbody>
+
             </table>
 
             <div className="row mt-3">
