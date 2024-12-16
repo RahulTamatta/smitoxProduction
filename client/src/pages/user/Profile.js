@@ -13,7 +13,7 @@ const Profile = () => {
   // State
   const [user_fullname, setName] = useState("");
   const [email_id, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+
   const [mobile_no, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [pincode, setPincode] = useState(""); // New pincode state
@@ -35,7 +35,7 @@ const Profile = () => {
       const { data } = await axios.put("/api/v1/auth/profile", {
         user_fullname,
         email_id,
-        password,
+ 
         mobile_no,
         address,
         pincode, // Send pincode in the request
@@ -87,15 +87,7 @@ const Profile = () => {
                     disabled
                   />
                 </div>
-                <div className="mb-3">
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="form-control"
-                    placeholder="Enter Your Password"
-                  />
-                </div>
+            
                 <div className="mb-3">
                   <input
                     type="text"

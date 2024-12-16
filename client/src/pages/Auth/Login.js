@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState ,useEffect} from "react";
 import Layout from "./../../components/Layout/Layout";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -14,7 +14,65 @@ const Login = () => {
   const [auth, setAuth] = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  useEffect(() => {
+    const storedAuth = localStorage.getItem("auth");
+    if (storedAuth) {
+      const parsedAuth = JSON.parse(storedAuth);
+      setAuth(parsedAuth);
+    }
+  }, []);
 
+  const verifyOTPAndLogin = async () => {
+    try {
+      const res = await axios.post("/api/v1/auth/verify-otp", {
+        sessionId,
+        phoneNumber,
+        otp,
+      });
+  
+      if (res.data.success) {
+        if (res.data.isNewUser) {
+          const authData = {
+            user: res.data.user,
+            token: res.data.token,
+            sessionId: res.data.sessionId || sessionId
+          };
+
+          // Set auth in state
+          setAuth(authData);
+
+          // Store full auth data in localStorage
+          localStorage.setItem("auth", JSON.stringify(authData));
+
+          toast.success(res.data.message);
+          navigate(location.state || "/");
+          // Redirect to registration page if user is new
+          navigate("/register", { state: { phoneNumber } });
+        } else {
+          // Modify how we set auth to include all relevant data
+          const authData = {
+            user: res.data.user,
+            token: res.data.token,
+            sessionId: res.data.sessionId || sessionId
+          };
+
+          // Set auth in state
+          setAuth(authData);
+
+          // Store full auth data in localStorage
+          localStorage.setItem("auth", JSON.stringify(authData));
+
+          toast.success(res.data.message);
+          navigate(location.state || "/");
+        }
+      } else {
+        toast.error(res.data.message);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error("Something went wrong");
+    }
+  }
   const sendOTP = async () => {
     try {
       const response = await axios.post("/api/v1/auth/send-otp", { phoneNumber });
@@ -31,43 +89,7 @@ const Login = () => {
     }
   };
 
-  const verifyOTPAndLogin = async () => {
-    try {
-      const res = await axios.post("/api/v1/auth/verify-otp", {
-        sessionId,
-        phoneNumber,
-        otp,
-      });
 
-      if (res && res.data.success) {
-        toast.success(res.data.message);
-        setAuth({
-          ...auth,
-          user: res.data.user,
-          token: res.data.token,
-        });
-        console.log("user id",res);
-        localStorage.setItem("auth", JSON.stringify(res.data));
-        navigate(location.state || "/");
-      } else {
-        // If user does not exist, navigate to registration
-        if (res.data.message.includes("please register")) {
-          navigate("/register", { state: { phoneNumber } });
-        } else {
-          toast.error(res.data.message);
-        }
-      }
-    } catch (error) {
-      console.log(error);
-      if (error.response && error.response.status === 404) {
-        // User not found, navigate to registration
-        navigate("/register", { state: { phoneNumber } });
-      } else {
-        toast.error("Something went wrong");
-      }
-    }
-  };
-  
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!showOtpInput) {

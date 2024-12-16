@@ -71,9 +71,11 @@ export const verifyOTPAndLoginController = async (req, res) => {
 
       const user = await userModel.findOne({ mobile_no });
       if (!user) {
-        return res.status(404).json({
-          success: false,
+        // Instead of showing an error, just inform the client that the user is new
+        return res.status(200).json({
+          success: true,
           message: "User does not exist, please register",
+          isNewUser: true, // Added this flag to indicate a new user
         });
       }
 
@@ -122,20 +124,23 @@ export const registerController = async (req, res) => {
     email_id, 
     mobile_no, 
     address, 
-    pincode, 
-    answer, 
-    live_product, 
-    credit, 
-    b_form_status 
+    pincode 
   } = req.body;
 
   try {
     // Check if user already exists
-    const existingUser = await userModel.findOne({ email_id });
+    const existingUser = await userModel.findOne({ 
+      $or: [{ email_id }, { mobile_no }] 
+    });
+    
     if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(400).json({ 
+        success: false,
+        message: existingUser.email_id === email_id 
+          ? "Email already exists" 
+          : "Mobile number already exists" 
+      });
     }
-
 
     // Validations
     if (!user_fullname) {
@@ -154,33 +159,46 @@ export const registerController = async (req, res) => {
       return res.status(400).send({ message: "PIN Code is Required" });
     }
 
-
-
     // Check pincode and create if necessary
     let existingPincode = await Pincode.findOne({ code: pincode });
     if (!existingPincode) {
       existingPincode = await new Pincode({ code: pincode, isAvailable: true }).save();
     }
 
-
-
+    // Create new user
     const newUser = new userModel({
       user_fullname,
       email_id,
       mobile_no,
       address,
       pincode,
-    live_product,
-      credit,
-      b_form_status,
+      role: 0, // Default role for new users
+    
     });
 
+    // Save the new user
     await newUser.save();
 
-    // Send success response
+    // Generate JWT token
+    const token = JWT.sign({ _id: newUser._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    // Send success response with user details and token
     res.status(201).json({
       success: true,
       message: "User registered successfully",
+      user: {
+        _id: newUser._id,
+        user_fullname: newUser.user_fullname,
+        email_id: newUser.email_id,
+        mobile_no: newUser.mobile_no,
+        address: newUser.address,
+      
+        pincode: newUser.pincode,
+
+      },
+      token,
     });
 
   } catch (error) {
@@ -188,9 +206,11 @@ export const registerController = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Registration failed. Try again later.",
+      error: error.message
     });
   }
 };
+
 
 // Login with email_id and password
 export const loginController = async (req, res) => {

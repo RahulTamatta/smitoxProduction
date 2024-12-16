@@ -8,11 +8,15 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
   const [order, setOrder] = useState(selectedOrder);
 
   const calculateSubtotal = () => {
-    return order.products.reduce(
-      (total, product) => total + product.price * product.quantity,
-      0
-    );
-  };
+    const subtotal = order.products.reduce((total, product) => {
+      console.log(`Product: ${product.name}, Price: ${product.price}, Quantity: ${product.quantity}`);
+      return total + product.price * product.quantity;
+    }, 0);
+  
+    console.log(`Calculated Subtotal: ₹${subtotal}`);
+    return subtotal;
+};
+  
 
   const calculateGST = () => {
     return order.products.reduce(
@@ -62,55 +66,7 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
     onUpdateOrder(order);
     onClose();
   };
-  // const renderStatusButtons = () => {
-  //   switch (order.status) {
-  //     case 'Pending':
-  //       return (
-  //         <div className="status-buttons">
-  //           <button 
-  //             className="btn btn-primary me-2"
-  //             onClick={() => updateOrderStatus('Confirmed')}
-  //           >
-  //             Confirm
-  //           </button>
-  //           <button 
-  //             className="btn btn-danger"
-  //             onClick={() => updateOrderStatus('Cancelled')}
-  //           >
-  //             Cancel
-  //           </button>
-  //         </div>
-  //       );
-  //     case 'Confirmed':
-  //       return (
-  //         <button 
-  //           className="btn btn-success"
-  //           onClick={() => updateOrderStatus('Accepted')}
-  //         >
-  //           Accept
-  //         </button>
-  //       );
-  //     case 'Dispatched':
-  //       return (
-  //         <div className="status-buttons">
-  //           <button 
-  //             className="btn btn-primary me-2"
-  //             onClick={() => updateOrderStatus('Delivered')}
-  //           >
-  //             Delivered
-  //           </button>
-  //           <button 
-  //             className="btn btn-warning"
-  //             onClick={() => updateOrderStatus('Returned')}
-  //           >
-  //             RTO
-  //           </button>
-  //         </div>
-  //       );
-  //     default:
-  //       return null;
-  //   }
-  // };
+
   return (
     <div className="modal" tabIndex="-1" style={{ display: "block" }}>
       <div className="modal-dialog modal-lg">
@@ -163,7 +119,7 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
         <span>{product.quantity}</span>
       </td>
       <td>
-        <span>₹{product.price.toFixed(2)}</span>
+        <span>₹{product.price}</span>
       </td>
       <td>
         ₹{(product.price * product.quantity).toFixed(2)}
@@ -224,6 +180,7 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
 const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [auth] = useAuth();
+const [selectedOrder, setSelectedOrder] = useState(null);
 
   useEffect(() => {
     // Fetch orders only when auth.user._id is available
@@ -249,8 +206,7 @@ const Orders = () => {
       console.error("Error fetching orders:", error);
     }
   };
-  const [selectedOrder, setSelectedOrder] = useState(null);
-
+  
   const navigateToOrderDetails = (order) => {
     setSelectedOrder(order);
   };
@@ -292,47 +248,25 @@ const Orders = () => {
                         <tr>
                           <th scope="col">#</th>
                           <th scope="col">Status</th>
-                          <th scope="col">Buyer</th>
+                          <th scope="col">Order Id</th>
                           <th scope="col">Date</th>
-                          <th scope="col">Payment</th>
-                          <th scope="col">Total Products</th>
+                          <th scope="col">Payment Method</th>
+                          <th scope="col">Quantity</th>
+                     
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
                           <td>{i + 1}</td>
                           <td>{o?.status || "Unknown"}</td>
-                          <td>{o?.buyer?.user_fullname || "N/A"}</td>
+                          <td>{o?._id || "N/A"}</td>
                           <td>{o?.createdAt ? moment(o.createdAt).format("YYYY-MM-DD") : "N/A"}</td>
                           <td>{o?.payment?.paymentMethod || "Unknown"}</td>
                           <td>{o?.products?.length || 0}</td>
                         </tr>
                       </tbody>
                     </table>
-                    <div className="container">
-                      {o?.products?.map((p, j) => (
-                        <div
-                          className="row mb-2 p-3 card flex-row"
-                          key={p?.product?._id || j}
-                        >
-                          <div className="col-md-4">
-                            <img
-                              src={`/api/v1/product/product-photo/${p?.product?._id}`}
-                              className="card-img-top"
-                              alt={p?.product?.name || "Product"}
-                              width="100px"
-                              height="100px"
-                            />
-                          </div>
-                          <div className="col-md-8">
-                            <p>Product Name: {p?.product?.name || "N/A"}</p>
-                            {/* <p>Price per Unit: ₹{p?.product?.price || "0.00"}</p> */}
-                            <p>Quantity: {p?.quantity || 0}</p>
-                            {/* <p>Total Amount: ₹{p?.price || "0.00"}</p> */}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                   
                   </div>
                 ))
             )}

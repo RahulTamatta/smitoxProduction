@@ -5,6 +5,12 @@ export const createCategoryController = async (req, res) => {
   try {
     const { name, photo } = req.body;
     console.log("request body", req.body);
+    if (photo && photo.length > 5 * 1024 * 1024) { // 5MB limit
+      return res.status(400).send({
+        success: false,
+        message: "Image size too large. Maximum 5MB allowed."
+      });
+    }
     
     if (!name) {
       return res.status(401).send({ message: "Name is required" });

@@ -20,6 +20,7 @@ const ProductDetails = () => {
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [cart, setCart] = useCart();
   const [unitSet, setUnitSet] = useState(1);
+  const [quantity, setQuantity] = useState(1);
   const [displayQuantity, setDisplayQuantity] = useState(0);
   const [showQuantitySelector, setShowQuantitySelector] = useState(false);
   const [productIds, setProductId] = useState();
@@ -62,6 +63,7 @@ const ProductDetails = () => {
       console.log("PProduct",data);
       getProductsForYou();
       setUnitSet(data?.product?.unitSet || 1);
+      setQuantity(data?.product?.quantity || 1);
     
     } catch (error) {
       console.error(error);
@@ -124,7 +126,7 @@ const ProductDetails = () => {
     // }
 
     try {
-      const initialQuantity = unitSet;
+      const initialQuantity = unitSet*quantity;
       const applicableBulk = getApplicableBulkProduct(initialQuantity);
 
       const response = await axios.post(
@@ -325,7 +327,7 @@ const ProductDetails = () => {
   const containerStyle = {
     maxWidth: "1200px",
     margin: "0 auto",
-    padding: "60px",
+    padding: "120px 0 0 0",
     fontFamily: "Arial, sans-serif",
     backgroundColor: "#f5f5f5",
     borderRadius: "8px",
@@ -657,21 +659,16 @@ const ProductDetails = () => {
         {productsForYou.map((item) => (
   <div key={item.productId?._id} className="col-lg-4 col-md-4 col-sm-4 col-6 mb-3">
     <div className="col-md-10 col-sm-6 col-12 mb-3">
-      {!item.productId ? (
-        <div className="card product-card h-100">
-          <div className="card-body d-flex flex-column">
-            <h5 style={{ fontSize: '0.9rem' }}>Product not available</h5>
-          </div>
-        </div>
-      ) : (
-        <div 
-          className="card product-card h-100" 
-          style={{ cursor: 'pointer', position: 'relative' }} 
-          onClick={() => navigate(`/product/${item.productId.slug}`)}
-        >
+      { (
+     <div
+     className="card product-card h-100"
+     style={{ cursor: 'pointer', position: 'relative' }}
+     onClick={() => window.location.href = `/product/${item.productId.slug}`} // Full reload
+   >
+   
       
           <img
-            src={`/api/v1/product/product-photo/${item.productId}`}
+            src={`/api/v1/product/product-photo/${item.productId._id}`}
             className="card-img-top product-image img-fluid"
             alt={item.productId.name}
             style={{ height: '200px', objectFit: 'fill' }}
@@ -687,15 +684,12 @@ const ProductDetails = () => {
                   currency: "INR",
                 }) || "Price not available"}
               </h5>
-              {item.productId.mrp && (
+              {item.productId.perPiecePrice && (
                 <h6
                   className="text-xs text-red-500"
                   style={{ textDecoration: "line-through" }}
                 >
-                  {item.productId.mrp.toLocaleString("en-US", {
-                    style: "currency",
-                    currency: "INR",
-                  })}
+            
                 </h6>
               )}
             </div>

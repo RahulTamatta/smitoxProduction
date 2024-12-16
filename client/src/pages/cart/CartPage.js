@@ -266,7 +266,7 @@ const CartPage = () => {
 
   return (
     <Layout>
-      <div className="cart-page container">
+<div className="cart-page container" style={{ paddingTop: '100px' }}>
         <div className="row">
           <div className="col-12">
             <h1 className="text-center bg-light p-2 mb-1">

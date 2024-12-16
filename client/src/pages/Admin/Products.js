@@ -243,7 +243,7 @@ const Products = () => {
 
                     <td className="border p-2">{p.category?.name || "N/A"}</td>
                     <td className="border p-2">{p.subcategory?.name || "N/A"}</td>
-                    <td className="border p-2">₹{p.price?.toFixed(2)}</td>
+                    <td className="border p-2">₹{p.perPiecePrice?.toFixed(2)}</td>
                     <td className="border p-2">{p.stock || 0}</td>
                     <td className="border p-2">
                       <div className="flex justify-center space-x-2">

@@ -1,11 +1,11 @@
+import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { NavLink, Link } from "react-router-dom";
 import { useAuth } from "../../context/auth";
 import toast from "react-hot-toast";
 import SearchInput from "../Form/SearchInput";
 import { Badge } from "antd";
-import axios from "axios";
-import { HeartOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import { HeartOutlined, ShoppingCartOutlined, HomeOutlined, LoginOutlined } from '@ant-design/icons';
 
 const Header = () => {
   const [auth, setAuth] = useAuth();
@@ -22,7 +22,6 @@ const Header = () => {
       }
     } catch (error) {
       console.error("Error fetching cart count:", error);
-      // toast.error("Error fetching cart count");
     }
   };
 
@@ -35,7 +34,6 @@ const Header = () => {
       }
     } catch (error) {
       console.error("Error fetching wishlist count:", error);
-      // toast.error("Error fetching wishlist count");
     }
   };
 
@@ -44,24 +42,23 @@ const Header = () => {
       setIsMobile(window.innerWidth <= 768);
     };
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
 
-    // Set up real-time updates
     if (auth?.user) {
       fetchCartCount();
       fetchWishlistCount();
 
-      const cartInterval = setInterval(fetchCartCount, 5000); // Update every 5 seconds
+      const cartInterval = setInterval(fetchCartCount, 5000);
       const wishlistInterval = setInterval(fetchWishlistCount, 5000);
 
       return () => {
-        window.removeEventListener('resize', handleResize);
+        window.removeEventListener("resize", handleResize);
         clearInterval(cartInterval);
         clearInterval(wishlistInterval);
       };
     }
 
-    return () => window.removeEventListener('resize', handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, [auth?.user]);
 
   const handleLogout = () => {
@@ -78,32 +75,44 @@ const Header = () => {
 
   return (
     <nav className="navbar navbar-expand bg-body-tertiary fixed-top">
-      <div className="container-fluid">
-        <Link to="/" className="navbar-brand" style={{ fontSize: isMobile ? '1rem' : '1.25rem' }}>
-          Smitox
-        </Link>
-        <div className="d-flex align-items-center">
-          {!isMobile && <SearchInput />}
-          <ul className="navbar-nav ms-auto mb-2 mb-lg-0" style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
+      <div className="container-fluid d-flex align-items-center">
+        <div className="d-flex align-items-center me-4">
+          <Link to="/" className="navbar-brand">
+            <img 
+              src="https://smitox.com/img/logo.png" 
+              alt="Smitox Logo" 
+              style={{ 
+                height: "80px", 
+                maxWidth: "100%",
+                objectFit: "contain"
+              }} 
+            />
+          </Link>
+        </div>
+        
+        <div className="flex-grow-1 me-4">
+          <SearchInput />
+        </div>
+        
+        <div className="d-flex">
+          <ul 
+            className="navbar-nav ms-auto mb-2 mb-lg-0" 
+            style={{ fontSize: isMobile ? "0.875rem" : "1rem" }}
+          >
             <li className="nav-item">
-              <NavLink to="/" className="nav-link">
+              <NavLink to="/" className="nav-link d-flex align-items-center">
+                <HomeOutlined style={{ marginRight: "5px", color: "white" }} />
                 Home
               </NavLink>
             </li>
 
             {!auth?.user ? (
-              <>
-                <li className="nav-item">
-                  <NavLink to="/register" className="nav-link">
-                    Register
-                  </NavLink>
-                </li>
-                <li className="nav-item">
-                  <NavLink to="/login" className="nav-link">
-                    Login
-                  </NavLink>
-                </li>
-              </>
+              <li className="nav-item">
+                <NavLink to="/login" className="nav-link d-flex align-items-center">
+                  <LoginOutlined style={{ marginRight: "5px", color: "white" }} />
+                  Login
+                </NavLink>
+              </li>
             ) : (
               <li className="nav-item dropdown">
                 <NavLink
@@ -111,7 +120,7 @@ const Header = () => {
                   href="#"
                   role="button"
                   data-bs-toggle="dropdown"
-                  style={{ border: "none" }}
+                  style={{ border: "none", color: "white" }}
                 >
                   {auth?.user?.user_fullname}
                 </NavLink>
@@ -137,17 +146,19 @@ const Header = () => {
               </li>
             )}
             <li className="nav-item">
-              <NavLink to="/wishlist" className="nav-link">
+              <NavLink to="/wishlist" className="nav-link d-flex align-items-center">
                 <Badge count={wishlistCount} showZero offset={[10, -5]}>
-                  <HeartOutlined />
+                  <HeartOutlined style={{ marginRight: "5px", color: "white", fontSize: "18px" }} />
                 </Badge>
+                Wishlist
               </NavLink>
             </li>
             <li className="nav-item">
-              <NavLink to="/cart" className="nav-link">
+              <NavLink to="/cart" className="nav-link d-flex align-items-center">
                 <Badge count={cartCount} showZero offset={[10, -5]}>
-                  <ShoppingCartOutlined />
+                  <ShoppingCartOutlined style={{ marginRight: "5px", color: "white", fontSize: "18px" }} />
                 </Badge>
+                Cart
               </NavLink>
             </li>
           </ul>

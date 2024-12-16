@@ -50,7 +50,8 @@ const Policy = () => {
 
   return (
     <Layout title={"Privacy Policy"}>
-      <div className="row contactus">
+      <div className="row contactus" style={{ position: "relative", width: "100%",   padding: "100px 25px", }}>
+        
         <div className="col-md-6">
           <img
             src="/images/contactus.jpeg"
@@ -59,23 +60,11 @@ const Policy = () => {
           />
         </div>
         <div className="col-md-4" style={{ maxHeight: "400px", overflowY: "auto",padding:"40px" }}>
+        <h1 className="bg-dark p-2 text-white text-center">Privacy Policy</h1>
           {privacyPolicyContent.map((paragraph, index) => (
             <p key={index}>{paragraph}</p>
           ))}
-          {!expanded && (
-            <p>
-              <button className="btn btn-link" onClick={toggleExpanded}>
-                Read More
-              </button>
-            </p>
-          )}
-          {expanded && (
-            <p>
-              <button className="btn btn-link" onClick={toggleExpanded}>
-                Show Less
-              </button>
-            </p>
-          )}
+     
         </div>
       </div>
     </Layout>

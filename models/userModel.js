@@ -4,15 +4,12 @@ const userSchema = new mongoose.Schema(
   {
     user_id: { 
       type: String, 
-      // required: true 
     },
     user_fullname: { 
       type: String, 
-      // required: true 
     },
     email_id: {  // changed from 'email' to 'email_id'
       type: String, 
-      // required: true,
       unique: true 
     },
     mobile_no: {  // changed from 'phone' to 'mobile_no'
@@ -42,23 +39,6 @@ const userSchema = new mongoose.Schema(
     flag: { 
       type: Number, 
       default: 0  // 0: active, 1: blocked
-    },
-    live_product: { 
-      type: Boolean, 
-      default: false 
-    },
-    credit: { 
-      type: Number, 
-      default: 0 
-    },
-    order_type: { 
-      type: String, 
-      default: "1", 
-      enum: ["", "all", "cod", "online", "0"]  // based on example provided
-    },
-    b_form_status: { 
-      type: Number, 
-      default: 0  // KYC related
     },
     products: [{ 
       type: mongoose.ObjectId, 
@@ -147,8 +127,7 @@ const userSchema = new mongoose.Schema(
       type: Number, 
       default: 0, 
       required: false, // Not required to allow null
-    }
-,    
+    },
     commission_wallet: {  // added based on example
       type: Number, 
       default: 0 
@@ -164,5 +143,6 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
 
 export default mongoose.model("User", userSchema);

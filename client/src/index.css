@@ -16,32 +16,41 @@
   line-height: 26px;
   text-transform: uppercase;
   box-shadow: 0 8px 6px -6px gray;
-  --webkit-box-shadow: 0 8px 6px -6px gray;
+  -webkit-box-shadow: 0 8px 6px -6px gray;
   border-bottom: solid gray !important;
-}
-
-.nav-link {
-  font-weight: 300 !important;
-}
-
-.active {
-  border-bottom: 2px solid red;
+  background-color: #d32f2f !important; /* Red background */
 }
 
 .navbar-brand {
   font-weight: 700;
-  font-family: "roboto", sans-serif;
+  font-family: "Playfair Display", serif; /* Consistent with the theme */
   letter-spacing: 3px;
+  color: white !important;
+}
+
+.nav-link {
+  font-weight: 300 !important;
+  color: white !important; /* White text */
+}
+
+.nav-link:hover {
+  color: #f0f0f0 !important; /* Lighter white on hover */
+}
+
+.active {
+  border-bottom: 2px solid #ffefba; /* Light gold for active link */
 }
 
 .search-form {
   margin-right: 10px;
   margin-top: 4px;
 }
+
 .search-form input {
   border: none;
   border-radius: 0;
 }
+
 .search-form button {
   background-color: #000000;
   border-radius: 0;
@@ -99,6 +108,7 @@
   padding: 10px;
   margin-top: 10px;
 }
+
 .pnf-btn:hover {
   background-color: black;
   color: white;
@@ -125,6 +135,7 @@
   font-size: 24px;
   text-transform: uppercase;
 }
+
 .cat-btn:hover {
   background-color: #434343;
   color: white;

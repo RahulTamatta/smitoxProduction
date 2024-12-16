@@ -201,16 +201,97 @@ const HomePage = () => {
     ]
   };
 
-  const bannerSettings = {
-    dots: true,
-    infinite: true,
-    speed: 500,
-    slidesToShow: 1,
-    slidesToScroll: 1,
-    autoplay: true,
-    autoplaySpeed: 3000,
-  };
+  const [currentSlide, setCurrentSlide] = useState(0);
 
+const bannerSettings = {
+  dots: true,
+  infinite: true,
+  speed: 500,
+  slidesToShow: 1,
+  slidesToScroll: 1,
+  autoplay: true,
+  autoplaySpeed: 2000,
+  beforeChange: (_, next) => setCurrentSlide(next),
+  nextArrow: (
+    <button
+      type="button"
+      style={{
+        position: 'absolute',
+        right: '30px', // Adjusted to account for container padding
+        top: '50%',
+        transform: 'translateY(-50%)',
+        width: '40px',
+        height: '40px',
+        backgroundColor: '#f0f0f0',
+        borderRadius: '50%',
+        border: '1px solid #e0e0e0',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        cursor: 'pointer',
+        zIndex: 2, // Increased z-index
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#666',
+        transition: 'all 0.3s ease'
+      }}
+    >
+      <span style={{ fontSize: '24px', fontWeight: 'bold' }}>&rsaquo;</span>
+    </button>
+  ),
+  prevArrow: (
+    <button
+      type="button"
+      style={{
+        position: 'absolute',
+        left: '30px', // Adjusted to account for container padding
+        top: '50%',
+        transform: 'translateY(-50%)',
+        width: '40px',
+        height: '40px',
+        backgroundColor: '#f0f0f0',
+        borderRadius: '50%',
+        border: '1px solid #e0e0e0',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        cursor: 'pointer',
+        zIndex: 2, // Increased z-index
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#666',
+        transition: 'all 0.3s ease'
+      }}
+    >
+      <span style={{ fontSize: '24px', fontWeight: 'bold' }}>&lsaquo;</span>
+    </button>
+  ),
+  appendDots: dots => (
+    <div
+      style={{
+        position: 'absolute',
+        bottom: '10px',
+        width: '100%',
+        display: 'flex',
+        justifyContent: 'center',
+        gap: '5px',
+        zIndex: 2 // Increased z-index
+      }}
+    >
+      {dots}
+    </div>
+  ),
+  customPaging: i => (
+    <div
+      style={{
+        width: '8px',
+        height: '8px',
+        backgroundColor: currentSlide === i ? '#fff' : 'rgba(255,255,255,0.5)',
+        borderRadius: '50%',
+        transition: 'all 0.3s ease'
+      }}
+    />
+  )
+};
+  
   if (isBlocked) {
     return (
       <Layout title="Account Blocked">
@@ -224,29 +305,61 @@ const HomePage = () => {
 
   return (
     <Layout title={"All Products - Best offers"}>
-    <div style={{mobileSearchStyle,padding:'80px 0px'}}>
+    <div style={{mobileSearchStyle,padding:'55px 0px'}}>
     {isMobile && (
-        <div style={{ padding: "20px 0px" }}>
+        <div style={{ padding: "2px 0px" }}>
           <SearchInput style={{ paddingTop: '1000px' }} />
         </div>
       )}
 </div>
 
-      <div className="banner-container" style={{ height: '300px', overflow: 'hidden', marginTop: isMobile ? '10px' : '0' }}>
-        <Slider {...bannerSettings}>
-          {banners.map((banner) => (
-            <div key={banner._id} onClick={() => handleBannerClick(banner)} style={{cursor: 'pointer'}}>
-              <img
-                src={`/api/v1/bannerManagement/single-banner/${banner._id}`}
-                alt={banner.bannerName}
-                className="banner-image"
-                style={{ width: '100%', height: '300px', objectFit: 'cover' }}
-              />
-            </div>
-          ))}
-        </Slider>
+<div
+  className="banner-container"
+  style={{
+    height: '300px',
+    overflow: 'hidden',
+    marginTop: isMobile ? '10px' : '0',
+    padding: '0 0px',
+    position: 'relative'  // Added this
+  }}
+>
+  <Slider {...bannerSettings}>
+    {banners.map((banner) => (
+      <div
+        key={banner._id}
+        onClick={() => handleBannerClick(banner)}
+        style={{ cursor: 'pointer' }}
+      >
+        <img
+          src={`/api/v1/bannerManagement/single-banner/${banner._id}`}
+          alt={banner.bannerName}
+          className="banner-image"
+          style={{
+            width: '100%',
+            height: '300px',
+            objectFit: 'cover',
+            borderRadius: '20px',
+          }}
+        />
       </div>
-
+    ))}
+  </Slider>
+  <div
+    style={{
+      position: 'absolute',
+      bottom: '20px',
+      right: '40px',
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      color: 'white',
+      padding: '4px 8px',
+      borderRadius: '12px',
+      fontSize: '12px',
+      zIndex: 1
+    }}
+  >
+    {currentSlide + 1} / {banners.length}
+  </div>
+</div>
       <div className="container-fluid mt-3">
         <h2 className="text-center">Categories</h2>
         <Slider {...settings}>

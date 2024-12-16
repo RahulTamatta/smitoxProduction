@@ -7,6 +7,8 @@ import { Select } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 const { Option } = Select;
 
+
+
 const UpdateProduct = () => {
   const navigate = useNavigate();
   const params = useParams();
@@ -22,8 +24,9 @@ const UpdateProduct = () => {
   const [subcategory, setSubcategory] = useState("");
   const [brand, setBrand] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [shipping, setShipping] = useState("");
-  const [photo, setPhoto] = useState("");
+  const [shipping, setShipping] = useState(false);
+  const [photo, setPhoto] = useState(null);
+  const [images, setImages] = useState([]); // Added for multiple images
   const [id, setId] = useState("");
   const [hsn, setHsn] = useState("");
   const [unit, setUnit] = useState("");
@@ -31,10 +34,11 @@ const UpdateProduct = () => {
   const [purchaseRate, setPurchaseRate] = useState("");
   const [mrp, setMrp] = useState("");
   const [perPiecePrice, setPerPiecePrice] = useState("");
+  const [totalsetPrice, setTotalsetPrice] = useState("");
   const [weight, setWeight] = useState("");
   const [stock, setStock] = useState("");
   const [gst, setGst] = useState("");
-  const [additionalUnit, setAdditionalUnit] = useState("");
+  const [additionalUnit, setAdditionalUnit] = useState("Unit A");
   const [sku, setSku] = useState("");
   const [fk_tags, setFkTags] = useState("");
   const [bulkProducts, setBulkProducts] = useState([
@@ -52,7 +56,7 @@ const UpdateProduct = () => {
         setDescription(product.description || "");
         setPrice(product.price || "");
         setQuantity(product.quantity || "");
-        setShipping(product.shipping || "");
+        setShipping(product.shipping || false);
         setCategory(product.category?._id || "");
         setSubcategory(product.subcategory?._id || "");
         setBrand(product.brand?._id || "");
@@ -62,10 +66,11 @@ const UpdateProduct = () => {
         setPurchaseRate(product.purchaseRate || "");
         setMrp(product.mrp || "");
         setPerPiecePrice(product.perPiecePrice || "");
+        setTotalsetPrice(product.totalsetPrice || "");
         setWeight(product.weight || "");
         setStock(product.stock || "");
         setGst(product.gst || "");
-        setAdditionalUnit(product.additionalUnit || "");
+        setAdditionalUnit(product.additionalUnit || "Unit A");
         setSku(product.sku || "");
         setFkTags(product.fk_tags ? product.fk_tags.join(", ") : "");
         setBulkProducts(product.bulkProducts || [{ minimum: "", maximum: "", discount_mrp: "", selling_price_set: "" }]);
@@ -77,7 +82,7 @@ const UpdateProduct = () => {
   };
 
   // Get all categories
-  const getAllCategory = async () => {
+  const getAllCategories = async () => {
     try {
       const { data } = await axios.get("/api/v1/category/get-category");
       if (data?.success) {
@@ -117,42 +122,96 @@ const UpdateProduct = () => {
 
   useEffect(() => {
     getSingleProduct();
-    getAllCategory();
+    getAllCategories();
     getAllBrands();
     getSubcategories();
   }, []);
 
+  // Handle category change
+  const handleCategoryChange = (value) => {
+    setCategory(value);
+    setSubcategory("");
+    setBrand("");
+
+    const filteredSubcategories = subcategories.filter(
+      (subcat) => subcat.category === value
+    );
+    setSubcategories(filteredSubcategories);
+  };
+
   // Handle bulk product changes
-  const handleBulkProductChange = (index, e) => {
+  const handleChange = (index, e) => {
     const { name, value } = e.target;
-    const updatedBulkProducts = [...bulkProducts];
-    updatedBulkProducts[index] = {
-      ...updatedBulkProducts[index],
-      [name]: value
-    };
-  
-    if (name === "discount_mrp") {
-      const discountPercentage = parseFloat(value) / 100;
-      const setPrice = parseFloat(price);
-      const netWeightValue = parseFloat(unitSet);
-      const discountedPrice = setPrice * (1 - discountPercentage);
-      updatedBulkProducts[index].selling_price_set = (
-        discountedPrice * netWeightValue
-      ).toFixed(2);
+    const list = [...bulkProducts];
+    list[index][name] = value;
+
+    if (name === "maximum" && index < list.length - 1) {
+      list[index + 1].minimum = (parseInt(value) + 1).toString();
     }
-  
-    setBulkProducts(updatedBulkProducts);
+
+    const netWeight = parseFloat(unitSet);
+    list[index].minNetWeight = (parseFloat(list[index].minimum) * netWeight).toFixed(2);
+    list[index].maxNetWeight = (parseFloat(list[index].maximum) * netWeight).toFixed(2);
+
+    if (name === "discount_mrp") {
+      const setPrice = parseFloat(perPiecePrice);
+      const totalPrice = setPrice;
+      const discountAmount = parseFloat(value);
+      list[index].selling_price_set = (totalPrice - discountAmount).toFixed(2);
+    }
+
+    setBulkProducts(list);
   };
 
   // Add bulk product row
-  const handleAddBulkProduct = () => {
-    setBulkProducts([...bulkProducts, { minimum: "", maximum: "", discount_mrp: "", selling_price_set: "" }]);
+  const handleAddRow = () => {
+    const lastRow = bulkProducts[bulkProducts.length - 1];
+    const newMinimum =
+      lastRow && lastRow.maximum
+        ? (parseInt(lastRow.maximum) + 1).toString()
+        : "";
+
+    setBulkProducts([
+      ...bulkProducts,
+      {
+        minimum: newMinimum,
+        maximum: "",
+        discount_mrp: "",
+        selling_price_set: "",
+      },
+    ]);
   };
 
+  
   // Remove bulk product row
-  const handleRemoveBulkProduct = (index) => {
-    const updatedBulkProducts = bulkProducts.filter((_, i) => i !== index);
+  const handleRemoveRow = (index) => {
+    const list = [...bulkProducts];
+    list.splice(index, 1);
+    setBulkProducts(list);
+  };
+
+  const handlePerPiecePriceChange = (e) => {
+    const newPerPiecePrice = e.target.value;
+    setPerPiecePrice(newPerPiecePrice);
+    
+    // Calculate new set price
+    const newSetPrice = (parseFloat(newPerPiecePrice) * parseFloat(unitSet)).toFixed(2);
+    setPrice(newSetPrice);
+    
+    // Update selling price for all bulk products
+    const updatedBulkProducts = bulkProducts.map(product => {
+      const discountAmount = parseFloat(product.discount_mrp) || 0;
+      return {
+        ...product,
+        selling_price_set: (parseFloat(newPerPiecePrice) - discountAmount).toFixed(2)
+      };
+    });
+    
     setBulkProducts(updatedBulkProducts);
+  };
+  // Handle FK Tags change
+  const handleFkTagsChange = (e) => {
+    setFkTags(e.target.value);
   };
 
   // Update product function
@@ -160,8 +219,6 @@ const UpdateProduct = () => {
     e.preventDefault();
     try {
       const productData = new FormData();
-      
-      // Append all fields only if they have values or are being updated
       productData.append("name", name);
       productData.append("description", description);
       productData.append("price", price);
@@ -169,35 +226,46 @@ const UpdateProduct = () => {
       productData.append("category", category);
       productData.append("subcategory", subcategory);
       productData.append("brand", brand);
-      productData.append("shipping", shipping);
+      productData.append("shipping", shipping ? "1" : "0");
       
-      if (hsn !== undefined) productData.append("hsn", hsn);
-      if (unit !== undefined) productData.append("unit", unit);
-      if (unitSet !== undefined) productData.append("unitSet", unitSet);
-      if (purchaseRate !== undefined) productData.append("purchaseRate", purchaseRate);
-      if (mrp !== undefined) productData.append("mrp", mrp);
-      if (perPiecePrice !== undefined) productData.append("perPiecePrice", perPiecePrice);
-      if (weight !== undefined) productData.append("weight", weight);
-      if (stock !== undefined) productData.append("stock", stock);
-      if (gst !== undefined) productData.append("gst", gst);
-      if (additionalUnit !== undefined) productData.append("additionalUnit", additionalUnit);
-      if (sku !== undefined) productData.append("sku", sku);
-      
+      // Append additional fields
+      productData.append("hsn", hsn);
+      productData.append("unit", unit);
+      productData.append("unitSet", unitSet);
+      productData.append("purchaseRate", purchaseRate);
+      productData.append("mrp", mrp);
+      productData.append("perPiecePrice", perPiecePrice);
+      productData.append("totalsetPrice", totalsetPrice);
+      productData.append("weight", weight);
+      productData.append("stock", stock);
+      productData.append("gst", gst);
+      productData.append("additionalUnit", additionalUnit);
+      productData.append("sku", sku);
+
+      // Handle FK Tags
       const fkTagsArray = fk_tags.split(',').map(tag => tag.trim()).filter(tag => tag !== "");
       productData.append("fk_tags", JSON.stringify(fkTagsArray));
-      
+
       // Handle bulk products
       productData.append("bulkProducts", JSON.stringify(bulkProducts));
-      
+
+      // Handle photo upload
       if (photo) {
         productData.append("photo", photo);
       }
-  
+
+      // Handle multiple images
+      if (images.length > 0) {
+        images.forEach((image) => {
+          productData.append("images", image);
+        });
+      }
+
       const { data } = await axios.put(
         `/api/v1/product/update-product/${id}`,
         productData
       );
-  
+
       if (data?.success) {
         toast.success("Product Updated Successfully");
         navigate("/dashboard/admin/products");
@@ -226,7 +294,7 @@ const UpdateProduct = () => {
 
   return (
     <Layout title={"Dashboard - Update Product"}>
-      <div className="container-fluid m-3 p-3">
+      <div className="container-fluid m-3 p-3 dashboard">
         <div className="row">
           <div className="col-md-3">
             <AdminMenu />
@@ -234,63 +302,87 @@ const UpdateProduct = () => {
           <div className="col-md-9">
             <h1>Update Product</h1>
             <div className="m-1 w-75">
-              <h4>Category</h4>
-              <Select
-                bordered={false}
-                placeholder="Select a category"
-                size="large"
-                showSearch
-                className="form-select mb-3"
-                onChange={(value) => setCategory(value)}
-                value={category}
-              >
-                {categories?.map((c) => (
-                  <Option key={c._id} value={c._id}>
-                    {c.name}
-                  </Option>
-                ))}
-              </Select>
-
-              <h4>Brand</h4>
-              <Select
-                bordered={false}
-                placeholder="Select a brand"
-                size="large"
-                showSearch
-                className="form-select mb-3"
-                onChange={(value) => setBrand(value)}
-                value={brand}
-              >
-                {brands?.map((b) => (
-                  <Option key={b._id} value={b._id}>
-                    {b.name}
-                  </Option>
-                ))}
-              </Select>
-
-              <h4>Subcategory</h4>
-              <Select
-                bordered={false}
-                placeholder="Select a subcategory"
-                size="large"
-                showSearch
-                className="form-select mb-3"
-                onChange={(value) => setSubcategory(value)}
-                value={subcategory}
-              >
-                {subcategories?.map((sc) => (
-                  <Option key={sc._id} value={sc._id}>
-                    {sc.name}
-                  </Option>
-                ))}
-              </Select>
-
-              {/* Rest of your form fields remain the same */}
-              {/* ... Photo upload section ... */}
+              {/* Category dropdown */}
               <div className="mb-3">
-                <label className="btn btn-outline-secondary col-md-12">
+                <label htmlFor="categorySelect" className="form-label">
+                  Category
+                </label>
+                <Select
+                  id="categorySelect"
+                  bordered={false}
+                  placeholder="Select a category"
+                  size="large"
+                  showSearch
+                  className="form-select mb-3"
+                  onChange={handleCategoryChange}
+                  value={category}
+                >
+                  {categories.map((c) => (
+                    <Option key={c._id} value={c._id}>
+                      {c.name}
+                    </Option>
+                  ))}
+                </Select>
+              </div>
+
+              {/* Subcategory dropdown */}
+              <div className="mb-3">
+                <label htmlFor="subcategorySelect" className="form-label">
+                  Subcategory
+                </label>
+                <Select
+                  id="subcategorySelect"
+                  bordered={false}
+                  placeholder="Select a subcategory"
+                  size="large"
+                  showSearch
+                  className="form-select mb-3"
+                  onChange={(value) => setSubcategory(value)}
+                  value={subcategory}
+                >
+                  {subcategories.map((sc) => (
+                    <Option key={sc._id} value={sc._id}>
+                      {sc.name}
+                    </Option>
+                  ))}
+                </Select>
+              </div>
+
+              {/* Brand dropdown */}
+              <div className="mb-3">
+                <label htmlFor="brandSelect" className="form-label">
+                  Brand
+                </label>
+                <Select
+                  id="brandSelect"
+                  bordered={false}
+                  placeholder="Select a brand"
+                  size="large"
+                  showSearch
+                  className="form-select mb-3"
+                  onChange={(value) => setBrand(value)}
+                  value={brand}
+                >
+                  {brands.map((b) => (
+                    <Option key={b._id} value={b._id}>
+                      {b.name}
+                    </Option>
+                  ))}
+                </Select>
+              </div>
+
+              {/* Photo upload */}
+              <div className="mb-3">
+                <label htmlFor="photoUpload" className="form-label">
+                  Product Photo
+                </label>
+                <label
+                  className="btn btn-outline-secondary col-md-12"
+                  htmlFor="photoUpload"
+                >
                   {photo ? photo.name : "Upload Photo"}
                   <input
+                    id="photoUpload"
                     type="file"
                     name="photo"
                     accept="image/*"
@@ -298,11 +390,8 @@ const UpdateProduct = () => {
                     hidden
                   />
                 </label>
-              </div>
-
-              <div className="mb-3">
                 {photo ? (
-                  <div className="text-center">
+                  <div className="text-center mt-2">
                     <img
                       src={URL.createObjectURL(photo)}
                       alt="product_photo"
@@ -324,211 +413,344 @@ const UpdateProduct = () => {
 
               {/* Basic Info Fields */}
               <div className="mb-3">
-                <h4>Product Name</h4>
+                <label htmlFor="productName" className="form-label">
+                  Product Name
+                </label>
                 <input
+                  id="productName"
                   type="text"
                   value={name}
-                  placeholder="Write a name"
+                  placeholder="Enter product name"
                   className="form-control"
                   onChange={(e) => setName(e.target.value)}
                 />
               </div>
 
               <div className="mb-3">
-                <h4>SKU</h4>
+                <label htmlFor="hsnCodeInput" className="form-label">
+                  HSN Code
+                </label>
                 <input
+                  id="hsnCodeInput"
                   type="text"
-                  value={sku}
-                  placeholder="Enter SKU"
+                  value={hsn}
+                  placeholder="Enter HSN code"
                   className="form-control"
-                  onChange={(e) => setSku(e.target.value)}
+                  onChange={(e) => setHsn(e.target.value)}
                 />
               </div>
 
               <div className="mb-3">
-                <h4>FK Tags</h4>
-                <input
-                  type="text"
-                  value={fk_tags}
-                  placeholder="Enter FK tags separated by commas"
-                  className="form-control"
-                  onChange={(e) => setFkTags(e.target.value)}
-                />
-              </div>
-
-              <div className="mb-3">
-                <h4>Description</h4>
+                <label htmlFor="productDescription" className="form-label">
+                  Product Description
+                </label>
                 <textarea
-                  value={description}
-                  placeholder="Write a description"
-                  className="form-control"
-                  onChange={(e) => setDescription(e.target.value)}
-                />
-              </div>
+  id="productDescription"
+  type="text"
+  value={description}
+  placeholder="Enter product description"
+  className="form-control"
+  onChange={(e) => setDescription(e.target.value)}
+/>
+</div>
 
-              {/* Pricing Fields */}
-              <div className="mb-3">
-                <h4>Price</h4>
-                <input
-                  type="number"
-                  value={price}
-                  placeholder="Write a Price"
-                  className="form-control"
-                  onChange={(e) => setPrice(e.target.value)}
-                />
-              </div>
+<div className="row mb-3">
+  <div className="col-md-4">
+    <label htmlFor="sku" className="form-label">
+      SKU
+    </label>
+    <input
+      id="sku"
+      type="text"
+      value={sku}
+      className="form-control"
+      onChange={(e) => setSku(e.target.value)}
+    />
+  </div>
+</div>
 
-              <div className="mb-3">
-                <h4>Purchase Rate</h4>
-                <input
-                  type="number"
-                  value={purchaseRate}
-                  placeholder="Purchase Rate"
-                  className="form-control"
-                  onChange={(e) => setPurchaseRate(e.target.value)}
-                />
-              </div>
+<div className="mb-3">
+  <label className="form-label">FK Tags</label>
+  <input
+    type="text"
+    className="form-control"
+    value={fk_tags}
+    onChange={handleFkTagsChange}
+    placeholder="Enter FK tags separated by commas"
+  />
+  <small className="text-muted">
+    Enter FK tags separated by commas.
+  </small>
+</div>
 
-              <div className="mb-3">
-                <h4>MRP</h4>
-                <input
-                  type="number"
-                  value={mrp}
-                  placeholder="MRP"
-                  className="form-control"
-                  onChange={(e) => setMrp(e.target.value)}
-                />
-              </div>
+<div className="row mb-3">
+  <div className="col-md-4">
+    <label htmlFor="unit" className="form-label">
+      Unit
+    </label>
+    <select
+      id="unit"
+      name="unit"
+      value={unit}
+      className="form-control"
+      onChange={(e) => setUnit(e.target.value)}
+    >
+      <option value="Chart">Chart</option>
+      <option value="Dozens">Dozens</option>
+      <option value="Kg">Kg</option>
+      <option value="Litre">Litre</option>
+      <option value="Meter">Meter</option>
+      <option value="Metric Tons">Metric Tons</option>
+      <option value="Nos.">Nos.</option>
+      <option value="Packet">Packet</option>
+      <option value="Pairs">Pairs</option>
+      <option value="Piece">Piece</option>
+      <option value="Pieces">Pieces</option>
+      <option value="Pounds">Pounds</option>
+      <option value="Quintal">Quintal</option>
+      <option value="Sets">Sets</option>
+      <option value="Tons">Tons</option>
+    </select>
+  </div>
+  <div className="col-md-4">
+    <label htmlFor="unitSet" className="form-label">
+      Net weight
+    </label>
+    <input
+      id="unitSet"
+      type="text"
+      value={unitSet}
+      name="unitSet"
+      placeholder="Enter Net Weight"
+      className="form-control"
+      onChange={(e) => setUnitSet(e.target.value)}
+    />
+  </div>
+  <div className="col-md-4">
+    <label htmlFor="additionalUnit" className="form-label">
+      Additional Unit
+    </label>
+    <select
+      id="additionalUnit"
+      name="additionalUnit"
+      value={additionalUnit}
+      className="form-control"
+      onChange={(e) => setAdditionalUnit(e.target.value)}
+    >
+      <option value="Chart">Chart</option>
+      <option value="Dozens">Dozens</option>
+      <option value="Kg">Kg</option>
+      <option value="Litre">Litre</option>
+      <option value="Meter">Meter</option>
+      <option value="Metric Tons">Metric Tons</option>
+      <option value="Nos.">Nos.</option>
+      <option value="Packet">Packet</option>
+      <option value="Pairs">Pairs</option>
+      <option value="Piece">Piece</option>
+      <option value="Pieces">Pieces</option>
+      <option value="Pounds">Pounds</option>
+      <option value="Quintal">Quintal</option>
+      <option value="Sets">Sets</option>
+      <option value="Tons">Tons</option>
+    </select>
+  </div>
+  <div className="col-md-4">
+    <label htmlFor="purchaseRate" className="form-label">
+      Purchase Rate
+    </label>
+    <input
+      id="purchaseRate"
+      type="text"
+      value={purchaseRate}
+      name="purchaseRate"
+      placeholder="Enter price set"
+      className="form-control"
+      onChange={(e) => setPurchaseRate(e.target.value)}
+    />
+  </div>
+  <div className="col-md-4">
+    <label htmlFor="mrp" className="form-label">
+      MRP
+    </label>
+    <input
+      id="mrp"
+      type="text"
+      value={mrp}
+      name="mrp"
+      placeholder="Enter MRP"
+      className="form-control"
+      onChange={(e) => setMrp(e.target.value)}
+    />
+  </div>
 
-              <div className="mb-3">
-                <h4>Per Piece Price</h4>
-                <input
-                  type="number"
-                  value={perPiecePrice}
-                  placeholder="Per Piece Price"
-                  className="form-control"
-                  onChange={(e) => setPerPiecePrice(e.target.value)}
-                />
-              </div>
+  <div className="col-md-4">
+    <label htmlFor="perPiecePrice" className="form-label">
+      PER PIECE PRICE
+    </label>
+    <input
+      id="perPiecePrice"
+      type="text"
+      value={perPiecePrice}
+      name="perPiecePrice"
+      placeholder="Enter per piece price"
+      className="form-control"
+      onChange={handlePerPiecePriceChange}
+    />
+  </div>
+  <div className="col-md-4">
+    <label htmlFor="price" className="form-label">
+      SET PRICE
+    </label>
+    <input
+      id="price"
+      type="text"
+      value={price}
+      name="price"
+      placeholder="Enter set price"
+      className="form-control"
+      readOnly
+    />
+  </div>
+  <div className="col-md-4">
+    <label htmlFor="weight" className="form-label">
+      WEIGHT
+    </label>
+    <input
+      id="weight"
+      type="text"
+      value={weight}
+      name="weight"
+      placeholder="Enter weight"
+      className="form-control"
+      onChange={(e) => setWeight(e.target.value)}
+    />
+  </div>
+  <div className="col-md-4">
+    <label htmlFor="quantity" className="form-label">
+      MINIMUM QUANTITY
+    </label>
+    <input
+      id="quantity"
+      type="text"
+      value={quantity}
+      name="quantity"
+      placeholder="Enter minimum quantity"
+      className="form-control"
+      onChange={(e) => setQuantity(e.target.value)}
+    />
+  </div>
+  <div className="col-md-4">
+    <label htmlFor="stock" className="form-label">
+      STOCK
+    </label>
+    <input
+      id="stock"
+      type="text"
+      value={stock}
+      name="stock"
+      placeholder="Enter stock"
+      className="form-control"
+      onChange={(e) => setStock(e.target.value)}
+    />
+  </div>
+  <div className="col-md-4">
+    <label htmlFor="gst" className="form-label">
+      GST
+    </label>
+    <input
+      id="gst"
+      type="text"
+      value={gst}
+      name="GST"
+      placeholder="Enter GST"
+      className="form-control"
+      onChange={(e) => setGst(e.target.value)}
+    />
+  </div>
+</div>
 
-              {/* Inventory Fields */}
-              <div className="mb-3">
-                <h4>Quantity</h4>
-                <input
-                  type="number"
-                  value={quantity}
-                  placeholder="Write a quantity"
-                  className="form-control"
-                  onChange={(e) => setQuantity(e.target.value)}
-                />
-              </div>
+{/* Bulk products */}
+<div className="mb-3">
+  <label>Bulk Products</label>
+  <table className="table">
+    <thead>
+      <tr>
+        <th>Minimum Quantity</th>
+        <th>Maximum Quantity</th>
+        <th>Discount MRP (Amount)</th>
+        <th>Selling Price Set</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {bulkProducts.map((product, index) => (
+        <tr key={index}>
+          <td>
+            <input
+              type="number"
+              className="form-control"
+              name="minimum"
+              value={product.minimum}
+              onChange={(e) => handleChange(index, e)}
+              readOnly={index > 0}
+            />
+            <small>{product.minNetWeight} {unit}</small>
+          </td>
+          <td>
+            <input
+              type="number"
+              className="form-control"
+              name="maximum"
+              value={product.maximum}
+              onChange={(e) => handleChange(index, e)}
+            />
+            <small>{product.maxNetWeight} {unit}</small>
+          </td>
+          <td>
+            <input
+              type="number"
+              className="form-control"
+              name="discount_mrp"
+              value={product.discount_mrp}
+              onChange={(e) => handleChange(index, e)}
+            />
+          </td>
+          <td>
+            <input
+              type="number"
+              className="form-control"
+              name="selling_price_set"
+              value={product.selling_price_set}
+              onChange={(e) => handleChange(index, e)}
+              readOnly
+            />
+          </td>
+          <td>
+            <button
+              className="btn btn-danger"
+              onClick={() => handleRemoveRow(index)}
+            >
+              Remove
+            </button>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+  <button className="btn btn-primary" onClick={handleAddRow}>
+    Add Bulk Product
+  </button>
+</div>
 
-              <div className="mb-3">
-                <h4>Stock</h4>
-                <input
-                  type="number"
-                  value={stock}
-                  placeholder="Enter stock quantity"
-                  className="form-control"
-                  onChange={(e) => setStock(e.target.value)}
-                />
-              </div>
-
-              <div className="mb-3">
-                <h4>GST (%)</h4>
-                <input
-                  type="number"
-                  value={gst}
-                  placeholder="Enter GST percentage"
-                  className="form-control"
-                  onChange={(e) => setGst(e.target.value)}
-                />
-              </div>
-
-              <div className="mb-3">
-                <h4>Additional Unit</h4>
-                <input
-                  type="text"
-                  value={additionalUnit}
-                  placeholder="Enter additional unit"
-                  className="form-control"
-                  onChange={(e) => setAdditionalUnit(e.target.value)}
-                />
-              </div>
-
-              <div className="mb-3">
-                <h4>Bulk Products</h4>
-                {bulkProducts.map((product, index) => (
-                  <div key={index} className="row mb-2">
-                    <div className="col">
-                      <input
-                        type="number"
-                        className="form-control"
-                        placeholder="Minimum"
-                        name="minimum"
-                        value={product.minimum}
-                        onChange={(e) => handleBulkProductChange(index, e)}
-                      />
-                    </div>
-                    <div className="col">
-                      <input
-                        type="number"
-                        className="form-control"
-                        placeholder="Maximum"
-                        name="maximum"
-                        value={product.maximum}
-                        onChange={(e) => handleBulkProductChange(index, e)}
-                      />
-                    </div>
-                    <div className="col">
-                      <input
-                        type="number"
-                        className="form-control"
-                        placeholder="Discount MRP %"
-                        name="discount_mrp"
-                        value={product.discount_mrp}
-                        onChange={(e) => handleBulkProductChange(index, e)}
-                      />
-                    </div>
-                    <div className="col">
-                      <input
-                        type="number"
-                        className="form-control"
-                        placeholder="Selling Price Set"
-                        name="selling_price_set"
-                        value={product.selling_price_set}
-                        disabled
-                      />
-                    </div>
-                    <div className="col-auto">
-                      <button
-                        type="button"
-                        className="btn btn-danger"
-                        onClick={() => handleRemoveBulkProduct(index)}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  className="btn btn-success mt-2"
-                  onClick={handleAddBulkProduct}
-                >
-                  Add Bulk Product
-                </button>
-              </div>
-
-              <div className="mb-3 d-flex gap-3">
-                <button className="btn btn-primary" onClick={handleUpdate}>
-                  Update Product
-                </button>
-                <button className="btn btn-danger" onClick={handleDelete}>
-                  Delete Product
-                </button>
-              </div>
-            </div>
+<div className="mb-3 d-flex justify-content-between">
+  <button className="btn btn-primary" onClick={handleUpdate}>
+    Update Product
+  </button>
+  <button className="btn btn-danger" onClick={handleDelete}>
+    Delete Product
+  </button>
+</div>
+</div>
           </div>
         </div>
       </div>

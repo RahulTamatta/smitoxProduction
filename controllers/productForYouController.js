@@ -13,11 +13,14 @@ export const getProductsForYouController = async (req, res) => {
           return res.status(400).send({ success: false, message: "Invalid category or subcategory ID" });
         }
     
-        const products = await productForYou.find({
-          categoryId: categoryId,     // Changed from category
-          subcategoryId: subcategoryId  // Changed from subcategory
-        }).populate("categoryId subcategoryId");
-    
+        const products   = await productForYouModel
+        .find({})
+        .populate("categoryId", "name")
+        .populate("subcategoryId", "name")
+        .populate("productId", "name photo price slug perPiecePrice") // Include price and slug
+        .select("categoryId subcategoryId productId")
+        .limit(12)
+        .sort({ createdAt: -1 });
         res.status(200).send({
           success: true,
           message: "Products fetched successfully",
