@@ -9,7 +9,6 @@ import slugify from "slugify";
 import dotenv from "dotenv";
 import { v4 as uuidv4 } from 'uuid';
 dotenv.config();
-
 export const createProductController = async (req, res) => {
   try {
     const {
@@ -37,18 +36,31 @@ export const createProductController = async (req, res) => {
       userId,
       variants,
       sets,
-      bulkProducts, // Keep this field
-      youtubeUrl, // New field for YouTube URL
+      bulkProducts,
+      youtubeUrl,
+      sku, // Add SKU to destructuring
     } = req.fields;
 
     const { photo } = req.files;
 
-    // Handle photo size validation if provided
+    // Generate SKU if not provided
+    const generateSKU = () => {
+      const timestamp = Date.now();
+      const timeComponent = timestamp.toString(36).slice(-4).toUpperCase();
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const randomLetters = Array.from(
+        { length: 2 }, 
+        () => letters.charAt(Math.floor(Math.random() * letters.length))
+      ).join('');
+      return `SM-${timeComponent}${randomLetters}`;
+    };
+
+    // Photo validation
     if (photo && photo.size > 1000000) {
       return res.status(400).send({ error: "Photo size should be less than 1MB." });
     }
 
-    // Parse bulkProducts as JSON if it's provided
+    // Parse bulkProducts
     let formattedBulkProducts = null;
     if (bulkProducts) {
       if (typeof bulkProducts === 'string') {
@@ -74,7 +86,7 @@ export const createProductController = async (req, res) => {
       }
     }
 
-    // Create a new product instance
+    // Create product instance with SKU
     const newProduct = new productModel({
       name,
       slug: slugify(name),
@@ -96,26 +108,26 @@ export const createProductController = async (req, res) => {
       mrp: parseFloat(mrp),
       perPiecePrice: parseFloat(perPiecePrice),
       weight: parseFloat(weight),
-      youtubeUrl, // Save the YouTube URL
-      bulkProducts: formattedBulkProducts || [], // Default to an empty array if not provided
+      youtubeUrl,
+      sku: sku || generateSKU(), // Use provided SKU or generate new one
+      bulkProducts: formattedBulkProducts || [],
       allowCOD: allowCOD === "1",
       returnProduct: returnProduct === "1",
       userId,
-      isActive: '1', // Default to active
+      isActive: '1',
       variants: JSON.parse(variants || '[]'),
       sets: JSON.parse(sets || '[]'),
     });
 
-    // Handle photo upload if provided
+    // Handle photo
     if (photo) {
       newProduct.photo.data = fs.readFileSync(photo.path);
       newProduct.photo.contentType = photo.type;
     }
 
-    // Save the product to the database
+    // Save product
     await newProduct.save();
 
-    // Respond with success message and product data
     res.status(201).send({
       success: true,
       message: "Product Created Successfully",
@@ -130,7 +142,6 @@ export const createProductController = async (req, res) => {
     });
   }
 };
-
 //get all products
 export const getProductController = async (req, res) => {
   try {

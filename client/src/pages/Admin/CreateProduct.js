@@ -220,7 +220,31 @@ const CreateProduct = () => {
   };
 
  
+// Add this function after your state declarations
+const generateUniqueSkU = () => {
+  // Get current timestamp
+  const timestamp = Date.now();
+  
+  // Convert timestamp to base 36 (numbers + letters) and take last 4 characters
+  const timeComponent = timestamp.toString(36).slice(-4).toUpperCase();
+  
+  // Generate 2 random letters
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const randomLetters = Array.from(
+    { length: 2 }, 
+    () => letters.charAt(Math.floor(Math.random() * letters.length))
+  ).join('');
+  
+  // Combine components
+  return `SM-${timeComponent}${randomLetters}`;
+};
 
+// Add this useEffect after your other useEffect hooks
+useEffect(() => {
+  // Generate and set SKU when component mounts
+  const uniqueSku = generateUniqueSkU();
+  setSku(uniqueSku);
+}, []); // Empty dependency array means this runs once on mount
  
   const handlePerPiecePriceChange = (e) => {
     const newPerPiecePrice = e.target.value;
@@ -394,19 +418,21 @@ const CreateProduct = () => {
               </div>
 
               <div className="row mb-3">
-        <div className="col-md-4">
-          <label htmlFor="sku" className="form-label">
-            SKU
-          </label>
-          <input
-            id="sku"
-            type="text"
-            value={sku}
-            className="form-control"
-            onChange={(e) => setSku(e.target.value)}
-          />
-        </div>
-       
+              <div className="col-md-4">
+  <label htmlFor="sku" className="form-label">
+    SKU
+  </label>
+  <input
+    id="sku"
+    type="text"
+    value={sku}
+    className="form-control"
+    readOnly
+    onChange={(e) => setSku(e.target.value)}
+  />
+</div>
+
+
   
       </div>
       
