@@ -252,6 +252,7 @@ const [selectedOrder, setSelectedOrder] = useState(null);
                           <th scope="col">Date</th>
                           <th scope="col">Payment Method</th>
                           <th scope="col">Quantity</th>
+                          <th scope="col">Tracking Id</th>
                      
                         </tr>
                       </thead>
@@ -263,6 +264,9 @@ const [selectedOrder, setSelectedOrder] = useState(null);
                           <td>{o?.createdAt ? moment(o.createdAt).format("YYYY-MM-DD") : "N/A"}</td>
                           <td>{o?.payment?.paymentMethod || "Unknown"}</td>
                           <td>{o?.products?.length || 0}</td>
+                          <td>  {o.tracking ? (
+                        `${o.tracking.company}: ${o.tracking.id}`
+                      ) : "nothing"}</td>
                         </tr>
                       </tbody>
                     </table>

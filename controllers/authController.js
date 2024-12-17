@@ -359,7 +359,7 @@ export const getOrdersController = async (req, res) => {
       .find({ buyer: user_id }) // Use the user_id directly
       .populate({
         path: "products.product",
-        select: "name photo price images sku"
+        select: "name photo price  sku"
         // Populate all fields in Product schema
       })
       .populate("buyer", "user_fullname"); // Include only `user_fullname` for the buyer

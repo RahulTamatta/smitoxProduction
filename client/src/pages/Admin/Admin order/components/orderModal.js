@@ -1,7 +1,7 @@
 import React from "react";
 import { Modal, Button, Table, Form } from "react-bootstrap";
 import moment from "moment";
-
+import jsPDF from 'jspdf';
 const OrderModal = ({
   show,
   handleClose,
@@ -75,6 +75,211 @@ const getProductName = (product) => {
   
   return "Unknown Product";
 };
+
+const convertToWords = (num) => {
+  const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  if ((num = num.toString()).length > 9) return 'Overflow';
+  let n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+  if (!n) return;
+  let str = '';
+  str += (n[1] != 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'Crore ' : '';
+  str += (n[2] != 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'Lakh ' : '';
+  str += (n[3] != 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'Thousand ' : '';
+  str += (n[4] != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'Hundred ' : '';
+  str += (n[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) + 'only' : '';
+  return str;
+};
+
+const generatePDF = () => {
+  if (!selectedOrder) {
+    alert('No order selected');
+    return;
+  }
+
+  try {
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    // Page setup
+    const pageWidth = 210; // A4 width
+    const pageHeight = 297; // A4 height
+    const margin = 10;
+    const contentWidth = pageWidth - (2 * margin);
+
+    // Font and styling
+    doc.setFont('helvetica');
+    doc.setFontSize(10);
+
+    // Column definitions with precise widths
+    const columns = {
+      product: { width: 70, align: 'left' },
+      unitPrice: { width: 25, align: 'right' },
+      quantity: { width: 20, align: 'right' },
+      netAmount: { width: 25, align: 'right' },
+      tax: { width: 25, align: 'right' },
+      total: { width: 25, align: 'right' }
+    };
+
+    // Calculate total column width to ensure it fits
+    const totalColumnWidth = Object.values(columns).reduce((sum, col) => sum + col.width, 0);
+    const startX = (pageWidth - totalColumnWidth) / 2;
+
+    // Helper function for precise text rendering
+    const safeText = (text, x, y, options = {}) => {
+      try {
+        doc.text(text.toString(), x, y, { 
+          ...options,
+          maxWidth: contentWidth,
+          lineHeightFactor: 1.2
+        });
+      } catch (error) {
+        console.error('Text rendering error:', error);
+      }
+    };
+
+    // Header
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    safeText('TAX INVOICE', pageWidth / 2, margin + 10, { align: 'center' });
+
+    // Company Details
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    safeText('Smitox B2b', margin + 10, margin + 20);
+    safeText('GST No: 27AGEPJ1490K1Z9', margin + 10, margin + 25);
+
+    // Invoice Details
+    const currentDate = new Date().toISOString().split('T')[0];
+    safeText(`Invoice No: ${selectedOrder.orderNumber || 'N/A'}`, pageWidth - margin - 50, margin + 20);
+    safeText(`Date: ${currentDate}`, pageWidth - margin - 50, margin + 25);
+
+    // Table Header
+    let currentY = margin + 40;
+    doc.setFillColor(230, 230, 230);
+    doc.rect(startX, currentY, totalColumnWidth, 10, 'F');
+
+    // Header Columns
+    const headers = ['Product', 'Unit Price', 'Qty', 'Net Amount', 'Tax', 'Total'];
+    headers.forEach((header, index) => {
+      const columnKeys = Object.keys(columns);
+      const columnKey = columnKeys[index];
+      const column = columns[columnKey];
+      
+      const x = startX + Object.keys(columns)
+        .slice(0, index)
+        .reduce((sum, key) => sum + columns[key].width, 0);
+      
+      safeText(header, x + (column.align === 'right' ? column.width : 2), currentY + 7, { 
+        align: column.align 
+      });
+    });
+
+    // Table Data
+    currentY += 10;
+    let totalAmount = 0;
+
+    // Safely handle products array
+    const productsList = Array.isArray(selectedOrder.products) ? selectedOrder.products : [];
+
+    productsList.forEach((product) => {
+      const productName = product.product.name || 'Unknown Product';
+      const unitPrice = Number(product.price) || 0;
+      const quantity = Number(product.quantity) || 0;
+      const netAmount = unitPrice * quantity;
+const gst=product.product.gst;
+      // Draw row
+      doc.rect(startX, currentY, totalColumnWidth, 10);
+
+      // Render each column
+      let currentX = startX;
+      
+      // Product Name
+      safeText(productName, currentX + 2, currentY + 7, { 
+        align: columns.product.align,
+        maxWidth: columns.product.width - 4 
+      });
+      currentX += columns.product.width;
+
+      // Unit Price
+      safeText(`₹ ${unitPrice.toFixed(2)}`, currentX + columns.unitPrice.width - 2, currentY + 7, { 
+        align: columns.unitPrice.align 
+      });
+      currentX += columns.unitPrice.width;
+
+      // Quantity
+      safeText(quantity.toString(), currentX + columns.quantity.width - 2, currentY + 7, { 
+        align: columns.quantity.align 
+      });
+      currentX += columns.quantity.width;
+
+      // Net Amount
+      safeText(`₹ ${netAmount.toFixed(2)}`, currentX + columns.netAmount.width - 2, currentY + 7, { 
+        align: columns.netAmount.align 
+      });
+      currentX += columns.netAmount.width;
+
+      // Tax
+      safeText(`${gst.toFixed(2)}%`, currentX + columns.tax.width - 2, currentY + 7, { 
+        align: columns.tax.align 
+      });
+      currentX += columns.tax.width;
+
+      // Total
+      safeText(`₹ ${netAmount.toFixed(2)}`, currentX + columns.total.width - 2, currentY + 7, { 
+        align: columns.total.align 
+      });
+
+      totalAmount += netAmount;
+      currentY += 10;
+    });
+
+    // Totals Section
+    currentY += 5;
+    const totals = [
+      { label: 'Subtotal', value: totalAmount.toFixed(2) },
+      { label: 'Delivery Charges', value: '360.00' },
+      { label: 'Total Amount', value: (totalAmount + 360).toFixed(2) },
+      { label: 'Amount Paid', value: '0.00' },
+      { label: 'Amount Pending', value: (totalAmount + 360).toFixed(2) }
+    ];
+
+    totals.forEach((total) => {
+      doc.rect(startX, currentY, totalColumnWidth, 7);
+      safeText(total.label, startX + 2, currentY + 5);
+      safeText(`₹ ${total.value}`, startX + totalColumnWidth - 2, currentY + 5, { align: 'right' });
+      currentY += 7;
+    });
+
+    // Amount in Words
+    currentY += 5;
+    const totalInvoiceAmount = totalAmount + 360;
+    safeText(`Amount in Words: ${convertToWords(Math.round(totalInvoiceAmount))}`, startX, currentY);
+
+    // Footer
+    currentY = pageHeight - 20;
+    safeText('For Smitox B2b', startX, currentY);
+    safeText('Authorized Signature', pageWidth - margin - 40, currentY);
+
+    // Page number
+    safeText('Page 1/1', pageWidth / 2, pageHeight - 10, { align: 'center' });
+
+    // Save PDF
+    doc.save(`Invoice_${selectedOrder.orderNumber || 'Order'}.pdf`);
+
+  } catch (error) {
+    console.error('PDF Generation Error:', error);
+    alert('Failed to generate PDF. Please try again.');
+  }
+};
+
+
+// ... rest of the component remains the same
+
 
 
   
@@ -342,6 +547,12 @@ const getProductName = (product) => {
           <Button variant="primary" onClick={handleUpdateOrder}>
             Update Order
           </Button>
+
+          <div className="d-flex justify-content-end mt-3 gap-2">
+              <Button variant="primary" onClick={generatePDF}>
+                Download PDF
+              </Button>
+            </div>
         </Modal.Footer>
         </Modal>
     );

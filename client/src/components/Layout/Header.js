@@ -5,7 +5,7 @@ import { useAuth } from "../../context/auth";
 import toast from "react-hot-toast";
 import SearchInput from "../Form/SearchInput";
 import { Badge } from "antd";
-import { HeartOutlined, ShoppingCartOutlined, HomeOutlined, LoginOutlined } from '@ant-design/icons';
+import { HeartOutlined, UserOutlined,ShoppingCartOutlined, HomeOutlined, LoginOutlined } from '@ant-design/icons';
 
 const Header = () => {
   const [auth, setAuth] = useAuth();
@@ -13,7 +13,6 @@ const Header = () => {
   const [wishlistCount, setWishlistCount] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
-  // Fetch cart count from the server
   const fetchCartCount = async () => {
     try {
       if (auth?.user) {
@@ -25,7 +24,6 @@ const Header = () => {
     }
   };
 
-  // Fetch wishlist count from the server
   const fetchWishlistCount = async () => {
     try {
       if (auth?.user) {
@@ -76,6 +74,7 @@ const Header = () => {
   return (
     <nav className="navbar navbar-expand bg-body-tertiary fixed-top">
       <div className="container-fluid d-flex align-items-center">
+        {/* Logo */}
         <div className="d-flex align-items-center me-4">
           <Link to="/" className="navbar-brand">
             <img 
@@ -89,12 +88,14 @@ const Header = () => {
             />
           </Link>
         </div>
-        
-        <div className="flex-grow-1 me-4">
+
+        {/* For Mobile: Hide the search input */}
+        <div className={`flex-grow-1 me-4 ${isMobile ? 'd-none' : 'd-block'}`}>
           <SearchInput />
         </div>
-        
-        <div className="d-flex">
+
+        {/* Navbar items (will show only on desktop, not mobile) */}
+        <div className={`d-flex ${isMobile ? 'd-none' : 'd-block'}`}>
           <ul 
             className="navbar-nav ms-auto mb-2 mb-lg-0" 
             style={{ fontSize: isMobile ? "0.875rem" : "1rem" }}
@@ -122,6 +123,7 @@ const Header = () => {
                   data-bs-toggle="dropdown"
                   style={{ border: "none", color: "white" }}
                 >
+                  <UserOutlined style={{ marginRight: "5px", color: "white" }} />
                   {auth?.user?.user_fullname}
                 </NavLink>
                 <ul className="dropdown-menu">
@@ -148,7 +150,7 @@ const Header = () => {
             <li className="nav-item">
               <NavLink to="/wishlist" className="nav-link d-flex align-items-center">
                 <Badge count={wishlistCount} showZero offset={[10, -5]}>
-                  <HeartOutlined style={{ marginRight: "5px", color: "white", fontSize: "18px" }} />
+                  <HeartOutlined style={{ marginRight: "5px", color: "white", fontSize: "15px" }} />
                 </Badge>
                 Wishlist
               </NavLink>
@@ -156,7 +158,63 @@ const Header = () => {
             <li className="nav-item">
               <NavLink to="/cart" className="nav-link d-flex align-items-center">
                 <Badge count={cartCount} showZero offset={[10, -5]}>
-                  <ShoppingCartOutlined style={{ marginRight: "5px", color: "white", fontSize: "18px" }} />
+                  <ShoppingCartOutlined style={{ marginRight: "5px", color: "white", fontSize: "15px" }} />
+                </Badge>
+                Cart
+              </NavLink>
+            </li>
+          </ul>
+        </div>
+
+        {/* For Mobile: Display only the logo, login, wishlist, and cart */}
+        <div className={`d-flex ${isMobile ? 'd-block' : 'd-none'} ms-auto`}>
+          <ul className="navbar-nav mb-2 mb-lg-0">
+          {auth?.user ? (
+  <li className="nav-item dropdown">
+    <NavLink
+      className="nav-link dropdown-toggle"
+      href="#"
+      role="button"
+      data-bs-toggle="dropdown"
+      style={{ border: "none", color: "white" }}
+    >
+      <UserOutlined style={{ marginRight: "5px", color: "white" }} />
+      {auth?.user?.user_fullname.slice(0, 5)} {/* Display only first 5 characters of the user's name */}
+    </NavLink>
+    <ul className="dropdown-menu">
+      <li>
+        <NavLink
+          to={`/dashboard/${auth?.user?.role === 1 ? "admin" : "user"}`}
+          className="dropdown-item"
+        >
+          Dashboard
+        </NavLink>
+      </li>
+      <li>
+        <NavLink
+          onClick={handleLogout}
+          to="/login"
+          className="dropdown-item"
+        >
+          Logout
+        </NavLink>
+      </li>
+    </ul>
+  </li>
+) : null}
+
+            <li className="nav-item">
+              <NavLink to="/wishlist" className="nav-link">
+                <Badge count={wishlistCount} showZero offset={[10, -5]}>
+                  <HeartOutlined style={{ marginRight: "5px", color: "white", fontSize: "15px" }} />
+                </Badge>
+                Wishlist
+              </NavLink>
+            </li>
+            <li className="nav-item">
+              <NavLink to="/cart" className="nav-link">
+                <Badge count={cartCount} showZero offset={[10, -5]}>
+                  <ShoppingCartOutlined style={{ marginRight: "5px", color: "white", fontSize: "15px" }} />
                 </Badge>
                 Cart
               </NavLink>

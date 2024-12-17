@@ -326,8 +326,8 @@ const ProductDetails = () => {
   // Styles
   const containerStyle = {
     maxWidth: "1200px",
-    margin: "0 auto",
-    padding: "120px 0 0 0",
+    // margin: "0 auto",
+    paddingTop: "8rem" ,
     fontFamily: "Arial, sans-serif",
     backgroundColor: "#f5f5f5",
     borderRadius: "8px",
@@ -395,7 +395,8 @@ const ProductDetails = () => {
     padding: "10px 20px",
     fontSize: "16px",
     cursor: "pointer",
-    backgroundColor: "#ffd814",
+    backgroundColor: "red",  // Complementary blue for wishlist
+    color: isInWishlist ? "#ffffff" : "#111111", 
     border: "none",
     borderRadius: "20px",
     transition: "background-color 0.3s",
@@ -461,8 +462,8 @@ const ProductDetails = () => {
           <div style={infoStyle}>
             <h1 style={headingStyle}>{product.name}</h1>
             <div style={priceStyle}>
-              <span style={strikeThroughStyle}>₹{product.mrp}</span>₹
-              {product.perPiecePrice}
+              <span style={strikeThroughStyle}>₹{product.mrp}</span>
+              <span style={{ color: 'red' }}>₹{product.perPiecePrice}</span>
             </div>
             <p
               style={{
@@ -503,18 +504,19 @@ const ProductDetails = () => {
             </p>
 
             {
-              <button
-                onClick={toggleWishlist}
-                style={{
-                  ...buttonStyle,
-                  backgroundColor: isInWishlist ? "#e47911" : "#f0c14b",
-                  color: isInWishlist ? "#ffffff" : "#111111",
-                  marginTop: "10px",
-                  width: "100%",
-                }}
-              >
-                {isInWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
-              </button>
+           <button
+           onClick={toggleWishlist}
+           style={{
+             ...buttonStyle,
+             backgroundColor: isInWishlist ? "#1157e4" : "red",  // Set background color to red when not in wishlist
+             color: isInWishlist ? "#ffffff" : "#ffffff",  // Keep text color white for contrast
+             marginTop: "10px",
+             width: "100%",
+           }}
+         >
+           {isInWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
+         </button>
+         
             }
 
             {!isPincodeAvailable && (

@@ -51,31 +51,14 @@ const Terms = () => {
   return (
     <Layout title={"Privacy Policy"}>
       <div className="row contactus" style={{ position: "relative", width: "100%",   padding: "100px 25px", }}>
-        <div className="col-md-6">
-          <img
-            src="/images/contactus.jpeg"
-            alt="contactus"
-            style={{ width: "100%" }}
-          />
-        </div>
-        <div className="col-md-4" style={{ maxHeight: "400px", overflowY: "auto",padding:"40px" }}>
+ 
+        <div className="col-md-4" style={{ maxHeight: "400px", overflowY: "auto",padding:"40px" , width: "100%"}}>
+        <h1 className="bg-dark p-2 text-white text-center">Terms&Conditions</h1>
+        
           {privacyPolicyContent.map((paragraph, index) => (
             <p key={index}>{paragraph}</p>
           ))}
-          {!expanded && (
-            <p>
-              <button className="btn btn-link" onClick={toggleExpanded}>
-                Read More
-              </button>
-            </p>
-          )}
-          {expanded && (
-            <p>
-              <button className="btn btn-link" onClick={toggleExpanded}>
-                Show Less
-              </button>
-            </p>
-          )}
+      
         </div>
       </div>
     </Layout>

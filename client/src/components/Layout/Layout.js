@@ -3,9 +3,10 @@ import Footer from "./Footer";
 import Header from "./Header";
 import { Helmet } from "react-helmet";
 import { Toaster } from "react-hot-toast";
+
 const Layout = ({ children, title, description, keywords, author }) => {
   return (
-    <div>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <Helmet>
         <meta charSet="utf-8" />
         <meta name="description" content={description} />
@@ -13,12 +14,16 @@ const Layout = ({ children, title, description, keywords, author }) => {
         <meta name="author" content={author} />
         <title>{title}</title>
       </Helmet>
+      {/* Header */}
       <Header />
-      <main style={{ minHeight: "15vh" }}>
-        <Toaster />
 
+      {/* Main Content */}
+      <main style={{ flex: 1, padding: "1rem", display: "flex", flexDirection: "column" }}>
+        <Toaster position="top-right" />
         {children}
       </main>
+
+      {/* Footer */}
       <Footer />
     </div>
   );

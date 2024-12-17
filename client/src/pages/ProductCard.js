@@ -96,9 +96,10 @@ const ProductCard = ({ product }) => {
           style={{ height: '200px', objectFit: 'fill' }}
         />
        <div className="p-4 flex flex-col h-full">
-          <h5 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
-            {product.name}
-          </h5>
+       <h5 className="text-xs font-semibold text-gray-900 dark:text-white mb-2">
+  {product.name.length > 20 ? `${product.name.slice(0, 20)}.....` : product.name}
+</h5>
+
           <div className="mt-auto">
             <h5 className="text-base font-bold text-gray-900 dark:text-white">
               {product.perPiecePrice?.toLocaleString("en-US", {

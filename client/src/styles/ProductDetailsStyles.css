@@ -33,7 +33,7 @@
   width: 100%;
   border-top-left-radius: 5px;
   border-bottom-right-radius: 5px;
-  font-size: 14px;
+  font-size: 12px !important;
   font-weight: bold;
 }
 

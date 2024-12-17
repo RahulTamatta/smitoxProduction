@@ -52,14 +52,14 @@ const Policy = () => {
     <Layout title={"Privacy Policy"}>
       <div className="row contactus" style={{ position: "relative", width: "100%",   padding: "100px 25px", }}>
         
-        <div className="col-md-6">
+        {/* <div className="col-md-6">
           <img
             src="/images/contactus.jpeg"
             alt="contactus"
             style={{ width: "100%" }}
           />
-        </div>
-        <div className="col-md-4" style={{ maxHeight: "400px", overflowY: "auto",padding:"40px" }}>
+        </div> */}
+        <div className="col-md-4" style={{ maxHeight: "400px", overflowY: "auto",padding:"40px",width: "100%" }}>
         <h1 className="bg-dark p-2 text-white text-center">Privacy Policy</h1>
           {privacyPolicyContent.map((paragraph, index) => (
             <p key={index}>{paragraph}</p>

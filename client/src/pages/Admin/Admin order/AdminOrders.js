@@ -239,18 +239,28 @@ const AdminOrders = () => {
   };
   
 
-  // const calculateTotals = () => {
-  //   if (!selectedOrder || !selectedOrder.products) return { subtotal: 0, gst: 0, total: 0 };
-
-  //   const subtotal = selectedOrder.products.reduce(
-  //     (acc, product) => acc + Number(product.price) * Number(product.quantity),
-  //     0
-  //   );
-  //   const gst = subtotal * 0.18; // Assuming 18% GST
-  //   const total = subtotal + gst + Number(selectedOrder.deliveryCharges || 0) + Number(selectedOrder.codCharges || 0) - Number(selectedOrder.discount || 0);
-
-  //   return { subtotal, gst, total };
-  // };
+  const calculateTotalsad = (order) => {
+    if (!order || !order.products) return { subtotal: 0, gst: 0, total: 0 };
+  
+    const subtotal = order.products.reduce(
+      (acc, product) => acc + Number(product.price) * Number(product.quantity),
+      0
+    );
+  
+    const gst = order.products.reduce((acc, product) => {
+      return acc + (Number(product.price) * Number(product.quantity) * (Number(product.gst) || 0)) / 100;
+    }, 0);
+  
+    const total =
+      subtotal +
+      gst +
+      Number(order.deliveryCharges || 0) +
+      Number(order.codCharges || 0) -
+      Number(order.discount || 0);
+  
+    return { subtotal, gst, total };
+  };
+  
   const handleDeleteProduct = async (index) => {
     if (index >= 0 && index < selectedOrder.products.length) {
       try {
@@ -359,17 +369,30 @@ const AdminOrders = () => {
           <AdminMenu />
         </div>
         <div className="col-md-9">
-          <h1 className="text-center">All Orders</h1>
-          <Nav variant="pills" className="mb-3">
-            <Nav.Item>
-              <Nav.Link active={orderType === 'all-orders'} onClick={() => setOrderType('all-orders')}>All orders</Nav.Link>
-            </Nav.Item>
-            {status.map((s, index) => (
-              <Nav.Item key={index}>
-                <Nav.Link active={orderType === s} onClick={() => setOrderType(s)}>{s} orders</Nav.Link>
-              </Nav.Item>
-            ))}
-          </Nav>
+        <Nav variant="pills" className="mb-3">
+  <Nav.Item>
+    <Nav.Link 
+      active={orderType === 'all-orders'} 
+      onClick={() => setOrderType('all-orders')}
+      style={{ backgroundColor: orderType === 'all-orders' ? 'blue' : 'red', color: orderType === 'all-orders' ? 'white' : 'red' }} // Active blue, Inactive red
+    >
+      All orders
+    </Nav.Link>
+  </Nav.Item>
+  {status.map((s, index) => (
+    <Nav.Item key={index}>
+      <Nav.Link
+        active={orderType === s}
+        onClick={() => setOrderType(s)}
+        style={{ backgroundColor: orderType === s ? 'blue' : 'red', color: orderType === s ? 'white' : 'red' }} // Active blue, Inactive red
+      >
+        {s} orders
+      </Nav.Link>
+    </Nav.Item>
+  ))}
+</Nav>
+
+
 
           {loading ? (
             <Spinner animation="border" role="status">
@@ -387,14 +410,16 @@ const AdminOrders = () => {
                   <th>Order Id</th>
                   <th>Trackin Information</th>
                  
-                  <th>Items</th>
+                  <th>Total</th>
                   <th>Status</th>
                   <th>Created</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {orders.map((o, index) => (
+                {orders.map((o, index) => {
+                    const totals = calculateTotals(o); 
+                  return(
                   <tr key={o._id}>
                     <td>{index + 1}</td>
                     <td>{o._id}</td>
@@ -408,7 +433,7 @@ const AdminOrders = () => {
                       )}
                     </td>
                 
-                    <td>{o?.products?.length}</td>
+                    <td>{calculateTotalsad(o).total.toFixed(2)}</td> 
                     <td>{o.status}</td>
                     <td>{moment(o.createdAt).format('DD-MM-YYYY')}</td>
                     <td>
@@ -416,7 +441,8 @@ const AdminOrders = () => {
                   
                     </td>
                   </tr>
-                ))}
+                )})
+                }
               </tbody>
             </Table>
           )}

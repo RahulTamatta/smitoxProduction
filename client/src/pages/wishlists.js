@@ -87,7 +87,9 @@ const WishlistPage = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8">
+  <div className="container mx-auto px-4 py-8" style={{ paddingTop: "8rem" }}>
+
+
         <h2 className="text-center text-2xl sm:text-3xl font-bold mb-6 md:mb-8">My Wishlist</h2>
 
         {!wishlist || wishlist.length === 0 ? (

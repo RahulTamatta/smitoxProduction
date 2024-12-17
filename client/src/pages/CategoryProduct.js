@@ -142,8 +142,8 @@ const CategoryProduct = () => {
   return (
     <Layout>
       <div className="container mt-3 category">
-        <h4 className="text-center" style={{ marginBottom: "1rem" }}>
-        {params.slug}
+        <h4 className="text-center" style={{ marginBottom: "1rem",paddingTop: "8rem"  }}>
+       
         </h4>
 
         {/* Conditionally render subcategories slider if not from banner */}
@@ -257,8 +257,8 @@ const CategoryProduct = () => {
                     style={{ height: "200px", objectFit: "contain" }}
                   />
                   <div className="card-body d-flex flex-column">
-                    <h5 className="card-title product-name">{p.name}</h5>
-                   
+                    <h5 className="card-title product-name">{p.name > 20 ? `${p.name.slice(0, 20)}.....` : p.name}</h5>
+       
                     <div className="mt-auto">
                       <h5 className="card-title product-price">
                         {p.perPiecePrice.toLocaleString("en-US", {

@@ -6,7 +6,7 @@ import { BiLogoWhatsapp, BiMailSend, BiPhoneCall } from "react-icons/bi";
 
 const Contact = () => {
   const handleWhatsAppClick = () => {
-    window.open("https://wa.me/8850832942", "_blank"); // Open WhatsApp in new tab
+    window.open("https://wa.me/+918850832942", "_blank"); // Open WhatsApp in new tab
   };
 
   return (
@@ -30,14 +30,10 @@ const Contact = () => {
       {/* Contact Section */}
       <div className="row contactus mt-4" style={{ margin: "0 15px" }}>
         <div className="col-md-6">
-          <img
-            src="https://smitox.com/img/99.jpg" // Replace with your desired image
-            alt="Contact Us"
-            style={{
-              width: "100%",
-              borderRadius: "8px",
-              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
-            }}
+        <img
+            src="/images/contactus.jpeg"
+            alt="contactus"
+            style={{ width: "100%" }}
           />
         </div>
         <div className="col-md-6" style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
@@ -49,9 +45,7 @@ const Contact = () => {
           <p className="mt-3" style={{ fontSize: "1rem" }}>
             <BiMailSend /> <strong>Email:</strong> helpsmitox@gmail.com
           </p>
-          <p className="mt-3" style={{ fontSize: "1rem" }}>
-            <BiPhoneCall /> <strong>Phone:</strong> 8850832942
-          </p>
+        
           <p
             className="mt-3"
             style={{
