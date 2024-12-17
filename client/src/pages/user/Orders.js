@@ -207,6 +207,27 @@ const [selectedOrder, setSelectedOrder] = useState(null);
     }
   };
   
+  const calculateTotalsad = (order) => {
+    if (!order || !order.products) return { subtotal: 0, gst: 0, total: 0 };
+  
+    const subtotal = order.products.reduce(
+      (acc, product) => acc + Number(product.price) * Number(product.quantity),
+      0
+    );
+  
+    const gst = order.products.reduce((acc, product) => {
+      return acc + (Number(product.price) * Number(product.quantity) * (Number(product.gst) || 0)) / 100;
+    }, 0);
+  
+    const total =
+      subtotal +
+      gst +
+      Number(order.deliveryCharges || 0) +
+      Number(order.codCharges || 0) -
+      Number(order.discount || 0);
+  
+    return { subtotal, gst, total };
+  };
   const navigateToOrderDetails = (order) => {
     setSelectedOrder(order);
   };
@@ -251,7 +272,8 @@ const [selectedOrder, setSelectedOrder] = useState(null);
                           <th scope="col">Order Id</th>
                           <th scope="col">Date</th>
                           <th scope="col">Payment Method</th>
-                          <th scope="col">Quantity</th>
+                            
+                  <th>Total</th>
                           <th scope="col">Tracking Id</th>
                      
                         </tr>
@@ -263,7 +285,8 @@ const [selectedOrder, setSelectedOrder] = useState(null);
                           <td>{o?._id || "N/A"}</td>
                           <td>{o?.createdAt ? moment(o.createdAt).format("YYYY-MM-DD") : "N/A"}</td>
                           <td>{o?.payment?.paymentMethod || "Unknown"}</td>
-                          <td>{o?.products?.length || 0}</td>
+                          <td>{calculateTotalsad(o).total.toFixed(2)}</td> 
+                          
                           <td>  {o.tracking ? (
                         `${o.tracking.company}: ${o.tracking.id}`
                       ) : "nothing"}</td>
