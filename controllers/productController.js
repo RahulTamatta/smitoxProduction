@@ -47,7 +47,7 @@ export const createProductController = async (req, res) => {
       return res.status(400).send({ error: "Photo size should be less than 1MB." });
     }
 
-    // Parse bulkProducts as JSON if it's a string
+    // Parse bulkProducts as JSON if it's provided
     let formattedBulkProducts = null;
     if (bulkProducts) {
       if (typeof bulkProducts === 'string') {
@@ -67,10 +67,10 @@ export const createProductController = async (req, res) => {
       // Map bulkProducts to ensure data is in correct format
       if (Array.isArray(formattedBulkProducts)) {
         formattedBulkProducts = formattedBulkProducts.map((item) => ({
-          minimum: parseInt(item.minimum),
-          maximum: parseInt(item.maximum),
-          discount_mrp: parseFloat(item.discount_mrp),
-          selling_price_set: parseFloat(item.selling_price_set),
+          minimum: isNaN(parseInt(item.minimum)) ? 0 : parseInt(item.minimum),
+          maximum: isNaN(parseInt(item.maximum)) ? 0 : parseInt(item.maximum),
+          discount_mrp: isNaN(parseFloat(item.discount_mrp)) ? 0 : parseFloat(item.discount_mrp),
+          selling_price_set: isNaN(parseFloat(item.selling_price_set)) ? 0 : parseFloat(item.selling_price_set),
         }));
       }
     }
@@ -97,7 +97,7 @@ export const createProductController = async (req, res) => {
       mrp: parseFloat(mrp),
       perPiecePrice: parseFloat(perPiecePrice),
       weight: parseFloat(weight),
-      bulkProducts: formattedBulkProducts, // This can be null
+      bulkProducts: formattedBulkProducts || [], // Default to an empty array if not provided
       allowCOD: allowCOD === "1",
       returnProduct: returnProduct === "1",
       userId,
@@ -130,6 +130,7 @@ export const createProductController = async (req, res) => {
     });
   }
 };
+
 
 //get all products
 export const getProductController = async (req, res) => {
