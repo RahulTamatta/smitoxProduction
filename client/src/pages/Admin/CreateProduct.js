@@ -27,6 +27,8 @@ const CreateProduct = () => {
   const [bulkProducts, setBulkProducts] = useState([
     { minimum: "", maximum: "", discount_mrp: "", selling_price_set: "" },
   ]);
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+
   const [unit, setUnit] = useState("");
   const [unitSet, setUnitSet] = useState("");
   const [purchaseRate, setPurchaseRate] = useState("");
@@ -172,6 +174,8 @@ const CreateProduct = () => {
         });
       }
       productData.append("category", category);
+      productData.append("youtubeUrl", youtubeUrl);
+
       productData.append("subcategory", subcategory);
       productData.append("brand", brand);
       productData.append("hsn", hsn);
@@ -303,6 +307,22 @@ const CreateProduct = () => {
                   ))}
                 </Select>
               </div>
+              <div className="mb-3">
+  <label htmlFor="youtubeUrl" className="form-label">
+    YouTube URL
+  </label>
+  <input
+    id="youtubeUrl"
+    type="text"
+    value={youtubeUrl}
+    placeholder="Enter YouTube URL"
+    className="form-control"
+    onChange={(e) => setYoutubeUrl(e.target.value)}
+  />
+  <small className="text-muted">
+    Enter a valid YouTube URL for the product video.
+  </small>
+</div>
 
               <div className="mb-3">
                 <label htmlFor="photoUpload" className="form-label">

@@ -38,6 +38,7 @@ export const createProductController = async (req, res) => {
       variants,
       sets,
       bulkProducts, // Keep this field
+      youtubeUrl, // New field for YouTube URL
     } = req.fields;
 
     const { photo } = req.files;
@@ -59,12 +60,10 @@ export const createProductController = async (req, res) => {
         }
       }
 
-      // Ensure formattedBulkProducts is an array if it's provided
       if (formattedBulkProducts && !Array.isArray(formattedBulkProducts)) {
         return res.status(400).send({ error: "bulkProducts must be an array" });
       }
 
-      // Map bulkProducts to ensure data is in correct format
       if (Array.isArray(formattedBulkProducts)) {
         formattedBulkProducts = formattedBulkProducts.map((item) => ({
           minimum: isNaN(parseInt(item.minimum)) ? 0 : parseInt(item.minimum),
@@ -97,6 +96,7 @@ export const createProductController = async (req, res) => {
       mrp: parseFloat(mrp),
       perPiecePrice: parseFloat(perPiecePrice),
       weight: parseFloat(weight),
+      youtubeUrl, // Save the YouTube URL
       bulkProducts: formattedBulkProducts || [], // Default to an empty array if not provided
       allowCOD: allowCOD === "1",
       returnProduct: returnProduct === "1",
@@ -130,7 +130,6 @@ export const createProductController = async (req, res) => {
     });
   }
 };
-
 
 //get all products
 export const getProductController = async (req, res) => {
@@ -253,6 +252,7 @@ export const updateProductController = async (req, res) => {
       bulkProducts,
       sku, // Added SKU
       fk_tags, // Added FK Tags
+      youtubeUrl, // Added YouTube URL
     } = req.fields;
 
     const { photo } = req.files;
@@ -271,6 +271,8 @@ export const updateProductController = async (req, res) => {
         return res.status(400).send({ error: "Quantity is Required" });
       case photo && photo.size > 1000000:
         return res.status(400).send({ error: "Photo is Required and should be less than 1MB" });
+      case youtubeUrl && !/^(https?:\/\/)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)\/(watch\?v=|embed\/|v\/|e\/|playlist\?list=)[\w-]+$/.test(youtubeUrl):
+        return res.status(400).send({ error: "Invalid YouTube URL" });
     }
 
     // Convert numeric fields to numbers and prepare updated fields
@@ -306,6 +308,7 @@ export const updateProductController = async (req, res) => {
       sku: sku, // Directly map sku
       bulkProducts: JSON.parse(bulkProducts || "[]"), // Parse JSON or default to an empty array
       fk_tags: JSON.parse(fk_tags || "[]"), // Parse JSON or default to an empty array
+      youtubeUrl: youtubeUrl || "", // Store YouTube URL if provided
     };
     
     // Handle FK Tags
@@ -392,6 +395,7 @@ export const updateProductController = async (req, res) => {
     });
   }
 };
+
 // filters
 export const productFiltersController = async (req, res) => {
   try {

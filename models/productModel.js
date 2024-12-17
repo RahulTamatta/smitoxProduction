@@ -109,6 +109,9 @@ const productSchema = new Schema(
       enum: ["0", "1", "2"],
       default: "1",
     },
+    youtubeUrl: {
+      type: String, // URL of the YouTube video related to the product
+    },
     userId: {
       type: String,
     },
