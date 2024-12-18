@@ -21,7 +21,10 @@ const CartPage = () => {
   const [minimumOrderCurrency, setMinimumOrderCurrency] = useState("");
   const [orderPlacementInProgress, setOrderPlacementInProgress] = useState(false);
   const [orderErrorMessage, setOrderErrorMessage] = useState("");
+
+
   const [isPincodeAvailable, setIsPincodeAvailable] = useState(false);
+  
 
   const navigate = useNavigate();
 

@@ -7,6 +7,26 @@ const SearchModal = ({ show, handleClose, handleAddToOrder }) => {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchResults, setSearchResults] = useState([]);
 
+  // Function to get price display
+  const getPriceDisplay = (product) => {
+    if (product.bulkProducts && product.bulkProducts.length > 0) {
+      const sortedBulkProducts = [...product.bulkProducts]
+        .filter(bp => bp && bp.minimum)
+        .sort((a, b) => a.minimum - b.minimum);
+
+      // Show the lowest and highest bulk pricing
+      if (sortedBulkProducts.length > 0) {
+        const lowestBulk = sortedBulkProducts[0];
+        const highestBulk = sortedBulkProducts[sortedBulkProducts.length - 1];
+        
+        return `₹${lowestBulk.selling_price_set.toFixed(2)} - ₹${highestBulk.selling_price_set.toFixed(2)}`;
+      }
+    }
+    
+    // Fallback to per piece or default price
+    return `₹${(product.perPiecePrice || product.price).toFixed(2)}`;
+  };
+
   const handleSearch = async (e) => {
     e.preventDefault();
     try {
@@ -39,15 +59,30 @@ const SearchModal = ({ show, handleClose, handleAddToOrder }) => {
         </Form>
         <ListGroup>
           {searchResults.map((product) => (
-            <ListGroup.Item key={product._id} className="d-flex justify-content-between align-items-center">
-                    <img
+            <ListGroup.Item 
+              key={product._id} 
+              className="d-flex justify-content-between align-items-center"
+            >
+              <img
                 src={`/api/v1/product/product-photo/${product._id}`}
                 alt={product.name}
                 width="50"
                 className="me-2"
               />
-              {product.name} - ${product.price}
-              <Button variant="success" size="sm" onClick={() => handleAddToOrder(product)}>
+              <div>
+                <div>{product.name}</div>
+                <div className="text-muted">Price: {getPriceDisplay(product)}</div>
+                {product.bulkProducts && product.bulkProducts.length > 0 && (
+                  <small className="text-info">
+                    Bulk pricing available
+                  </small>
+                )}
+              </div>
+              <Button 
+                variant="success" 
+                size="sm" 
+                onClick={() => handleAddToOrder(product)}
+              >
                 Add to Order
               </Button>
             </ListGroup.Item>
@@ -57,5 +92,4 @@ const SearchModal = ({ show, handleClose, handleAddToOrder }) => {
     </Modal>
   );
 };
-
 export default SearchModal;

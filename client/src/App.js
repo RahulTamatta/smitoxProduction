@@ -33,6 +33,7 @@ import Terms from "./pages/TermsofUse";
 import BannerManagement from "./pages/Admin/bannerManagement";
 import ProductForYou from "./pages/Admin/ProductForYou.js";
 import WishlistPage from "./pages/wishlists.js";
+import AddToCartPage from "../../client/src/pages/Admin/userCart.js";
 
 function App() {
   return (
@@ -78,6 +79,8 @@ function App() {
         <Route path="/wishlist" element={<WishlistPage />} />
         <Route path="/policy" element={<Policy />} />
         <Route path="/terms" element={<Terms />} />
+        <Route path="/add-to-cart/:userId/:user_fullname" element={<AddToCartPage />} />
+
         <Route path="*" element={<Pagenotfound />} />
       </Routes>
     </>

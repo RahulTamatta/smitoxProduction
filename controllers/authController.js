@@ -402,10 +402,6 @@ export const getAllOrdersController = async (req, res) => {
   }
 };
 
-
-
-
-
 export const addProductToOrderController = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -429,15 +425,14 @@ export const addProductToOrderController = async (req, res) => {
       });
     }
 
-    // Ensure status is valid
-    const validStatuses = [
-      "Pending", "Confirmed", "Accepted", "Cancelled", 
-      "Rejected", "Dispatched", "Delivered", "Returned"
-    ];
+    // Find the product
+    const product = await productModel.findById(productId);
 
-    // If current status is invalid, set to default "Pending"
-    if (!validStatuses.includes(order.status)) {
-      order.status = "Pending";
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found"
+      });
     }
 
     // Check if product already exists in order
@@ -472,7 +467,7 @@ export const addProductToOrderController = async (req, res) => {
       .findById(orderId)
       .populate({
         path: "products.product",
-        select: "name photo price images sku"
+        select: "name photo price images sku gst"
       })
       .populate("buyer", "name email");
 
@@ -491,6 +486,9 @@ export const addProductToOrderController = async (req, res) => {
     });
   }
 };
+
+
+
 //order status'
 export const orderStatusController = async (req, res) => {
   try {

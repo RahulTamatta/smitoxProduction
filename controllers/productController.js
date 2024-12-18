@@ -471,22 +471,39 @@ export const productListController = async (req, res) => {
     });
   }
 };
-
-// search product
 export const searchProductController = async (req, res) => {
   try {
     const { keyword } = req.params;
-    const resutls = await productModel
+
+    // Check if the keyword is a valid ObjectId
+    const isObjectId = mongoose.Types.ObjectId.isValid(keyword);
+
+    const results = await productModel
       .find({
         $or: [
           { name: { $regex: keyword, $options: "i" } },
           { description: { $regex: keyword, $options: "i" } },
+          { tag: { $regex: keyword, $options: "i" } }, // Search in tags
+          { sku: { $regex: `^${keyword}`, $options: "i" } },
+          // Search in SKU
+          { slug: { $regex: keyword, $options: "i" } }, // Search in slug
+          ...(isObjectId
+            ? [
+                { category: keyword }, // Search by category ID
+                { subcategory: keyword }, // Search by subcategory ID
+                { brand: keyword }, // Search by brand ID
+              ]
+            : []),
         ],
       })
-      .select("-photo");
-    res.json(resutls);
+      .populate("category", "name") // Populate category name
+      .populate("subcategory", "name") // Populate subcategory name
+      .populate("brand", "name") // Populate brand name
+      .select("-photo"); // Exclude photo for optimization
+
+    res.json(results);
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(400).send({
       success: false,
       message: "Error In Search Product API",

@@ -3,6 +3,9 @@ import axios from 'axios';
 import { MessageCircle, Edit } from 'lucide-react';
 import Layout from "../../components/Layout/Layout";
 import AdminMenu from "../../components/Layout/AdminMenu";
+import CartSearchModal from "./addTocartModal.js";
+import { useNavigate } from 'react-router-dom';
+import AddToCartPage from "./userCart.js";
 
 const UserList = () => {
   const [users, setUsers] = useState([]);
@@ -16,7 +19,11 @@ const UserList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [usersPerPage] = useState(20);
   const [activeRegularFilter, setActiveRegularFilter] = useState('all');
+  const [showSearchModal, setShowSearchModal] = useState(false);
 
+
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  
   const styles = {
     headerText: { color: '#1a237e' },
     errorText: { color: '#d32f2f' },
@@ -76,7 +83,16 @@ const UserList = () => {
     setCurrentPage(1);
   };
   
-
+  // const handleOpenSearchModal = (userId) => {
+  //   setSelectedUserId(userId);
+  //   setShowSearchModal(true);
+  // };
+  const handleOpenSearchModal = (userId,user_fullname) => {
+    // If you have any logic to handle modal opening, you can include it here.
+    // For now, it just navigates to the add-to-cart page for the given user.
+    navigate(`/add-to-cart/${userId}/${user_fullname}`); // Replace with your actual route
+  };
+  
   const toggleStatus = async (id, currentStatus) => {
     try {
       const newStatus = currentStatus === 1 ? 0 : 1;
@@ -375,6 +391,30 @@ console.log(`New Status: ${newStatus}`);
                     >
                       <Edit size={16} style={{ marginRight: '0.25rem' }} /> Edit
                     </button>
+                    <td style={{ padding: '0.75rem' }}>
+                    <button
+      onClick={() => handleOpenSearchModal(user._id,user.user_fullname)}
+      style={{
+        marginTop: '0.5rem',
+        padding: '0.5rem 1rem',
+        backgroundColor: '#007bff',
+        color: '#ffffff',
+        border: 'none',
+        borderRadius: '0.25rem',
+        cursor: 'pointer',
+      }}
+    >
+      Cart
+    </button>
+
+</td>
+
+
+              {/* <CartSearchModal
+        show={showSearchModal}
+        userId={selectedUserId}
+        handleClose={() => setShowSearchModal(false)}
+      /> */}
                   </td>
                 </tr>
               ))}
@@ -611,6 +651,7 @@ console.log(`New Status: ${newStatus}`);
       </>
     );
   };
+  const navigate = useNavigate();
 
   return (
     <Layout title="User List">

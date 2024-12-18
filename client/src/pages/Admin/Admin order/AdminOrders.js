@@ -137,24 +137,70 @@ const AdminOrders = () => {
 
   const handleAddToOrder = async (product) => {
     try {
+      // Function to get price based on product and quantity
+      const getPriceForProduct = (product, quantity = 1) => {
+        const unitSet = product.unitSet || 1;
+  
+        // Check for bulk pricing
+        if (product.bulkProducts && product.bulkProducts.length > 0) {
+          const sortedBulkProducts = [...product.bulkProducts]
+            .filter(bp => bp && bp.minimum)
+            .sort((a, b) => b.minimum - a.minimum);
+  
+          const applicableBulk = sortedBulkProducts.find(
+            (bp) => quantity >= (bp.minimum * unitSet) && 
+                    (!bp.maximum || quantity <= (bp.maximum * unitSet))
+          );
+  
+          if (applicableBulk) {
+            // Return the selling price for the bulk range
+            return parseFloat(applicableBulk.selling_price_set || product.perPiecePrice || product.price);
+          }
+        }
+  
+        // Fallback to per piece price or default price
+        return parseFloat(product.perPiecePrice || product.price || 0);
+      };
+  
+      // Calculate the price for the product
+      const productPrice = getPriceForProduct(product, 1);
+  
+      // Prepare the new product object to be added
+      const newProductToAdd = {
+        product: product._id,  // Use the product's ObjectId
+        quantity: product.unitSet,
+        price: productPrice
+      };
+  
+      // Create a new products array that includes existing products and the new product
+      const updatedProducts = [
+        ...(selectedOrder.products || []),
+        newProductToAdd
+      ];
+  
+      // Calculate the new total amount
+      const totalAmount = updatedProducts.reduce(
+        (total, item) => total + (item.quantity * item.price), 
+        0
+      );
+  
+      // Prepare the updated order object
       const updatedOrder = {
         ...selectedOrder,
-        products: [
-          ...selectedOrder.products,
-          {
-            ...product,
-            quantity: 1,
-          },
-        ],
+        products: updatedProducts,
+        amount: totalAmount
       };
+  
+      // Update local state
       setSelectedOrder(updatedOrder);
       
-      const response = await axios.post(`/api/v1/auth/orders/${selectedOrder._id}`, {
+      // Send API request to update the order
+      const response = await axios.put(`/api/v1/auth/order/${selectedOrder._id}/add`, {
         productId: product._id,
         quantity: 1,
-        price: product.price,
+        price: productPrice,
       });
-
+  
       if (response.data.success) {
         message.success("Product added to order successfully");
         handleCloseSearchModal();
