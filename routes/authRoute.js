@@ -56,7 +56,7 @@ router.get("/orders/:user_id", getOrdersController);
 router.get("/all-orders", requireSignIn, isAdmin, getAllOrdersController);
 router.put('/order/:orderId/add', requireSignIn,isAdmin, addProductToOrderController);
 // order status update
-router.put("/order-status/:orderId", requireSignIn, orderStatusController);
+router.put("/order-status/:orderId", orderStatusController);
 
 // update order
 router.put("/order/:orderId", requireSignIn, isAdmin, updateOrderController);
