@@ -494,22 +494,35 @@ export const orderStatusController = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { status } = req.body;
-    // console.log("Oder and status",{orderId,status});
-    const orders = await orderModel.findByIdAndUpdate(
+
+    const order = await orderModel.findByIdAndUpdate(
       orderId,
       { status },
       { new: true }
     );
-    res.json(orders);
+
+    if (!order) {
+      return res.status(404).send({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Order status updated successfully',
+      order,
+    });
   } catch (error) {
     console.log(error);
     res.status(500).send({
       success: false,
-      message: "Error While Updateing orderModel",
+      message: 'Error while updating order',
       error,
     });
   }
 };
+
 
 // In your orderController.js file
 export const addTrackingInfo = async (req, res) => {
