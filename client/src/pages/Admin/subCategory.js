@@ -72,6 +72,66 @@ const SubcategoryList = () => {
     }
   };
 
+// For creation
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("category", parentCategoryId);
+    if (photo) {
+      formData.append("photo", photo); // Append the file if uploaded
+    }
+
+    const { data } = await axios.post("/api/v1/subcategory/create-subcategory", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    if (data?.success) {
+      toast.success(`${name} is created`);
+      setName("");
+      setParentCategoryId("");
+      setPhoto(null);
+      getAllSubcategories();
+    } else {
+      toast.error(data.message);
+    }
+  } catch (error) {
+    console.log(error);
+    toast.error("Something went wrong in creating subcategory");
+  }
+};
+
+const handleEditSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    const { data } = await axios.put(
+      `/api/v1/subcategory/update-subcategory/${editingSubcategory._id}`,
+      {
+        name: editName,
+        category: editParentCategoryId,
+        isActive: editIsActive,
+        photo: editPhoto || editingSubcategory.photo  // Keep old photo if no new one is uploaded
+      }
+    );
+
+    if (data?.success) {
+      toast.success(`${editName} subcategory updated successfully`);
+      setShowEditModal(false);
+      setEditName("");
+      setEditParentCategoryId("");
+      setEditPhoto(null);
+      setEditIsActive(true);
+      getAllSubcategories();
+    } else {
+      toast.error(data.message);
+    }
+  } catch (error) {
+    console.log(error);
+    toast.error("Something went wrong while updating subcategory");
+  }
+};
+
+
 
   const handleEditImageChange = (e) => {
     const file = e.target.files[0];
@@ -89,29 +149,7 @@ const SubcategoryList = () => {
     getAllSubcategories();
   }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      // const formData = new FormData();
-      // formData.append("name", name);
-      // formData.append("category", parentCategoryId);
-      // if (photo) formData.append("photo", photo);
-
-      const { data } = await axios.post("/api/v1/subcategory/create-subcategory", {name,parentCategoryId,photo});
-      if (data?.success) {
-        toast.success(`${name} is created`);
-        setName("");
-        setParentCategoryId("");
-        setPhoto(null);
-        getAllSubcategories();
-      } else {
-        toast.error(data.message);
-      }
-    } catch (error) {
-      console.log(error);
-      toast.error("Something went wrong in creating subcategory");
-    }
-  };
+  
 
   const handleDelete = async (pId) => {
     try {
@@ -135,41 +173,7 @@ const SubcategoryList = () => {
     setShowEditModal(true);
   };
 
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const updateData = {
-        name: editName,
-        category: editParentCategoryId,
-        isActive: editIsActive
-      };
-
-      if (editPhoto) {
-        updateData.photo = editPhoto;
-      }
-
-      const { data } = await axios.put(
-        `/api/v1/subcategory/update-subcategory/${editingSubcategory._id}`,
-        updateData
-      );
-
-      if (data.success) {
-        toast.success(`${editName} subcategory updated successfully`);
-        setShowEditModal(false);
-        setEditName("");
-        setEditParentCategoryId("");
-        setEditPhoto(null);
-        setEditIsActive(true);
-        getAllSubcategories();
-      } else {
-        toast.error(data.message);
-      }
-    } catch (error) {
-      console.log(error);
-      toast.error("Something went wrong while updating subcategory");
-    }
-  };
-
+ 
   const handleToggleActive = async (subcategory) => {
     try {
       const { data } = await axios.put(`/api/v1/subcategory/toggle-active/${subcategory._id}`);

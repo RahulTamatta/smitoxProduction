@@ -1,5 +1,6 @@
 import categoryModel from "../models/categoryModel.js";
 import slugify from "slugify";
+import fs from 'fs';
 
 export const createCategoryController = async (req, res) => {
   try {
@@ -51,27 +52,43 @@ export const createCategoryController = async (req, res) => {
 //update category
 export const updateCategoryController = async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, photo } = req.body; // Add photo here
     const { id } = req.params;
+
+    // Build the update data object dynamically
+    const updateData = { name, slug: slugify(name) };
+    if (photo) {
+      updateData.photo = photo; // Update the photo if provided
+    }
+
     const category = await categoryModel.findByIdAndUpdate(
       id,
-      { name, slug: slugify(name) },
+      updateData,
       { new: true }
     );
+
+    if (!category) {
+      return res.status(404).send({
+        success: false,
+        message: "Category not found",
+      });
+    }
+
     res.status(200).send({
       success: true,
-      messsage: "Category Updated Successfully",
+      message: "Category Updated Successfully",
       category,
     });
   } catch (error) {
     console.log(error);
     res.status(500).send({
       success: false,
-      error,
+      error: error.message,
       message: "Error while updating category",
     });
   }
 };
+
 
 // get all cat
 export const categoryControlller = async (req, res) => {

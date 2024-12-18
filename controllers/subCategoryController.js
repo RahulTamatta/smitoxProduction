@@ -146,29 +146,35 @@ export const getSingleSubcategoryController = async (req, res) => {
 
 export const updateSubcategoryController = async (req, res) => {
   try {
-    const { name, category,isActive } = req.body;
+    const { name, category, isActive, photo } = req.body; // Destructure photo here
     const { id } = req.params;
-    console.log("Request subcategory",req.body);
-    if (!name) {
-      return res.status(401).send({ message: "Name is required" });
-    }
+
+    // if (!name) {
+    //   return res.status(401).send({ message: "Name is required" });
+    // }
     if (!category) {
       return res.status(401).send({ message: "Category is required" });
     }
+
+    // Prepare the update data
     const updateData = {
       name,
       slug: slugify(name),
-      category
+      category,
+      isActive
     };
-    if (isActive !== undefined) {
-      updateData.isActive = isActive;
+
+    // Only update the photo if provided
+    if (photo) {
+      updateData.photo = photo;
     }
 
-    const subcategory = await subcategoryModel.findByIdAndUpdate(
-      id,
-      { name, slug: slugify(name), category },
-      { new: true }
-    );
+    const subcategory = await subcategoryModel.findByIdAndUpdate(id, updateData, { new: true });
+
+    if (!subcategory) {
+      return res.status(404).send({ success: false, message: "Subcategory not found" });
+    }
+
     res.status(200).send({
       success: true,
       message: "Subcategory Updated Successfully",
@@ -178,11 +184,13 @@ export const updateSubcategoryController = async (req, res) => {
     console.log(error);
     res.status(500).send({
       success: false,
-      error,
+      error: error.message,
       message: "Error while updating subcategory",
     });
   }
 };
+
+
 
 export const deleteSubcategoryController = async (req, res) => {
   try {
