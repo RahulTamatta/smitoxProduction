@@ -83,22 +83,28 @@ const CartSearchModal = ({ show, handleClose, userId }) => {
     }
   
     try {
+      // Get the applicable bulk product details, if any
       const bulkProduct = getApplicableBulkProduct(product, updatedQuantity);
+      
+      // Prepare the bulk product details (null if no applicable bulk pricing)
+      const bulkProductDetails = bulkProduct
+        ? {
+            price: bulkProduct.selling_price_set,
+            minimum: bulkProduct.minimum,
+            maximum: bulkProduct.maximum,
+          }
+        : null;
+  
       const payload = {
         productId: product._id,
         quantity: updatedQuantity,
-        bulkProductDetails: bulkProduct
-          ? {
-              price: bulkProduct.selling_price_set,
-              minimum: bulkProduct.minimum,
-              maximum: bulkProduct.maximum,
-            }
-          : null,
+        bulkProductDetails,  // This will be null if no bulk pricing is found
       };
   
       // Call the updateQuantity function
       await updateQuantity(product, updatedQuantity);
   
+      // Update the cart with the new quantity
       await axios.post(`/api/v1/carts/users/${userId}/cartq/${product._id}`, payload);
       toast.success('Cart updated successfully');
     } catch (error) {
@@ -136,6 +142,43 @@ const CartSearchModal = ({ show, handleClose, userId }) => {
     } catch (error) {
       console.error("Quantity update error:", error);
       toast.error("Failed to update quantity");
+    }
+  };
+  const addToCart = async (product, applicableBulk) => {
+    if (!auth.user) {
+      toast.error("Please log in to add items to cart");
+      return;
+    }
+  const firstQuantity=(product.unitSet)*(product.quantity);
+    // if (!isPincodeAvailable) {
+    //   toast.error("Delivery not available for your pincode");
+    //   return;
+    // }
+  
+    try {
+      const response = await axios.post(
+        `/api/v1/carts/users/${auth.user._id}/cart`,
+        {
+          productId: product._id,
+          quantity: firstQuantity,
+          price: applicableBulk
+            ? parseFloat(applicableBulk.selling_price_set)
+            : parseFloat(product.price),
+          bulkProductDetails: applicableBulk,
+        }
+      );
+  
+      if (response.data.status === "success") {
+        // setCart(response.data.cart);
+        // setDisplayQuantity(updatedQuantity);
+        // setSelectedBulk(applicableBulk);
+        // calculateTotalPrice(applicableBulk, updatedQuantity);
+        // setShowQuantitySelector(true);
+        toast.success("Item added to cart");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Error adding item to cart");
     }
   };
   

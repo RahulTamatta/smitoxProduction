@@ -3,12 +3,14 @@ import productModel from "../models/productModel.js";
 import subcategoryModel from "../models/subcategoryModel.js";
 import categoryModel from "../models/categoryModel.js";
 import orderModel from "../models/orderModel.js";
-
+import Razorpay from 'razorpay';
+import crypto from 'crypto';
 import fs from "fs";
 import slugify from "slugify";
 import dotenv from "dotenv";
 import { v4 as uuidv4 } from 'uuid';
 dotenv.config();
+
 export const createProductController = async (req, res) => {
   try {
     const {
@@ -604,18 +606,84 @@ export const productSubcategoryController = async (req, res) => {
 };
 
 
+// Initialize Razorpay
+const razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
+});
+
+// Process payment controller
 export const processPaymentController = async (req, res) => {
   try {
-    const { products, paymentMethod, amount } = req.body;
-    
-    if (!products || !Array.isArray(products) || products.length === 0 || !paymentMethod) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Invalid request body. Missing products or paymentMethod." 
+    // Check for authenticated user first
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+        reason: "User not authenticated"
       });
     }
 
-    // Create the order
+    const { products, paymentMethod, amount, cardType } = req.body;
+
+    // Debugging: Log incoming request body
+    console.log("Received request body:", req.body);
+
+    // Validation
+    if (!products || !Array.isArray(products) || products.length === 0 || !paymentMethod) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid request body. Missing products or paymentMethod.",
+        reason: "Missing or invalid fields in request body"
+      });
+    }
+
+    // Handle COD
+    if (paymentMethod === "COD") {
+      const order = new orderModel({
+        products: products.map(item => ({
+          product: item.product,
+          quantity: item.quantity,
+          price: item.price
+        })),
+        payment: {
+          paymentMethod,
+          transactionId: `COD-${Date.now()}`,
+        },
+        buyer: req.user._id,
+        amount: 0,
+        status: "Pending",
+      });
+
+      await order.save();
+      return res.json({
+        success: true,
+        message: "COD order placed successfully",
+        order
+      });
+    }
+
+    // For Razorpay payments
+    const razorpayOrderData = {
+      amount: Math.round(amount * 100), // Convert to paise
+      currency: 'INR',
+      receipt: `order_${Date.now()}`,
+      notes: {
+        paymentMethod,
+        cardType,
+        baseAmount: amount,
+        userId: req.user._id.toString() // Add user ID to notes for reference
+      }
+    };
+
+    // Debugging: Log Razorpay order creation attempt
+    console.log("Creating Razorpay order...");
+    const razorpayOrder = await razorpay.orders.create(razorpayOrderData);
+
+    // Debugging: Log the Razorpay order response
+    console.log("Razorpay order created:", razorpayOrder);
+
+    // Create order in database
     const order = new orderModel({
       products: products.map(item => ({
         product: item.product,
@@ -624,26 +692,168 @@ export const processPaymentController = async (req, res) => {
       })),
       payment: {
         paymentMethod,
-        transactionId: `${paymentMethod}-${Date.now()}`,
-        status: paymentMethod === "COD",
+        transactionId: razorpayOrder.id,
+        status: false,
       },
-      buyer: req.user._id, // Assuming you have user authentication middleware
+      buyer: req.user._id,
       amount: amount,
       status: "Pending",
     });
 
     await order.save();
 
-    res.json({ success: true, message: "Order placed successfully", order });
+    // Debugging: Log the created order
+    console.log("Order saved to database:", order);
+
+    res.json({
+      success: true,
+      message: "Order initiated",
+      order,
+      razorpayOrder,
+      key: process.env.RAZORPAY_KEY_ID
+    });
+
   } catch (error) {
+    // Debugging: Log the error message
     console.error("Error in processPaymentController:", error);
+
+    // Return error response with reason
     res.status(500).json({
       success: false,
       message: "Error in payment processing",
+      error: error.message,
+      reason: error.stack
+    });
+  }
+};
+
+
+// Verify Razorpay payment
+// const crypto = require('crypto');
+// const razorpay = require('razorpay'); // Ensure Razorpay SDK is correctly initialized
+
+export const verifyPaymentController = async (req, res) => {
+  try {
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature
+    } = req.body;
+
+    // Validate required fields
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required payment verification parameters"
+      });
+    }
+
+    // Find the order
+    const order = await orderModel.findOne({
+      "payment.transactionId": razorpay_order_id
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    try {
+      // Razorpay uses the order_id and payment_id to generate the signature
+      const body = razorpay_order_id + "|" + razorpay_payment_id;
+
+      // Generate expected signature using Razorpay's secret key
+      const expectedSignature = crypto
+        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+        .update(body)
+        .digest('hex');
+
+      // Log the expected signature and received signature for debugging
+      console.log('Body for signature:', body);
+      console.log('Expected Signature:', expectedSignature);
+      console.log('Received Signature:', razorpay_signature);
+
+      // Compare the Razorpay signature with the expected one
+      if (expectedSignature !== razorpay_signature) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid payment signature"
+        });
+      }
+
+      // If signature validation passes, update the order
+      order.payment.status = true;
+      order.payment.razorpayPaymentId = razorpay_payment_id;
+      order.status = "Pending"; // Ensure this status matches your enum
+      await order.save();
+
+      res.json({
+        success: true,
+        message: "Payment verified successfully",
+        order
+      });
+
+    } catch (signatureError) {
+      console.error("Signature validation failed:", signatureError);
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment signature"
+      });
+    }
+
+  } catch (error) {
+    console.error("Error in verifyPaymentController:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error in payment verification",
       error: error.message
     });
   }
 };
+
+
+// Get payment status
+export const getPaymentStatusController = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const order = await orderModel.findById(orderId);
+        
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: "Order not found"
+            });
+        }
+
+        if (order.payment.paymentMethod === "COD") {
+            return res.json({
+                success: true,
+                status: "COD",
+                order
+            });
+        }
+
+        const payment = await razorpay.payments.fetch(order.payment.transactionId);
+
+        res.json({
+            success: true,
+            status: payment.status,
+            order,
+            payment
+        });
+
+    } catch (error) {
+        console.error("Error in getPaymentStatusController:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching payment status",
+            error: error.message
+        });
+    }
+};
+
 
 export const getProductPhoto = async (req, res) => {
   try {

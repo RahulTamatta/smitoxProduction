@@ -205,18 +205,22 @@ const CartPage = () => {
       toast.error("Error checking pincode");
     }
   };
-
   const handlePayment = async () => {
     const total = totalPrice();
   
     if (!isPincodeAvailable) {
-      toast.error("Service is not available in your area or pincode.");
-      return;
+        toast.error("Service is not available in your area or pincode.");
+        return;
     }
   
     if (total < minimumOrder) {
-      toast.error(`Minimum order amount is ${minimumOrderCurrency} ${minimumOrder}`);
-      return;
+        toast.error(`Minimum order amount is ${minimumOrderCurrency} ${minimumOrder}`);
+        return;
+    }
+
+    if (!auth?.user?._id) {
+        toast.error("Please login to proceed with payment");
+        return;
     }
   
     setLoading(true);
@@ -224,44 +228,114 @@ const CartPage = () => {
     setOrderErrorMessage("");
   
     try {
-      const payload = {
-        products: Array.isArray(cart)
-          ? cart.map(item => ({
-              product: item.product._id,
-              quantity: item.quantity,
-              price: getPriceForProduct(item.product, item.quantity),
-            }))
-          : [],
-        paymentMethod,
-        amount: 0,
-      };
+        const payload = {
+            products: Array.isArray(cart)
+                ? cart.map(item => ({
+                    product: item.product._id,
+                    quantity: item.quantity,
+                    price: getPriceForProduct(item.product, item.quantity),
+                }))
+                : [],
+            paymentMethod: paymentMethod === "Razorpay" ? "Razorpay" : "COD",
+            amount: total,
+        };
+
+        // Handle COD orders
+        if (paymentMethod === "COD") {
+            const { data } = await axios.post("/api/v1/product/process-payment", payload);
+            if (data.success) {
+                await clearCart();
+                toast.success("Order Placed Successfully!");
+                navigate("/dashboard/user/orders");
+            } else {
+                throw new Error(data.message || "Failed to place COD order");
+            }
+            return;
+        }
   
-      if (paymentMethod === "Braintree" && instance) {
-        const { nonce } = await instance.requestPaymentMethod();
-        payload.nonce = nonce;
+        // Handle Razorpay payments
+   // Replace the Razorpay section in handlePayment with this:
+if (paymentMethod === "Razorpay") {
+  const { data } = await axios.post("/api/v1/product/process-payment", payload);
+
+  if (!data.success || !data.razorpayOrder) {
+      throw new Error(data.message || "Failed to create Razorpay order");
+  }
+
+  const options = {
+      key: data.key,
+      amount: data.razorpayOrder.amount,
+      currency: "INR",
+      name: "Smitox",
+      description: "Order Payment",
+      order_id: data.razorpayOrder.id,
+      handler: async function (response) {
+          try {
+              const verifyPayload = {
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+              };
+              
+              const verifyResponse = await axios.post(
+                  "/api/v1/product/verify-payment", 
+                  verifyPayload
+              );
+
+              if (verifyResponse.data.success) {
+                  await clearCart();
+                  toast.success("Payment successful! Order placed successfully");
+                  navigate("/dashboard/user/orders");
+              } else {
+                  throw new Error(verifyResponse.data.message || "Payment verification failed");
+              }
+          } catch (verifyError) {
+              toast.error(verifyError.message || "Payment verification failed");
+              console.error("Verification error:", verifyError);
+          }
+      },
+      prefill: {
+          name: auth?.user?.user_fullname || "",
+          email: auth?.user?.email || "",
+          contact: auth?.user?.phone || "",
+      },
+      theme: {
+          color: "#3399cc",
+      },
+      modal: {
+          ondismiss: function() {
+              setLoading(false);
+              setOrderPlacementInProgress(false);
+          }
       }
-  
-      const { data } = await axios.post("/api/v1/product/process-payment", payload);
-  
-      if (data.success) {
-        await clearCart();
-        toast.success("Order Placed Successfully!");
-        navigate("/dashboard/user/orders");
-      } else {
-        setOrderErrorMessage(data.message || "Failed to place order");
-        toast.error(data.message || "Failed to place order");
-      }
-    } catch (error) {
-      const errorMessage = error.response?.data?.message || "Payment processing failed";
-      setOrderErrorMessage(errorMessage);
-      toast.error(errorMessage);
-      console.error("Payment error:", error);
-    } finally {
+  };
+
+  // Use window.Razorpay instead of creating new Razorpay instance
+  const rzp = new window.Razorpay(options);
+  rzp.open();
+
+  // Handle payment modal close
+  rzp.on('payment.failed', function (response) {
+      toast.error("Payment failed. Please try again.");
       setLoading(false);
       setOrderPlacementInProgress(false);
+  });
+}
+    } catch (error) {
+        const errorMessage = error.response?.data?.message || error.message || "Payment processing failed";
+        setOrderErrorMessage(errorMessage);
+        toast.error(errorMessage);
+        console.error("Payment error:", error);
+        setLoading(false);
+        setOrderPlacementInProgress(false);
+    } finally {
+        // Only set loading false for COD
+        if (paymentMethod === "COD") {
+            setLoading(false);
+            setOrderPlacementInProgress(false);
+        }
     }
-  };
-  
+};
 
   const handleProductClick = (slug) => {
     navigate(`/product/${slug}`);
@@ -446,28 +520,20 @@ const CartPage = () => {
               </div>
             </div>
             <div className="mb-3">
-              <label className="form-label">Payment Method</label>
-              <select 
-                className="form-select"
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-              >
-                <option value="COD">COD</option>
-                {/* <option value="Braintree">Braintree</option> */}
-              </select>
-            </div>
+  <label className="form-label">Payment Method</label>
+  <label className="form-label">Payment Method</label>
+<select 
+  className="form-select"
+  value={paymentMethod}
+  onChange={(e) => setPaymentMethod(e.target.value)}
+>
+  <option value="COD">COD</option>
+  <option value="Razorpay">Razorpay</option>
+  <option value="Advance">Advance</option> {/* New payment method option */}
+</select>
 
-            {paymentMethod === "Braintree" && clientToken && (
-              <div className="mb-3">
-                <DropIn
-                  options={{
-                    authorization: clientToken,
-                    paypal: { flow: "vault" },
-                  }}
-                  onInstance={(instance) => setInstance(instance)}
-                />
-              </div>
-            )}
+</div>
+
 
 <button
   className="btn btn-primary w-100"

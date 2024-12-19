@@ -9,6 +9,7 @@ import "../cart/cartPage.css"
 import { useCart } from "../../context/cart";
 import { useAuth } from "../../context/auth";
 import { useParams } from 'react-router-dom';
+import CartSearchModal from "../Admin/addTocartModal";
 
 const AddToCartPages = () => {
   const [cart, setCart] = useState([]);
@@ -24,8 +25,14 @@ const AddToCartPages = () => {
   const [auth] = useAuth();
   const navigate = useNavigate();
   const { userId ,user_fullname} = useParams();
+  const [showSearchModal, setShowSearchModal] = useState(false);
   
-
+  const [selectedUserId, setSelectedUserId] = useState(null);
+    const handleOpenSearchModal = (userId) => {
+    setSelectedUserId(userId);
+    setShowSearchModal(true);
+  };
+  
   const getPriceForProduct = (product, quantity) => {
     const unitSet = product.unitSet || 1;
     if (product.bulkProducts && product.bulkProducts.length > 0) {
@@ -159,20 +166,33 @@ const AddToCartPages = () => {
   return (
     <Layout>
 <div className="cart-page container" style={{ paddingTop: '100px' }}>
-        <div className="row">
-          <div className="col-12">
-            <h1 className="text-center bg-light p-2 mb-1">
-  
-              <p className="text-center">
-                {cart?.length
-                  ? ` ${user_fullname} Have ${cart.length} items in his cart `
-                  : "His Cart Is Empty"}
-              </p>
-            </h1>
-          </div>
-        </div>
+
+<div className="col-12">
+  <h1 className="text-center bg-light p-2 mb-1">
+    <p className="text-center">
+      {cart?.length
+        ? ` ${user_fullname} Have ${cart.length} items in his cart `
+        : "His Cart Is Empty"}
+    </p>
+    {/* Add this button */}
+    <button 
+      className="btn btn-primary"
+      onClick={() => handleOpenSearchModal(userId)}
+    >
+      Add Products to Cart
+    </button>
+  </h1>
+</div>
+
+{/* Move this outside the header but keep it in the component */}
+<CartSearchModal
+  show={showSearchModal}
+  handleClose={() => setShowSearchModal(false)} // Add this prop
+  userId={selectedUserId}
+/>
         <div className="row">
           <div className="col-md-7 col-12">
+            
             {Array.isArray(cart) && cart.map((p) => (
               p?.product && (
                 <div

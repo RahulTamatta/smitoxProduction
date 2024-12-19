@@ -19,7 +19,7 @@ const orderSchema = new mongoose.Schema(
     payment: {
       paymentMethod: {
         type: String,
-        enum: ["COD", "UPI"],
+        enum: ["COD", "Razorpay"],
         // required: true,
       },
       transactionId: String,

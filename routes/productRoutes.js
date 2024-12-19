@@ -3,7 +3,7 @@ import {
   createProductController,
   deleteProductController,
   getProductController,
-  getSingleProductController,
+  getSingleProductController,verifyPaymentController,
   productCategoryController,
   productCountController,
   productFiltersController,
@@ -97,5 +97,6 @@ router.get("/product-subcategory/:subcategoryId", productSubcategoryController);
 // router.get("/product-photo/:pid", getProductPhoto);
 // New route for processing payments (both COD and UPI)
 router.post("/process-payment", requireSignIn, processPaymentController);
+router.post("/verify-payment", requireSignIn, verifyPaymentController);
 
 export default router;
