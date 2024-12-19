@@ -1,7 +1,9 @@
-import React from "react";
-import { Modal, Button, Table, Form } from "react-bootstrap";
-import moment from "moment";
-import jsPDF from 'jspdf';
+import React from 'react';
+import { Modal, Button, Table, Form } from 'react-bootstrap';
+import moment from 'moment';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable'; // Add this import for better table handling
+
 const OrderModal = ({
   show,
   handleClose,
@@ -21,58 +23,47 @@ const OrderModal = ({
   const orderId = selectedOrder?._id;
   const products = selectedOrder?.products || [];
 
-  // Update the getProductPhotoUrl function in OrderModal.js:
-
   const getProductPhotoUrl = (product) => {
     if (!product) return null;
-
-    // If the product is populated and has images
+    
     if (product.product && product.product.images && product.product.images.length > 0) {
       return product.product.images[0].thumbnailLink;
     }
-
-    // If we have direct access to images (from search results)
+    
     if (product.images && product.images.length > 0) {
       return product.images[0].thumbnailLink;
     }
-
-    // If product has an ID and photo buffer
+    
     if (product.product && product.product._id) {
       return `/api/v1/product/product-photo/${product.product._id}`;
     }
-
-    // If we have direct product ID
+    
     if (product._id) {
       return `/api/v1/product/product-photo/${product._id}`;
     }
-
+    
     return null;
   };
 
-  // Update the getProductName function in OrderModal.js:
-
   const getProductName = (product) => {
     if (!product) return "Unknown Product";
-
-    // First, check populated product name
+    
     if (product.product && product.product.name) {
       return product.product.name;
     }
-
-    // Fallback to direct name 
+    
     if (product.name) {
       return product.name;
     }
-
-    // If no name, use SKU
+    
     if (product.product && product.product.sku) {
       return `Product (${product.product.sku})`;
     }
-
+    
     if (product.sku) {
       return `Product (${product.sku})`;
     }
-
+    
     return "Unknown Product";
   };
 
@@ -97,191 +88,124 @@ const OrderModal = ({
       alert('No order selected');
       return;
     }
-
-    try {
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
+  
+    // Create a function to load the image and return a promise
+    const loadImage = (url) => {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';  // Handle CORS
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = url;
       });
-
-      // Page setup
-      const pageWidth = 210; // A4 width
-      const pageHeight = 297; // A4 height
-      const margin = 10;
-      const contentWidth = pageWidth - (2 * margin);
-
-      // Font and styling
-      doc.setFont('helvetica');
-      doc.setFontSize(10);
-
-      // Column definitions with precise widths
-      const columns = {
-        product: { width: 70, align: 'left' },
-        unitPrice: { width: 25, align: 'right' },
-        quantity: { width: 20, align: 'right' },
-        netAmount: { width: 25, align: 'right' },
-        tax: { width: 25, align: 'right' },
-        total: { width: 25, align: 'right' }
-      };
-
-      // Calculate total column width to ensure it fits
-      const totalColumnWidth = Object.values(columns).reduce((sum, col) => sum + col.width, 0);
-      const startX = (pageWidth - totalColumnWidth) / 2;
-
-      // Helper function for precise text rendering
-      const safeText = (text, x, y, options = {}) => {
+    };
+  
+    // Main PDF generation with image handling
+    const generatePDFWithLogo = async () => {
+      try {
+        const doc = new jsPDF();
+        const totals = calculateTotals();
+  
+        // Define PDF dimensions
+        const pageWidth = doc.internal.pageSize.width;
+        const marginLeft = 10;
+        const marginRight = 10;
+        const maxTextWidth = pageWidth - marginLeft - marginRight;
+  
         try {
-          doc.text(text.toString(), x, y, {
-            ...options,
-            maxWidth: contentWidth,
-            lineHeightFactor: 1.2
-          });
-        } catch (error) {
-          console.error('Text rendering error:', error);
+          // Load and add logo
+          const logoData = await loadImage('https://smitox.com/img/logo.png');
+          // Add logo with proper scaling (80px height equivalent)
+          doc.addImage(logoData, 'PNG', 20, 10, 40, 15); // Adjust dimensions as needed
+        } catch (imageError) {
+          console.warn('Failed to load logo:', imageError);
+          // Continue PDF generation without logo
         }
-      };
-
-      // Header
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      safeText('TAX INVOICE', pageWidth / 2, margin + 10, { align: 'center' });
-
-      // Company Details
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      safeText('Smitox B2b', margin + 10, margin + 20);
-      safeText('GST No: 27AGEPJ1490K1Z9', margin + 10, margin + 25);
-
-      // Invoice Details
-      const currentDate = new Date().toISOString().split('T')[0];
-      safeText(`Invoice No: ${selectedOrder.orderNumber || 'N/A'}`, pageWidth - margin - 50, margin + 20);
-      safeText(`Date: ${currentDate}`, pageWidth - margin - 50, margin + 25);
-
-      // Table Header
-      let currentY = margin + 40;
-      doc.setFillColor(230, 230, 230);
-      doc.rect(startX, currentY, totalColumnWidth, 10, 'F');
-
-      // Header Columns
-      const headers = ['Product', 'Unit Price', 'Qty', 'Net Amount', 'Tax', 'Total'];
-      headers.forEach((header, index) => {
-        const columnKeys = Object.keys(columns);
-        const columnKey = columnKeys[index];
-        const column = columns[columnKey];
-
-        const x = startX + Object.keys(columns)
-          .slice(0, index)
-          .reduce((sum, key) => sum + columns[key].width, 0);
-
-        safeText(header, x + (column.align === 'right' ? column.width : 2), currentY + 7, {
-          align: column.align
+  
+        // Add company header
+        doc.setFontSize(20);
+        doc.text('TAX INVOICE', 105, 20, { align: 'center' });
+  
+        doc.setFontSize(12);
+        doc.text('Smitox B2b', 20, 30);
+        doc.text(`Address : ${selectedOrder.buyer?.address}`, 20, 35);
+  
+        // Add invoice details with text width check
+        const invoiceText = `Invoice No: ${selectedOrder._id || 'N/A'}`;
+        let textWidth = doc.getTextWidth(invoiceText);
+  
+        if (textWidth > maxTextWidth) {
+          let lines = doc.splitTextToSize(invoiceText, maxTextWidth);
+          doc.text(lines, 130, 30);
+        } else {
+          doc.text(invoiceText, 130, 30);
+        }
+  
+        doc.text(`Date: ${moment().format('DD/MM/YYYY')}`, 130, 35);
+  
+        // Add customer details
+        doc.text('Bill To:', 20, 50);
+        doc.text(`Name: ${selectedOrder.buyer.user_fullname || 'N/A'}`, 20, 55);
+  
+        // Create table for products
+        const tableColumn = ['Product', 'Qty', 'Price', 'GST%', 'Net Amount', 'Tax Amount', 'Total'];
+        const tableRows = products.map(product => [
+          getProductName(product),
+          product.quantity,
+          Number(product.price).toFixed(2),
+          `${product.product.gst}%`,
+          Number(product.price * product.quantity).toFixed(2),
+          Number((product.price * product.quantity) * product.product.gst).toFixed(2),
+          Number((product.price * product.quantity) * (1 + product.product.gst)).toFixed(2)
+        ]);
+  
+        doc.autoTable({
+          head: [tableColumn],
+          body: tableRows,
+          startY: 70,
+          theme: 'grid',
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [66, 139, 202] }
         });
-      });
-
-      // Table Data
-      currentY += 10;
-      let totalAmount = 0;
-
-      // Safely handle products array
-      const productsList = Array.isArray(selectedOrder.products) ? selectedOrder.products : [];
-
-      productsList.forEach((product) => {
-        const productName = product.product.name || 'Unknown Product';
-        const unitPrice = Number(product.price) || 0;
-        const quantity = Number(product.quantity) || 0;
-        const netAmount = unitPrice * quantity;
-        const gst = product.product.gst;
-        // Draw row
-        doc.rect(startX, currentY, totalColumnWidth, 10);
-
-        // Render each column
-        let currentX = startX;
-
-        // Product Name
-        safeText(productName, currentX + 2, currentY + 7, {
-          align: columns.product.align,
-          maxWidth: columns.product.width - 4
-        });
-        currentX += columns.product.width;
-
-        // Unit Price
-        safeText(`₹ ${unitPrice.toFixed(2)}`, currentX + columns.unitPrice.width - 2, currentY + 7, {
-          align: columns.unitPrice.align
-        });
-        currentX += columns.unitPrice.width;
-
-        // Quantity
-        safeText(quantity.toString(), currentX + columns.quantity.width - 2, currentY + 7, {
-          align: columns.quantity.align
-        });
-        currentX += columns.quantity.width;
-
-        // Net Amount
-        safeText(`₹ ${netAmount.toFixed(2)}`, currentX + columns.netAmount.width - 2, currentY + 7, {
-          align: columns.netAmount.align
-        });
-        currentX += columns.netAmount.width;
-
-        // Tax
-        safeText(`${gst.toFixed(2)}%`, currentX + columns.tax.width - 2, currentY + 7, {
-          align: columns.tax.align
-        });
-        currentX += columns.tax.width;
-
-        // Total
-        safeText(`₹ ${netAmount.toFixed(2)}`, currentX + columns.total.width - 2, currentY + 7, {
-          align: columns.total.align
-        });
-
-        totalAmount += netAmount;
-        currentY += 10;
-      });
-
-      // Totals Section
-      currentY += 5;
-      const totals = [
-        { label: 'Subtotal', value: totalAmount.toFixed(2) },
-        { label: 'Delivery Charges', value: '360.00' },
-        { label: 'Total Amount', value: (totalAmount + 360).toFixed(2) },
-        { label: 'Amount Paid', value: '0.00' },
-        { label: 'Amount Pending', value: (totalAmount + 360).toFixed(2) }
-      ];
-
-      totals.forEach((total) => {
-        doc.rect(startX, currentY, totalColumnWidth, 7);
-        safeText(total.label, startX + 2, currentY + 5);
-        safeText(`₹ ${total.value}`, startX + totalColumnWidth - 2, currentY + 5, { align: 'right' });
-        currentY += 7;
-      });
-
-      // Amount in Words
-      currentY += 5;
-      const totalInvoiceAmount = totalAmount + 360;
-      safeText(`Amount in Words: ${convertToWords(Math.round(totalInvoiceAmount))}`, startX, currentY);
-
-      // Footer
-      currentY = pageHeight - 20;
-      safeText('For Smitox B2b', startX, currentY);
-      safeText('Authorized Signature', pageWidth - margin - 40, currentY);
-
-      // Page number
-      safeText('Page 1/1', pageWidth / 2, pageHeight - 10, { align: 'center' });
-
-      // Save PDF
-      doc.save(`Invoice_${selectedOrder.orderNumber || 'Order'}.pdf`);
-
-    } catch (error) {
-      console.error('PDF Generation Error:', error);
-      alert('Failed to generate PDF. Please try again.');
-    }
+  
+        const finalY = doc.lastAutoTable.finalY + 10;
+  
+        // Add totals
+        doc.text(`Subtotal: ${Number(totals.subtotal).toFixed(2)}`, 20, finalY + 10);
+        doc.text(`GST: ${Number(totals.gst).toFixed(2)}`, 20, finalY + 15);
+        doc.text(`Delivery Charges: ${Number(selectedOrder.deliveryCharges || 0).toFixed(2)}`, 20, finalY + 20);
+        doc.text(`COD Charges: ${Number(selectedOrder.codCharges || 0).toFixed(2)}`, 20, finalY + 25);
+        doc.text(`Discount: ${Number(selectedOrder.discount || 0).toFixed(2)}`, 20, finalY + 30);
+        doc.text(`Total Amount: ${Number(totals.total).toFixed(2)}`, 20, finalY + 35);
+        doc.text(`Amount Paid: ${Number(selectedOrder.amount || 0).toFixed(2)}`, 20, finalY + 40);
+        doc.text(`Amount Pending: ${Number(totals.total - (selectedOrder.amount || 0)).toFixed(2)}`, 20, finalY + 45);
+  
+        // Add amount in words
+        doc.text(`Amount in Words: ${convertToWords(Math.round(totals.total))}`, 20, finalY + 60);
+  
+        // Add footer
+        doc.text('For Smitox B2b', 20, finalY + 80);
+        doc.text('Authorized Signature', 150, finalY + 80);
+  
+        // Save PDF
+        doc.save(`Invoice_${selectedOrder.orderNumber || 'Order'}.pdf`);
+  
+      } catch (error) {
+        console.error('PDF Generation Error:', error);
+        alert('Failed to generate PDF. Please try again.');
+      }
+    };
+  
+    // Call the async function
+    generatePDFWithLogo();
   };
-
-
-  // ... rest of the component remains the same
-
-
-
 
   return (
     <Modal show={show} onHide={handleClose} size="lg">
@@ -292,7 +216,7 @@ const OrderModal = ({
         {selectedOrder ? (
           <div>
             <h2>Order ID: {orderId}</h2>
-            <p>Buyer: {selectedOrder.buyer?.name}</p>
+            <p>Buyer: {selectedOrder.buyer?.user_fullname}</p>
             <p>Email: {selectedOrder.buyer?.email}</p>
             <p>Created At: {moment(selectedOrder.createdAt).format("LLLL")}</p>
 
@@ -339,13 +263,12 @@ const OrderModal = ({
                           type="number"
                           value={product.price}
                           onChange={(e) => handleProductChange(index, "price", e.target.value)}
-                          style={{ width: "100px" }} // Adjust the width as needed
+                          style={{ width: "100px" }}
                         />
                       </td>
-
                       <td>₹{(Number(product.price) * Number(product.quantity)).toFixed(2)}</td>
                       <td>₹{((Number(product.price) * Number(product.quantity)) * product.product.gst).toFixed(2)}</td>
-                      <td>₹{((Number(product.price) * Number(product.quantity)) + ((Number(product.price) * Number(product.quantity)) * product.product.gst)).toFixed(2)}</td>
+                      <td>₹{((Number(product.price) * Number(product.quantity)) * (1 + product.product.gst)).toFixed(2)}</td>
                       <td>
                         <Button
                           variant="danger"
@@ -437,11 +360,6 @@ const OrderModal = ({
                 </tr>
               </tbody>
             </Table>
-            <div className="d-flex justify-content-end mt-3">
-              <Button variant="primary" onClick={handleDownloadPDF}>
-                Download Invoice
-              </Button>
-            </div>
           </div>
         ) : (
           <p>No order selected</p>
@@ -471,92 +389,89 @@ const OrderModal = ({
               </Button>
             </div>
           )}
-
+          
           {selectedOrder && selectedOrder.status === "Confirmed" && (
             <div>
               <Button
                 variant="success"
                 onClick={() => handleStatusChange(selectedOrder._id, "Accepted")}
-              >
-                Accept
-              </Button>
-            </div>
-          )}
-
-          {selectedOrder && selectedOrder.status === "Dispatched" && (
-            <div>
-              <Button
-                variant="success"
-                onClick={() => handleStatusChange(selectedOrder._id, "Delivered")}
-              >
-                Delivered
-              </Button>
-              <Button
-                variant="danger"
-                onClick={() => handleStatusChange(selectedOrder._id, "Returned")}
-              >
-                RTO
-              </Button>
-            </div>
-          )}
-
-          {selectedOrder && (selectedOrder.status === "Cancelled" || selectedOrder.status === "Rejected") && (
-            <div>
-              <Button
-                variant="primary"
-                onClick={() => handleStatusChange(selectedOrder._id, "Pending")}
-              >
-                Set to Pending
-              </Button>
-            </div>
-          )}
-
-          {selectedOrder && selectedOrder.status === "Accepted" && (
-            <div>
-              <Button
-                variant="primary"
-                onClick={() => handleStatusChange(selectedOrder._id, "Dispatched")}
-              >
-                Dispatched
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => handleStatusChange(selectedOrder._id, "Rejected")}
-              >
-                Reject
-              </Button>
-            </div>
-          )}
-
-          {selectedOrder && (selectedOrder.status === "Delivered" || selectedOrder.status === "Returned") && (
-            <div>
-              <Button variant="success" onClick={handleDelivered}>
-                Delivered
-              </Button>
-              <Button variant="danger" onClick={handleReturned}>
-                Returned
-              </Button>
-            </div>
-          )}
-        </div>
-
-        <Button variant="secondary" onClick={handleClose}>
-          Close
-        </Button>
-
-        <Button variant="primary" onClick={handleUpdateOrder}>
-          Update Order
-        </Button>
-
-        <div className="d-flex justify-content-end mt-3 gap-2">
+                >
+                  Accept
+                </Button>
+              </div>
+            )}
+            
+            {selectedOrder && selectedOrder.status === "Dispatched" && (
+              <div>
+                <Button
+                  variant="success"
+                  onClick={() => handleStatusChange(selectedOrder._id, "Delivered")}
+                >
+                  Delivered
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => handleStatusChange(selectedOrder._id, "Returned")}
+                >
+                  RTO
+                </Button>
+              </div>
+            )}
+            
+            {selectedOrder && (selectedOrder.status === "Cancelled" || selectedOrder.status === "Rejected") && (
+              <div>
+                <Button
+                  variant="primary"
+                  onClick={() => handleStatusChange(selectedOrder._id, "Pending")}
+                >
+                  Set to Pending
+                </Button>
+              </div>
+            )}
+            
+            {selectedOrder && selectedOrder.status === "Accepted" && (
+              <div>
+                <Button
+                  variant="primary"
+                  onClick={() => handleStatusChange(selectedOrder._id, "Dispatched")}
+                >
+                  Dispatched
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => handleStatusChange(selectedOrder._id, "Rejected")}
+                >
+                  Reject
+                </Button>
+              </div>
+            )}
+            
+            {selectedOrder && (selectedOrder.status === "Delivered" || selectedOrder.status === "Returned") && (
+              <div>
+                <Button variant="success" onClick={handleDelivered}>
+                  Delivered
+                </Button>
+                <Button variant="danger" onClick={handleReturned}>
+                  Returned
+                </Button>
+              </div>
+            )}
+          </div>
+  
+          <Button variant="secondary" onClick={handleClose}>
+            Close
+          </Button>
+  
+          <Button variant="primary" onClick={handleUpdateOrder}>
+            Update Order
+          </Button>
+  
           <Button variant="primary" onClick={generatePDF}>
             Download PDF
           </Button>
-        </div>
-      </Modal.Footer>
-    </Modal>
-  );
-};
-
-export default OrderModal;
-
+        </Modal.Footer>
+      </Modal>
+    );
+  };
+  
+  export default OrderModal;

@@ -356,13 +356,13 @@ export const getOrdersController = async (req, res) => {
 
     // Fetch orders based on the user_id passed in the route
     const orders = await orderModel
-      .find({ buyer: user_id }) // Use the user_id directly
+      .find({ buyer: user_id })
+      .populate("buyer", "user_fullname") // Use the user_id directly
       .populate({
         path: "products.product",
         select: "name photo price  sku"
         // Populate all fields in Product schema
-      })
-      .populate("buyer", "user_fullname"); // Include only `user_fullname` for the buyer
+      }); // Include only `user_fullname` for the buyer
 
     res.json(orders);
   } catch (error) {
@@ -389,7 +389,7 @@ export const getAllOrdersController = async (req, res) => {
       path: "products.product",
       select: "name  gst price " // Ensure name is selected
     })
-    .populate("buyer", "name email gst")
+    .populate("buyer", "user_fullname email_id address pincode gst")
     .sort({ createdAt: "-1" });
     res.json(orders);
   } catch (error) {
