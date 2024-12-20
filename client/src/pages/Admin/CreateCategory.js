@@ -62,7 +62,7 @@ const CreateCategory = () => {
         `/api/v1/category/update-category/${selected._id}`,
         {
           name: updatedName,
-          photo: updatedImage
+          photo: updatedImage,
         }
       );
       if (data?.success) {
@@ -71,7 +71,7 @@ const CreateCategory = () => {
         setUpdatedName("");
         setUpdatedImage(null);
         setVisible(false);
-        getAllCategory();
+        window.location.reload(); // Reload the page
       } else {
         toast.error(data.message);
       }
@@ -80,6 +80,7 @@ const CreateCategory = () => {
       toast.error("Something went wrong while updating");
     }
   };
+  
 
   // delete category
   const handleDelete = async (pId) => {

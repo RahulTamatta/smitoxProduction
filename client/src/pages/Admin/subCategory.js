@@ -110,7 +110,7 @@ const handleEditSubmit = async (e) => {
         name: editName,
         category: editParentCategoryId,
         isActive: editIsActive,
-        photo: editPhoto || editingSubcategory.photo  // Keep old photo if no new one is uploaded
+        photo: editPhoto || editingSubcategory.photo, // Keep old photo if no new one is uploaded
       }
     );
 
@@ -121,7 +121,8 @@ const handleEditSubmit = async (e) => {
       setEditParentCategoryId("");
       setEditPhoto(null);
       setEditIsActive(true);
-      getAllSubcategories();
+      // Reload the page
+      window.location.reload();
     } else {
       toast.error(data.message);
     }
