@@ -83,9 +83,7 @@ const handleSubmit = async (e) => {
       formData.append("photo", photo); // Append the file if uploaded
     }
 
-    const { data } = await axios.post("/api/v1/subcategory/create-subcategory", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const { data } = await axios.post("/api/v1/subcategory/create-subcategory", {name,parentCategoryId,photo});
     if (data?.success) {
       toast.success(`${name} is created`);
       setName("");

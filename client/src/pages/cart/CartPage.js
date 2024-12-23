@@ -57,7 +57,7 @@ const CartPage = () => {
       if (auth?.user?.pincode) {
         checkPincode(auth.user.pincode);
       }
-      getToken();
+      // getToken();
     }
   }, [auth?.token, auth?.user?._id]);
 
@@ -85,14 +85,15 @@ const CartPage = () => {
     }
   };
 
-  const getToken = async () => {
-    try {
-      const { data } = await axios.get("/api/v1/product/braintree/token");
-      setClientToken(data?.clientToken);
-    } catch (error) {
-      console.log(error);
-    }
-  };
+
+  // const getToken = async () => {
+  //   try {
+  //     const { data } = await axios.get("/api/v1/product/braintree/token");
+  //     setClientToken(data?.clientToken);
+  //   } catch (error) {
+  //     console.log(error);
+  //   }
+  // };
 
   const removeCartItem = async (pid) => {
     try {
@@ -158,33 +159,25 @@ const CartPage = () => {
 
   const totalPrice = () => {
     try {
+      if (!Array.isArray(cart)) return 0;
+  
       let total = 0;
-      let totalGST = 0;
-
-      if (Array.isArray(cart)) {
-        cart.forEach((item) => {
-          const { product, quantity } = item;
-
+  
+      cart.forEach((item) => {
+        const { product, quantity } = item;
+        if (product && quantity > 0) {
           const itemPrice = getPriceForProduct(product, quantity);
-          const gst = typeof product.gst === 'number' && !isNaN(product.gst) ? product.gst : 0;
-
-          const validQuantity = typeof quantity === 'number' && quantity > 0 ? quantity : 1;
-
-          const itemGST = gst > 0 ? (itemPrice * gst) / 100 : 0;
-          const itemPriceWithGST = itemPrice + itemGST;
-          const itemTotal = itemPriceWithGST * validQuantity;
-
-          total += itemTotal;
-          totalGST += itemGST * validQuantity;
-        });
-      }
-
+          total += itemPrice * quantity;
+        }
+      });
+  
       return total;
     } catch (error) {
-      console.error("Total calculation error:", error);
+      console.error("Error calculating total price:", error);
       return 0;
     }
   };
+  
 
   const checkPincode = async (pincode) => {
     try {
@@ -209,18 +202,19 @@ const CartPage = () => {
     const total = totalPrice();
   
     if (!isPincodeAvailable) {
-        toast.error("Service is not available in your area or pincode.");
-        return;
+      toast.error("Service is not available in your area or pincode.");
+      return;
     }
   
     if (total < minimumOrder) {
-        toast.error(`Minimum order amount is ${minimumOrderCurrency} ${minimumOrder}`);
-        return;
+      toast.error(`Minimum order amount is ${minimumOrderCurrency} ${minimumOrder}`);
+      return;
     }
-
+  
+    // Check if user is logged in and has an _id
     if (!auth?.user?._id) {
-        toast.error("Please login to proceed with payment");
-        return;
+      toast.error("Please login to proceed with payment");
+      return;
     }
   
     setLoading(true);
@@ -228,115 +222,114 @@ const CartPage = () => {
     setOrderErrorMessage("");
   
     try {
-        const payload = {
-            products: Array.isArray(cart)
-                ? cart.map(item => ({
-                    product: item.product._id,
-                    quantity: item.quantity,
-                    price: getPriceForProduct(item.product, item.quantity),
-                }))
-                : [],
-            paymentMethod: paymentMethod === "Razorpay" ? "Razorpay" : "COD",
-            amount: total,
-        };
-
-        // Handle COD orders
-        if (paymentMethod === "COD") {
-            const { data } = await axios.post("/api/v1/product/process-payment", payload);
-            if (data.success) {
-                await clearCart();
-                toast.success("Order Placed Successfully!");
-                navigate("/dashboard/user/orders");
-            } else {
-                throw new Error(data.message || "Failed to place COD order");
-            }
-            return;
+      const payload = {
+        products: Array.isArray(cart)
+          ? cart.map(item => ({
+              product: item.product._id,
+              quantity: item.quantity,
+              price: getPriceForProduct(item.product, item.quantity),
+            }))
+          : [],
+        paymentMethod: paymentMethod === "Razorpay" ? "Razorpay" : "COD",
+        amount: total,
+      };
+  
+      // Handle COD orders
+      if (paymentMethod === "COD") {
+        const { data } = await axios.post("/api/v1/product/process-payment", payload);
+        if (data.success) {
+          await clearCart();
+          toast.success("Order Placed Successfully!");
+          navigate("/dashboard/user/orders");
+        } else {
+          throw new Error(data.message || "Failed to place COD order");
+        }
+        return;
+      }
+  
+      // Handle Razorpay payments
+      if (paymentMethod === "Razorpay") {
+        const { data } = await axios.post("/api/v1/product/process-payment", payload);
+  
+        if (!data.success || !data.razorpayOrder) {
+          throw new Error(data.message || "Failed to create Razorpay order");
         }
   
-        // Handle Razorpay payments
-   // Replace the Razorpay section in handlePayment with this:
-if (paymentMethod === "Razorpay") {
-  const { data } = await axios.post("/api/v1/product/process-payment", payload);
-
-  if (!data.success || !data.razorpayOrder) {
-      throw new Error(data.message || "Failed to create Razorpay order");
-  }
-
-  const options = {
-      key: data.key,
-      amount: data.razorpayOrder.amount,
-      currency: "INR",
-      name: "Smitox",
-      description: "Order Payment",
-      order_id: data.razorpayOrder.id,
-      handler: async function (response) {
-          try {
+        const options = {
+          key: data.key,
+          amount: data.razorpayOrder.amount,
+          currency: "INR",
+          name: "Smitox",
+          description: "Order Payment",
+          order_id: data.razorpayOrder.id,
+          handler: async function (response) {
+            try {
               const verifyPayload = {
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
               };
-              
+  
               const verifyResponse = await axios.post(
-                  "/api/v1/product/verify-payment", 
-                  verifyPayload
+                "/api/v1/product/verify-payment", 
+                verifyPayload
               );
-
+  
               if (verifyResponse.data.success) {
-                  await clearCart();
-                  toast.success("Payment successful! Order placed successfully");
-                  navigate("/dashboard/user/orders");
+                await clearCart();
+                toast.success("Payment successful! Order placed successfully");
+                navigate("/dashboard/user/orders");
               } else {
-                  throw new Error(verifyResponse.data.message || "Payment verification failed");
+                throw new Error(verifyResponse.data.message || "Payment verification failed");
               }
-          } catch (verifyError) {
+            } catch (verifyError) {
               toast.error(verifyError.message || "Payment verification failed");
               console.error("Verification error:", verifyError);
-          }
-      },
-      prefill: {
-          name: auth?.user?.user_fullname || "",
-          email: auth?.user?.email || "",
-          contact: auth?.user?.phone || "",
-      },
-      theme: {
-          color: "#3399cc",
-      },
-      modal: {
-          ondismiss: function() {
+            }
+          },
+          prefill: {
+            name: auth?.user?.user_fullname || "",
+            email: auth?.user?.email || "",
+            contact: auth?.user?.phone || "",
+          },
+          theme: {
+            color: "#3399cc",
+          },
+          modal: {
+            ondismiss: function() {
               setLoading(false);
               setOrderPlacementInProgress(false);
+            }
           }
+        };
+  
+        // Use window.Razorpay instead of creating new Razorpay instance
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+  
+        // Handle payment modal close
+        rzp.on('payment.failed', function (response) {
+          toast.error("Payment failed. Please try again.");
+          setLoading(false);
+          setOrderPlacementInProgress(false);
+        });
       }
-  };
-
-  // Use window.Razorpay instead of creating new Razorpay instance
-  const rzp = new window.Razorpay(options);
-  rzp.open();
-
-  // Handle payment modal close
-  rzp.on('payment.failed', function (response) {
-      toast.error("Payment failed. Please try again.");
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || error.message || "Payment processing failed";
+      setOrderErrorMessage(errorMessage);
+      toast.error(errorMessage);
+      console.error("Payment error:", error);
       setLoading(false);
       setOrderPlacementInProgress(false);
-  });
-}
-    } catch (error) {
-        const errorMessage = error.response?.data?.message || error.message || "Payment processing failed";
-        setOrderErrorMessage(errorMessage);
-        toast.error(errorMessage);
-        console.error("Payment error:", error);
+    } finally {
+      // Only set loading false for COD
+      if (paymentMethod === "COD") {
         setLoading(false);
         setOrderPlacementInProgress(false);
-    } finally {
-        // Only set loading false for COD
-        if (paymentMethod === "COD") {
-            setLoading(false);
-            setOrderPlacementInProgress(false);
-        }
+      }
     }
-};
-
+  };
+  
   const handleProductClick = (slug) => {
     navigate(`/product/${slug}`);
   };
@@ -506,10 +499,10 @@ if (paymentMethod === "Razorpay") {
             <div className="row">
               <div className="col-12">
                 <h5>Payment Options</h5>
-                {clientToken && (
+                { (
                   <DropIn
                     options={{
-                      authorization: clientToken,
+                      // authorization: clientToken,
                       paypal: {
                         flow: "vault",
                       },

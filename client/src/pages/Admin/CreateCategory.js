@@ -109,19 +109,19 @@ const CreateCategory = () => {
           <div className="col-md-9">
             <h1>Manage Category</h1>
             <div className="p-3 w-50">
-              {/* <CategoryForm
+              <CategoryForm
                 handleSubmit={handleSubmit}
                 value={name}
                 setValue={setName}
                 setImage={setImage}
-              /> */}
-                   <CategoryForm
+              />
+                   {/* <CategoryForm
                 value={updatedName}
                 setValue={setUpdatedName}
                 handleSubmit={handleUpdate}
                 photo={updatedImage}
                 setPhoto={setUpdatedImage}
-              />
+              /> */}
             </div>
             <div className="w-75">
               <table className="table">
