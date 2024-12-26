@@ -9,6 +9,14 @@ const ProductCard = ({ product }) => {
   const navigate = useNavigate();
   const [auth] = useAuth();
   const [isInWishlist, setIsInWishlist] = useState(false);
+  const [screenWidth, setScreenWidth] = useState(window.innerWidth);
+
+  // Update screen width on window resize
+  useEffect(() => {
+    const handleResize = () => setScreenWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     if (auth?.user?._id && product?._id) {
@@ -18,29 +26,33 @@ const ProductCard = ({ product }) => {
 
   const checkWishlistStatus = async () => {
     try {
-      const { data } = await axios.get(`/api/v1/carts/users/${auth.user._id}/wishlist/check/${product._id}`);
+      const { data } = await axios.get(
+        `/api/v1/carts/users/${auth.user._id}/wishlist/check/${product._id}`
+      );
       setIsInWishlist(data.exists);
     } catch (error) {
-      console.error('Error checking wishlist status:', error);
+      console.error("Error checking wishlist status:", error);
     }
   };
 
   const toggleWishlist = async (e) => {
     e.stopPropagation(); // Prevent navigating to product details when clicking the heart
-    
+
     if (!auth.user) {
       toast.error("Please log in to manage your wishlist");
       return;
     }
-  
+
     try {
       if (isInWishlist) {
-        await axios.delete(`/api/v1/carts/users/${auth.user._id}/wishlist/${product._id}`);
+        await axios.delete(
+          `/api/v1/carts/users/${auth.user._id}/wishlist/${product._id}`
+        );
         setIsInWishlist(false);
         toast.success("Removed from wishlist");
       } else {
-        await axios.post(`/api/v1/carts/users/${auth.user._id}/wishlist`, { 
-          productId: product._id 
+        await axios.post(`/api/v1/carts/users/${auth.user._id}/wishlist`, {
+          productId: product._id,
         });
         setIsInWishlist(true);
         toast.success("Added to wishlist");
@@ -51,13 +63,37 @@ const ProductCard = ({ product }) => {
     }
   };
 
-  // Check if product is null or undefined
+  // Determine font sizes based on screen width
+  const getFontSizes = () => {
+    if (screenWidth <= 576) {
+      return {
+        name: "0.8rem",
+        price: "0.9rem",
+        mrp: "0.7rem",
+      };
+    } else if (screenWidth <= 768) {
+      return {
+        name: "0.9rem",
+        price: "1rem",
+        mrp: "0.75rem",
+      };
+    } else {
+      return {
+        name: "1rem",
+        price: "1.25rem",
+        mrp: "0.875rem",
+      };
+    }
+  };
+
+  const fontSizes = getFontSizes();
+
   if (!product) {
     return (
       <div className="col-md-4 col-sm-6 col-12 mb-3">
         <div className="card product-card h-100">
           <div className="card-body d-flex flex-column">
-            <h5 style={{ fontSize: '0.9rem' }}>Product not available</h5>
+            <h5 style={{ fontSize: "0.9rem" }}>Product not available</h5>
           </div>
         </div>
       </div>
@@ -66,21 +102,21 @@ const ProductCard = ({ product }) => {
 
   return (
     <div className="col-md-10 col-sm-6 col-12 mb-3">
-      <div 
-        className="card product-card h-100" 
-        style={{ cursor: 'pointer', position: 'relative' }} 
+      <div
+        className="card product-card h-100"
+        style={{ cursor: "pointer", position: "relative" }}
         onClick={() => navigate(`/product/${product.slug}`)}
       >
-        <button 
+        <button
           onClick={toggleWishlist}
           style={{
-            position: 'absolute',
-            top: '10px',
-            right: '10px',
+            position: "absolute",
+            top: "10px",
+            right: "10px",
             zIndex: 2,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
+            background: "none",
+            border: "none",
+            cursor: "pointer",
           }}
         >
           <Heart
@@ -93,16 +129,36 @@ const ProductCard = ({ product }) => {
           src={`/api/v1/product/product-photo/${product._id}`}
           className="card-img-top product-image img-fluid"
           alt={product.name}
-          style={{   width: "100%",
-          height: "200px", objectFit: 'cover' }}
+          style={{
+            width: "100%",
+            height: "200px",
+            objectFit: "cover",
+          }}
         />
-       <div className="p-4 flex flex-col h-full">
-       <h5 className="text-xs font-semibold text-gray-900 dark:text-white mb-2">
-  {product.name.length > 20 ? `${product.name.slice(0, 20)}.....` : product.name}
-</h5>
-
-          <div className="mt-auto">
-            <h5 className="text-base font-bold text-gray-900 dark:text-white">
+        <div className="p-4 flex flex-col h-full">
+          <h5
+            style={{
+              fontSize: fontSizes.name,
+              fontWeight: "600",
+              color: "#333",
+              marginBottom: "10px",
+            }}
+          >
+            {product.name.length > 20
+              ? `${product.name.slice(0, 20)}.....`
+              : product.name}
+          </h5>
+        
+        </div>
+        <div className="mt-auto">
+            <h5
+              style={{
+                fontSize: fontSizes.price,
+                fontWeight: "700",
+                color: "#333",
+                padding:"0 1px 5px 20px"
+              }}
+            >
               {product.perPiecePrice?.toLocaleString("en-US", {
                 style: "currency",
                 currency: "INR",
@@ -110,8 +166,12 @@ const ProductCard = ({ product }) => {
             </h5>
             {product.mrp && (
               <h6
-                className="text-xs text-red-500"
-                style={{ textDecoration: "line-through" }}
+                style={{
+                  fontSize: fontSizes.mrp,
+                  textDecoration: "line-through",
+                  color: "red",
+                  padding:"0 1px 5px 20px"
+                }}
               >
                 {product.mrp.toLocaleString("en-US", {
                   style: "currency",
@@ -120,7 +180,6 @@ const ProductCard = ({ product }) => {
               </h6>
             )}
           </div>
-        </div>
       </div>
     </div>
   );

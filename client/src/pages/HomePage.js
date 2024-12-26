@@ -124,36 +124,43 @@ const HomePage = () => {
       toast.error('Failed to fetch banners');
     }
   };
+
+
   const settings = {
     dots: false,
-    infinite: false,
+    infinite: true,
     speed: 500,
     slidesToShow: 6,
     slidesToScroll: 1,
+    initialSlide: 0,
+    centerMode: false,
+    centerPadding: "0px", // Remove extra padding
     responsive: [
       {
         breakpoint: 1024,
         settings: {
           slidesToShow: 4,
           slidesToScroll: 1,
-        }
+        },
       },
       {
         breakpoint: 600,
         settings: {
           slidesToShow: 3,
           slidesToScroll: 1,
-        }
+        },
       },
       {
         breakpoint: 480,
         settings: {
-          slidesToShow: 2,
-          slidesToScroll: 1
-        }
-      }
-    ]
+          slidesToShow: 2.5,
+          slidesToScroll: 1,
+          centerPadding: "0px",
+        },
+      },
+    ],
   };
+  
   
   const [currentSlide, setCurrentSlide] = useState(0);
   
@@ -328,7 +335,6 @@ export default HomePage;
 
 
 
-// const HomePage = () => {
 //   const navigate = useNavigate();
 //   const [cart, setCart] = useCart();
 //   const [products, setProducts] = useState([]);
