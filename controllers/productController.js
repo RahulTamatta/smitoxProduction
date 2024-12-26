@@ -611,10 +611,9 @@ const razorpay = new Razorpay({
     key_secret: process.env.RAZORPAY_KEY_SECRET
 });
 
-// Process payment controller
+// Controller
 export const processPaymentController = async (req, res) => {
   try {
-    // Check for authenticated user first
     if (!req.user || !req.user._id) {
       return res.status(401).json({
         success: false,
@@ -625,9 +624,6 @@ export const processPaymentController = async (req, res) => {
 
     const { products, paymentMethod, amount, cardType } = req.body;
 
-    // Debugging: Log incoming request body
-    console.log("Received request body:", req.body);
-
     // Validation
     if (!products || !Array.isArray(products) || products.length === 0 || !paymentMethod) {
       return res.status(400).json({
@@ -637,7 +633,7 @@ export const processPaymentController = async (req, res) => {
       });
     }
 
-    // Handle COD
+    // Handle COD orders immediately
     if (paymentMethod === "COD") {
       const order = new orderModel({
         products: products.map(item => ({
@@ -650,7 +646,7 @@ export const processPaymentController = async (req, res) => {
           transactionId: `COD-${Date.now()}`,
         },
         buyer: req.user._id,
-        amount: 0,
+        amount: amount,
         status: "Pending",
       });
 
@@ -662,75 +658,40 @@ export const processPaymentController = async (req, res) => {
       });
     }
 
-    // For Razorpay payments
+    // For Razorpay payments - only create Razorpay order, don't save to DB yet
     const razorpayOrderData = {
-      amount: Math.round(amount * 100), // Convert to paise
+      amount: Math.round(amount * 100),
       currency: 'INR',
       receipt: `order_${Date.now()}`,
       notes: {
         paymentMethod,
         cardType,
         baseAmount: amount,
-        userId: req.user._id.toString() // Add user ID to notes for reference
+        userId: req.user._id.toString(),
+        products: JSON.stringify(products) // Store products in notes for later use
       }
     };
 
-    // Debugging: Log Razorpay order creation attempt
-    console.log("Creating Razorpay order...");
     const razorpayOrder = await razorpay.orders.create(razorpayOrderData);
-
-    // Debugging: Log the Razorpay order response
-    console.log("Razorpay order created:", razorpayOrder);
-
-    // Create order in database
-    const order = new orderModel({
-      products: products.map(item => ({
-        product: item.product,
-        quantity: item.quantity,
-        price: item.price
-      })),
-      payment: {
-        paymentMethod,
-        transactionId: razorpayOrder.id,
-        status: false,
-      },
-      buyer: req.user._id,
-      amount: amount,
-      status: "Pending",
-    });
-
-    await order.save();
-
-    // Debugging: Log the created order
-    console.log("Order saved to database:", order);
 
     res.json({
       success: true,
-      message: "Order initiated",
-      order,
+      message: "Razorpay order initiated",
       razorpayOrder,
       key: process.env.RAZORPAY_KEY_ID
     });
 
   } catch (error) {
-    // Debugging: Log the error message
     console.error("Error in processPaymentController:", error);
-
-    // Return error response with reason
     res.status(500).json({
       success: false,
       message: "Error in payment processing",
-      error: error.message,
-      reason: error.stack
+      error: error.message
     });
   }
 };
 
-
-// Verify Razorpay payment
-// const crypto = require('crypto');
-// const razorpay = require('razorpay'); // Ensure Razorpay SDK is correctly initialized
-
+// Verify payment and create order only after successful payment
 export const verifyPaymentController = async (req, res) => {
   try {
     const {
@@ -739,7 +700,6 @@ export const verifyPaymentController = async (req, res) => {
       razorpay_signature
     } = req.body;
 
-    // Validate required fields
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return res.status(400).json({
         success: false,
@@ -747,60 +707,49 @@ export const verifyPaymentController = async (req, res) => {
       });
     }
 
-    // Find the order
-    const order = await orderModel.findOne({
-      "payment.transactionId": razorpay_order_id
-    });
+    // Verify signature
+    const body = razorpay_order_id + "|" + razorpay_payment_id;
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(body)
+      .digest('hex');
 
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found"
-      });
-    }
-
-    try {
-      // Razorpay uses the order_id and payment_id to generate the signature
-      const body = razorpay_order_id + "|" + razorpay_payment_id;
-
-      // Generate expected signature using Razorpay's secret key
-      const expectedSignature = crypto
-        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-        .update(body)
-        .digest('hex');
-
-      // Log the expected signature and received signature for debugging
-      console.log('Body for signature:', body);
-      console.log('Expected Signature:', expectedSignature);
-      console.log('Received Signature:', razorpay_signature);
-
-      // Compare the Razorpay signature with the expected one
-      if (expectedSignature !== razorpay_signature) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid payment signature"
-        });
-      }
-
-      // If signature validation passes, update the order
-      order.payment.status = true;
-      order.payment.razorpayPaymentId = razorpay_payment_id;
-      order.status = "Pending"; // Ensure this status matches your enum
-      await order.save();
-
-      res.json({
-        success: true,
-        message: "Payment verified successfully",
-        order
-      });
-
-    } catch (signatureError) {
-      console.error("Signature validation failed:", signatureError);
+    if (expectedSignature !== razorpay_signature) {
       return res.status(400).json({
         success: false,
         message: "Invalid payment signature"
       });
     }
+
+    // Fetch the Razorpay order to get the stored data
+    const razorpayOrder = await razorpay.orders.fetch(razorpay_order_id);
+    const products = JSON.parse(razorpayOrder.notes.products);
+
+    // Create order in database only after successful payment verification
+    const order = new orderModel({
+      products: products.map(item => ({
+        product: item.product,
+        quantity: item.quantity,
+        price: item.price
+      })),
+      payment: {
+        paymentMethod: "Razorpay",
+        transactionId: razorpay_order_id,
+        razorpayPaymentId: razorpay_payment_id,
+        status: true,
+      },
+      buyer: razorpayOrder.notes.userId,
+      amount: razorpayOrder.notes.baseAmount,
+      status: "Pending",
+    });
+
+    await order.save();
+
+    res.json({
+      success: true,
+      message: "Payment verified and order created successfully",
+      order
+    });
 
   } catch (error) {
     console.error("Error in verifyPaymentController:", error);
@@ -811,7 +760,6 @@ export const verifyPaymentController = async (req, res) => {
     });
   }
 };
-
 
 // Get payment status
 export const getPaymentStatusController = async (req, res) => {

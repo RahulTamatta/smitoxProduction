@@ -46,7 +46,6 @@ const CreateProduct = () => {
   const [fk_tags, setFkTags] = useState([]); // Added to match controller
   const [sku, setSku] = useState(""); // Added to match controller
 
-
   useEffect(() => {
     getAllCategories();
     getSubcategories();
@@ -117,8 +116,12 @@ const CreateProduct = () => {
     }
 
     const netWeight = parseFloat(unitSet);
-    list[index].minNetWeight = (parseFloat(list[index].minimum) * netWeight).toFixed(2);
-    list[index].maxNetWeight = (parseFloat(list[index].maximum) * netWeight).toFixed(2);
+    list[index].minNetWeight = (
+      parseFloat(list[index].minimum) * netWeight
+    ).toFixed(2);
+    list[index].maxNetWeight = (
+      parseFloat(list[index].maximum) * netWeight
+    ).toFixed(2);
 
     if (name === "discount_mrp") {
       const setPrice = parseFloat(perPiecePrice);
@@ -197,8 +200,10 @@ const CreateProduct = () => {
       // productData.append("tags", JSON.stringify(tags));
       productData.append("fk_tags", JSON.stringify(fk_tags));
       productData.append("sku", sku);
-      const fkTagsArray = fk_tags.split(',').map(tag => tag.trim()).filter(tag => tag !== "");
-      
+      const fkTagsArray = fk_tags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter((tag) => tag !== "");
 
       productData.append("fk_tags", JSON.stringify(fkTagsArray));
 
@@ -219,37 +224,37 @@ const CreateProduct = () => {
     }
   };
 
- 
-// Add this function after your state declarations
-const generateUniqueSkU = () => {
-  // Get current timestamp
-  const timestamp = Date.now();
-  
-  // Convert timestamp to base 36 (numbers + letters) and take last 4 characters
-  const timeComponent = timestamp.toString(36).slice(-4).toUpperCase();
-  
-  // Generate 2 random letters
-  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const randomLetters = Array.from(
-    { length: 2 }, 
-    () => letters.charAt(Math.floor(Math.random() * letters.length))
-  ).join('');
-  
-  // Combine components
-  return `SM-${timeComponent}${randomLetters}`;
-};
+  // Add this function after your state declarations
+  const generateUniqueSkU = () => {
+    // Get current timestamp
+    const timestamp = Date.now();
 
-// Add this useEffect after your other useEffect hooks
-useEffect(() => {
-  // Generate and set SKU when component mounts
-  const uniqueSku = generateUniqueSkU();
-  setSku(uniqueSku);
-}, []); // Empty dependency array means this runs once on mount
- 
+    // Convert timestamp to base 36 (numbers + letters) and take last 4 characters
+    const timeComponent = timestamp.toString(36).slice(-4).toUpperCase();
+
+    // Generate 2 random letters
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const randomLetters = Array.from({ length: 2 }, () =>
+      letters.charAt(Math.floor(Math.random() * letters.length))
+    ).join("");
+
+    // Combine components
+    return `SM-${timeComponent}${randomLetters}`;
+  };
+
+  // Add this useEffect after your other useEffect hooks
+  useEffect(() => {
+    // Generate and set SKU when component mounts
+    const uniqueSku = generateUniqueSkU();
+    setSku(uniqueSku);
+  }, []); // Empty dependency array means this runs once on mount
+
   const handlePerPiecePriceChange = (e) => {
     const newPerPiecePrice = e.target.value;
     setPerPiecePrice(newPerPiecePrice);
-    const newSetPrice = (parseFloat(newPerPiecePrice) * parseFloat(unitSet)).toFixed(2);
+    const newSetPrice = (
+      parseFloat(newPerPiecePrice) * parseFloat(unitSet)
+    ).toFixed(2);
     setPrice(newSetPrice);
   };
 
@@ -332,21 +337,21 @@ useEffect(() => {
                 </Select>
               </div>
               <div className="mb-3">
-  <label htmlFor="youtubeUrl" className="form-label">
-    YouTube URL
-  </label>
-  <input
-    id="youtubeUrl"
-    type="text"
-    value={youtubeUrl}
-    placeholder="Enter YouTube URL"
-    className="form-control"
-    onChange={(e) => setYoutubeUrl(e.target.value)}
-  />
-  <small className="text-muted">
-    Enter a valid YouTube URL for the product video.
-  </small>
-</div>
+                <label htmlFor="youtubeUrl" className="form-label">
+                  YouTube URL
+                </label>
+                <input
+                  id="youtubeUrl"
+                  type="text"
+                  value={youtubeUrl}
+                  placeholder="Enter YouTube URL"
+                  className="form-control"
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                />
+                <small className="text-muted">
+                  Enter a valid YouTube URL for the product video.
+                </small>
+              </div>
 
               <div className="mb-3">
                 <label htmlFor="photoUpload" className="form-label">
@@ -418,39 +423,34 @@ useEffect(() => {
               </div>
 
               <div className="row mb-3">
-              <div className="col-md-4">
-  <label htmlFor="sku" className="form-label">
-    SKU
-  </label>
-  <input
-    id="sku"
-    type="text"
-    value={sku}
-    className="form-control"
-    readOnly
-    onChange={(e) => setSku(e.target.value)}
-  />
-</div>
+                <div className="col-md-4">
+                  <label htmlFor="sku" className="form-label">
+                    SKU
+                  </label>
+                  <input
+                    id="sku"
+                    type="text"
+                    value={sku}
+                    className="form-control"
+                    readOnly
+                    onChange={(e) => setSku(e.target.value)}
+                  />
+                </div>
+              </div>
 
-
-  
-      </div>
-      
-   
-  
-      <div className="mb-3">
-        <label className="form-label">FK Tags</label>
-        <input
-          type="text"
-          className="form-control"
-          value={fk_tags}
-          onChange={handleFkTagsChange}
-          placeholder="Enter FK tags separated by commas"
-        />
-        <small className="text-muted">
-          Enter FK tags separated by commas.
-        </small>
-      </div>
+              <div className="mb-3">
+                <label className="form-label">FK Tags</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={fk_tags}
+                  onChange={handleFkTagsChange}
+                  placeholder="Enter FK tags separated by commas"
+                />
+                <small className="text-muted">
+                  Enter FK tags separated by commas.
+                </small>
+              </div>
 
               <div className="row mb-3">
                 <div className="col-md-4">
@@ -506,7 +506,7 @@ useEffect(() => {
                     className="form-control"
                     onChange={(e) => setAdditionalUnit(e.target.value)}
                   >
-                         <option value="Chart">Chart</option>
+                    <option value="Chart">Chart</option>
                     <option value="Dozens">Dozens</option>
                     <option value="Kg">Kg</option>
                     <option value="Litre">Litre</option>
@@ -551,178 +551,181 @@ useEffect(() => {
                     onChange={(e) => setMrp(e.target.value)}
                   />
                 </div>
-         
 
-<div className="col-md-4">
-  <label htmlFor="perPiecePrice" className="form-label">
-  PER PIECE PRICE  
-  </label>
-  <input
-    id="perPiecePrice"
-    type="text"
-    value={perPiecePrice}
-    name="perPiecePrice"
-    placeholder="Enter per piece price"
-    className="form-control"
-    onChange={handlePerPiecePriceChange}
-  />
-</div>
-<div className="col-md-4">
-  <label htmlFor="price" className="form-label">
- SET PRICE
-  </label>
-  <input
-    id="price"
-    type="text"
-    value={price}
-    name="price"
-    placeholder="Enter set price"
-    className="form-control"
-    readOnly
-  />
-</div>
-<div className="col-md-4">
-  <label htmlFor="weight" className="form-label">
-    WEIGHT
-  </label>
-  <input
-    id="weight"
-    type="text"
-    value={weight}
-    name="weight"
-    placeholder="Enter weight"
-    className="form-control"
-    onChange={(e) => setWeight(e.target.value)}
-  />
-</div>
-<div className="col-md-4">
-  <label htmlFor="quantity" className="form-label">
-    MINIMUM QUANTITY
-  </label>
-  <input
-    id="quantity"
-    type="text"
-    value={quantity}
-    name="quantity"
-    placeholder="Enter minimum quantity"
-    className="form-control"
-    onChange={(e) => setQuantity(e.target.value)}
-  />
-</div>
-<div className="col-md-4">
-  <label htmlFor="stock" className="form-label">
-    STOCK
-  </label>
-  <input
-    id="stock"
-    type="text"
-    value={stock}
-    name="stock"
-    placeholder="Enter stock"
-    className="form-control"
-    onChange={(e) => setStock(e.target.value)}
-  />
-</div>
-<div className="col-md-4">
-  <label htmlFor="gst" className="form-label">
-    GST
-  </label>
-  <input
-    id="gst"
-    type="text"
-    value={gst}
-    name="GST"
-    placeholder="Enter GST"
-    className="form-control"
-    onChange={(e) => setGst(e.target.value)}
-  />
-</div>
-</div>
-
-{/* Bulk products */}
-<div className="mb-3">
-        <label>Bulk Products</label>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Minimum Quantity</th>
-              <th>Maximum Quantity</th>
-              <th>Discount MRP (Amount)</th>
-              <th>Selling Price Set</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {bulkProducts.map((product, index) => (
-              <tr key={index}>
-                <td>
+                <div className="col-md-4">
+                  <label htmlFor="perPiecePrice" className="form-label">
+                    PER PIECE PRICE
+                  </label>
                   <input
-                    type="number"
+                    id="perPiecePrice"
+                    type="text"
+                    value={perPiecePrice}
+                    name="perPiecePrice"
+                    placeholder="Enter per piece price"
                     className="form-control"
-                    name="minimum"
-                    value={product.minimum}
-                    onChange={(e) => handleChange(index, e)}
-                    readOnly={index > 0}
+                    onChange={handlePerPiecePriceChange}
                   />
-                  <small>{product.minNetWeight} {unit}</small>
-                </td>
-                <td>
+                </div>
+                <div className="col-md-4">
+                  <label htmlFor="price" className="form-label">
+                    SET PRICE
+                  </label>
                   <input
-                    type="number"
+                    id="price"
+                    type="text"
+                    value={price}
+                    name="price"
+                    placeholder="Enter set price"
                     className="form-control"
-                    name="maximum"
-                    value={product.maximum}
-                    onChange={(e) => handleChange(index, e)}
-                  />
-                  <small>{product.maxNetWeight} {unit}</small>
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    className="form-control"
-                    name="discount_mrp"
-                    value={product.discount_mrp}
-                    onChange={(e) => handleChange(index, e)}
-                  />
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    className="form-control"
-                    name="selling_price_set"
-                    value={product.selling_price_set}
-                    onChange={(e) => handleChange(index, e)}
                     readOnly
                   />
-                </td>
-                <td>
-                  <button
-                    className="btn btn-danger"
-                    onClick={() => handleRemoveRow(index)}
-                  >
-                    Remove
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <button className="btn btn-primary" onClick={handleAddRow}>
-          Add Bulk Product
-        </button>
+                </div>
+                <div className="col-md-4">
+                  <label htmlFor="weight" className="form-label">
+                    WEIGHT
+                  </label>
+                  <input
+                    id="weight"
+                    type="text"
+                    value={weight}
+                    name="weight"
+                    placeholder="Enter weight"
+                    className="form-control"
+                    onChange={(e) => setWeight(e.target.value)}
+                  />
+                </div>
+                <div className="col-md-4">
+                  <label htmlFor="quantity" className="form-label">
+                    MINIMUM QUANTITY
+                  </label>
+                  <input
+                    id="quantity"
+                    type="text"
+                    value={quantity}
+                    name="quantity"
+                    placeholder="Enter minimum quantity"
+                    className="form-control"
+                    onChange={(e) => setQuantity(e.target.value)}
+                  />
+                </div>
+                <div className="col-md-4">
+                  <label htmlFor="stock" className="form-label">
+                    STOCK
+                  </label>
+                  <input
+                    id="stock"
+                    type="text"
+                    value={stock}
+                    name="stock"
+                    placeholder="Enter stock"
+                    className="form-control"
+                    onChange={(e) => setStock(e.target.value)}
+                  />
+                </div>
+                <div className="col-md-4">
+                  <label htmlFor="gst" className="form-label">
+                    GST
+                  </label>
+                  <input
+                    id="gst"
+                    type="text"
+                    value={gst}
+                    name="GST"
+                    placeholder="Enter GST"
+                    className="form-control"
+                    onChange={(e) => setGst(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Bulk products */}
+              <div className="mb-3">
+                <label>Bulk Products</label>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Minimum Quantity</th>
+                      <th>Maximum Quantity</th>
+                      <th>Discount MRP (Amount)</th>
+                      <th>Selling Price Set</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bulkProducts.map((product, index) => (
+                      <tr key={index}>
+                        <td>
+                          <input
+                            type="number"
+                            className="form-control"
+                            name="minimum"
+                            value={product.minimum}
+                            onChange={(e) => handleChange(index, e)}
+                            readOnly={index > 0}
+                          />
+                          <small>
+                            {product.minNetWeight} {unit}
+                          </small>
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            className="form-control"
+                            name="maximum"
+                            value={product.maximum}
+                            onChange={(e) => handleChange(index, e)}
+                          />
+                          <small>
+                            {product.maxNetWeight} {unit}
+                          </small>
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            className="form-control"
+                            name="discount_mrp"
+                            value={product.discount_mrp}
+                            onChange={(e) => handleChange(index, e)}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            className="form-control"
+                            name="selling_price_set"
+                            value={product.selling_price_set}
+                            onChange={(e) => handleChange(index, e)}
+                            readOnly
+                          />
+                        </td>
+                        <td>
+                          <button
+                            className="btn btn-danger"
+                            onClick={() => handleRemoveRow(index)}
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <button className="btn btn-primary" onClick={handleAddRow}>
+                  Add Bulk Product
+                </button>
+              </div>
+
+              <div className="mb-3">
+                <button className="btn btn-primary" onClick={handleCreate}>
+                  Create Product
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      
-<div className="mb-3">
-<button className="btn btn-primary" onClick={handleCreate}>
-  Create Product
-</button>
-</div>
-</div>
-</div>
-</div>
-</div>
-</Layout>
-);
+    </Layout>
+  );
 };
 
 export default CreateProduct;

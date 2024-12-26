@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from "react";
-import Layout from "../components/Layout/Layout";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
+import { toast } from "react-hot-toast";
+import Layout from "../components/Layout/Layout";
 import Slider from "react-slick";
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
-import toast from "react-hot-toast";
+import { Heart } from "lucide-react";
+import { useAuth } from "../context/auth";
 
 const CategoryProduct = () => {
   const params = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const [auth] = useAuth();
 
   const [products, setProducts] = useState([]);
   const [category, setCategory] = useState({});
@@ -22,6 +23,7 @@ const CategoryProduct = () => {
   const [fromBanner, setFromBanner] = useState(
     location.state?.fromBanner || false
   );
+  const [wishlistStatus, setWishlistStatus] = useState({});
 
   useEffect(() => {
     if (params?.slug) {
@@ -36,6 +38,30 @@ const CategoryProduct = () => {
       fetchProductsByCategoryOrSubcategory(selectedSubcategory);
     }
   }, [fromBanner, selectedSubcategory]);
+
+  const checkWishlistStatus = async (products) => {
+    if (!auth?.user?._id) return;
+
+    try {
+      const statuses = {};
+      await Promise.all(
+        products.map(async (product) => {
+          try {
+            const { data } = await axios.get(
+              `/api/v1/carts/users/${auth.user._id}/wishlist/check/${product._id}`
+            );
+            statuses[product._id] = data.exists;
+          } catch (error) {
+            console.error(`Error checking wishlist status for product ${product._id}:`, error);
+            statuses[product._id] = false;
+          }
+        })
+      );
+      setWishlistStatus(statuses);
+    } catch (error) {
+      console.error('Error checking wishlist statuses:', error);
+    }
+  };
 
   const getCategoryAndSubcategories = async () => {
     try {
@@ -53,22 +79,24 @@ const CategoryProduct = () => {
   const getSubcategories = async (categoryId) => {
     try {
       const { data } = await axios.get("/api/v1/subcategory/get-subcategories");
+      
       if (data?.success) {
         const filteredSubcategories = data.subcategories.filter((subcat) => {
-          subcat.photo = subcat.photo || "/api/v1/placeholder/64/64"; // Default image if photo is missing
+          subcat.photo = subcat.photo || "/api/v1/placeholder/64/64";
           return subcat.category === categoryId;
         });
+        
         setSubcategories(filteredSubcategories);
       } else {
         setSubcategories([]);
       }
     } catch (error) {
-      console.log(error);
+      console.error("Error fetching subcategories:", error);
       toast.error("Error fetching subcategories");
       setSubcategories([]);
     }
   };
-
+  
   const fetchProductsByCategoryOrSubcategory = async (subcategoryId) => {
     try {
       setLoading(true);
@@ -78,6 +106,7 @@ const CategoryProduct = () => {
       }
       const { data } = await axios.get(url);
       setProducts(data?.products || []);
+      await checkWishlistStatus(data?.products || []);
     } catch (error) {
       console.log(error);
       toast.error("Error fetching products");
@@ -94,6 +123,7 @@ const CategoryProduct = () => {
         `/api/v1/product/product-subcategory/${subcategoryId}`
       );
       setProducts(data?.products || []);
+      await checkWishlistStatus(data?.products || []);
     } catch (error) {
       console.log(error);
       toast.error("Error fetching products");
@@ -105,7 +135,33 @@ const CategoryProduct = () => {
 
   const filterBySubcategory = (subcategoryId) => {
     setSelectedSubcategory(subcategoryId);
-    fetchProductsByCategoryOrSubcategory(params.selectedSubcategory);
+    fetchProductsByCategoryOrSubcategory(subcategoryId);
+  };
+
+  const toggleWishlist = async (e, productId) => {
+    e.stopPropagation();
+    
+    if (!auth?.user) {
+      toast.error("Please log in to manage your wishlist");
+      return;
+    }
+  
+    try {
+      if (wishlistStatus[productId]) {
+        await axios.delete(`/api/v1/carts/users/${auth.user._id}/wishlist/${productId}`);
+        setWishlistStatus(prev => ({ ...prev, [productId]: false }));
+        toast.success("Removed from wishlist");
+      } else {
+        await axios.post(`/api/v1/carts/users/${auth.user._id}/wishlist`, { 
+          productId: productId 
+        });
+        setWishlistStatus(prev => ({ ...prev, [productId]: true }));
+        toast.success("Added to wishlist");
+      }
+    } catch (error) {
+      console.error("Error toggling wishlist:", error);
+      toast.error("Error updating wishlist");
+    }
   };
 
   const settings = {
@@ -142,19 +198,16 @@ const CategoryProduct = () => {
   return (
     <Layout>
       <div className="container mt-3 category">
-        <h4 className="text-center" style={{ marginBottom: "1rem",paddingTop: "8rem"  }}>
-       
+        <h4 className="text-center" style={{ marginBottom: "1rem", paddingTop: "8rem" }}>
+          {category?.name}
         </h4>
 
-        {/* Conditionally render subcategories slider if not from banner */}
         {!fromBanner && subcategories.length > 0 && (
           <div className="subcategory-slider mb-4">
             <Slider {...settings}>
               <div
                 key="all"
-                className={`subcategory-item ${
-                  !selectedSubcategory ? "active" : ""
-                }`}
+                className={`subcategory-item ${!selectedSubcategory ? "active" : ""}`}
                 onClick={() => {
                   setSelectedSubcategory(null);
                   fetchProductsByCategoryOrSubcategory(null);
@@ -176,25 +229,23 @@ const CategoryProduct = () => {
                     borderRadius: "50%",
                     overflow: "hidden",
                     margin: "0 auto",
-                    border: "none", // Remove border
-                    padding: "0", // Remove padding
+                    border: "none",
+                    padding: "0",
                   }}
                 >
-                  {/* <img
+                  <img
                     src="/api/v1/placeholder/64/64"
                     alt="All"
                     className="subcategory-image"
                     style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                  /> */}
+                  />
                 </div>
                 <h6 className="mt-2">All</h6>
               </div>
               {subcategories.map((s) => (
                 <div
                   key={s._id}
-                  className={`subcategory-item ${
-                    selectedSubcategory === s._id ? "active" : ""
-                  }`}
+                  className={`subcategory-item ${selectedSubcategory === s._id ? "active" : ""}`}
                   onClick={() => filterBySubcategory(s._id)}
                   style={{
                     cursor: "pointer",
@@ -213,12 +264,12 @@ const CategoryProduct = () => {
                       borderRadius: "50%",
                       overflow: "hidden",
                       margin: "0 auto",
-                      border: "none", // Remove border
-                      padding: "0", // Remove padding
+                      border: "none",
+                      padding: "0",
                     }}
                   >
                     <img
-                      src={s.photo} // Updated to use photo field
+                      src={s.photo}
                       alt={s.name}
                       className="subcategory-image"
                       style={{
@@ -235,6 +286,7 @@ const CategoryProduct = () => {
             </Slider>
           </div>
         )}
+        
         <h6 className="text-center mb-4">
           {products?.length} result{products?.length !== 1 ? "s" : ""}
         </h6>
@@ -247,26 +299,55 @@ const CategoryProduct = () => {
               <div className="col-md-4 col-sm-6 mb-3" key={p._id}>
                 <div
                   className="card product-card h-100"
-                  style={{ cursor: "pointer" }}
+                  style={{ cursor: "pointer", position: "relative" }}
                   onClick={() => navigate(`/product/${p.slug}`)}
                 >
+                  <button 
+                    onClick={(e) => toggleWishlist(e, p._id)}
+                    style={{
+                      position: 'absolute',
+                      top: '10px',
+                      right: '10px',
+                      zIndex: 2,
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Heart
+                      size={24}
+                      fill={wishlistStatus[p._id] ? "#e47911" : "none"}
+                      color={wishlistStatus[p._id] ? "#e47911" : "#000000"}
+                    />
+                  </button>
                   <img
                     src={`/api/v1/product/product-photo/${p._id}`}
                     className="card-img-top product-image"
                     alt={p.name}
                     style={{ height: "200px", objectFit: "contain" }}
                   />
-                  <div className="card-body d-flex flex-column">
-                    <h5 className="card-title product-name">{p.name > 20 ? `${p.name.slice(0, 20)}.....` : p.name}</h5>
-       
+                  <div className="p-4 flex flex-col h-full">
+                    <h5 className="text-xs font-semibold text-gray-900 dark:text-white mb-2">
+                      {p.name.length > 20 ? `${p.name.slice(0, 20)}.....` : p.name}
+                    </h5>
                     <div className="mt-auto">
-                      <h5 className="card-title product-price">
-                        {p.perPiecePrice.toLocaleString("en-US", {
+                      <h5 className="text-base font-bold text-gray-900 dark:text-white">
+                        {p.perPiecePrice?.toLocaleString("en-US", {
                           style: "currency",
                           currency: "INR",
-                        })}
+                        }) || "Price not available"}
                       </h5>
-                     
+                      {p.mrp && (
+                        <h6
+                          className="text-xs text-red-500"
+                          style={{ textDecoration: "line-through" }}
+                        >
+                          {p.mrp.toLocaleString("en-US", {
+                            style: "currency",
+                            currency: "INR",
+                          })}
+                        </h6>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -280,4 +361,5 @@ const CategoryProduct = () => {
     </Layout>
   );
 };
+
 export default CategoryProduct;

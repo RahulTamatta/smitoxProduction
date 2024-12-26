@@ -15,6 +15,7 @@ export const createMinimumOrder = async (req, res) => {
   const minimumOrder = new MinimumOrder({
     amount: req.body.amount,
     currency: req.body.currency,
+    ...(req.body.advancePercentage !== undefined && { advancePercentage: req.body.advancePercentage })
   });
 
   try {
@@ -27,9 +28,16 @@ export const createMinimumOrder = async (req, res) => {
 
 export const updateMinimumOrder = async (req, res) => {
   try {
+    const updateData = {};
+    
+    // Only include fields that are provided in the request
+    if (req.body.amount !== undefined) updateData.amount = req.body.amount;
+    if (req.body.currency !== undefined) updateData.currency = req.body.currency;
+    if (req.body.advancePercentage !== undefined) updateData.advancePercentage = req.body.advancePercentage;
+
     const updatedMinimumOrder = await MinimumOrder.findOneAndUpdate(
       {},
-      { amount: req.body.amount, currency: req.body.currency },
+      updateData,
       { new: true, upsert: true }
     );
     res.json(updatedMinimumOrder);

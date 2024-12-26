@@ -4,6 +4,7 @@ import axios from 'axios';
 const MinimumOrderForm = () => {
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('');
+  const [advancePercentage, setAdvancePercentage] = useState('');
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -16,6 +17,7 @@ const MinimumOrderForm = () => {
       if (response.data) {
         setAmount(response.data.amount);
         setCurrency(response.data.currency);
+        setAdvancePercentage(response.data.advancePercentage || '');
       }
     } catch (error) {
       console.error('Error fetching minimum order:', error);
@@ -25,10 +27,14 @@ const MinimumOrderForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.put('/api/v1/minimumOrder/updateMinimumOrder', {
-        amount: parseFloat(amount),
-        currency,
-      });
+      const updateData = {};
+      
+      // Only include fields that have been modified
+      if (amount !== '') updateData.amount = parseFloat(amount);
+      if (currency !== '') updateData.currency = currency;
+      if (advancePercentage !== '') updateData.advancePercentage = parseFloat(advancePercentage);
+
+      const response = await axios.put('/api/v1/minimumOrder/updateMinimumOrder', updateData);
       setMessage('Minimum order updated successfully!');
       console.log(response.data);
     } catch (error) {
@@ -48,7 +54,7 @@ const MinimumOrderForm = () => {
             id="amount"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            required
+            placeholder="Enter amount (optional)"
           />
         </div>
         <div>
@@ -58,7 +64,19 @@ const MinimumOrderForm = () => {
             id="currency"
             value={currency}
             onChange={(e) => setCurrency(e.target.value)}
-            required
+            placeholder="Enter currency (optional)"
+          />
+        </div>
+        <div>
+          <label htmlFor="advancePercentage">Advance Payment (%):</label>
+          <input
+            type="number"
+            id="advancePercentage"
+            value={advancePercentage}
+            onChange={(e) => setAdvancePercentage(e.target.value)}
+            min="0"
+            max="100"
+            placeholder="Enter advance percentage (optional)"
           />
         </div>
         <button type="submit">Update Minimum Order</button>

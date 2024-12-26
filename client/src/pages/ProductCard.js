@@ -93,7 +93,8 @@ const ProductCard = ({ product }) => {
           src={`/api/v1/product/product-photo/${product._id}`}
           className="card-img-top product-image img-fluid"
           alt={product.name}
-          style={{ height: '200px', objectFit: 'fill' }}
+          style={{   width: "100%",
+          height: "200px", objectFit: 'cover' }}
         />
        <div className="p-4 flex flex-col h-full">
        <h5 className="text-xs font-semibold text-gray-900 dark:text-white mb-2">

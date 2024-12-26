@@ -18,6 +18,7 @@ const CartPage = () => {
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("COD");
   const [minimumOrder, setMinimumOrder] = useState(0);
+  const [advance, setAdvcance] = useState(0);
   const [minimumOrderCurrency, setMinimumOrderCurrency] = useState("");
   const [orderPlacementInProgress, setOrderPlacementInProgress] = useState(false);
   const [orderErrorMessage, setOrderErrorMessage] = useState("");
@@ -77,6 +78,7 @@ const CartPage = () => {
       const { data } = await axios.get('/api/v1/minimumOrder/getMinimumOrder');
       if (data) {
         setMinimumOrder(data.amount);
+        setAdvcance(data.advance)
         setMinimumOrderCurrency(data.currency === "rupees" ? "INR" : data.currency);
       }
     } catch (error) {
@@ -459,7 +461,7 @@ const CartPage = () => {
             <p>Minimum Order: {minimumOrder.toLocaleString("en-US", {
               style: "currency",
               currency: minimumOrderCurrency || "INR",
-            })}</p>
+            }) }</p>
 
             {totalPrice() < minimumOrder && (
               <p className="text-danger">
