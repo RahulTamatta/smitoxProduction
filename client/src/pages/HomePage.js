@@ -270,6 +270,31 @@ const HomePage = () => {
         </Slider>
       </div>
 
+
+
+      <div className="container-fluid mt-3">
+        <h2 className="text-center">Categories</h2>
+         <Slider {...settings}>
+          {categories.map((c) => (
+            <div key={c._id} className="text-center category-item">
+              <div
+                className="category-circle"
+                onClick={() => navigate(`/category/${c.slug}`)}
+                style={{ width: '80px', height: '80px', borderRadius: '50%', overflow: 'hidden', margin: '0 auto' }}
+              >
+                <img
+                  src={c.photo}
+                  alt={c.name}
+                  className="img-fluid"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
+              <h6 className="mt-2">{c.name}</h6>
+            </div>
+          ))}
+        </Slider>
+      </div>
+
       <div className="container mt-4">
         <h1 className="text-center mb-4">All Products</h1>
         <div className="row">
