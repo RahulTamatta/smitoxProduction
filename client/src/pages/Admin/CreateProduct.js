@@ -687,6 +687,9 @@ const CreateProduct = () => {
                             value={product.discount_mrp}
                             onChange={(e) => handleChange(index, e)}
                           />
+                           <small>
+                            {(product.discount_mrp)*(unitSet)} {"Discount"}
+                          </small>
                         </td>
                         <td>
                           <input
@@ -697,6 +700,9 @@ const CreateProduct = () => {
                             onChange={(e) => handleChange(index, e)}
                             readOnly
                           />
+                                 <small>
+                            {(product.selling_price_set)*(unitSet)} {"Discount"}
+                          </small>
                         </td>
                         <td>
                           <button

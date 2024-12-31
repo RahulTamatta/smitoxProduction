@@ -128,13 +128,13 @@ const HomePage = () => {
 
   const settings = {
     dots: false,
-    infinite: true,
+    infinite: false,
     speed: 500,
     slidesToShow: 6,
     slidesToScroll: 1,
     initialSlide: 0,
     centerMode: false,
-    centerPadding: "0px", // Remove extra padding
+    centerPadding: "0px",
     responsive: [
       {
         breakpoint: 1024,
@@ -148,6 +148,8 @@ const HomePage = () => {
         settings: {
           slidesToShow: 3,
           slidesToScroll: 1,
+          centerMode: true,
+          centerPadding: "20px",
         },
       },
       {
@@ -155,13 +157,12 @@ const HomePage = () => {
         settings: {
           slidesToShow: 2.5,
           slidesToScroll: 1,
-          centerPadding: "0px",
+          centerMode: true,
+          centerPadding: "40px",
         },
       },
     ],
-  };
-  
-  
+  }
   const [currentSlide, setCurrentSlide] = useState(0);
   
   const bannerSettings = {
@@ -257,13 +258,13 @@ const HomePage = () => {
     <Layout title="All Products - Best offers">
       <div style={{ padding: '55px 0px' }}>
         {isMobile && (
-          <div style={{ padding: '2px 0px' }}>
+          <div style={{ padding: '50px 0px' }}>
             <SearchInput />
           </div>
         )}
       </div>
 
-      <div className="banner-container" style={{ height: '300px', overflow: 'hidden', marginTop: isMobile ? '10px' : '0', padding: '0 0px' }}>
+      <div className="banner-container" style={{ height: '300px', overflow: 'hidden', }}>
         <Slider dots infinite autoplay autoplaySpeed={3000}>
           {banners.map((banner) => (
             <div key={banner._id}>
@@ -278,28 +279,74 @@ const HomePage = () => {
       </div>
 
 
-
-      <div className="container-fluid mt-3">
-        <h2 className="text-center">Categories</h2>
-         <Slider {...settings}>
-          {categories.map((c) => (
-            <div key={c._id} className="text-center category-item">
-              <div
-                className="category-circle"
+      <div style={{ 
+        width: '100%',
+        padding: '0px 0px',
+        marginTop: '20px'
+      }}>
+        <h2 style={{ 
+          textAlign: 'center',
+          marginBottom: '20px'
+        }}>Categories</h2>
+        
+        <div style={{
+          width: '100%',
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          msOverflowStyle: '-ms-autohiding-scrollbar',
+          padding: '0 15px'
+        }}>
+          <div style={{
+            display: 'flex',
+            gap: '20px',
+            padding: '10px 5px',
+            minWidth: 'min-content'
+          }}>
+            {categories.map((c) => (
+              <div 
+                key={c._id}
                 onClick={() => navigate(`/category/${c.slug}`)}
-                style={{ width: '80px', height: '80px', borderRadius: '50%', overflow: 'hidden', margin: '0 auto' }}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  minWidth: isMobile ? '100px' : '120px',
+                  cursor: 'pointer'
+                }}
               >
-                <img
-                  src={c.photo}
-                  alt={c.name}
-                  className="img-fluid"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
+                <div style={{
+                  width: '80px',
+                  height: '80px',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  marginBottom: '0px',
+                  border: '1px solid #eee'
+                }}>
+                  <img
+                    src={c.photo}
+                    alt={c.name}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }}
+                  />
+                </div>
+                <h6 style={{
+                  margin: 0,
+                  fontSize: isMobile ? '12px' : '14px',
+                  textAlign: 'center',
+                  maxWidth: '100px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {c.name}
+                </h6>
               </div>
-              <h6 className="mt-2">{c.name}</h6>
-            </div>
-          ))}
-        </Slider>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="container mt-4">

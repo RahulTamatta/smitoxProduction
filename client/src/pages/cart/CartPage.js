@@ -338,7 +338,7 @@ const CartPage = () => {
 
   return (
     <Layout>
-<div className="cart-page container" style={{ paddingTop: '100px' }}>
+      <div className="cart-page container" style={{ paddingTop: "100px" }}>
         <div className="row">
           <div className="col-12">
             <h1 className="text-center bg-light p-2 mb-1">
@@ -353,205 +353,163 @@ const CartPage = () => {
             </h1>
           </div>
         </div>
+
+        {/* Table Layout for Cart Items */}
         <div className="row">
-          <div className="col-md-7 col-12">
-            {Array.isArray(cart) && cart.map((p) => (
-              p?.product && (
-                <div
-                  className="row card flex-row my-3"
-                  key={p._id}
-                  onClick={() => handleProductClick(p.product.slug)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="col-md-4 col-12">
-                    <img
-                      src={`/api/v1/product/product-photo/${p.product._id}`}
-                      className="card-img-top"
-                      alt={p.product.name}
-                      width="100%"
-                      height={"130px"}
-                    />
-                  </div>
-                  <div className="col-md-4 col-12">
-                    <p>{p.product.name}</p>
-                    <p>
-                      Price: {minimumOrderCurrency}{" "}
-                      {getPriceForProduct(p.product, p.quantity).toFixed(2)}
-                    </p>
-                    
-                    <div className="d-flex align-items-center" style={{
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      marginBottom: '10px'
-                    }}>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleQuantityChange(p.product._id, p.quantity - p.product.unitSet);
-                        }} 
-                        style={{
-                          padding: '5px 10px',
-                          backgroundColor: '#f0f0f0',
-                          border: '1px solid #ddd',
-                          borderRadius: '4px',
-                          marginRight: '10px'
-                        }}
-                      >
-                        -
-                      </button>
-                      <input
-                        type="number"
-                        min="1"
-                        value={p.quantity}
-                        onChange={(e) => {
-                          const newQuantity = parseInt(e.target.value);
-                          handleQuantityChange(p.product._id, newQuantity);
-                        }}
-                        className="quantity-input"
-                        style={{ 
-                          width: '60px', 
-                          textAlign: 'center',
-                          padding: '5px',
-                          border: '1px solid #ddd',
-                          borderRadius: '4px'
-                        }}
-                      />
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleQuantityChange(p.product._id, p.quantity + p.product.unitSet);
-                        }} 
-                        style={{
-                          padding: '5px 10px',
-                          backgroundColor: '#f0f0f0',
-                          border: '1px solid #ddd',
-                          borderRadius: '4px',
-                          marginLeft: '10px'
-                        }}
-                      >
-                        +
-                      </button>
-                    </div>
-
-                    <p>
-                      {(getPriceForProduct(p.product, p.quantity) * p.quantity).toFixed(2)}
-                    </p>
-                    <button
-                      className="btn btn-danger"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeCartItem(p.product._id);
-                      }}
-                    >
-                      Remove Item
-                    </button>
-                  </div>
-                </div>
-              )
-            ))}
+          <div className="col-md-8">
+            {cart?.length > 0 ? (
+              <div className="table-responsive">
+                <table className="table table-bordered">
+                  <thead>
+                    <tr>
+                      <th>Image</th>
+                      <th>Product</th>
+                      <th>Quantity</th>
+                      <th>Unit Price</th>
+                      <th>Total Price</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cart.map((item) => (
+                      <tr key={item._id}>
+                        <td>
+                          <img
+                            src={`/api/v1/product/product-photo/${item.product._id}`}
+                            alt={item.product.name}
+                            style={{
+                              width: "80px",
+                              height: "80px",
+                              objectFit: "cover",
+                            }}
+                          />
+                        </td>
+                        <td>{item.product.name}</td>
+                        <td>
+                          <div className="d-flex align-items-center">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleQuantityChange(
+                                  item.product._id,
+                                  item.quantity - item.product.unitSet
+                                );
+                              }}
+                              className="btn btn-sm btn-light"
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const newQuantity = parseInt(e.target.value);
+                                handleQuantityChange(
+                                  item.product._id,
+                                  newQuantity
+                                );
+                              }}
+                              className="form-control mx-2"
+                              style={{ width: "60px", textAlign: "center" }}
+                            />
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleQuantityChange(
+                                  item.product._id,
+                                  item.quantity + item.product.unitSet
+                                );
+                              }}
+                              className="btn btn-sm btn-light"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </td>
+                        <td>
+                          {minimumOrderCurrency}{" "}
+                          {getPriceForProduct(item.product, 1).toFixed(2)}
+                        </td>
+                        <td>
+                          {minimumOrderCurrency}{" "}
+                          {(
+                            getPriceForProduct(item.product, 1) * item.quantity
+                          ).toFixed(2)}
+                        </td>
+                        <td>
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeCartItem(item.product._id);
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-center">Your cart is empty.</p>
+            )}
           </div>
-          <div className="col-md-5 col-12 cart-summary">
-            <h2>Cart Summary</h2>
-            <p>Total | Checkout | Payment</p>
-            <hr />
-            <h4>Total: {totalPrice().toLocaleString("en-US", {
-              style: "currency",
-              currency: minimumOrderCurrency || "INR",
-            })}</h4>
-            <p>Minimum Order: {minimumOrder.toLocaleString("en-US", {
-              style: "currency",
-              currency: minimumOrderCurrency || "INR",
-            }) }</p>
 
+          {/* Cart Summary */}
+          <div className="col-md-4">
+            <h2>Cart Summary</h2>
+            <hr />
+            <p>
+              Total:{" "}
+              {totalPrice().toLocaleString("en-US", {
+                style: "currency",
+                currency: minimumOrderCurrency || "INR",
+              })}
+            </p>
+            <p>
+              Minimum Order:{" "}
+              {minimumOrder.toLocaleString("en-US", {
+                style: "currency",
+                currency: minimumOrderCurrency || "INR",
+              })}
+            </p>
             {totalPrice() < minimumOrder && (
               <p className="text-danger">
-                <AiFillWarning /> Order total is below the minimum order amount
+                Order total is below the minimum order amount.
               </p>
             )}
-            {auth?.user?.address ? (
-              <>
-                <div className="mb-3">
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => navigate("/dashboard/user/profile")}
-                  >
-                    Edit Address
-                  </button>
-                </div>
-                <hr />
-              </>
-            ) : (
-              <div className="alert alert-warning">
-                Please update your address before proceeding with checkout.
-              </div>
-            )}
-                       {
-  !isPincodeAvailable && (
-    <div style={{ textAlign: 'center', marginTop: '10px' }}>
-      <p style={{ color: 'red', fontSize: '16px', marginBottom: '10px' }}>
-        Service is not available in your area or pincode.
-      </p>
-      <a href="https://wa.me/918291541168" target="_blank" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
-            <i className="fab fa-whatsapp" style={{ fontSize: '30px', marginRight: '8px', color: '#25D366' }}></i>
-            <span style={{ color: '#007bff', fontSize: '16px' }}>Contact Support via WhatsApp</span>
-          </a>
-    </div>
-  )
-}
-            <div className="row">
-              <div className="col-12">
-                <h5>Payment Options</h5>
-                { (
-                  <DropIn
-                    options={{
-                      // authorization: clientToken,
-                      paypal: {
-                        flow: "vault",
-                      },
-                    }}
-                    onInstance={(instance) => setInstance(instance)}
-                  />
-                )}
-              </div>
-            </div>
             <div className="mb-3">
-  <label className="form-label">Payment Method</label>
-  <label className="form-label">Payment Method</label>
-<select 
-  className="form-select"
-  value={paymentMethod}
-  onChange={(e) => setPaymentMethod(e.target.value)}
->
-  <option value="COD">COD</option>
-  <option value="Razorpay">Razorpay</option>
-  <option value="Advance">Advance</option> {/* New payment method option */}
-</select>
-
-</div>
-
-
-<button
-  className="btn btn-primary w-100"
-  onClick={handlePayment}
-  disabled={
-    loading ||
-    orderPlacementInProgress ||
-    totalPrice() < minimumOrder ||
-    !isPincodeAvailable || // Disable button if pincode is not available
-    (paymentMethod === "Braintree" && !instance)
-  }
->
-  {orderPlacementInProgress ? (
-    <span className="spinner-border spinner-border-sm me-2" />
-  ) : null}
-  {orderPlacementInProgress ? "Processing..." : "Place Order"}
-</button>
-
+              <label className="form-label">Payment Method</label>
+              <select
+                className="form-select"
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+              >
+                <option value="COD">COD</option>
+                <option value="Razorpay">Razorpay</option>
+                <option value="Advance">Advance</option>
+              </select>
+            </div>
+            <button
+              className="btn btn-primary w-100"
+              onClick={handlePayment}
+              disabled={
+                loading ||
+                orderPlacementInProgress ||
+                totalPrice() < minimumOrder ||
+                !isPincodeAvailable ||
+                (paymentMethod === "Braintree" && !instance)
+              }
+            >
+              {orderPlacementInProgress ? "Processing..." : "Place Order"}
+            </button>
           </div>
         </div>
       </div>
     </Layout>
   );
 };
-
 export default CartPage;
