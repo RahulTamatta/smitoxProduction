@@ -1,26 +1,30 @@
 {
-  "name": "Ecommerce-app-2023",
-  "proxy": "http://127.0.0.1:5000",
-  "version": "1.0.0",
-  "description": "ecommerce rest api",
-  "main": "server.js",
-  "type": "module",
+  "name": "ecommerce",
+  "private": true,
+  "workspaces": [
+    "."
+  ],
   "scripts": {
     "start": "node server.js",
     "server": "nodemon server.js",
-    "client": "npm start --prefix ./client",
-    "dev": "concurrently \"npm run server\" \"npm run client\""
+    "client": "react-scripts --max_old_space_size=4096 start",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "build": "react-scripts --max_old_space_size=4096 build"
   },
-  "keywords": [],
-  "author": "Techinfoyt",
-  "license": "MIT",
   "dependencies": {
+    "@fortawesome/react-fontawesome": "^0.2.2",
     "@sendgrid/mail": "^7.7.0",
+    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^13.5.0",
+    "antd": "^5.1.7",
     "axios": "^1.7.2",
     "bcrypt": "^5.1.1",
+    "braintree-web-drop-in-react": "^1.2.1",
     "colors": "^1.4.0",
     "concurrently": "^7.6.0",
     "cors": "^2.8.5",
+    "crypto": "^1.0.1",
     "crypto-js": "^4.2.0",
     "datatables.net-dt": "^2.0.8",
     "dotenv": "^16.0.3",
@@ -30,17 +34,29 @@
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",
     "mdb-react-ui-kit": "^9.0.0",
+    "moment": "^2.29.4",
     "mongoose": "^6.8.4",
     "morgan": "^1.10.0",
     "nodemon": "^2.0.20",
     "razorpay": "^2.9.5",
+    "react": "^18.2.0",
     "react-bootstrap": "^2.10.4",
+    "react-dom": "^18.2.0",
+    "react-feather": "^2.0.10",
+    "react-helmet": "^6.1.0",
+    "react-hot-toast": "^2.4.0",
     "react-icons": "^4.7.1",
     "react-paginate": "^8.2.0",
     "react-responsive-carousel": "^3.2.23",
+    "react-router-dom": "^6.7.0",
+    "react-scripts": "5.0.1",
     "react-slick": "^0.30.2",
+    "react-table": "^7.8.0",
+    "react-toastify": "^9.1.1",
     "slugify": "^1.6.5",
-    "util": "^0.12.5"
+    "uuid": "^10.0.0",
+    "web-vitals": "^2.1.4",
+    "yarn": "^1.22.22"
   },
   "devDependencies": {
     "@eslint/js": "^9.11.1",
@@ -57,5 +73,7 @@
     "stream-browserify": "^3.0.0",
     "stream-http": "^3.2.0",
     "url": "^0.11.4"
-  }
+  },
+  "type": "module",
+  "proxy": "http://localhost:8080"
 }

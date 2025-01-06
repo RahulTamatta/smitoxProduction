@@ -34,6 +34,7 @@ import BannerManagement from "./pages/Admin/bannerManagement";
 import ProductForYou from "./pages/Admin/ProductForYou.js";
 import WishlistPage from "./pages/wishlists.js";
 import AddToCartPage from "../../client/src/pages/Admin/userCart.js";
+import AdminLogin from "./pages/Auth/AdminLog.js";
 
 function App() {
   return (
@@ -74,6 +75,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPasssword />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/adminlogin" element={<AdminLogin />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/wishlist" element={<WishlistPage />} />
