@@ -9,7 +9,7 @@
     "server": "nodemon server.js",
     "client": "react-scripts --max_old_space_size=4096 start",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "build": "react-scripts  build"
+    "build": "react-scripts --max_old_space_size=4096 build"
   },
   "dependencies": {
     "@fortawesome/react-fontawesome": "^0.2.2",
