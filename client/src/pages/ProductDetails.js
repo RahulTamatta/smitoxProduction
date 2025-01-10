@@ -50,21 +50,26 @@ const ProductDetails = () => {
       getProductsForYou();
     }
   }, [categoryId, subcategoryId,productsForYou]);
-
   const getProduct = async () => {
     try {
       const { data } = await axios.get(
         `/api/v1/product/get-product/${params.slug}`
       );
 
- if(data.success===true){     setProduct(data?.product || {});
-      setCategoryId(data?.product?.category._id);
-      setSubcategoryId(data?.product?.subcategory._id || {});}
-      console.log("PProduct",data);
+      if (data.success === true) {
+        // Update product state with image URL
+        const productData = {
+          ...data.product,
+          photoUrl: data.product?._id ? `/api/v1/product/product-photo/${data.product._id}` : '/placeholder-image.jpg'
+        };
+        setProduct(productData);
+        setCategoryId(data?.product?.category._id);
+        setSubcategoryId(data?.product?.subcategory._id || {});
+      }
+      console.log("PProduct", data);
       getProductsForYou();
       setUnitSet(data?.product?.unitSet || 1);
       setQuantity(data?.product?.quantity || 1);
-    
     } catch (error) {
       console.error(error);
       toast.error("Error fetching product details");
@@ -450,11 +455,20 @@ const ProductDetails = () => {
           {/* Replace the quantity selector and add to cart button section with: */}
           <div style={imageStyle}>
             {product._id ? (
-              <img
-                src={`/api/v1/product/product-photo/${product._id}`}
-                alt={product.name}
-                style={{ width: "100%", height: "auto", borderRadius: "8px" }}
-              />
+                   <img
+                   src={product.photoUrl}
+                   alt={product.name}
+                   style={{ 
+                     width: "100%", 
+                     height: "auto", 
+                     borderRadius: "8px",
+                     objectFit: "cover"
+                   }}
+                   onError={(e) => {
+                     e.target.src = '/placeholder-image.jpg';
+                   }}
+                 />
+               
             ) : (
               <p>Loading product image...</p>
             )}

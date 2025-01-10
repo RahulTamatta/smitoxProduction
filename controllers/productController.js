@@ -172,22 +172,40 @@ export const getSingleProductController = async (req, res) => {
   try {
     const product = await productModel
       .findOne({ slug: req.params.slug })
-      .select("-photo")
-      .populate("category").populate("subcategory").populate("brand");
+      .select("name description price category subcategory brand photo") // Include specific fields
+      .populate({
+        path: "subcategory",
+        select: "name photo" // Select only the subcategory name and photo
+      })
+      .populate("category")
+      .populate("brand"); // Populate related collections
+
+    if (product && product.photo) {
+      // Convert Buffer to Base64 string
+      const photoBase64 = product.photo.data.toString('base64');
+      product.photo = `data:${product.photo.contentType};base64,${photoBase64}`;
+    }
+
     res.status(200).send({
       success: true,
       message: "Single Product Fetched",
-      product,
+      product: {
+        ...product._doc,
+        subcategoryPhoto: product?.subcategory?.photo, // Add subcategory photo
+      },
     });
   } catch (error) {
     console.log(error);
     res.status(500).send({
       success: false,
-      message: "Eror while getitng single product",
+      message: "Error while getting single product",
       error,
     });
   }
 };
+
+
+
 
 // get photo
 export const productPhotoController = async (req, res) => {
@@ -455,13 +473,23 @@ export const productListController = async (req, res) => {
     const page = req.params.page ? req.params.page : 1;
     const products = await productModel
       .find({})
-      .select("-photo")
       .skip((page - 1) * perPage)
       .limit(perPage)
       .sort({ createdAt: -1 });
+
+    // Convert photo buffer to base64 string
+    const productsWithBase64Photos = products.map(product => {
+      const productObj = product.toObject();
+      if (productObj.photo && productObj.photo.data) {
+        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString('base64')}`;
+        delete productObj.photo; // Remove the buffer data
+      }
+      return productObj;
+    });
+
     res.status(200).send({
       success: true,
-      products,
+      products: productsWithBase64Photos,
     });
   } catch (error) {
     console.log(error);

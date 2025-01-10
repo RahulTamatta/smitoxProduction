@@ -382,7 +382,7 @@ export default HomePage;
 
 
 
-//   const navigate = useNavigate();
+
 //   const [cart, setCart] = useCart();
 //   const [products, setProducts] = useState([]);
 //   const [categories, setCategories] = useState([]);

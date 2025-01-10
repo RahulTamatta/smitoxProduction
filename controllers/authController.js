@@ -79,8 +79,9 @@ export const verifyOTPAndLoginController = async (req, res) => {
         });
       }
 
+      // Generate JWT token with 365-day expiration
       const token = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
-        expiresIn: "7d",
+        expiresIn: "365d",
       });
 
       return res.status(200).json({
@@ -116,6 +117,7 @@ export const verifyOTPAndLoginController = async (req, res) => {
     });
   }
 };
+
 
 // Register user
 export const registerController = async (req, res) => {
@@ -217,14 +219,17 @@ export const loginController = async (req, res) => {
   try {
     const { email_id, password } = req.body;
 
+    // Validate input fields
     if (!email_id || !password) {
-      return res.status(404).send({
+      return res.status(400).send({
         success: false,
-        message: "Invalid email_id or password",
+        message: "Email and password are required",
       });
     }
 
-    const user = await userModel.findOne({ email_id });
+    // Find user by email
+    const user = await userModel.findOne({ email_id }).maxTimeMS(5000);
+
     if (!user) {
       return res.status(404).send({
         success: false,
@@ -232,42 +237,54 @@ export const loginController = async (req, res) => {
       });
     }
 
-    const match = await comparePassword(password, user.password);
-    if (!match) {
-      return res.status(200).send({
+    if (!user.password) {
+      return res.status(400).send({
+        success: false,
+        message: "Password not set for this account",
+      });
+    }
+
+    // Direct password check
+    if (password !== user.password) {
+      return res.status(401).send({
         success: false,
         message: "Invalid Password",
       });
     }
 
+    // Generate JWT token with 365-day expiration
     const token = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
+      expiresIn: "365d", // Token expiration time set to 365 days
     });
 
+    // Return user details with token
     res.status(200).send({
       success: true,
-      message: "Login successfully",
+      message: "Login successful",
+      token,
       user: {
         _id: user._id,
         user_fullname: user.user_fullname,
         email_id: user.email_id,
-        mobile_no: user.phone,
+        mobile_no: user.mobile_no,
         address: user.address,
         role: user.role,
         pincode: user.pincode,
-        order_type: user.order_type, // Include order type
+        order_type: user.order_type,
       },
-      token,
     });
   } catch (error) {
-    console.error(error);
+    console.error('Login error:', error);
+
     res.status(500).send({
       success: false,
       message: "Error in login",
-      error,
+      error: error.message,
     });
   }
 };
+
+
 
 // Forgot Password
 export const forgotPasswordController = async (req, res) => {

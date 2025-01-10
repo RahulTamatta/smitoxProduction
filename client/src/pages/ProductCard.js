@@ -10,8 +10,8 @@ const ProductCard = ({ product }) => {
   const [auth] = useAuth();
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [screenWidth, setScreenWidth] = useState(window.innerWidth);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
-  // Update screen width on window resize
   useEffect(() => {
     const handleResize = () => setScreenWidth(window.innerWidth);
     window.addEventListener("resize", handleResize);
@@ -36,7 +36,7 @@ const ProductCard = ({ product }) => {
   };
 
   const toggleWishlist = async (e) => {
-    e.stopPropagation(); // Prevent navigating to product details when clicking the heart
+    e.stopPropagation();
 
     if (!auth.user) {
       toast.error("Please log in to manage your wishlist");
@@ -63,7 +63,6 @@ const ProductCard = ({ product }) => {
     }
   };
 
-  // Determine font sizes based on screen width
   const getFontSizes = () => {
     if (screenWidth <= 576) {
       return {
@@ -125,16 +124,30 @@ const ProductCard = ({ product }) => {
             color={isInWishlist ? "#e47911" : "#000000"}
           />
         </button>
+
+        {!imageLoaded && (
+          <div
+            style={{
+              width: "100%",
+              height: "200px",
+              background: "#f0f0f0",
+            }}
+          />
+        )}
+        
         <img
-          src={`/api/v1/product/product-photo/${product._id}`}
+          src={product.photoUrl || '/placeholder-image.jpg'}
           className="card-img-top product-image img-fluid"
           alt={product.name}
           style={{
             width: "100%",
             height: "200px",
             objectFit: "cover",
+            display: imageLoaded ? "block" : "none"
           }}
+          onLoad={() => setImageLoaded(true)}
         />
+        
         <div className="p-4 flex flex-col h-full">
           <h5
             style={{
@@ -148,38 +161,38 @@ const ProductCard = ({ product }) => {
               ? `${product.name.slice(0, 20)}.....`
               : product.name}
           </h5>
-        
         </div>
+        
         <div className="mt-auto">
-            <h5
+          <h5
+            style={{
+              fontSize: fontSizes.price,
+              fontWeight: "700",
+              color: "#333",
+              padding: "0 1px 5px 20px"
+            }}
+          >
+            {product.perPiecePrice?.toLocaleString("en-US", {
+              style: "currency",
+              currency: "INR",
+            }) || "Price not available"}
+          </h5>
+          {product.mrp && (
+            <h6
               style={{
-                fontSize: fontSizes.price,
-                fontWeight: "700",
-                color: "#333",
-                padding:"0 1px 5px 20px"
+                fontSize: fontSizes.mrp,
+                textDecoration: "line-through",
+                color: "red",
+                padding: "0 1px 5px 20px"
               }}
             >
-              {product.perPiecePrice?.toLocaleString("en-US", {
+              {product.mrp.toLocaleString("en-US", {
                 style: "currency",
                 currency: "INR",
-              }) || "Price not available"}
-            </h5>
-            {product.mrp && (
-              <h6
-                style={{
-                  fontSize: fontSizes.mrp,
-                  textDecoration: "line-through",
-                  color: "red",
-                  padding:"0 1px 5px 20px"
-                }}
-              >
-                {product.mrp.toLocaleString("en-US", {
-                  style: "currency",
-                  currency: "INR",
-                })}
-              </h6>
-            )}
-          </div>
+              })}
+            </h6>
+          )}
+        </div>
       </div>
     </div>
   );

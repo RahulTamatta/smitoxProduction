@@ -201,113 +201,91 @@ const CategoryProduct = () => {
         <h4 className="text-center" style={{ marginBottom: "1rem", paddingTop: "8rem" }}>
           {category?.name}
         </h4>
-{/* Update the subcategories slider section */}
-{!fromBanner && subcategories.length > 0 && (
-  <div className="subcategory-slider mb-3" style={{ padding: '0 10px' }}> {/* Reduced margin bottom */}
-    <div style={{
-      width: '100%',
-      overflowX: 'auto',
-      WebkitOverflowScrolling: 'touch',
-      msOverflowStyle: '-ms-autohiding-scrollbar',
-    }}>
-      <div style={{
-        display: 'flex',
-        gap: '10px', // Reduced gap between items
-        padding: '5px 0', // Reduced padding
-        minWidth: 'min-content'
-      }}>
-        {/* All category item */}
-        <div
-          key="all"
-          className={`subcategory-item ${!selectedSubcategory ? "active" : ""}`}
-          onClick={() => {
-            setSelectedSubcategory(null);
-            fetchProductsByCategoryOrSubcategory(null);
-          }}
-          style={{
-            cursor: "pointer",
-            textAlign: "center",
-            minWidth: '60px', // Reduced minimum width
-          }}
-        >
-          <div
-            className="subcategory-circle"
-            style={{
-              width: '60px', // Reduced size
-              height: '60px', // Reduced size
-              borderRadius: '50%',
-              overflow: 'hidden',
-              margin: '0 auto',
-              border: '1px solid #eee',
-              padding: '0',
-            }}
-          >
-            <img
-              src="/api/v1/placeholder/64/64"
-              alt="All"
-              style={{ 
-                width: '100%', 
-                height: '100%', 
-                objectFit: 'cover' 
-              }}
-            />
-          </div>
-          <h6 style={{ 
-            marginTop: '5px', // Reduced margin
-            fontSize: '12px', // Smaller font size
-            fontWeight: '500'
-          }}>All</h6>
-        </div>
 
-        {/* Subcategory items */}
-        {subcategories.map((s) => (
-          <div
-            key={s._id}
-            className={`subcategory-item ${selectedSubcategory === s._id ? "active" : ""}`}
-            onClick={() => filterBySubcategory(s._id)}
-            style={{
-              cursor: "pointer",
-              textAlign: "center",
-              minWidth: '60px', // Reduced minimum width
-            }}
-          >
-            <div
-              className="subcategory-circle"
-              style={{
-                width: '60px', // Reduced size
-                height: '60px', // Reduced size
-                borderRadius: '50%',
-                overflow: 'hidden',
-                margin: '0 auto',
-                border: '1px solid #eee',
-                padding: '0',
-              }}
-            >
-              <img
-                src={s.photo}
-                alt={s.name}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
+        {!fromBanner && subcategories.length > 0 && (
+          <div className="subcategory-slider mb-4">
+            <Slider {...settings}>
+              <div
+                key="all"
+                className={`subcategory-item ${!selectedSubcategory ? "active" : ""}`}
+                onClick={() => {
+                  setSelectedSubcategory(null);
+                  fetchProductsByCategoryOrSubcategory(null);
                 }}
-              />
-            </div>
-            <h6 style={{ 
-              marginTop: '5px', // Reduced margin
-              fontSize: '12px', // Smaller font size
-              fontWeight: '500',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              maxWidth: '60px' // Match container width
-            }}>{s.name}</h6>
+                style={{
+                  cursor: "pointer",
+                  textAlign: "center",
+                  margin: "0 10px",
+                }}
+              >
+                <div
+                  className="subcategory-circle"
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    width: "80px",
+                    height: "80px",
+                    borderRadius: "50%",
+                    overflow: "hidden",
+                    margin: "0 auto",
+                    border: "none",
+                    padding: "0",
+                  }}
+                >
+                  <img
+                    src="/api/v1/placeholder/64/64"
+                    alt="All"
+                    className="subcategory-image"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
+                </div>
+                <h6 className="mt-2">All</h6>
+              </div>
+              {subcategories.map((s) => (
+                <div
+                  key={s._id}
+                  className={`subcategory-item ${selectedSubcategory === s._id ? "active" : ""}`}
+                  onClick={() => filterBySubcategory(s._id)}
+                  style={{
+                    cursor: "pointer",
+                    textAlign: "center",
+                    margin: "0 10px",
+                  }}
+                >
+                  <div
+                    className="subcategory-circle"
+                    style={{
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      width: "80px",
+                      height: "80px",
+                      borderRadius: "50%",
+                      overflow: "hidden",
+                      margin: "0 auto",
+                      border: "none",
+                      padding: "0",
+                    }}
+                  >
+                    <img
+                      src={s.photo}
+                      alt={s.name}
+                      className="subcategory-image"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        display: "block",
+                      }}
+                    />
+                  </div>
+                  <h6 className="mt-2">{s.name}</h6>
+                </div>
+              ))}
+            </Slider>
           </div>
-        ))}
-      </div>
-    </div>
-  </div>
-)}
+        )}
         
         <h6 className="text-center mb-4">
           {products?.length} result{products?.length !== 1 ? "s" : ""}
