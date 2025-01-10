@@ -321,7 +321,7 @@ const CategoryProduct = () => {
                     />
                   </button>
                   <img
-                    src={`/api/v1/product/product-photo/${p._id}`}
+                    src={p.photoUrl}
                     className="card-img-top product-image"
                     alt={p.name}
                     style={{ height: "200px", objectFit: "contain" }}

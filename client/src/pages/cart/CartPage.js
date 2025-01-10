@@ -375,7 +375,7 @@ const CartPage = () => {
                       <tr key={item._id}>
                         <td>
                           <img
-                            src={`/api/v1/product/product-photo/${item.product._id}`}
+                            src={item.product.photoUrl}
                             alt={item.product.name}
                             style={{
                               width: "80px",

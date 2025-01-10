@@ -167,45 +167,28 @@ export const getProductController = async (req, res) => {
     });
   }
 };
-// get single product
+
+
 export const getSingleProductController = async (req, res) => {
   try {
     const product = await productModel
       .findOne({ slug: req.params.slug })
-      .select("name description price category subcategory brand photo") // Include specific fields
-      .populate({
-        path: "subcategory",
-        select: "name photo" // Select only the subcategory name and photo
-      })
-      .populate("category")
-      .populate("brand"); // Populate related collections
-
-    if (product && product.photo) {
-      // Convert Buffer to Base64 string
-      const photoBase64 = product.photo.data.toString('base64');
-      product.photo = `data:${product.photo.contentType};base64,${photoBase64}`;
-    }
-
+      .select("-photo")
+      .populate("category").populate("subcategory").populate("brand");
     res.status(200).send({
       success: true,
       message: "Single Product Fetched",
-      product: {
-        ...product._doc,
-        subcategoryPhoto: product?.subcategory?.photo, // Add subcategory photo
-      },
+      product,
     });
   } catch (error) {
     console.log(error);
     res.status(500).send({
       success: false,
-      message: "Error while getting single product",
+      message: "Eror while getitng single product",
       error,
     });
   }
 };
-
-
-
 
 // get photo
 export const productPhotoController = async (req, res) => {
@@ -465,6 +448,7 @@ export const productCountController = async (req, res) => {
     });
   }
 };
+
 
 // product list base on page
 export const productListController = async (req, res) => {
