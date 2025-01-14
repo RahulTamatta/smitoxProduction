@@ -10,7 +10,6 @@ import slugify from "slugify";
 import dotenv from "dotenv";
 import { v4 as uuidv4 } from 'uuid';
 dotenv.config();
-
 export const createProductController = async (req, res) => {
   try {
     const {
@@ -168,27 +167,201 @@ export const getProductController = async (req, res) => {
   }
 };
 
+export const productListController = async (req, res) => {
+  try {
+    const perPage = 10;
+    const page = req.params.page ? req.params.page : 1;
 
+    // Fetch only the required fields for the product card
+    const products = await productModel
+      .find({ isActive: "1" }, "name photo  perPiecePrice mrp stock")
+      .skip((page - 1) * perPage)
+      .limit(perPage)
+      .sort({ createdAt: -1 });
+
+    // Format response to include Base64-encoded photos
+    const productsWithPhotos = products.map(product => {
+      const productObj = product.toObject();
+      if (productObj.photo && productObj.photo.data) {
+        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString('base64')}`;
+        delete productObj.photo; // Remove the buffer data
+      }
+      return productObj;
+    });
+
+    res.status(200).send({
+      success: true,
+      products: productsWithPhotos,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(400).send({
+      success: false,
+      message: "Error fetching product data",
+      error,
+    });
+  }
+};
+
+// Modified search controller with direct photo data
+export const searchProductController = async (req, res) => {
+  try {
+    const { keyword } = req.params;
+    const isObjectId = mongoose.Types.ObjectId.isValid(keyword);
+
+    const results = await productModel
+      .find({
+        $or: [
+          { name: { $regex: keyword, $options: "i" } },
+          { description: { $regex: keyword, $options: "i" } },
+          { tag: { $regex: keyword, $options: "i" } },
+          { sku: { $regex: `^${keyword}`, $options: "i" } },
+          { slug: { $regex: keyword, $options: "i" } },
+          ...(isObjectId ? [
+            { category: keyword },
+            { subcategory: keyword },
+            { brand: keyword },
+          ] : []),
+        ],
+      })
+      .populate("category", "name")
+      .populate("subcategory", "name")
+      .populate("brand", "name");
+
+    // Convert photos to base64
+    const resultsWithPhotos = results.map(product => {
+      const productObj = product.toObject();
+      if (productObj.photo && productObj.photo.data) {
+        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString('base64')}`;
+        delete productObj.photo;
+      }
+      return productObj;
+    });
+
+    res.json(resultsWithPhotos);
+  } catch (error) {
+    console.error(error);
+    res.status(400).send({
+      success: false,
+      message: "Error In Search Product API",
+      error,
+    });
+  }
+};
+
+// Modified related products controller with direct photo data
+export const realtedProductController = async (req, res) => {
+  try {
+    const { pid, cid } = req.params;
+    const products = await productModel
+      .find({
+        category: cid,
+        _id: { $ne: pid },
+      })
+      .limit(3)
+      .populate("category");
+
+    // Convert photos to base64
+    const productsWithPhotos = products.map(product => {
+      const productObj = product.toObject();
+      if (productObj.photo && productObj.photo.data) {
+        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString('base64')}`;
+        delete productObj.photo;
+      }
+      return productObj;
+    });
+
+    res.status(200).send({
+      success: true,
+      products: productsWithPhotos,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(400).send({
+      success: false,
+      message: "error while getting related product",
+      error,
+    });
+  }
+};
+
+// Modified single product controller with direct photo data
 export const getSingleProductController = async (req, res) => {
   try {
     const product = await productModel
       .findOne({ slug: req.params.slug })
-      .select("-photo")
-      .populate("category").populate("subcategory").populate("brand");
+      .populate("category")
+      .populate("subcategory")
+      .populate("brand");
+
+    if (!product) {
+      return res.status(404).send({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    // Convert photo to base64
+    const productObj = product.toObject();
+    if (productObj.photo && productObj.photo.data) {
+      productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString('base64')}`;
+      delete productObj.photo;
+    }
+
     res.status(200).send({
       success: true,
       message: "Single Product Fetched",
-      product,
+      product: productObj,
     });
   } catch (error) {
     console.log(error);
     res.status(500).send({
       success: false,
-      message: "Eror while getitng single product",
+      message: "Error while getting single product",
       error,
     });
   }
 };
+
+// Modified product category controller with direct photo data
+export const productCategoryController = async (req, res) => {
+  try {
+    const category = await categoryModel.findOne({ slug: req.params.slug });
+    if (!category) {
+      return res.status(404).send({
+        success: false,
+        message: "Category not found",
+      });
+    }
+    const products = await productModel
+      .find({ category: category._id })
+      .populate("category");
+
+    // Convert photos to base64
+    const productsWithPhotos = products.map(product => {
+      const productObj = product.toObject();
+      if (productObj.photo && productObj.photo.data) {
+        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString('base64')}`;
+        delete productObj.photo;
+      }
+      return productObj;
+    });
+
+    res.status(200).send({
+      success: true,
+      category,
+      products: productsWithPhotos,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      error: error.message,
+      message: "Error while getting products",
+    });
+  }
+};
+
 
 // get photo
 export const productPhotoController = async (req, res) => {
@@ -450,132 +623,7 @@ export const productCountController = async (req, res) => {
 };
 
 
-// product list base on page
-export const productListController = async (req, res) => {
-  try {
-    const perPage = 10;
-    const page = req.params.page ? req.params.page : 1;
-    const products = await productModel
-      .find({})
-      .skip((page - 1) * perPage)
-      .limit(perPage)
-      .sort({ createdAt: -1 });
 
-    // Convert photo buffer to base64 string
-    const productsWithBase64Photos = products.map(product => {
-      const productObj = product.toObject();
-      if (productObj.photo && productObj.photo.data) {
-        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString('base64')}`;
-        delete productObj.photo; // Remove the buffer data
-      }
-      return productObj;
-    });
-
-    res.status(200).send({
-      success: true,
-      products: productsWithBase64Photos,
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(400).send({
-      success: false,
-      message: "error in per page ctrl",
-      error,
-    });
-  }
-};
-export const searchProductController = async (req, res) => {
-  try {
-    const { keyword } = req.params;
-
-    // Check if the keyword is a valid ObjectId
-    const isObjectId = mongoose.Types.ObjectId.isValid(keyword);
-
-    const results = await productModel
-      .find({
-        $or: [
-          { name: { $regex: keyword, $options: "i" } },
-          { description: { $regex: keyword, $options: "i" } },
-          { tag: { $regex: keyword, $options: "i" } }, // Search in tags
-          { sku: { $regex: `^${keyword}`, $options: "i" } },
-          // Search in SKU
-          { slug: { $regex: keyword, $options: "i" } }, // Search in slug
-          ...(isObjectId
-            ? [
-                { category: keyword }, // Search by category ID
-                { subcategory: keyword }, // Search by subcategory ID
-                { brand: keyword }, // Search by brand ID
-              ]
-            : []),
-        ],
-      })
-      .populate("category", "name") // Populate category name
-      .populate("subcategory", "name") // Populate subcategory name
-      .populate("brand", "name") // Populate brand name
-      .select("-photo"); // Exclude photo for optimization
-
-    res.json(results);
-  } catch (error) {
-    console.error(error);
-    res.status(400).send({
-      success: false,
-      message: "Error In Search Product API",
-      error,
-    });
-  }
-};
-
-// similar products
-export const realtedProductController = async (req, res) => {
-  try {
-    const { pid, cid } = req.params;
-    const products = await productModel
-      .find({
-        category: cid,
-        _id: { $ne: pid },
-      })
-      .select("-photo")
-      .limit(3)
-      .populate("category");
-    res.status(200).send({
-      success: true,
-      products,
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(400).send({
-      success: false,
-      message: "error while geting related product",
-      error,
-    });
-  }
-};
-
-// get prdocyst by catgory
-export const productCategoryController = async (req, res) => {
-  try {
-    const category = await categoryModel.findOne({ slug: req.params.slug });
-    if (!category) {
-      return res.status(404).send({
-        success: false,
-        message: "Category not found",
-      });
-    }
-    const products = await productModel.find({ category: category._id }).populate("category");
-    res.status(200).send({
-      success: true,
-      category,
-      products,
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).send({
-      success: false,
-      error: error.message,
-      message: "Error while getting products",
-    });
-  }
-};
 
 export const productSubcategoryController = async (req, res) => {
   try {

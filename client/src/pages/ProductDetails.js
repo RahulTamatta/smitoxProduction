@@ -57,8 +57,7 @@ const ProductDetails = () => {
       );
 
       if (data.success === true) {
-        // Update product state with image URL
-        const productData = {
+      const productData = {
           ...data.product,
           photoUrl: data.product?._id ? `/api/v1/product/product-photo/${data.product._id}` : '/placeholder-image.jpg'
         };

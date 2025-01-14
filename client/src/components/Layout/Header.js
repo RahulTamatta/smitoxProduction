@@ -11,27 +11,19 @@ const Header = () => {
   const [auth, setAuth] = useAuth();
   const [cartCount, setCartCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
+  const [dataFetched, setDataFetched] = useState(false); // To track if data is fetched
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
-  const fetchCartCount = async () => {
+  const fetchCounts = async () => {
     try {
       if (auth?.user) {
-        const { data } = await axios.get(`/api/v1/carts/users/${auth.user._id}/cart`);
-        setCartCount(data.cart.length);
+        const cartResponse = await axios.get(`/api/v1/carts/users/${auth.user._id}/cart`);
+        const wishlistResponse = await axios.get(`/api/v1/carts/users/${auth.user._id}/wishlist`);
+        setCartCount(cartResponse.data.cart.length);
+        setWishlistCount(wishlistResponse.data.wishlist.length);
       }
     } catch (error) {
-      console.error("Error fetching cart count:", error);
-    }
-  };
-
-  const fetchWishlistCount = async () => {
-    try {
-      if (auth?.user) {
-        const { data } = await axios.get(`/api/v1/carts/users/${auth.user._id}/wishlist`);
-        setWishlistCount(data.wishlist.length);
-      }
-    } catch (error) {
-      console.error("Error fetching wishlist count:", error);
+      console.error("Error fetching data:", error);
     }
   };
 
@@ -40,24 +32,19 @@ const Header = () => {
       setIsMobile(window.innerWidth <= 768);
     };
 
+    // Add event listener for window resize
     window.addEventListener("resize", handleResize);
 
-    if (auth?.user) {
-      fetchCartCount();
-      fetchWishlistCount();
-
-      const cartInterval = setInterval(fetchCartCount, 5000);
-      const wishlistInterval = setInterval(fetchWishlistCount, 5000);
-
-      return () => {
-        window.removeEventListener("resize", handleResize);
-        clearInterval(cartInterval);
-        clearInterval(wishlistInterval);
-      };
+    // Cleanup event listener on component unmount
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+  const handleToggle = (section) => {
+    if (section === "cart" || section === "wishlist") {
+      fetchCounts(); // Fetch updated counts only when toggled
     }
-
-    return () => window.removeEventListener("resize", handleResize);
-  }, [auth?.user]);
+  };
 
   const handleLogout = () => {
     setAuth({

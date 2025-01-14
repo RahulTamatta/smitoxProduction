@@ -1,10 +1,9 @@
-import { configureStore } from "@reduxjs/toolkit";
-import homeSlice from "./homeslice";
+// store/index.js
+import { configureStore } from '@reduxjs/toolkit'
+import imageReducer from './slice'
 
-const store = configureStore({
+export const store = configureStore({
   reducer: {
-    home: homeSlice,
-  },
-});
-
-export default store;
+    images: imageReducer
+  }
+})
