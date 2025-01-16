@@ -136,7 +136,7 @@ const ProductCard = ({ product }) => {
         )}
         
         <img
-          src={product.photoUrl || '/placeholder-image.jpg'}
+          src={product.photos || '/placeholder-image.jpg'}
           className="card-img-top product-image img-fluid"
           alt={product.name}
           style={{

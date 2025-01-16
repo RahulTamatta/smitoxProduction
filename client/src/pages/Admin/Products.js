@@ -226,7 +226,7 @@ const Products = () => {
 
                     <td className="border p-2 text-center">
                     <img
-  src={`/api/v1/product/product-photo/${p._id}`}
+  src={p.photos}
   alt={p.name}
   className="border p-2"
   style={{

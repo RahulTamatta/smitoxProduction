@@ -39,10 +39,14 @@ export const createProductController = async (req, res) => {
       sets,
       bulkProducts,
       youtubeUrl,
-      sku, // Add SKU to destructuring
+      sku,
+      tag,
+      photos, // Cloudinary URL
+      multipleimages, // Array of Cloudinary URLs
     } = req.fields;
 
-    const { photo } = req.files;
+    // Handle files from request
+    const { photo, images } = req.files;
 
     // Generate SKU if not provided
     const generateSKU = () => {
@@ -50,15 +54,24 @@ export const createProductController = async (req, res) => {
       const timeComponent = timestamp.toString(36).slice(-4).toUpperCase();
       const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
       const randomLetters = Array.from(
-        { length: 2 }, 
+        { length: 2 },
         () => letters.charAt(Math.floor(Math.random() * letters.length))
       ).join('');
       return `SM-${timeComponent}${randomLetters}`;
     };
 
-    // Photo validation
+    // Photo validation for Buffer-based images
     if (photo && photo.size > 1000000) {
       return res.status(400).send({ error: "Photo size should be less than 1MB." });
+    }
+
+    if (images) {
+      const imageArray = Array.isArray(images) ? images : [images];
+      for (let img of imageArray) {
+        if (img.size > 1000000) {
+          return res.status(400).send({ error: "Each image size should be less than 1MB." });
+        }
+      }
     }
 
     // Parse bulkProducts
@@ -87,7 +100,7 @@ export const createProductController = async (req, res) => {
       }
     }
 
-    // Create product instance with SKU
+    // Create product instance
     const newProduct = new productModel({
       name,
       slug: slugify(name),
@@ -110,7 +123,7 @@ export const createProductController = async (req, res) => {
       perPiecePrice: parseFloat(perPiecePrice),
       weight: parseFloat(weight),
       youtubeUrl,
-      sku: sku || generateSKU(), // Use provided SKU or generate new one
+      sku: sku || generateSKU(),
       bulkProducts: formattedBulkProducts || [],
       allowCOD: allowCOD === "1",
       returnProduct: returnProduct === "1",
@@ -118,12 +131,27 @@ export const createProductController = async (req, res) => {
       isActive: '1',
       variants: JSON.parse(variants || '[]'),
       sets: JSON.parse(sets || '[]'),
+      tag: Array.isArray(tag) ? tag : tag ? [tag] : [],
+      // Handle Cloudinary URLs
+      photos: photos || null,
+      multipleimages: Array.isArray(multipleimages) ? multipleimages : multipleimages ? [multipleimages] : [],
     });
 
-    // Handle photo
+    // Handle Buffer-based photo
     if (photo) {
-      newProduct.photo.data = fs.readFileSync(photo.path);
-      newProduct.photo.contentType = photo.type;
+      newProduct.photo = {
+        data: fs.readFileSync(photo.path),
+        contentType: photo.type
+      };
+    }
+
+    // Handle Buffer-based multiple images
+    if (images) {
+      const imageArray = Array.isArray(images) ? images : [images];
+      newProduct.images = imageArray.map(img => ({
+        data: fs.readFileSync(img.path),
+        contentType: img.type
+      }));
     }
 
     // Save product
@@ -174,7 +202,7 @@ export const productListController = async (req, res) => {
 
     // Fetch only the required fields for the product card
     const products = await productModel
-      .find({ isActive: "1" }, "name photo  perPiecePrice mrp stock")
+      .find({ isActive: "1" }, "name photo photos perPiecePrice mrp stock")
       .skip((page - 1) * perPage)
       .limit(perPage)
       .sort({ createdAt: -1 });
@@ -436,12 +464,16 @@ export const updateProductController = async (req, res) => {
       variants,
       sets,
       bulkProducts,
-      sku, // Added SKU
-      fk_tags, // Added FK Tags
-      youtubeUrl, // Added YouTube URL
+      sku,
+      fk_tags,
+      youtubeUrl,
+      tag,
+      photos, // Cloudinary URL
+      multipleimages, // Array of Cloudinary URLs
     } = req.fields;
 
-    const { photo } = req.files;
+    // Handle files from request
+    const { photo, images } = req.files;
 
     // Validation
     switch (true) {
@@ -456,47 +488,59 @@ export const updateProductController = async (req, res) => {
       case !quantity:
         return res.status(400).send({ error: "Quantity is Required" });
       case photo && photo.size > 1000000:
-        return res.status(400).send({ error: "Photo is Required and should be less than 1MB" });
+        return res.status(400).send({ error: "Photo should be less than 1MB" });
       case youtubeUrl && !/^(https?:\/\/)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)\/(watch\?v=|embed\/|v\/|e\/|playlist\?list=)[\w-]+$/.test(youtubeUrl):
         return res.status(400).send({ error: "Invalid YouTube URL" });
     }
 
-    // Convert numeric fields to numbers and prepare updated fields
+    // Validate additional images if provided
+    if (images) {
+      const imageArray = Array.isArray(images) ? images : [images];
+      for (let img of imageArray) {
+        if (img.size > 1000000) {
+          return res.status(400).send({ error: "Each additional image should be less than 1MB" });
+        }
+      }
+    }
+
+    // Convert numeric fields and prepare updated fields
     const updatedFields = {
-      name: name,
-      description: description,
-      slug: slugify(name), // Generate a slug from the name
-      price: parseFloat(price), // Convert price to a float
-      category: mongoose.Types.ObjectId(category), // Convert to ObjectId
+      name,
+      description,
+      slug: slugify(name),
+      price: parseFloat(price),
+      category: mongoose.Types.ObjectId(category),
       subcategory: mongoose.Types.ObjectId(subcategory),
       brand: mongoose.Types.ObjectId(brand),
-      quantity: parseInt(quantity), // Convert quantity to integer
-      stock: parseInt(stock) || 0, // Default to 0 if stock is undefined
-      minimumqty: parseInt(minimumqty), // Convert to integer
-      shipping: shipping === "1", // Convert to boolean
-      hsn: hsn, // Directly map hsn
-      unit: unit, // Directly map unit
-      unitSet: parseInt(unitSet), // Convert unitSet to integer
-      additionalUnit: additionalUnit, // Directly map additionalUnit
-      gst: parseFloat(gst), // Convert gst to float
-      gstType: gstType, // Directly map gstType
-      purchaseRate: parseFloat(purchaseRate), // Convert to float
-      mrp: parseFloat(mrp), // Convert to float
-      perPiecePrice: parseFloat(perPiecePrice), // Convert to float
-      setPrice: parseFloat(setPrice), // Convert to float
-      weight: parseFloat(weight), // Convert to float
-      allowCOD: allowCOD === "1", // Convert to boolean
-      returnProduct: returnProduct === "1", // Convert to boolean
-      userId: userId, // Directly map userId
-      isActive: "1", // Default to active
-      variants: JSON.parse(variants || "[]"), // Parse JSON or default to an empty array
-      sets: JSON.parse(sets || "[]"), // Parse JSON or default to an empty array
-      sku: sku, // Directly map sku
-      bulkProducts: JSON.parse(bulkProducts || "[]"), // Parse JSON or default to an empty array
-      fk_tags: JSON.parse(fk_tags || "[]"), // Parse JSON or default to an empty array
-      youtubeUrl: youtubeUrl || "", // Store YouTube URL if provided
+      quantity: parseInt(quantity),
+      stock: parseInt(stock) || 0,
+      minimumqty: parseInt(minimumqty),
+      shipping: shipping === "1",
+      hsn,
+      unit,
+      unitSet: parseInt(unitSet),
+      additionalUnit,
+      gst: parseFloat(gst),
+      gstType,
+      purchaseRate: parseFloat(purchaseRate),
+      mrp: parseFloat(mrp),
+      perPiecePrice: parseFloat(perPiecePrice),
+      setPrice: parseFloat(setPrice),
+      weight: parseFloat(weight),
+      allowCOD: allowCOD === "1",
+      returnProduct: returnProduct === "1",
+      userId,
+      isActive: "1",
+      variants: JSON.parse(variants || "[]"),
+      sets: JSON.parse(sets || "[]"),
+      sku,
+      youtubeUrl: youtubeUrl || "",
+      tag: Array.isArray(tag) ? tag : tag ? [tag] : [],
+      // Handle Cloudinary URLs
+      photos: photos || null,
+      multipleimages: Array.isArray(multipleimages) ? multipleimages : multipleimages ? [multipleimages] : [],
     };
-    
+
     // Handle FK Tags
     if (fk_tags) {
       let parsedFkTags = [];
@@ -511,7 +555,6 @@ export const updateProductController = async (req, res) => {
         parsedFkTags = fk_tags;
       }
 
-      // Ensure fk_tags is an array of valid tags
       if (!Array.isArray(parsedFkTags)) {
         return res.status(400).send({ error: "fk_tags must be an array" });
       }
@@ -519,9 +562,8 @@ export const updateProductController = async (req, res) => {
       updatedFields.fk_tags = parsedFkTags;
     }
 
-    // Check if bulkProducts is provided
+    // Handle bulkProducts
     if (bulkProducts) {
-      // Parse bulkProducts as JSON if it's a string
       let formattedBulkProducts = null;
       if (typeof bulkProducts === 'string') {
         try {
@@ -532,12 +574,10 @@ export const updateProductController = async (req, res) => {
         }
       }
 
-      // Ensure formattedBulkProducts is an array if it's provided
       if (formattedBulkProducts && !Array.isArray(formattedBulkProducts)) {
         return res.status(400).send({ error: "bulkProducts must be an array" });
       }
 
-      // Map bulkProducts to ensure data is in correct format
       if (Array.isArray(formattedBulkProducts)) {
         formattedBulkProducts = formattedBulkProducts.map((item) => ({
           minimum: parseInt(item.minimum),
@@ -547,26 +587,38 @@ export const updateProductController = async (req, res) => {
         }));
       }
 
-      updatedFields.bulkProducts = formattedBulkProducts; // Add to updatedFields
+      updatedFields.bulkProducts = formattedBulkProducts;
     }
 
-    // Find and update the product
-    const products = await productModel.findByIdAndUpdate(
-      req.params.pid,
-      updatedFields,
-      { new: true }
-    );
+    // Find the product to update
+    const products = await productModel.findById(req.params.pid);
+    if (!products) {
+      return res.status(404).send({ error: "Product not found" });
+    }
 
-    // Handle photo upload if provided
+    // Update the product with new fields
+    Object.assign(products, updatedFields);
+
+    // Handle Buffer-based photo if provided
     if (photo) {
-      products.photo.data = fs.readFileSync(photo.path);
-      products.photo.contentType = photo.type;
+      products.photo = {
+        data: fs.readFileSync(photo.path),
+        contentType: photo.type
+      };
+    }
+
+    // Handle Buffer-based multiple images if provided
+    if (images) {
+      const imageArray = Array.isArray(images) ? images : [images];
+      products.images = imageArray.map(img => ({
+        data: fs.readFileSync(img.path),
+        contentType: img.type
+      }));
     }
 
     // Save the updated product
     await products.save();
 
-    // Respond with success message and updated product
     res.status(200).send({
       success: true,
       message: "Product Updated Successfully",
@@ -581,7 +633,6 @@ export const updateProductController = async (req, res) => {
     });
   }
 };
-
 // filters
 export const productFiltersController = async (req, res) => {
   try {

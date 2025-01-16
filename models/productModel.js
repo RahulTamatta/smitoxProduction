@@ -50,6 +50,14 @@ const productSchema = new Schema(
         contentType: String,
       },
     ],
+    photos: {
+      type: String, // Changed from Buffer to String to store Cloudinary URL
+      required: false
+    },
+    multipleimages: [{
+      type: String, // Array of Cloudinary URLs
+      required: false
+    }],
     shipping: {
       type: Boolean,
     },

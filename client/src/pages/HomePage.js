@@ -56,7 +56,6 @@ const sliderSettings = {
   ],
 };
 
-
 const HomePage = () => {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
@@ -192,67 +191,6 @@ const HomePage = () => {
         </Slider>
       </div>
 
-      <div style={{ width: '100%', padding: '20px 0', marginTop: '20px' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Categories</h2>
-        <div style={{ 
-          width: '100%', 
-          overflowX: 'auto', 
-          WebkitOverflowScrolling: 'touch',
-          padding: '0 15px'
-        }}>
-          <div style={{
-            display: 'flex',
-            gap: '20px',
-            padding: '10px 5px',
-            minWidth: 'min-content'
-          }}>
-            {categories.map((c) => (
-              <div 
-                key={c._id}
-                onClick={() => navigate(`/category/${c.slug}`)}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  minWidth: isMobile ? '100px' : '120px',
-                  cursor: 'pointer'
-                }}
-              >
-                <div style={{
-                  width: '80px',
-                  height: '80px',
-                  borderRadius: '50%',
-                  overflow: 'hidden',
-                  border: '1px solid #eee'
-                }}>
-                  <LazyLoadImage
-                    src={c.photoUrl || c.photo}
-                    alt={c.name}
-                    effect="blur"
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover'
-                    }}
-                  />
-                </div>
-                <h6 style={{
-                  margin: '8px 0 0',
-                  fontSize: isMobile ? '12px' : '14px',
-                  textAlign: 'center',
-                  maxWidth: '100px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}>
-                  {c.name}
-                </h6>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
       <div className="container mt-4">
         <h2 className="text-center mb-4">All Products</h2>
         <div className="row">
@@ -338,5 +276,3 @@ const HomePage = () => {
 };
 
 export default HomePage;
-
-
