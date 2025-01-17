@@ -5,8 +5,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
 
-import { Edit, Trash2, MessageCircle } from 'lucide-react';
-
+import { Edit, Trash2, MessageCircle } from "lucide-react";
 
 const Products = () => {
   const [products, setProducts] = useState([]);
@@ -15,17 +14,42 @@ const Products = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [selectedProducts, setSelectedProducts] = useState([]);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   // Get all products
-  const getAllProducts = async () => {
+  const getAllProducts = async (page = 1) => {
     try {
-      const { data } = await axios.get("/api/v1/product/get-product");
-      setProducts(data.products);
+      setLoading(true);
+      const { data } = await axios.get(`/api/v1/product/get-product?page=${page}&limit=${itemsPerPage}`);
+      if (data.success) {
+        setProducts(data.products);
+        setTotalProducts(data.total);
+        setCurrentPage(data.page);
+      }
     } catch (error) {
       console.log(error);
       toast.error("Something Went Wrong");
+    } finally {
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // Fetch products only when currentPage changes
+    getAllProducts(currentPage);
+  }, [currentPage]);
+  // Handle page change
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+  
+
+  // Calculate total pages
+  const totalPages = Math.ceil(totalProducts / itemsPerPage);
+
 
   useEffect(() => {
     getAllProducts();
@@ -34,17 +58,24 @@ const Products = () => {
   // Handle bulk actions
   const handleBulkAction = async (action) => {
     try {
-      if (action === "delete" && !window.confirm("Are you sure you want to delete selected products?")) {
+      if (
+        action === "delete" &&
+        !window.confirm("Are you sure you want to delete selected products?")
+      ) {
         return; // Prevent deletion if the user cancels
       }
 
       if (action === "delete") {
         await Promise.all(
-          selectedProducts.map((id) => axios.delete(`/api/v1/product/delete-product/${id}`))
+          selectedProducts.map((id) =>
+            axios.delete(`/api/v1/product/delete-product/${id}`)
+          )
         );
         toast.success("Selected products deleted!");
         setProducts((prevProducts) =>
-          prevProducts.filter((product) => !selectedProducts.includes(product._id))
+          prevProducts.filter(
+            (product) => !selectedProducts.includes(product._id)
+          )
         );
       } else {
         await Promise.all(
@@ -78,16 +109,25 @@ const Products = () => {
   };
   const toggleIsActive = async (productId, newStatus) => {
     try {
-      const response = await axios.put(`/api/v1/product/updateStatus/products/${productId}`, {
-        isActive: newStatus,
-      });
+      const response = await axios.put(
+        `/api/v1/product/updateStatus/products/${productId}`,
+        {
+          isActive: newStatus,
+        }
+      );
       if (response.data.success) {
         setProducts((prevProducts) =>
           prevProducts.map((product) =>
-            product._id === productId ? { ...product, isActive: newStatus } : product
+            product._id === productId
+              ? { ...product, isActive: newStatus }
+              : product
           )
         );
-        toast.success(`Product status updated to ${newStatus === "1" ? "Active" : "Inactive"}!`);
+        toast.success(
+          `Product status updated to ${
+            newStatus === "1" ? "Active" : "Inactive"
+          }!`
+        );
       } else {
         toast.error("Failed to update product status.");
       }
@@ -102,26 +142,34 @@ const Products = () => {
     if (filter === "outOfStock" && product.stock !== 0) return false;
     if (filter === "active" && product.isActive !== "1") return false;
     if (filter === "inactive" && product.isActive !== "0") return false;
-    if (searchTerm && !product.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    if (
+      searchTerm &&
+      !product.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+      return false;
     return true;
   });
 
   // Paginated products
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentProducts = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
+  const currentProducts = filteredProducts.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
 
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
 
   return (
     <Layout>
-      <div className="flex" style={{ display: 'flex', flexDirection: 'row' }}>
+      <div className="flex" style={{ display: "flex", flexDirection: "row" }}>
         {/* Admin Menu in row with product list */}
-        <div className="w-1/5" style={{ paddingRight: '20px' }}>
+        <div className="w-1/5" style={{ paddingRight: "20px" }}>
           <AdminMenu />
         </div>
-        <div className="w-4/5 p-4" style={{ backgroundColor: '#f4f4f9' }}>
-          <h1 className="text-2xl font-bold mb-4" style={{ color: '#4a4a4a' }}>Products List</h1>
+        <div className="w-4/5 p-4" style={{ backgroundColor: "#f4f4f9" }}>
+          <h1 className="text-2xl font-bold mb-4" style={{ color: "#4a4a4a" }}>
+            Products List
+          </h1>
 
           <div className="mb-4">
             <div className="flex space-x-4">
@@ -133,8 +181,8 @@ const Products = () => {
                     filter === tab ? "bg-blue-500 text-white" : "bg-gray-100"
                   }`}
                   style={{
-                    color: filter === tab ? 'white' : '#333',
-                    borderRadius: '4px',
+                    color: filter === tab ? "white" : "#333",
+                    borderRadius: "4px",
                   }}
                 >
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -150,10 +198,11 @@ const Products = () => {
               placeholder="Search by name"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ borderRadius: '4px', width: '200px' }}
+              style={{ borderRadius: "4px", width: "200px" }}
             />
-            <span style={{ fontSize: '14px', color: '#666' }}>
-              Showing {currentProducts.length} of {filteredProducts.length} products
+            <span style={{ fontSize: "14px", color: "#666" }}>
+              Showing {currentProducts.length} of {filteredProducts.length}{" "}
+              products
             </span>
           </div>
 
@@ -162,7 +211,7 @@ const Products = () => {
               onClick={() => handleBulkAction("delete")}
               disabled={selectedProducts.length === 0}
               className="px-4 py-2 border bg-red-500 text-white"
-              style={{ backgroundColor: '#e53e3e', color: 'white' }}
+              style={{ backgroundColor: "#e53e3e", color: "white" }}
             >
               Delete Selected
             </button>
@@ -170,7 +219,7 @@ const Products = () => {
               onClick={() => handleBulkAction("activate")}
               disabled={selectedProducts.length === 0}
               className="px-4 py-2 border bg-green-500 text-white ml-2"
-              style={{ backgroundColor: '#48bb78', color: 'white' }}
+              style={{ backgroundColor: "#48bb78", color: "white" }}
             >
               Activate Selected
             </button>
@@ -178,31 +227,19 @@ const Products = () => {
               onClick={() => handleBulkAction("deactivate")}
               disabled={selectedProducts.length === 0}
               className="px-4 py-2 border bg-yellow-500 text-white ml-2"
-              style={{ backgroundColor: '#f6e05e', color: 'black' }}
+              style={{ backgroundColor: "#f6e05e", color: "black" }}
             >
               Deactivate Selected
             </button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse border border-gray-200">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="border p-2">
-                    <input
-                      type="checkbox"
-                      onChange={(e) =>
-                        setSelectedProducts(
-                          e.target.checked ? currentProducts.map((p) => p._id) : []
-                        )
-                      }
-                      checked={
-                        selectedProducts.length > 0 &&
-                        currentProducts.every((p) => selectedProducts.includes(p._id))
-                      }
-                    />
-                  </th>
-                  <th className="border p-2">#</th>
+        {/* Update the products display section */}
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse border border-gray-200">
+            <thead>
+              <tr>
+                {/* Table header content */}
+                <th className="border p-2">#</th>
                   <th className="border p-2">Photo</th>
                   <th className="border p-2">Name</th>
                   <th className="border p-2">Category</th>
@@ -210,93 +247,129 @@ const Products = () => {
                   <th className="border p-2">Price</th>
                   <th className="border p-2">Stock</th>
                   <th className="border p-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan="5" className="text-center py-4">
+                    Loading...
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {currentProducts.map((p, index) => (
+              ) : (
+                products.map((p, index) => (
                   <tr key={p._id} className="hover:bg-gray-50">
-                    <td className="border p-2 text-center">
-                      <input
-                        type="checkbox"
-                        checked={selectedProducts.includes(p._id)}
-                        onChange={() => toggleSelectProduct(p._id)}
-                      />
+                    <td className="border border-gray-300 px-4 py-2">
+                      {(currentPage - 1) * itemsPerPage + index + 1}
                     </td>
-                    <td className="border p-2 text-center">{indexOfFirstItem + index + 1}</td>
-
-                    <td className="border p-2 text-center">
-                    <img
-  src={p.photos}
-  alt={p.name}
-  className="border p-2"
-  style={{
-    width: "50px", // Set a fixed width
-    height: "50px", // Set a fixed height
-    objectFit: "cover", // Ensure the image maintains aspect ratio and fits within the box
-    borderRadius: "4px", // Add rounded corners if desired
-  }}
-/>
-
-          </td>
-                    <td className="border p-2">{p.name}</td>
-          
-
-                    <td className="border p-2">{p.category?.name || "N/A"}</td>
-                    <td className="border p-2">{p.subcategory?.name || "N/A"}</td>
-                    <td className="border p-2">₹{p.perPiecePrice?.toFixed(2)}</td>
-                    <td className="border p-2">{p.stock || 0}</td>
+                          {/* Product image */}
+      <td className="border p-2 text-center">
+        <img
+          src={p.photos || "/placeholder-image.png"} // Fallback image if photos is undefined
+          alt={p.name}
+          className="border p-2"
+          style={{
+            width: "50px",
+            height: "50px",
+            objectFit: "cover",
+            borderRadius: "4px",
+          }}
+        />
+      </td>
+                    <td className="border border-gray-300 px-4 py-2">{p.name}</td>
+                    <td className="border border-gray-300 px-4 py-2">{p.category.name}</td>
+                    <td className="border border-gray-300 px-4 py-2">{p.subcategory.name}</td>
+                    <td className="border border-gray-300 px-4 py-2">{p.perPiecePrice}</td>
+                    <td className="border border-gray-300 px-4 py-2">{p.stock}</td>
+              
                     <td className="border p-2">
-                      <div className="flex justify-center space-x-2">
-                      {p.isActive === "1" ? (
-                          <button
-                            onClick={() => toggleIsActive(p._id, "0")}
-                            className="text-yellow-500 hover:text-yellow-700"
-                          >
-                            Active
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() =>toggleIsActive(p._id, "1")}
-                            className="text-green-500 hover:text-green-700"
-                          >
-                            Deactivate
-                          </button>
-                        )}
-
-                        <Link to={`/dashboard/admin/product/${p.slug}`}>
-                          <Edit className="text-green-500 hover:text-green-700" />
-                        </Link>
-                        {/* <button onClick={() => handleBulkAction("delete")}>
-                          <Trash2 className="text-red-500 hover:text-red-700" />
-                        </button> */}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex justify-between items-center mt-4">
-            <div className="flex space-x-2">
-              <button
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="px-4 py-2 border bg-gray-300"
-              >
-                Prev
-              </button>
-              <span className="px-4 py-2">{`Page ${currentPage} of ${totalPages}`}</span>
-              <button
-                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="px-4 py-2 border bg-gray-300"
-              >
-                Next
-              </button>
-            </div>
-          </div>
+        <div className="flex justify-center space-x-2">
+          {/* Toggle active/inactive status */}
+          <button
+            onClick={() => toggleIsActive(p._id, p.isActive === "1" ? "0" : "1")}
+            className={`${
+              p.isActive === "1" ? "text-yellow-500 hover:text-yellow-700" : "text-green-500 hover:text-green-700"
+            }`}
+          >
+            {p.isActive === "1" ? "Active" : "Deactivate"}
+          </button>
+          
+          {/* Edit p link */}
+          <Link
+            to={`/dashboard/admin/product/${p.slug}`}
+            aria-label={`Edit product ${p.name}`}
+          >
+            <Edit className="text-green-500 hover:text-green-700" />
+          </Link>
         </div>
+      </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Update the pagination controls */}
+        <div className="flex justify-between items-center mt-4">
+          <div className="flex space-x-2">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1 || loading}
+              className="px-4 py-2 border bg-gray-300 disabled:opacity-50"
+            >
+              Prev
+            </button>
+
+            {/* Add page numbers */}
+            <div className="flex space-x-1">
+              {[...Array(totalPages)].map((_, index) => {
+                const pageNumber = index + 1;
+                if (
+                  pageNumber === 1 ||
+                  pageNumber === totalPages ||
+                  (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                ) {
+                  return (
+                    <button
+                      key={pageNumber}
+                      onClick={() => handlePageChange(pageNumber)}
+                      className={`px-4 py-2 border ${
+                        currentPage === pageNumber
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-100"
+                      }`}
+                      disabled={loading}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                }
+                if (
+                  pageNumber === currentPage - 2 ||
+                  pageNumber === currentPage + 2
+                ) {
+                  return <span key={pageNumber} className="px-4 py-2">...</span>;
+                }
+                return null;
+              })}
+            </div>
+
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages || loading}
+              className="px-4 py-2 border bg-gray-300 disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+          <span className="text-sm text-gray-600">
+            Showing {(currentPage - 1) * itemsPerPage + 1} to {" "}
+            {Math.min(currentPage * itemsPerPage, totalProducts)} of {" "}
+            {totalProducts} products
+          </span>
+        </div>
+      </div>
       </div>
     </Layout>
   );

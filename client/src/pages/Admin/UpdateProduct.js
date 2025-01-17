@@ -91,123 +91,72 @@ const uploadToCloudinary = async (file) => {
 
 const handleUpdate = async (e) => {
   e.preventDefault();
-  console.log('Starting product update process...');
-  
   try {
+    toast.loading("Updating product...");
     const productData = new FormData();
+
+    // Upload photos in parallel if they exist
+    const uploadPromises = [];
     
-    // Handle main photo (single photo)
     if (photo) {
-      console.log('Uploading new main photo...');
-      try {
-        const photoUrl = await uploadToCloudinary(photo);
-        productData.append("photos", photoUrl);
-      } catch (error) {
-        console.error('Error uploading main photo:', error);
-        toast.error('Error uploading main photo. Please try again.');
-        return;
-      }
+      uploadPromises.push(
+        uploadToCloudinary(photo).then(url => {
+          productData.append("photos", url);
+        })
+      );
     } else if (photos) {
-      // Keep existing main photo
-      console.log('Keeping existing main photo...');
       productData.append("photos", photos);
     }
 
-    // Handle multiple images
-    let allImageUrls = [];
+    // Handle multiple images in parallel
+    let allImageUrls = [...(multipleimages || [])];
     
-    // Keep existing images that weren't deleted
-    if (multipleimages && multipleimages.length > 0) {
-      allImageUrls = [...multipleimages];
+    if (images?.length) {
+      const newImagePromises = images.map(uploadToCloudinary);
+      const newUrls = await Promise.all(newImagePromises);
+      allImageUrls.push(...newUrls);
     }
-
-    // Upload new images if any
-    if (images && images.length > 0) {
-      console.log('Uploading new additional images...');
-      try {
-        const newImageUrls = await Promise.all(
-          images.map(async (image) => {
-            const imageUrl = await uploadToCloudinary(image);
-            return imageUrl;
-          })
-        );
-        allImageUrls = [...allImageUrls, ...newImageUrls];
-      } catch (error) {
-        console.error('Error uploading additional images:', error);
-        toast.error('Error uploading additional images. Please try again.');
-        return;
-      }
-    }
-
-    // Append all image URLs as JSON string
+    
     productData.append("multipleimages", JSON.stringify(allImageUrls));
 
-    // Append all other form data
-    productData.append("name", name);
-    productData.append("description", description);
-    productData.append("price", price);
-    productData.append("quantity", quantity);
-    productData.append("category", category);
-    productData.append("subcategory", subcategory);
-    productData.append("brand", brand);
-    productData.append("shipping", shipping ? "1" : "0");
-    productData.append("hsn", hsn);
-    productData.append("unit", unit);
-    productData.append("unitSet", unitSet);
-    productData.append("purchaseRate", purchaseRate);
-    productData.append("mrp", mrp);
-    productData.append("perPiecePrice", perPiecePrice);
-    productData.append("totalsetPrice", totalsetPrice);
-    productData.append("weight", weight);
-    productData.append("stock", stock);
-    productData.append("gst", gst);
-    productData.append("additionalUnit", additionalUnit);
-    productData.append("sku", sku);
+    // Batch append all other form data
+    const formFields = {
+      name, description, price, quantity, category, subcategory, brand,
+      shipping: shipping ? "1" : "0", hsn, unit, unitSet, purchaseRate,
+      mrp, perPiecePrice, totalsetPrice, weight, stock, gst,
+      additionalUnit, sku, fk_tags: fk_tags ? JSON.stringify(fk_tags.split(',').map(tag => tag.trim()).filter(Boolean)) : "",
+      bulkProducts: JSON.stringify(bulkProducts.map(p => ({
+        minimum: parseFloat(p.minimum) || 0,
+        maximum: parseFloat(p.maximum) || 0,
+        discount_mrp: parseFloat(p.discount_mrp) || 0,
+        selling_price_set: parseFloat(p.selling_price_set) || 0
+      })))
+    };
 
-    // Handle FK Tags
-    if (fk_tags) {
-      const fkTagsArray = fk_tags.split(',').map(tag => tag.trim()).filter(Boolean);
-      productData.append("fk_tags", JSON.stringify(fkTagsArray));
-    }
-    
-    // Handle bulk products
-    if (bulkProducts && bulkProducts.length > 0) {
-      // Clean up bulk products data
-      const cleanedBulkProducts = bulkProducts.map(product => ({
-        minimum: parseFloat(product.minimum) || 0,
-        maximum: parseFloat(product.maximum) || 0,
-        discount_mrp: parseFloat(product.discount_mrp) || 0,
-        selling_price_set: parseFloat(product.selling_price_set) || 0
-      }));
-      productData.append("bulkProducts", JSON.stringify(cleanedBulkProducts));
-    }
-
-    console.log('Sending update request...');
-    
-    // Make the update request
-    const { data } = await axios.put(
-      `/api/v1/product/update-product/${id}`,
-      productData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+    Object.entries(formFields).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        productData.append(key, value);
       }
-    );
+    });
+
+    // Wait for all uploads to complete
+    await Promise.all(uploadPromises);
+
+    const { data } = await axios.put(`/api/v1/product/update-product/${id}`, productData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
 
     if (data?.success) {
-      console.log('Update successful');
-      toast.success('Product Updated Successfully');
+      toast.dismiss();
+      toast.success("Product Updated Successfully");
       navigate('/dashboard/admin/products');
-    } else {
-      throw new Error(data?.message || 'Update failed');
     }
   } catch (error) {
+    toast.dismiss();
+    toast.error(error.message || "Error updating product");
     console.error('Update error:', error);
-    toast.error(error.message || "Something went wrong in updating product");
   }
 };
-
   // Get single product
  const getSingleProduct = async () => {
   try {
@@ -547,66 +496,7 @@ const handleUpdate = async (e) => {
   </div>
 </div>
 
-{/* Multiple Images Display
-<div className="mb-3">
-  <label className="form-label">Additional Product Images</label>
-  <input
-    type="file"
-    className="form-control"
-    multiple
-    accept="image/*"
-    onChange={(e) => setImages(Array.from(e.target.files))}
-  /> */}
-  
-  {/* Display existing multiple images */}
-  {/* <div className="d-flex flex-wrap gap-2 mt-2">
-    {multipleimages.map((imgUrl, index) => (
-      <div key={index} className="position-relative">
-        <img
-          src={imgUrl}
-          alt={`Product ${index + 1}`}
-          style={{ width: '100px', height: '100px', objectFit: 'cover' }}
-          className="border rounded"
-          onError={(e) => {
-            e.target.onerror = null;
-            e.target.src = '/default-product.jpg'; // fallback image
-          }}
-        />
-        <button
-          className="btn btn-sm btn-danger position-absolute top-0 end-0"
-          onClick={() => {
-            const updatedImages = multipleimages.filter((_, i) => i !== index);
-            setMultipleImages(updatedImages);
-          }}
-        >
-          ×
-        </button>
-      </div>
-    ))} */}
-    
-    {/* Display newly uploaded images */}
-    {/* {images.map((file, index) => (
-      <div key={`new-${index}`} className="position-relative">
-        <img
-          src={URL.createObjectURL(file)}
-          alt={`New Upload ${index + 1}`}
-          style={{ width: '100px', height: '100px', objectFit: 'cover' }}
-          className="border rounded"
-        />
-        <button
-          className="btn btn-sm btn-danger position-absolute top-0 end-0"
-          onClick={() => {
-            const updatedImages = images.filter((_, i) => i !== index);
-            setImages(updatedImages);
-          }}
-        >
-          ×
-        </button>
-      </div>
-    ))} */}
-  {/* </div> */}
-{/* </div> */}
-              {/* Basic Info Fields */}
+
               <div className="mb-3">
                 <label htmlFor="productName" className="form-label">
                   Product Name
@@ -954,3 +844,66 @@ const handleUpdate = async (e) => {
 };
 
 export default UpdateProduct;
+
+
+
+{/* Multiple Images Display
+<div className="mb-3">
+  <label className="form-label">Additional Product Images</label>
+  <input
+    type="file"
+    className="form-control"
+    multiple
+    accept="image/*"
+    onChange={(e) => setImages(Array.from(e.target.files))}
+  /> */}
+  
+  {/* Display existing multiple images */}
+  {/* <div className="d-flex flex-wrap gap-2 mt-2">
+    {multipleimages.map((imgUrl, index) => (
+      <div key={index} className="position-relative">
+        <img
+          src={imgUrl}
+          alt={`Product ${index + 1}`}
+          style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+          className="border rounded"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = '/default-product.jpg'; // fallback image
+          }}
+        />
+        <button
+          className="btn btn-sm btn-danger position-absolute top-0 end-0"
+          onClick={() => {
+            const updatedImages = multipleimages.filter((_, i) => i !== index);
+            setMultipleImages(updatedImages);
+          }}
+        >
+          ×
+        </button>
+      </div>
+    ))} */}
+    
+    {/* Display newly uploaded images */}
+    {/* {images.map((file, index) => (
+      <div key={`new-${index}`} className="position-relative">
+        <img
+          src={URL.createObjectURL(file)}
+          alt={`New Upload ${index + 1}`}
+          style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+          className="border rounded"
+        />
+        <button
+          className="btn btn-sm btn-danger position-absolute top-0 end-0"
+          onClick={() => {
+            const updatedImages = images.filter((_, i) => i !== index);
+            setImages(updatedImages);
+          }}
+        >
+          ×
+        </button>
+      </div>
+    ))} */}
+  {/* </div> */}
+{/* </div> */}
+              {/* Basic Info Fields */}

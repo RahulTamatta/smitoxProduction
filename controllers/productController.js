@@ -174,26 +174,40 @@ export const createProductController = async (req, res) => {
 //get all products
 export const getProductController = async (req, res) => {
   try {
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1); // Ensure page is at least 1
+    const limit = Math.max(parseInt(req.query.limit, 10) || 10, 1); // Ensure limit is at least 1
+    const skip = (page - 1) * limit;
+
     const products = await productModel
       .find({})
-      .populate("category subcategory")
-      .select("-photo")
-      .sort({ createdAt: -1 });
+      .populate("category", "name")
+      .populate("subcategory", "name")
+      .select("name category subcategory isActive perPiecePrice slug stock photos")
+      .skip(skip)
+      .limit(limit);
+
+    const total = await productModel.countDocuments();
+
     res.status(200).send({
       success: true,
-      counTotal: products.length,
-      message: "ALlProducts ",
+      total,
+      page,
+      limit,
+      message: "Fetched products successfully",
       products,
     });
   } catch (error) {
-    console.log(error);
+    console.error("Error fetching products:", error);
     res.status(500).send({
       success: false,
-      message: "Erorr in getting products",
+      message: "Error in fetching products",
       error: error.message,
     });
   }
 };
+
+
+
 
 export const productListController = async (req, res) => {
   try {
