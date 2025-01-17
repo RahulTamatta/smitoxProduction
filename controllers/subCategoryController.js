@@ -2,10 +2,10 @@ import subcategoryModel from "../models/subcategoryModel.js";
 import slugify from "slugify";
 
 // Create Subcategory
+// Create Subcategory Controller
 export const createSubcategoryController = async (req, res) => {
   try {
-    const { name, photo, parentCategoryId ,isActive} = req.body;
-    console.log("request body", req.body);
+    const { name, photos, parentCategoryId, isActive } = req.body;
 
     if (!name) {
       return res.status(401).send({ message: "Name is required" });
@@ -19,17 +19,23 @@ export const createSubcategoryController = async (req, res) => {
     if (existingCategory) {
       return res.status(200).send({
         success: false,
-        message: "Category Already Exists",
+        message: "Subcategory already exists",
       });
     }
 
-    // Create a new category object with the name, slug, category, and photo
+    if (photos && photos.length > 5 * 1024 * 1024) { // 5MB size limit
+      return res.status(400).send({
+        success: false,
+        message: "Image size too large. Maximum 5MB allowed.",
+      });
+    }
+
     const subcategoryData = {
       name,
       slug: slugify(name),
       isActive: isActive !== undefined ? isActive : true,
-      category: parentCategoryId, // Use parentCategoryId as the category field
-      photo: photo 
+      category: parentCategoryId,
+      photos, // Store the URLs from Cloudinary
     };
 
     const subcategory = await new subcategoryModel(subcategoryData).save();
@@ -44,7 +50,136 @@ export const createSubcategoryController = async (req, res) => {
     res.status(500).send({
       success: false,
       error: error.message,
-      message: "Error in subCategory",
+      message: "Error in subcategory creation",
+    });
+  }
+};
+
+
+// Update Subcategory Controller
+export const updateSubcategoryController = async (req, res) => {
+  try {
+    const { name, category, isActive, photos } = req.body;
+    const { id } = req.params;
+
+    if (!category) {
+      return res.status(401).send({ message: "Parent category is required" });
+    }
+
+    const updateData = {
+      name,
+      slug: slugify(name),
+      category,
+      isActive,
+    };
+
+    if (photos) {
+      if (photos.length > 5 * 1024 * 1024) { // Validate photos size
+        return res.status(400).send({
+          success: false,
+          message: "Image size too large. Maximum 5MB allowed.",
+        });
+      }
+      updateData.photos = photos; // Update photos if provided
+    }
+
+    const subcategory = await subcategoryModel.findByIdAndUpdate(id, updateData, { new: true });
+
+    if (!subcategory) {
+      return res.status(404).send({
+        success: false,
+        message: "Subcategory not found",
+      });
+    }
+
+    res.status(200).send({
+      success: true,
+      message: "Subcategory updated successfully",
+      subcategory,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      error: error.message,
+      message: "Error while updating subcategory",
+    });
+  }
+};
+
+
+// Get Single Subcategory Controller
+export const getSingleSubcategoryController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const subcategory = await subcategoryModel.findById(id);
+
+    if (!subcategory) {
+      return res.status(404).send({
+        success: false,
+        message: "Subcategory not found",
+      });
+    }
+
+    res.status(200).send({
+      success: true,
+      message: "Subcategory retrieved successfully",
+      subcategory,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      error,
+      message: "Error while retrieving subcategory",
+    });
+  }
+};
+
+
+
+// Delete Subcategory Controller
+export const deleteSubcategoryController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await subcategoryModel.findByIdAndDelete(id);
+    res.status(200).send({
+      success: true,
+      message: "Subcategory deleted successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      message: "Error while deleting subcategory",
+      error,
+    });
+  }
+};
+
+
+// Get All Subcategories Controller with Active Status Filter
+export const getAllSubcategoriesController = async (req, res) => {
+  try {
+    const { active } = req.query;
+    let query = {};
+
+    if (active !== undefined) {
+      query.isActive = active === 'true';
+    }
+
+    const subcategories = await subcategoryModel.find(query);
+    res.status(200).send({
+      success: true,
+      message: "All subcategories retrieved",
+      subcategories,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      error,
+      message: "Error while retrieving subcategories",
     });
   }
 };
@@ -99,116 +234,13 @@ export const createSubcategoryController = async (req, res) => {
 //   }
 // };
 // Get Single Subcategory
-export const getSingleSubcategoryController = async (req, res) => {
-  try {
-    const { category } = req.params;
-    console.log("Request parameters:", req.params);
 
-    // Fetch the subcategory by ID
-    const subcategory = await subcategoryModel.findById(category);
-    
-    // Check if the subcategory exists
-    if (!subcategory) {
-      return res.status(404).send({
-        success: false,
-        message: "Subcategory not found",
-      });
-    }
-
-    // Apply filtering logic if necessary
-    // Example: Filter properties to include in the response
-    const filteredSubcategory = {
-      id: subcategory._id,
-      name: subcategory.name,
-      // Add more fields if needed
-    };
-
-    // Print the filtered subcategory to the console
-    console.log("Filtered Subcategory:", filteredSubcategory);
-
-    // Send the filtered subcategory as the response
-    res.status(200).send({
-      success: true,
-      message: "Subcategory retrieved successfully",
-      subcategory: filteredSubcategory,
-    });
-  } catch (error) {
-    console.log("Error while retrieving subcategory:", error);
-    res.status(500).send({
-      success: false,
-      error,
-      message: "Error while retrieving subcategory",
-    });
-  }
-};
 
 // Other controllers remain unchanged...
 
-export const updateSubcategoryController = async (req, res) => {
-  try {
-    const { name, category, isActive, photo } = req.body; // Destructure photo here
-    const { id } = req.params;
-
-    // if (!name) {
-    //   return res.status(401).send({ message: "Name is required" });
-    // }
-    if (!category) {
-      return res.status(401).send({ message: "Category is required" });
-    }
-
-    // Prepare the update data
-    const updateData = {
-      name,
-      slug: slugify(name),
-      category,
-      isActive
-    };
-
-    // Only update the photo if provided
-    if (photo) {
-      updateData.photo = photo;
-    }
-
-    const subcategory = await subcategoryModel.findByIdAndUpdate(id, updateData, { new: true });
-
-    if (!subcategory) {
-      return res.status(404).send({ success: false, message: "Subcategory not found" });
-    }
-
-    res.status(200).send({
-      success: true,
-      message: "Subcategory Updated Successfully",
-      subcategory,
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).send({
-      success: false,
-      error: error.message,
-      message: "Error while updating subcategory",
-    });
-  }
-};
 
 
 
-export const deleteSubcategoryController = async (req, res) => {
-  try {
-    const { id } = req.params;
-    await subcategoryModel.findByIdAndDelete(id);
-    res.status(200).send({
-      success: true,
-      message: "Subcategory Deleted Successfully",
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).send({
-      success: false,
-      message: "Error while deleting subcategory",
-      error,
-    });
-  }
-};
 
 // Add a new controller to toggle active status
 export const toggleSubcategoryStatusController = async (req, res) => {
@@ -241,28 +273,3 @@ export const toggleSubcategoryStatusController = async (req, res) => {
   }
 };
 
-// Modify getAllSubcategoriesController to optionally filter by active status
-export const getAllSubcategoriesController = async (req, res) => {
-  try {
-    const { active } = req.query;
-    let query = {};
-    
-    if (active !== undefined) {
-      query.isActive = active === 'true';
-    }
-
-    const subcategories = await subcategoryModel.find(query);
-    res.status(200).send({
-      success: true,
-      message: "All Subcategories List",
-      subcategories,
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).send({
-      success: false,
-      error,
-      message: "Error while getting all subcategories",
-    });
-  }
-};

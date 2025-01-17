@@ -2,11 +2,15 @@ import categoryModel from "../models/categoryModel.js";
 import slugify from "slugify";
 import fs from 'fs';
 
+// Category Controller functions
+
 export const createCategoryController = async (req, res) => {
   try {
-    const { name, photo } = req.body;
+    const { name, photos } = req.body;
     console.log("request body", req.body);
-    if (photo && photo.length > 5 * 1024 * 1024) { // 5MB limit
+    
+    // Changed photo to photos in validation
+    if (photos && photos.length > 5 * 1024 * 1024) { // 5MB limit
       return res.status(400).send({
         success: false,
         message: "Image size too large. Maximum 5MB allowed."
@@ -25,11 +29,11 @@ export const createCategoryController = async (req, res) => {
       });
     }
     
-    // Create a new category object with the name, slug, and photo
+    // Updated to use photos instead of photo
     const categoryData = {
       name,
       slug: slugify(name),
-      photo: photo  // Store the base64 string directly
+      photos: photos  // Store the URL from Cloudinary
     };
     
     const category = await new categoryModel(categoryData).save();
@@ -49,16 +53,15 @@ export const createCategoryController = async (req, res) => {
   }
 };
 
-//update category
 export const updateCategoryController = async (req, res) => {
   try {
-    const { name, photo } = req.body; // Add photo here
+    const { name, photos } = req.body; // Changed photo to photos
     const { id } = req.params;
 
-    // Build the update data object dynamically
+    // Build the update data object with photos
     const updateData = { name, slug: slugify(name) };
-    if (photo) {
-      updateData.photo = photo; // Update the photo if provided
+    if (photos) {
+      updateData.photos = photos; // Update photos if provided
     }
 
     const category = await categoryModel.findByIdAndUpdate(
@@ -89,8 +92,7 @@ export const updateCategoryController = async (req, res) => {
   }
 };
 
-
-// get all cat
+// No changes needed for categoryController (get all)
 export const categoryControlller = async (req, res) => {
   try {
     const category = await categoryModel.find({});
@@ -109,13 +111,13 @@ export const categoryControlller = async (req, res) => {
   }
 };
 
-// single category
+// No changes needed for singleCategoryController
 export const singleCategoryController = async (req, res) => {
   try {
     const category = await categoryModel.findOne({ slug: req.params.slug });
     res.status(200).send({
       success: true,
-      message: "Get SIngle Category SUccessfully",
+      message: "Get Single Category Successfully",
       category,
     });
   } catch (error) {
@@ -128,14 +130,14 @@ export const singleCategoryController = async (req, res) => {
   }
 };
 
-//delete category
+// No changes needed for deleteCategoryController
 export const deleteCategoryCOntroller = async (req, res) => {
   try {
     const { id } = req.params;
     await categoryModel.findByIdAndDelete(id);
     res.status(200).send({
       success: true,
-      message: "Categry Deleted Successfully",
+      message: "Category Deleted Successfully",
     });
   } catch (error) {
     console.log(error);

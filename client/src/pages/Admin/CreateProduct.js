@@ -45,7 +45,11 @@ const CreateProduct = () => {
   const [tags, setTags] = useState([]); // Added to match controller
   const [fk_tags, setFkTags] = useState([]); // Added to match controller
   const [sku, setSku] = useState(""); // Added to match controller
+  
+  const [photos, setPhotos] = useState(""); 
+  const [multipleimages, setMultipleImages] = useState([]);
 
+  
   useEffect(() => {
     getAllCategories();
     getSubcategories();
@@ -161,69 +165,113 @@ const CreateProduct = () => {
     setFkTags(e.target.value);
   };
 
+
+  // Add this function for Cloudinary upload
+  const uploadToCloudinary = async (file) => {
+    console.log('Starting Cloudinary upload for file:', file.name);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', 'smitoxphoto');
+      formData.append('cloud_name', 'djtiblazd');
+  
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/djtiblazd/image/upload`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+  
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+  
+      const data = await response.json();
+      console.log('Upload successful, URL:', data.secure_url);
+      return data.secure_url;
+    } catch (error) {
+      console.error('Cloudinary upload error:', error);
+      throw error;
+    }
+  };
+  
+  // Modify the handleCreate function to handle image uploads
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
+      toast.loading("Creating product...");
       const productData = new FormData();
-      productData.append("name", name);
-      productData.append("description", description);
-      productData.append("price", price);
-      productData.append("quantity", quantity);
-      productData.append("photo", photo);
-      // Handle multiple images
-      if (images.length > 0) {
-        images.forEach((image) => {
-          productData.append("images", image);
-        });
+  
+      // Upload photos in parallel if they exist
+      const uploadPromises = [];
+      
+      if (photo) {
+        uploadPromises.push(
+          uploadToCloudinary(photo).then(url => {
+            productData.append("photos", url);
+          })
+        );
       }
-      productData.append("category", category);
-      productData.append("youtubeUrl", youtubeUrl);
-
-      productData.append("subcategory", subcategory);
-      productData.append("brand", brand);
-      productData.append("hsn", hsn);
-      productData.append("shipping", shipping ? "1" : "0");
-      productData.append("bulkProducts", JSON.stringify(bulkProducts));
-      productData.append("unit", unit);
-      productData.append("unitSet", unitSet);
-      productData.append("purchaseRate", purchaseRate);
-      productData.append("mrp", mrp);
-      productData.append("perPiecePrice", perPiecePrice);
-      productData.append("totalsetPrice", totalsetPrice);
-      productData.append("weight", weight);
-      productData.append("stock", stock);
-      productData.append("gst", gst);
-      // productData.append("gstType", gstType);
-      productData.append("additionalUnit", additionalUnit);
-      // productData.append("allowCOD", allowCOD ? "1" : "0");
-      // productData.append("returnProduct", returnProduct ? "1" : "0");
-      // productData.append("tags", JSON.stringify(tags));
-      productData.append("fk_tags", JSON.stringify(fk_tags));
-      productData.append("sku", sku);
-      const fkTagsArray = fk_tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter((tag) => tag !== "");
-
-      productData.append("fk_tags", JSON.stringify(fkTagsArray));
-
+  
+      // Handle multiple images in parallel
+      let allImageUrls = [...(multipleimages || [])];
+      
+      if (images?.length) {
+        const newImagePromises = images.map(uploadToCloudinary);
+        const newUrls = await Promise.all(newImagePromises);
+        allImageUrls.push(...newUrls);
+      }
+      
+      productData.append("multipleimages", JSON.stringify(allImageUrls));
+  
+      // Add all other form fields
+      const formFields = {
+        name, description, price, quantity, category, subcategory, brand,
+        shipping: shipping ? "1" : "0", hsn, unit, unitSet, purchaseRate,
+        mrp, perPiecePrice, totalsetPrice, weight, stock, gst,
+        additionalUnit, sku, fk_tags: fk_tags ? JSON.stringify(fk_tags.split(',').map(tag => tag.trim()).filter(Boolean)) : "",
+        youtubeUrl,
+        bulkProducts: JSON.stringify(bulkProducts.map(p => ({
+          minimum: parseFloat(p.minimum) || 0,
+          maximum: parseFloat(p.maximum) || 0,
+          discount_mrp: parseFloat(p.discount_mrp) || 0,
+          selling_price_set: parseFloat(p.selling_price_set) || 0
+        })))
+      };
+  
+      Object.entries(formFields).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          productData.append(key, value);
+        }
+      });
+  
+      // Wait for all uploads to complete
+      await Promise.all(uploadPromises);
+  
       const { data } = await axios.post(
         "/api/v1/product/create-product",
-        productData
+        productData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        }
       );
-
-      if (data.success) {
+  
+      if (data?.success) {
+        toast.dismiss();
         toast.success("Product Created Successfully");
         navigate("/dashboard/admin/products");
       } else {
-        toast.error(data.message);
+        toast.dismiss();
+        toast.error(data?.message || "Error creating product");
       }
     } catch (error) {
-      console.error("Error creating product:", error);
-      toast.error("Something went wrong while creating product");
+      toast.dismiss();
+      toast.error(error.message || "Error creating product");
+      console.error('Create error:', error);
     }
   };
-
+  
   // Add this function after your state declarations
   const generateUniqueSkU = () => {
     // Get current timestamp
@@ -354,34 +402,38 @@ const CreateProduct = () => {
               </div>
 
               <div className="mb-3">
-                <label htmlFor="photoUpload" className="form-label">
-                  Product Photo
-                </label>
-                <label
-                  className="btn btn-outline-secondary col-md-12"
-                  htmlFor="photoUpload"
-                >
-                  {photo ? photo.name : "Upload Photo"}
-                  <input
-                    id="photoUpload"
-                    type="file"
-                    name="photo"
-                    accept="image/*"
-                    onChange={(e) => setPhoto(e.target.files[0])}
-                    hidden
-                  />
-                </label>
-                {photo && (
-                  <div className="text-center mt-2">
-                    <img
-                      src={URL.createObjectURL(photo)}
-                      alt="product_photo"
-                      height={"200px"}
-                      className="img img-responsive"
-                    />
-                  </div>
-                )}
-              </div>
+  <label className="btn btn-outline-secondary col-md-12">
+    {photo ? photo.name : "Upload Photo"}
+    <input
+      type="file"
+      name="photo"
+      accept="image/*"
+      onChange={(e) => setPhoto(e.target.files[0])}
+      hidden
+    />
+  </label>
+  <div className="mb-3">
+    {photo ? (
+      <div className="text-center">
+        <img
+          src={URL.createObjectURL(photo)}
+          alt="product_photo"
+          height="200"
+          className="img img-responsive"
+        />
+      </div>
+    ) : photos ? (
+      <div className="text-center">
+        <img
+          src={photos}
+          alt="product_photo"
+          height="200"
+          className="img img-responsive"
+        />
+      </div>
+    ) : null}
+  </div>
+</div>
               <div className="mb-3">
                 <label htmlFor="productName" className="form-label">
                   Product Name
