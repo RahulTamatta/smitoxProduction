@@ -90,7 +90,8 @@ const UserList = () => {
   const handleOpenSearchModal = (userId,user_fullname) => {
     // If you have any logic to handle modal opening, you can include it here.
     // For now, it just navigates to the add-to-cart page for the given user.
-    navigate(`/add-to-cart/${userId}/${user_fullname}`); // Replace with your actual route
+    const encodedName = encodeURIComponent(user_fullname);
+    navigate(`/add-to-cart/${userId}/${encodedName}`); // Replace with your actual route
   };
   
   const toggleStatus = async (id, currentStatus) => {

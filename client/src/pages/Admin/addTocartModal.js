@@ -165,7 +165,7 @@ const CartSearchModal = ({ show, handleClose, userId }) => {
           const initialTotalPrice = calculateTotalPrice(product, applicableBulk, initialQuantity);
 
           const response = await axios.post(
-              `/api/v1/carts/users/${auth.user._id}/cart`,
+              `/api/v1/carts/users/${userId}/cart`,
               {
                   productId: product._id,
                   quantity: initialQuantity,

@@ -3,7 +3,8 @@ import { Modal, Button, Table, Form } from 'react-bootstrap';
 import moment from 'moment';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable'; // Add this import for better table handling
-
+import { useEffect,useState } from 'react';
+import axios from 'axios';
 const OrderModal = ({
   show,
   handleClose,
@@ -19,9 +20,26 @@ const OrderModal = ({
   handleUpdateOrder,
   handleDelivered,
   handleReturned,
+  getOrders, // Add this prop
+  orderType ,
+  onOrderUpdate 
 }) => {
   const orderId = selectedOrder?._id;
   const products = selectedOrder?.products || [];
+  const [localOrder, setLocalOrder] = useState(selectedOrder);
+
+  // Update local state when selectedOrder changes
+  useEffect(() => {
+    setLocalOrder(selectedOrder);
+  }, [selectedOrder]);
+
+  // Add useEffect to refresh data when modal is shown
+  useEffect(() => {
+    if (show && orderId) {
+      refreshOrderData();
+    }
+  }, [show, orderId]);
+
 
   const getProductPhotoUrl = (product) => {
     if (!product) return null;
@@ -205,6 +223,25 @@ const OrderModal = ({
   
     // Call the async function
     generatePDFWithLogo();
+  };
+
+  const refreshOrderData = async () => {
+    try {
+      const response = await axios.get(`/api/v1/auth/order/${orderId}`);
+      if (response.data.success) {
+        onOrderUpdate(response.data.order); // Update parent state
+        setLocalOrder(response.data.order); 
+      }
+    } catch (error) {
+      console.error('Error refreshing order data:', error);
+    }
+  };
+
+  // Modify handleUpdateOrder to refresh data after update
+  const handleOrderUpdate = async () => {
+    await handleUpdateOrder();
+    await refreshOrderData();
+    await getOrders(orderType);
   };
 
   return (

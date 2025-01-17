@@ -24,6 +24,10 @@ const CategoryProduct = () => {
     location.state?.fromBanner || false
   );
   const [wishlistStatus, setWishlistStatus] = useState({});
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const productsPerPage = 15;
 
   useEffect(() => {
     if (params?.slug) {
@@ -85,7 +89,6 @@ const CategoryProduct = () => {
           subcat.photo = subcat.photo || "/api/v1/placeholder/64/64";
           return subcat.category === categoryId;
         });
-        
         setSubcategories(filteredSubcategories);
       } else {
         setSubcategories([]);
@@ -96,45 +99,46 @@ const CategoryProduct = () => {
       setSubcategories([]);
     }
   };
-  
+
   const fetchProductsByCategoryOrSubcategory = async (subcategoryId) => {
     try {
       setLoading(true);
-      let url = `/api/v1/product/product-category/${params.slug}`;
+      let url = `/api/v1/product/product-category/${params.slug}?page=${page}`;
       if (subcategoryId) {
-        url = `/api/v1/product/product-subcategory/${subcategoryId}`;
+        url = `/api/v1/product/product-subcategory/${subcategoryId}?page=${page}`;
       }
       const { data } = await axios.get(url);
-      setProducts(data?.products || []);
+      
+      if (page === 1) {
+        setProducts(data?.products || []);
+      } else {
+        setProducts(prev => [...prev, ...(data?.products || [])]);
+      }
+      
+      setTotal(data?.pagination?.totalProducts || 0);
+      setHasMore(data?.pagination?.hasMore || false);
       await checkWishlistStatus(data?.products || []);
     } catch (error) {
       console.log(error);
       toast.error("Error fetching products");
-      setProducts([]);
+      if (page === 1) {
+        setProducts([]);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchProductsBySubcategory = async (subcategoryId) => {
-    try {
-      setLoading(true);
-      const { data } = await axios.get(
-        `/api/v1/product/product-subcategory/${subcategoryId}`
-      );
-      setProducts(data?.products || []);
-      await checkWishlistStatus(data?.products || []);
-    } catch (error) {
-      console.log(error);
-      toast.error("Error fetching products");
-      setProducts([]);
-    } finally {
-      setLoading(false);
-    }
+  const loadMore = async () => {
+    if (loading || !hasMore) return;
+    setPage(prev => prev + 1);
+    await fetchProductsByCategoryOrSubcategory(selectedSubcategory);
   };
 
   const filterBySubcategory = (subcategoryId) => {
+    setPage(1); // Reset page when filtering
     setSelectedSubcategory(subcategoryId);
+    setProducts([]); // Clear existing products
     fetchProductsByCategoryOrSubcategory(subcategoryId);
   };
 
@@ -163,6 +167,30 @@ const CategoryProduct = () => {
       toast.error("Error updating wishlist");
     }
   };
+
+
+  
+
+  const fetchProductsBySubcategory = async (subcategoryId) => {
+    try {
+      setLoading(true);
+      const { data } = await axios.get(
+        `/api/v1/product/product-subcategory/${subcategoryId}`
+      );
+      setProducts(data?.products || []);
+      setTotal(data?.products?.length || 0);
+      setPage(1); // Reset page when fetching new products
+      await checkWishlistStatus(data?.products || []);
+    } catch (error) {
+      console.log(error);
+      toast.error("Error fetching products");
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
 
   const settings = {
     dots: false,
@@ -210,6 +238,7 @@ const CategoryProduct = () => {
                 className={`subcategory-item ${!selectedSubcategory ? "active" : ""}`}
                 onClick={() => {
                   setSelectedSubcategory(null);
+                  setPage(1);
                   fetchProductsByCategoryOrSubcategory(null);
                 }}
                 style={{
@@ -287,73 +316,99 @@ const CategoryProduct = () => {
           </div>
         )}
         
-        <h6 className="text-center mb-4">
-          {products?.length} result{products?.length !== 1 ? "s" : ""}
-        </h6>
+        {/* <h6 className="text-center mb-4">
+          {total} result{total !== 1 ? "s" : ""}
+        </h6> */}
 
-        {loading ? (
+        {loading && products.length === 0 ? (
           <div className="text-center">Loading...</div>
         ) : products?.length > 0 ? (
-          <div className="row">
-            {products.map((p) => (
-              <div className="col-md-4 col-sm-6 mb-3" key={p._id}>
-                <div
-                  className="card product-card h-100"
-                  style={{ cursor: "pointer", position: "relative" }}
-                  onClick={() => navigate(`/product/${p.slug}`)}
-                >
-                  <button 
-                    onClick={(e) => toggleWishlist(e, p._id)}
-                    style={{
-                      position: 'absolute',
-                      top: '10px',
-                      right: '10px',
-                      zIndex: 2,
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                    }}
+          <>
+            <div className="row">
+              {products.map((p) => (
+                <div className="col-md-4 col-sm-6 mb-3" key={p._id}>
+                  <div
+                    className="card product-card h-100"
+                    style={{ cursor: "pointer", position: "relative" }}
+                    onClick={() => navigate(`/product/${p.slug}`)}
                   >
-                    <Heart
-                      size={24}
-                      fill={wishlistStatus[p._id] ? "#e47911" : "none"}
-                      color={wishlistStatus[p._id] ? "#e47911" : "#000000"}
+                    <button 
+                      onClick={(e) => toggleWishlist(e, p._id)}
+                      style={{
+                        position: 'absolute',
+                        top: '10px',
+                        right: '10px',
+                        zIndex: 2,
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Heart
+                        size={24}
+                        fill={wishlistStatus[p._id] ? "#e47911" : "none"}
+                        color={wishlistStatus[p._id] ? "#e47911" : "#000000"}
+                      />
+                    </button>
+                    <img
+                      src={p.photoUrl}
+                      className="card-img-top product-image"
+                      alt={p.name}
+                      style={{ height: "200px", objectFit: "contain" }}
                     />
-                  </button>
-                  <img
-                    src={p.photoUrl}
-                    className="card-img-top product-image"
-                    alt={p.name}
-                    style={{ height: "200px", objectFit: "contain" }}
-                  />
-                  <div className="p-4 flex flex-col h-full">
-                    <h5 className="text-xs font-semibold text-gray-900 dark:text-white mb-2">
-                      {p.name.length > 20 ? `${p.name.slice(0, 20)}.....` : p.name}
-                    </h5>
-                    <div className="mt-auto">
-                      <h5 className="text-base font-bold text-gray-900 dark:text-white">
-                        {p.perPiecePrice?.toLocaleString("en-US", {
-                          style: "currency",
-                          currency: "INR",
-                        }) || "Price not available"}
+                    <div className="p-4 flex flex-col h-full">
+                      <h5 className="text-xs font-semibold text-gray-900 dark:text-white mb-2">
+                        {p.name.length > 20 ? `${p.name.slice(0, 20)}.....` : p.name}
                       </h5>
-                      {p.mrp && (
-                        <h6
-                          className="text-xs text-red-500"
-                          style={{ textDecoration: "line-through" }}
-                        >
-                          {p.mrp.toLocaleString("en-US", {
+                      <div className="mt-auto">
+                        <h5 className="text-base font-bold text-gray-900 dark:text-white">
+                          {p.perPiecePrice?.toLocaleString("en-US", {
                             style: "currency",
                             currency: "INR",
-                          })}
-                        </h6>
-                      )}
+                          }) || "Price not available"}
+                        </h5>
+                        {p.mrp && (
+                          <h6
+                            className="text-xs text-red-500"
+                            style={{ textDecoration: "line-through" }}
+                          >
+                            {p.mrp.toLocaleString("en-US", {
+                              style: "currency",
+                              currency: "INR",
+                            })}
+                          </h6>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
+              ))}
+            </div>
+            {hasMore && (
+              <div className="text-center mt-4">
+                <button
+                  className="btn btn-primary"
+                  onClick={loadMore}
+                  disabled={loading}
+                  style={{
+                    backgroundColor: 'red',
+                    border: 'none',
+                    color: 'white',
+                    padding: '10px 20px',
+                    borderRadius: '5px',
+                    fontSize: '16px',
+                    cursor: 'pointer',
+                    boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)',
+                    transition: 'all 0.3s ease',
+                  }}
+                  onMouseEnter={(e) => (e.target.style.backgroundColor = '#cc0000')}
+                  onMouseLeave={(e) => (e.target.style.backgroundColor = 'red')}
+                >
+                  {loading ? 'Loading...' : 'Show More'}
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         ) : (
           <div className="text-center">No products found.</div>
         )}

@@ -455,7 +455,7 @@ const ProductDetails = () => {
           <div style={imageStyle}>
             {product._id ? (
                    <img
-                   src={product.photoUrl}
+                   src={product.photos}
                    alt={product.name}
                    style={{ 
                      width: "100%", 
@@ -683,7 +683,7 @@ const ProductDetails = () => {
    
       
           <img
-            src={item.productId.photoUrl}
+            src={item.productId.photos}
             className="card-img-top product-image img-fluid"
             alt={item.productId.name}
             style={{ height: '200px', objectFit: 'fill' }}

@@ -375,9 +375,24 @@ export const productCategoryController = async (req, res) => {
         message: "Category not found",
       });
     }
+
+    // Get page from query params or default to 1
+    const page = parseInt(req.query.page) || 1;
+    const limit = 15; // Products per page
+    const skip = (page - 1) * limit;
+
+    // Get total count of products in this category
+    const totalProducts = await productModel.countDocuments({ 
+      category: category._id 
+    });
+
+    // Fetch paginated products
     const products = await productModel
       .find({ category: category._id })
-      .populate("category");
+      .populate("category")
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 }); // Optional: sort by creation date
 
     // Convert photos to base64
     const productsWithPhotos = products.map(product => {
@@ -393,6 +408,12 @@ export const productCategoryController = async (req, res) => {
       success: true,
       category,
       products: productsWithPhotos,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalProducts / limit),
+        totalProducts,
+        hasMore: totalProducts > skip + products.length
+      }
     });
   } catch (error) {
     console.log(error);

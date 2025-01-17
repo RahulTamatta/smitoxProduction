@@ -24,7 +24,7 @@ const Search = () => {
             onClick={() => navigate(`/product/${p.slug}`)} // Navigates to product page
           >
             <img
-              src={`/api/v1/product/product-photo/${p._id}`}
+              src={p.photos}
               className="card-img-top product-image img-fluid"
               alt={p.name}
               style={{ height: "200px", objectFit: "fill" }}

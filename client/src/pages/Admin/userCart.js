@@ -131,37 +131,13 @@ const AddToCartPages = () => {
     }
   };
 
-  const handlePayment = async () => {
-    const total = totalPrice();
-    if (total < minimumOrder) {
-      toast.error(`Minimum order amount is ${minimumOrderCurrency} ${minimumOrder}`);
-      return;
+  const decodedUserName = decodeURIComponent(user_fullname);
+
+  useEffect(() => {
+    if (userId) {
+      getCart(userId);
     }
-    setLoading(true);
-    try {
-      const payload = {
-        products: cart.map((item) => ({
-          product: item.product._id,
-          quantity: item.quantity,
-          price: getPriceForProduct(item.product, item.quantity),
-        })),
-        paymentMethod,
-        amount: total,
-      };
-      const { data } = await axios.post("/api/v1/product/process-payment", payload);
-      if (data.success) {
-        toast.success("Order placed successfully");
-        navigate("/dashboard/user/orders");
-      } else {
-        toast.error("Failed to place order");
-      }
-    } catch (error) {
-      console.error("Payment error:", error);
-      toast.error("Payment failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [userId]);
 
   return (
     <Layout>
@@ -171,7 +147,7 @@ const AddToCartPages = () => {
   <h1 className="text-center bg-light p-2 mb-1">
     <p className="text-center">
       {cart?.length
-        ? ` ${user_fullname} Have ${cart.length} items in his cart `
+        ? ` ${decodedUserName} Have ${cart.length} items in his cart `
         : "His Cart Is Empty"}
     </p>
     {/* Add this button */}
