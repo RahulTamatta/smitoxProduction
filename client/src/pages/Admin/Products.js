@@ -4,18 +4,44 @@ import Layout from "./../../components/Layout/Layout";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
-
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Edit, Trash2, MessageCircle } from "lucide-react";
 
 const Products = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Initialize state from URL search params
+  const urlParams = new URLSearchParams(location.search);
+  const pageFromUrl = parseInt(urlParams.get('page')) || 1;
+
   const [products, setProducts] = useState([]);
   const [filter, setFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(pageFromUrl);
   const [itemsPerPage] = useState(10);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [totalProducts, setTotalProducts] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  // Listen to browser history changes (back/forward buttons)
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const params = new URLSearchParams(location.search);
+      const page = parseInt(params.get('page')) || 1;
+      setCurrentPage(page);
+    };
+
+    // Initial check
+    handleLocationChange();
+
+    // Listen for location changes
+    window.addEventListener('popstate', handleLocationChange);
+
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+    };
+  }, [location]);
 
   // Get all products
   const getAllProducts = async (page = 1) => {
@@ -25,7 +51,10 @@ const Products = () => {
       if (data.success) {
         setProducts(data.products);
         setTotalProducts(data.total);
-        setCurrentPage(data.page);
+        
+        // Update URL without triggering a navigation
+        const newUrl = `${window.location.pathname}?page=${page}`;
+        window.history.replaceState({}, '', newUrl);
       }
     } catch (error) {
       console.log(error);
@@ -35,17 +64,21 @@ const Products = () => {
     }
   };
 
+  // Fetch products when page changes
   useEffect(() => {
-    // Fetch products only when currentPage changes
     getAllProducts(currentPage);
   }, [currentPage]);
+
   // Handle page change
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
+      
+      // Update URL with the new page number
+      const newUrl = `${window.location.pathname}?page=${newPage}`;
+      window.history.pushState({}, '', newUrl);
     }
   };
-  
 
   // Calculate total pages
   const totalPages = Math.ceil(totalProducts / itemsPerPage);

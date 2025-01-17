@@ -149,7 +149,7 @@ const handleUpdate = async (e) => {
     if (data?.success) {
       toast.dismiss();
       toast.success("Product Updated Successfully");
-      navigate('/dashboard/admin/products');
+      // navigate('/dashboard/admin/products');
     }
   } catch (error) {
     toast.dismiss();
