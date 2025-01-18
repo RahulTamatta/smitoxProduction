@@ -32,24 +32,30 @@ const CartPage = () => {
   // New function to get price based on product and quantity
   const getPriceForProduct = (product, quantity) => {
     const unitSet = product.unitSet || 1;
-
+  
     if (product.bulkProducts && product.bulkProducts.length > 0) {
+      // Sort bulk products based on minimum quantity in descending order
       const sortedBulkProducts = [...product.bulkProducts]
         .filter(bp => bp && bp.minimum)
         .sort((a, b) => b.minimum - a.minimum);
-
+  
+      // Find the bulk price that applies to the current quantity
       const applicableBulk = sortedBulkProducts.find(
-        (bp) => quantity >= (bp.minimum * unitSet) && 
-                (!bp.maximum || quantity <= (bp.maximum * unitSet))
+        (bp) =>
+          quantity >= (bp.minimum * unitSet) && 
+          (!bp.maximum || quantity <= (bp.maximum * unitSet))
       );
-
+  
+      // Return the selling price from the applicable bulk price
       if (applicableBulk) {
         return parseFloat(applicableBulk.selling_price_set);
       }
     }
-
+  
+    // Fallback: return the regular price
     return parseFloat(product.perPiecePrice || product.price || 0);
   };
+  
 
   useEffect(() => {
     if (auth?.token && auth?.user?._id) {
@@ -126,7 +132,30 @@ const CartPage = () => {
       toast.error("Error clearing cart");
     }
   };
+  useEffect(() => {
+    // Dynamically load the Razorpay script
+    const loadRazorpayScript = (src) => {
+      return new Promise((resolve) => {
+        const script = document.createElement("script");
+        script.src = src;
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+      });
+    };
 
+    const initRazorpay = async () => {
+      const isScriptLoaded = await loadRazorpayScript("https://checkout.razorpay.com/v1/checkout.js");
+
+      if (!isScriptLoaded) {
+        alert("Failed to load Razorpay checkout script.");
+      }
+    };
+
+    initRazorpay();
+  }, []);
+
+ 
   const handleQuantityChange = async (productId, newQuantity) => {
     if (newQuantity < 1) {
       removeCartItem(productId);
@@ -213,7 +242,6 @@ const CartPage = () => {
       return;
     }
   
-    // Check if user is logged in and has an _id
     if (!auth?.user?._id) {
       toast.error("Please login to proceed with payment");
       return;
@@ -236,7 +264,6 @@ const CartPage = () => {
         amount: total,
       };
   
-      // Handle COD orders
       if (paymentMethod === "COD") {
         const { data } = await axios.post("/api/v1/product/process-payment", payload);
         if (data.success) {
@@ -249,7 +276,6 @@ const CartPage = () => {
         return;
       }
   
-      // Handle Razorpay payments
       if (paymentMethod === "Razorpay") {
         const { data } = await axios.post("/api/v1/product/process-payment", payload);
   
@@ -305,11 +331,9 @@ const CartPage = () => {
           }
         };
   
-        // Use window.Razorpay instead of creating new Razorpay instance
         const rzp = new window.Razorpay(options);
         rzp.open();
   
-        // Handle payment modal close
         rzp.on('payment.failed', function (response) {
           toast.error("Payment failed. Please try again.");
           setLoading(false);
@@ -324,17 +348,17 @@ const CartPage = () => {
       setLoading(false);
       setOrderPlacementInProgress(false);
     } finally {
-      // Only set loading false for COD
       if (paymentMethod === "COD") {
         setLoading(false);
         setOrderPlacementInProgress(false);
       }
     }
   };
-  
+
   const handleProductClick = (slug) => {
     navigate(`/product/${slug}`);
   };
+  
 
   return (
     <Layout>
@@ -375,7 +399,7 @@ const CartPage = () => {
                       <tr key={item._id}>
                         <td>
                           <img
-                            src={`/api/v1/product/product-photo/${item.product._id}`}
+                            src={item.product.photos}
                             alt={item.product.name}
                             style={{
                               width: "80px",
@@ -429,13 +453,14 @@ const CartPage = () => {
                         </td>
                         <td>
                           {minimumOrderCurrency}{" "}
-                          {getPriceForProduct(item.product, 1).toFixed(2)}
+                          {getPriceForProduct(item.product, item.quantity).toFixed(2)}
                         </td>
                         <td>
                           {minimumOrderCurrency}{" "}
-                          {(
-                            getPriceForProduct(item.product, 1) * item.quantity
-                          ).toFixed(2)}
+                          {totalPrice().toLocaleString("en-US", {
+                style: "currency",
+                currency: minimumOrderCurrency || "INR",
+              })}
                         </td>
                         <td>
                           <button

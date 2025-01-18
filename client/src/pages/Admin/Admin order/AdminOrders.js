@@ -101,7 +101,7 @@ const AdminOrders = () => {
     console.log("Selected Order:", selectedOrder);
   
     const subtotal = selectedOrder.products.reduce(
-      (acc, product) => acc + Number(product.price) * Number(product.quantity),
+      (acc, product) => acc + (Number(product.price) * Number(product.quantity)),
       0
     );
   
@@ -115,14 +115,15 @@ const AdminOrders = () => {
     const total =
       subtotal +
       gst +
-      Number(selectedOrder.deliveryCharges || 0) +
-      Number(selectedOrder.codCharges || 0) -
-      Number(selectedOrder.discount || 0);
+      (Number(selectedOrder.deliveryCharges) || 0) +
+      (Number(selectedOrder.codCharges) || 0) -
+      (Number(selectedOrder.discount) || 0);
   
     console.log("Total:", total);
   
     return { subtotal, gst, total };
   };
+  
   
 
   const handleAddClick = () => {

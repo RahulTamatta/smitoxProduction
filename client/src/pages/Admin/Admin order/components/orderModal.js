@@ -41,49 +41,28 @@ const OrderModal = ({
   }, [show, orderId]);
 
 
-  const getProductPhotoUrl = (product) => {
-    if (!product) return null;
-    
-    if (product.product && product.product.images && product.product.images.length > 0) {
-      return product.product.images[0].thumbnailLink;
-    }
-    
-    if (product.images && product.images.length > 0) {
-      return product.images[0].thumbnailLink;
-    }
-    
-    if (product.product && product.product._id) {
-      return `/api/v1/product/product-photo/${product.product._id}`;
-    }
-    
-    if (product._id) {
-      return `/api/v1/product/product-photo/${product._id}`;
-    }
-    
-    return null;
-  };
 
-  const getProductName = (product) => {
-    if (!product) return "Unknown Product";
+  // const getProductName = (product) => {
+  //   if (!product) return "Unknown Product";
     
-    if (product.product && product.product.name) {
-      return product.product.name;
-    }
+  //   if (product.product && product.product.name) {
+  //     return product.product.name;
+  //   }
     
-    if (product.name) {
-      return product.name;
-    }
+  //   if (product.name) {
+  //     return product.name;
+  //   }
     
-    if (product.product && product.product.sku) {
-      return `Product (${product.product.sku})`;
-    }
+  //   if (product.product && product.product.sku) {
+  //     return `Product (${product.product.sku})`;
+  //   }
     
-    if (product.sku) {
-      return `Product (${product.sku})`;
-    }
+  //   if (product.sku) {
+  //     return `Product (${product.sku})`;
+  //   }
     
-    return "Unknown Product";
-  };
+  //   return "Unknown Product";
+  // };
 
   const convertToWords = (num) => {
     const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
@@ -175,7 +154,7 @@ const OrderModal = ({
         // Create table for products
         const tableColumn = ['Product', 'Qty', 'Price', 'GST%', 'Net Amount', 'Tax Amount', 'Total'];
         const tableRows = products.map(product => [
-          getProductName(product),
+      product.product.name,
           product.quantity,
           Number(product.price).toFixed(2),
           `${product.product.gst}%`,
@@ -276,18 +255,16 @@ const OrderModal = ({
                   products.map((product, index) => (
                     <tr key={product._id || index}>
                       <td>
-                        {getProductPhotoUrl(product) ? (
+                        {
                           <img
-                            src={getProductPhotoUrl(product)}
-                            alt={getProductName(product)}
+                            src={product.product.photos}
+                            alt={product.photos}
                             width="50"
                             className="img-fluid"
                           />
-                        ) : (
-                          <div className="text-center">No Image</div>
-                        )}
+                         }
                       </td>
-                      <td>{getProductName(product)}</td>
+                      <td>{product.product.name}</td>
                       <td>
                         <Form.Control
                           type="number"
@@ -305,7 +282,14 @@ const OrderModal = ({
                       </td>
                       <td>₹{(Number(product.price) * Number(product.quantity)).toFixed(2)}</td>
                       <td>₹{((Number(product.price) * Number(product.quantity)) * product.product.gst).toFixed(2)}</td>
-                      <td>₹{((Number(product.price) * Number(product.quantity)) * (1 + product.product.gst)).toFixed(2)}</td>
+                      <td>
+  ₹{
+    product.product.gst !== "0"
+      ? ((Number(product.price) * Number(product.quantity)) * (1 + product.product.gst)).toFixed(2)
+      : ((Number(product.price) * Number(product.quantity)) ).toFixed(2)
+  }
+</td>
+
                       <td>
                         <Button
                           variant="danger"

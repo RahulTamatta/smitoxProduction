@@ -64,7 +64,7 @@ const SearchModal = ({ show, handleClose, handleAddToOrder }) => {
               className="d-flex justify-content-between align-items-center"
             >
               <img
-                src={`/api/v1/product/product-photo/${product._id}`}
+                src={product.photos}
                 alt={product.name}
                 width="50"
                 className="me-2"

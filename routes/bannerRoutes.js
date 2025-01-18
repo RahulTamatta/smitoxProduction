@@ -19,7 +19,7 @@ router.post(
   "/create-banner",
   requireSignIn,
   isAdmin,
-  formidable(),
+
   createBannerController,
 
 );
@@ -29,7 +29,7 @@ router.put(
   "/update-banner/:id",
   requireSignIn,
   isAdmin,
-  formidable(),
+
   updateBannerController
 );
 

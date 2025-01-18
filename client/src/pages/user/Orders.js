@@ -99,7 +99,7 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
       <td>
         <div className="d-flex align-items-center">
           <img
-            src={`/api/v1/product/product-photo/${product.product._id}`}
+            src={product.product.photos}
             alt={product.name}
             style={{
               width: "40px",

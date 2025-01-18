@@ -58,80 +58,26 @@ const sliderSettings = {
 
 const HomePage = () => {
   const navigate = useNavigate();
+  const [cart, setCart] = useCart();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [banners, setBanners] = useState([]);
+  const [checked, setChecked] = useState([]);
+  const [radio, setRadio] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [banners, setBanners] = useState([]);
+  const [user, setUser] = useState(null);
+  const [isBlocked, setIsBlocked] = useState(false);
   const [productsForYou, setProductsForYou] = useState([]);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const abortController = useRef(null);
 
-  // Fetch initial data
-  const fetchInitialData = async () => {
-    try {
-      if (abortController.current) {
-        abortController.current.abort();
-      }
-      abortController.current = new AbortController();
-
-      setLoading(true);
-      const [categoryRes, totalRes, bannerRes, forYouRes, productsRes] = await Promise.all([
-        axios.get('/api/v1/category/get-category', {
-          signal: abortController.current.signal,
-        }),
-        axios.get('/api/v1/product/product-count', {
-          signal: abortController.current.signal,
-        }),
-        axios.get('/api/v1/bannerManagement/get-banners', {
-          signal: abortController.current.signal,
-        }),
-        axios.get('/api/v1/productForYou/get-all', {
-          signal: abortController.current.signal,
-        }),
-        axios.get('/api/v1/product/product-list/1', {
-          signal: abortController.current.signal,
-        }),
-      ]);
-
-      setCategories(categoryRes.data?.category || []);
-      setTotal(totalRes.data?.total || 0);
-      setBanners(bannerRes.data?.banners || []);
-      setProducts(productsRes.data?.products || []);
-
-      const validProducts = forYouRes.data?.products?.filter(
-        (item) => item?.productId && Object.keys(item.productId).length > 0
-      ) || [];
-      setProductsForYou(validProducts);
-    } catch (error) {
-      if (!axios.isCancel(error)) {
-        console.error('Fetch error:', error);
-        toast.error('Error loading content');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load more products
-  const loadMore = async () => {
-    if (loading) return;
-    try {
-      setLoading(true);
-      const { data } = await axios.get(`/api/v1/product/product-list/${page + 1}`);
-      if (data?.success) {
-        setProducts((prev) => [...prev, ...data.products]);
-        setPage((prev) => prev + 1);
-      }
-    } catch (error) {
-      console.error('Load more error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Resize handler
+  useEffect(() => {
+    getAllCategory();
+    getTotal();
+    getBanners();
+    getAllProductsForYou();
+  }, []);
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth <= 768);
@@ -140,56 +86,323 @@ const HomePage = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Initial data load
-  useEffect(() => {
-    fetchInitialData();
-    return () => {
-      if (abortController.current) {
-        abortController.current.abort();
+  const mobileSearchStyle = {
+    position: 'sticky',
+    top: 0,
+    zIndex: 1000,
+    backgroundColor: '#2874f0',
+    padding: '10px',
+    display: isMobile ? 'block' : 'none',
+  };
+  const getAllCategory = async () => {
+    try {
+      const { data } = await axios.get("/api/v1/category/get-category");
+      if (data?.success) {
+        setCategories(data?.category);
       }
-    };
-  }, []);
-
-  const bannerSettings = {
-    dots: true,
-    infinite: true,
-    speed: 500,
-    slidesToShow: 1,
-    slidesToScroll: 1,
-    autoplay: true,
-    autoplaySpeed: 3000,
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  return (
-    <Layout title="All Products - Best offers">
-      <div style={{ padding: '55px 0px' }}>
-        {isMobile && (
-          <div style={{ padding: '50px 0px' }}>
-            <Suspense fallback={<div>Loading...</div>}>
-              <SearchInput />
-            </Suspense>
-          </div>
-        )}
-      </div>
+  const getAllProducts = async () => {
+    try {
+      setLoading(true);
+      const { data } = await axios.get(`/api/v1/product/product-list/${page}`);
+      setLoading(false);
+      setProducts(data.products);
+    } catch (error) {
+      setLoading(false);
+      console.log(error);
+    }
+  };
 
-      <div className="banner-container" style={{ height: '300px', overflow: 'hidden', borderRadius: '20px', margin: '0 20px' }}>
-        <Slider {...bannerSettings}>
-          {banners.map((banner) => (
-            <div key={banner._id}>
-              <LazyLoadImage
-                src={banner.photoUrl || `/api/v1/bannerManagement/single-banner/${banner._id}`}
-                alt={banner.bannerName}
-                effect="blur"
-                style={{
-                  width: '100%',
-                  height: '300px',
-                  objectFit: 'cover',
-                }}
-              />
-            </div>
-          ))}
-        </Slider>
+  const getTotal = async () => {
+    try {
+      const { data } = await axios.get("/api/v1/product/product-count");
+      setTotal(data?.total);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const getAllProductsForYou = async () => {
+    try {
+      const { data } = await axios.get("/api/v1/productForYou/get-all");
+      if (data?.success) {
+        setProductsForYou(data.productsForYou || []);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error("Failed to fetch products for you");
+    }
+  };
+
+
+  useEffect(() => {
+    if (page === 1) return;
+    loadMore();
+  }, [page]);
+
+  const loadMore = async () => {
+    try {
+      setLoading(true);
+      const { data } = await axios.get(`/api/v1/product/product-list/${page}`);
+      setLoading(false);
+      setProducts([...products, ...data?.products]);
+    } catch (error) {
+      console.log(error);
+      setLoading(false);
+    }
+  };
+
+  const handleFilter = (value, id) => {
+    let all = [...checked];
+    if (value) {
+      all.push(id);
+    } else {
+      all = all.filter((c) => c !== id);
+    }
+    setChecked(all);
+  };
+
+  useEffect(() => {
+    if (!checked.length || !radio.length) getAllProducts();
+  }, [checked.length, radio.length]);
+
+  useEffect(() => {
+    if (checked.length || radio.length) filterProduct();
+  }, [checked, radio]);
+
+  const filterProduct = async () => {
+    try {
+      const { data } = await axios.post("/api/v1/product/product-filters", {
+        checked,
+        radio,
+      });
+      setProducts(data?.products);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const getBanners = async () => {
+    try {
+      const { data } = await axios.get("/api/v1/bannerManagement/get-banners");
+      if (data?.success) {
+        setBanners(data.banners);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error("Failed to fetch banners");
+    }
+  };
+
+  const handleBannerClick = (banner) => {
+    if (banner.categoryId) {
+      navigate(`/category/${banner.subcategoryId.name}`, {
+        state: { 
+          selectedSubcategory: banner.subcategoryId._id || null,
+          fromBanner: true,
+          bannerName:banner._id,
+          slug: banner.subcategoryId.slug,
+        }
+      });
+    } else {
+      toast.error("Banner is not linked to a category");
+    }
+  };
+
+  const settings = {
+    dots: false,
+    infinite: false,
+    speed: 500,
+    slidesToShow: 6,
+    slidesToScroll: 1,
+    responsive: [
+      {
+        breakpoint: 1024,
+        settings: {
+          slidesToShow: 4,
+          slidesToScroll: 1,
+        }
+      },
+      {
+        breakpoint: 600,
+        settings: {
+          slidesToShow: 3,
+          slidesToScroll: 1,
+        }
+      },
+      {
+        breakpoint: 480,
+        settings: {
+          slidesToShow: 2,
+          slidesToScroll: 1
+        }
+      }
+    ]
+  };
+
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+const bannerSettings = {
+  dots: true,
+  infinite: true,
+  speed: 500,
+  slidesToShow: 1,
+  slidesToScroll: 1,
+  autoplay: true,
+  autoplaySpeed: 2000,
+  beforeChange: (_, next) => setCurrentSlide(next),
+  nextArrow: (
+    <button
+      type="button"
+      style={{
+        position: 'absolute',
+        right: '30px', // Adjusted to account for container padding
+        top: '50%',
+        transform: 'translateY(-50%)',
+        width: '40px',
+        height: '40px',
+        backgroundColor: '#f0f0f0',
+        borderRadius: '50%',
+        border: '1px solid #e0e0e0',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        cursor: 'pointer',
+        zIndex: 2, // Increased z-index
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#666',
+        transition: 'all 0.3s ease'
+      }}
+    >
+      <span style={{ fontSize: '24px', fontWeight: 'bold' }}>&rsaquo;</span>
+    </button>
+  ),
+  prevArrow: (
+    <button
+      type="button"
+      style={{
+        position: 'absolute',
+        left: '30px', // Adjusted to account for container padding
+        top: '50%',
+        transform: 'translateY(-50%)',
+        width: '40px',
+        height: '40px',
+        backgroundColor: '#f0f0f0',
+        borderRadius: '50%',
+        border: '1px solid #e0e0e0',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        cursor: 'pointer',
+        zIndex: 2, // Increased z-index
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#666',
+        transition: 'all 0.3s ease'
+      }}
+    >
+      <span style={{ fontSize: '24px', fontWeight: 'bold' }}>&lsaquo;</span>
+    </button>
+  ),
+  appendDots: dots => (
+    <div
+      style={{
+        position: 'absolute',
+        bottom: '10px',
+        width: '100%',
+        display: 'flex',
+        justifyContent: 'center',
+        gap: '5px',
+        zIndex: 2 // Increased z-index
+      }}
+    >
+      {dots}
+    </div>
+  ),
+  customPaging: i => (
+    <div
+      style={{
+        width: '8px',
+        height: '8px',
+        backgroundColor: currentSlide === i ? '#fff' : 'rgba(255,255,255,0.5)',
+        borderRadius: '50%',
+        transition: 'all 0.3s ease'
+      }}
+    />
+  )
+};
+  
+  if (isBlocked) {
+    return (
+      <Layout title="Account Blocked">
+        <div className="container">
+          <h1>Your account has been blocked</h1>
+          <p>Please contact support for more information.</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  return (
+    <Layout title={"All Products - Best offers"}>
+    <div style={{mobileSearchStyle,padding:'55px 0px'}}>
+    {isMobile && (
+        <div style={{ padding: "2px 0px" }}>
+          <SearchInput style={{ paddingTop: '1000px' }} />
+        </div>
+      )}
+</div>
+
+<div
+  className="banner-container"
+  style={{
+    height: '300px',
+    overflow: 'hidden',
+    marginTop: isMobile ? '10px' : '0',
+    padding: '0 0px',
+    position: 'relative'  // Added this
+  }}
+>
+  <Slider {...bannerSettings}>
+    {banners.map((banner) => (
+      <div
+        key={banner._id}
+        onClick={() => handleBannerClick(banner)}
+        style={{ cursor: 'pointer' }}
+      >
+        <img
+          src={banner.photos}
+          alt={banner.bannerName}
+          className="banner-image"
+          style={{
+            width: '100%',
+            height: '300px',
+            objectFit: 'cover',
+            borderRadius: '20px',
+          }}
+        />
       </div>
+    ))}
+  </Slider>
+  <div
+    style={{
+      position: 'absolute',
+      bottom: '20px',
+      right: '40px',
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      color: 'white',
+      padding: '4px 8px',
+      borderRadius: '12px',
+      fontSize: '12px',
+      zIndex: 1
+    }}
+  >
+    {currentSlide + 1} / {banners.length}
+  </div>
+</div>
       <div style={{ width: '100%', padding: '20px 0', marginTop: '20px' }}>
         <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Categories</h2>
         <div style={{ 

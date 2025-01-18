@@ -26,7 +26,7 @@ const ProductDetails = () => {
   const [productIds, setProductId] = useState();
   const [categoryId, setCategoryId] = useState();
   const [subcategoryId, setSubcategoryId] = useState();
-  
+
   useEffect(() => {
     window.scrollTo(0, 0);
     if (params?.slug) {
@@ -34,6 +34,7 @@ const ProductDetails = () => {
         checkPincode(auth.user.pincode);
       }
       getProduct();
+      getProductsForYou();
     }
   }, [params?.slug, auth?.user?.pincode]);
 
@@ -42,14 +43,16 @@ const ProductDetails = () => {
       checkWishlistStatus(product._id);
       fetchInitialQuantity(product._id);
     }
+    getProductsForYou();
   }, [product._id, auth?.user?._id]);
 
   // New useEffect to handle Products For You fetching
-  useEffect(() => {
-    if (categoryId && subcategoryId) {
-      getProductsForYou();
-    }
-  }, [categoryId, subcategoryId,productsForYou]);
+  // useEffect(() => {
+  //   if (categoryId && subcategoryId) {
+  //     getProductsForYou();
+  //   }
+  // }, [categoryId, subcategoryId,productsForYou]);
+
   const getProduct = async () => {
     try {
       const { data } = await axios.get(
@@ -57,16 +60,18 @@ const ProductDetails = () => {
       );
 
       if (data.success === true) {
-      const productData = {
+        const productData = {
           ...data.product,
-          photoUrl: data.product?._id ? `/api/v1/product/product-photo/${data.product._id}` : '/placeholder-image.jpg'
+          photoUrl: data.product?._id
+            ? `/api/v1/product/product-photo/${data.product._id}`
+            : "/placeholder-image.jpg",
         };
         setProduct(productData);
         setCategoryId(data?.product?.category._id);
         setSubcategoryId(data?.product?.subcategory._id || {});
       }
       console.log("PProduct", data);
-      getProductsForYou();
+
       setUnitSet(data?.product?.unitSet || 1);
       setQuantity(data?.product?.quantity || 1);
     } catch (error) {
@@ -77,21 +82,22 @@ const ProductDetails = () => {
 
   const getProductsForYou = async () => {
     try {
-      const { data } = await axios.get(`/api/v1/productForYou/products/${categoryId}/${subcategoryId}`);
-      
+      const { data } = await axios.get(
+        `/api/v1/productForYou/products/${categoryId}/${subcategoryId}`
+      );
+
       // Log the response data for debugging
-      console.log('Response Data:', data);
-  
+      console.log("Response Data:", data);
+
       if (data?.success) {
         setProductsForYou(data.products || []);
-        console.log("Ha",data.products);
+        console.log("Ha", data.products);
       }
     } catch (error) {
-      console.error('Error fetching products for you:', error);
+      console.error("Error fetching products for you:", error);
       toast.error("Failed to fetch products for you");
     }
   };
-  
 
   const getApplicableBulkProduct = (quantity) => {
     if (!product.bulkProducts || product.bulkProducts.length === 0) return null;
@@ -130,7 +136,7 @@ const ProductDetails = () => {
     // }
 
     try {
-      const initialQuantity = unitSet*quantity;
+      const initialQuantity = unitSet * quantity;
       const applicableBulk = getApplicableBulkProduct(initialQuantity);
 
       const response = await axios.post(
@@ -331,7 +337,7 @@ const ProductDetails = () => {
   const containerStyle = {
     maxWidth: "1200px",
     // margin: "0 auto",
-    paddingTop: "8rem" ,
+    paddingTop: "8rem",
     fontFamily: "Arial, sans-serif",
     backgroundColor: "#f5f5f5",
     borderRadius: "8px",
@@ -399,8 +405,8 @@ const ProductDetails = () => {
     padding: "10px 20px",
     fontSize: "16px",
     cursor: "pointer",
-    backgroundColor: "red",  // Complementary blue for wishlist
-    color: isInWishlist ? "#ffffff" : "#111111", 
+    backgroundColor: "red", // Complementary blue for wishlist
+    color: isInWishlist ? "#ffffff" : "#111111",
     border: "none",
     borderRadius: "20px",
     transition: "background-color 0.3s",
@@ -454,20 +460,19 @@ const ProductDetails = () => {
           {/* Replace the quantity selector and add to cart button section with: */}
           <div style={imageStyle}>
             {product._id ? (
-                   <img
-                   src={product.photos}
-                   alt={product.name}
-                   style={{ 
-                     width: "100%", 
-                     height: "auto", 
-                     borderRadius: "8px",
-                     objectFit: "cover"
-                   }}
-                   onError={(e) => {
-                     e.target.src = '/placeholder-image.jpg';
-                   }}
-                 />
-               
+              <img
+                src={product.photos}
+                alt={product.name}
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  borderRadius: "8px",
+                  objectFit: "cover",
+                }}
+                onError={(e) => {
+                  e.target.src = "/placeholder-image.jpg";
+                }}
+              />
             ) : (
               <p>Loading product image...</p>
             )}
@@ -476,7 +481,7 @@ const ProductDetails = () => {
             <h1 style={headingStyle}>{product.name}</h1>
             <div style={priceStyle}>
               <span style={strikeThroughStyle}>₹{product.mrp}</span>
-              <span style={{ color: 'red' }}>₹{product.perPiecePrice}</span>
+              <span style={{ color: "red" }}>₹{product.perPiecePrice}</span>
             </div>
             <p
               style={{
@@ -517,19 +522,18 @@ const ProductDetails = () => {
             </p>
 
             {
-           <button
-           onClick={toggleWishlist}
-           style={{
-             ...buttonStyle,
-             backgroundColor: isInWishlist ? "#1157e4" : "red",  // Set background color to red when not in wishlist
-             color: isInWishlist ? "#ffffff" : "#ffffff",  // Keep text color white for contrast
-             marginTop: "10px",
-             width: "100%",
-           }}
-         >
-           {isInWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
-         </button>
-         
+              <button
+                onClick={toggleWishlist}
+                style={{
+                  ...buttonStyle,
+                  backgroundColor: isInWishlist ? "#1157e4" : "red", // Set background color to red when not in wishlist
+                  color: isInWishlist ? "#ffffff" : "#ffffff", // Keep text color white for contrast
+                  marginTop: "10px",
+                  width: "100%",
+                }}
+              >
+                {isInWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
+              </button>
             }
 
             {!isPincodeAvailable && (
@@ -624,6 +628,16 @@ const ProductDetails = () => {
                             checked={autoSelectCondition}
                             readOnly
                             disabled
+                            style={{
+                              width: "20px",
+                              height: "20px",
+                              backgroundColor: autoSelectCondition
+                                ? "#000000"
+                                : "#333333", // Black background when selected
+                              border: "2px solid #000000", // Dark black border
+                              cursor: "not-allowed", // Indicating it's disabled
+                              accentColor: "#ffffff", // White checkmark when selected
+                            }}
                           />
                         </td>
                       </tr>
@@ -670,51 +684,53 @@ const ProductDetails = () => {
       <div className="container mt-5">
         <h2 className="text-center mb-4">Products For You</h2>
         <div className="row">
-        {     console.log("Id",productsForYou.productId)}
-        {productsForYou.map((item) => (
-  <div key={item.productId?._id} className="col-lg-4 col-md-4 col-sm-4 col-6 mb-3">
-    <div className="col-md-10 col-sm-6 col-12 mb-3">
-      { (
-     <div
-     className="card product-card h-100"
-     style={{ cursor: 'pointer', position: 'relative' }}
-     onClick={() => window.location.href = `/product/${item.productId.slug}`} // Full reload
-   >
-   
-      
-          <img
-            src={item.productId.photos}
-            className="card-img-top product-image img-fluid"
-            alt={item.productId.name}
-            style={{ height: '200px', objectFit: 'fill' }}
-          />
-          <div className="p-4 flex flex-col h-full">
-            <h5 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
-              {item.productId.name}
-            </h5>
-            <div className="mt-auto">
-              <h5 className="text-base font-bold text-gray-900 dark:text-white">
-                {item.productId.perPiecePrice?.toLocaleString("en-US", {
-                  style: "currency",
-                  currency: "INR",
-                }) || "Price not available"}
-              </h5>
-              {item.productId.perPiecePrice && (
-                <h6
-                  className="text-xs text-red-500"
-                  style={{ textDecoration: "line-through" }}
-                >
-            
-                </h6>
-              )}
+          {productsForYou.map((item) => (
+            <div
+              key={item.productId?._id}
+              className="col-lg-4 col-md-4 col-sm-4 col-6 mb-3"
+            >
+              <div className="col-md-10 col-sm-6 col-12 mb-3">
+                {
+                  <div
+                    className="card product-card h-100"
+                    style={{ cursor: "pointer", position: "relative" }}
+                    onClick={() =>
+                      (window.location.href = `/product/${item.productId.slug}`)
+                    } // Full reload
+                  >
+                    <img
+                      src={item.productId.photos}
+                      className="card-img-top product-image img-fluid"
+                      alt={item.productId.name}
+                      style={{ height: "200px", objectFit: "fill" }}
+                    />
+                    <div className="p-4 flex flex-col h-full">
+                      <h5 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                        {item.productId.name}
+                      </h5>
+                      <div className="mt-auto">
+                        <h5 className="text-base font-bold text-gray-900 dark:text-white">
+                          {item.productId.perPiecePrice?.toLocaleString(
+                            "en-US",
+                            {
+                              style: "currency",
+                              currency: "INR",
+                            }
+                          ) || "Price not available"}
+                        </h5>
+                        {item.productId.perPiecePrice && (
+                          <h6
+                            className="text-xs text-red-500"
+                            style={{ textDecoration: "line-through" }}
+                          ></h6>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
             </div>
-          </div>
-        </div>
-      )}
-    </div>
-  </div>
-))}
-
+          ))}
         </div>
 
         {productsForYou.length > 10 && (

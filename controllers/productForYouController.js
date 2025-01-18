@@ -21,25 +21,25 @@ export const getProductsForYouController = async (req, res) => {
       .find({})
       .populate("categoryId", "name") // Populate category with name only
       .populate("subcategoryId", "name") // Populate subcategory with name only
-      .populate("productId", "name photo price slug perPiecePrice") // Include necessary fields
+      .populate("productId", "name photos price slug perPiecePrice") // Include necessary fields
       .select("categoryId subcategoryId productId")
       .limit(12)
       .sort({ createdAt: -1 });
 
-    // Process products to handle photo conversion
+    // Process products to handle photos conversion
     const productsWithBase64Photos = products.map((productForYou) => {
       const productObj = productForYou.toObject();
 
-      // If the product has a photo, convert it to base64
+      // If the product has a photos, convert it to base64
       if (
         productObj.productId &&
-        productObj.productId.photo &&
-        productObj.productId.photo.data
+        productObj.productId.photos &&
+        productObj.productId.photos.data
       ) {
-        productObj.productId.photoUrl = `data:${productObj.productId.photo.contentType};base64,${productObj.productId.photo.data.toString(
+        productObj.productId.photoUrl = `data:${productObj.productId.photos.contentType};base64,${productObj.productId.photos.data.toString(
           "base64"
         )}`;
-        delete productObj.productId.photo; // Remove the raw photo buffer
+        delete productObj.productId.photos; // Remove the raw photos buffer
       }
 
       return productObj;
@@ -66,24 +66,24 @@ export const getAllProductsForYouController = async (req, res) => {
     const products = await productForYouModel.find()
       .populate("categoryId", "name") // Populate category with name only
       .populate("subcategoryId", "name") // Populate subcategory with name only
-      .populate("productId", "name photo price slug perPiecePrice") // Include necessary fields
+      .populate("productId", "name photos price slug perPiecePrice") // Include necessary fields
       .select("categoryId subcategoryId productId")
       .sort({ createdAt: -1 });
 
-    // Process products to handle photo conversion
+    // Process products to handle photos conversion
     const productsWithBase64Photos = products.map((productForYou) => {
       const productObj = productForYou.toObject();
 
-      // If the product has a photo, convert it to base64
+      // If the product has a photos, convert it to base64
       if (
         productObj.productId &&
-        productObj.productId.photo &&
-        productObj.productId.photo.data
+        productObj.productId.photos &&
+        productObj.productId.photos.data
       ) {
         productObj.productId.photoUrl = `data:${
-          productObj.productId.photo.contentType
-        };base64,${productObj.productId.photo.data.toString("base64")}`;
-        delete productObj.productId.photo; // Remove the raw photo buffer
+          productObj.productId.photos.contentType
+        };base64,${productObj.productId.photos.data.toString("base64")}`;
+        delete productObj.productId.photos; // Remove the raw photos buffer
       }
 
       return productObj;
@@ -107,7 +107,7 @@ export const getAllProductsForYouController = async (req, res) => {
       try {
         const banner = await bannerModel
           .findOne({ _id: req.params.id })
-          .select("-photo")
+          .select("-photos")
           .populate("category")
           .populate("subcategory");
         res.status(200).send({
@@ -195,7 +195,7 @@ export const getBannersController = async (req, res) => {
       .find({})
       .populate("categoryId", "name")
       .populate("subcategoryId", "name")
-      .populate("productId", "name photo price slug") // Include price and slug
+      .populate("productId", "name photos price slug") // Include price and slug
       .select("categoryId subcategoryId productId")
       .limit(12)
       .sort({ createdAt: -1 });
@@ -234,16 +234,16 @@ export const deleteProductController = async (req, res) => {
 
 export const getProductPhoto = async (req, res) => {
   try {
-    const product = await productModel.findById(req.params.pid).select("photo");
-    if (product.photo.data) {
-      res.set("Content-type", product.photo.contentType);
-      return res.status(200).send(product.photo.data);
+    const product = await productModel.findById(req.params.pid).select("photos");
+    if (product.photos.data) {
+      res.set("Content-type", product.photos.contentType);
+      return res.status(200).send(product.photos.data);
     }
   } catch (error) {
     console.log(error);
     res.status(500).send({
       success: false,
-      message: "Error while getting photo",
+      message: "Error while getting photos",
       error,
     });
   }

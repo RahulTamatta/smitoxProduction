@@ -316,9 +316,7 @@ const CategoryProduct = () => {
           </div>
         )}
         
-        {/* <h6 className="text-center mb-4">
-          {total} result{total !== 1 ? "s" : ""}
-        </h6> */}
+    
 
         {loading && products.length === 0 ? (
           <div className="text-center">Loading...</div>
@@ -326,7 +324,7 @@ const CategoryProduct = () => {
           <>
             <div className="row">
               {products.map((p) => (
-                <div className="col-md-4 col-sm-6 mb-3" key={p._id}>
+                  <div className="col-lg-3 col-md-4 col-sm-6 mb-3" key={p._id}>
                   <div
                     className="card product-card h-100"
                     style={{ cursor: "pointer", position: "relative" }}

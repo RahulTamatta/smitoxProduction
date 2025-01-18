@@ -31,6 +31,7 @@ const BannerManagement = () => {
     setError(null);
     try {
       const response = await axios.get('/api/v1/bannerManagement/get-banners');
+      
       setBanners(response.data.banners || []);
     } catch (error) {
       console.error('Error fetching banners:', error);
@@ -88,19 +89,55 @@ const BannerManagement = () => {
     setFormData({ ...formData, image: e.target.files[0] });
   };
 
+  const uploadToCloudinary = async (file) => {
+    console.log('Starting Cloudinary upload for file:', file.name);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', 'smitoxphoto'); // Use your upload preset
+      formData.append('cloud_name', 'djtiblazd'); // Use your cloud name
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/djtiblazd/image/upload`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Upload successful, URL:', data.secure_url);
+      return data.secure_url;
+    } catch (error) {
+      console.error('Cloudinary upload error:', error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const data = new FormData();
-    for (const key in formData) {
-      data.append(key, formData[key]);
-    }
-
     try {
+      let photoUrl = '';
+      if (formData.image) {
+        photoUrl = await uploadToCloudinary(formData.image);
+      }
+
+      const submitData = {
+        bannerName: formData.bannerName,
+        categoryId: formData.categoryId,
+        subcategoryId: formData.subcategoryId,
+        photos: photoUrl || (currentBanner ? currentBanner.photos : '')
+      };
+
       if (currentBanner) {
-        await axios.put(`/api/v1/bannerManagement/update-banner/${currentBanner._id}`, data);
+        await axios.put(`/api/v1/bannerManagement/update-banner/${currentBanner._id}`, submitData);
         toast.success('Banner updated successfully');
       } else {
-        await axios.post('/api/v1/bannerManagement/create-banner', data);
+        await axios.post('/api/v1/bannerManagement/create-banner', submitData);
         toast.success('Banner created successfully');
       }
       fetchBanners();
@@ -110,7 +147,6 @@ const BannerManagement = () => {
       toast.error('Failed to submit banner');
     }
   };
-
   const handleDelete = async (id) => {
     try {
       await axios.delete(`/api/v1/bannerManagement/delete-banner/${id}`);
@@ -189,26 +225,40 @@ const BannerManagement = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {banners.map((banner, index) => (
-                        <tr key={banner._id}>
-                          <td>{index + 1}</td>
-                          <td>{banner.bannerName}</td>
-                          <td>{banner.categoryId?.name}</td>
-                          <td>{banner.subcategoryId?.name}</td>
-                          <td>
-                            <img src={`/api/v1/bannerManagement/single-banner/${banner._id}`} alt={banner.bannerName} width="50" />
-                          </td>
-                          <td>
-                            <Button variant="primary" size="sm" onClick={() => handleEdit(banner)} className="mr-2">
-                              <Pencil size={18} />
-                            </Button>
-                            <Button variant="danger" size="sm" onClick={() => handleDelete(banner._id)}>
-                              <Trash size={18} />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
+      {banners.map((banner, index) => (
+        <tr key={banner._id}>
+          <td>{index + 1}</td>
+          <td>{banner.bannerName}</td>
+          <td>{banner.categoryId?.name}</td>
+          <td>{banner.subcategoryId?.name}</td>
+          <td>
+            <img 
+              src={banner.photos} 
+              alt={banner.bannerName} 
+              width="50" 
+              className="img-thumbnail"
+            />
+          </td>
+          <td>
+            <Button 
+              variant="primary" 
+              size="sm" 
+              onClick={() => handleEdit(banner)} 
+              className="mr-2"
+            >
+              <Pencil size={18} />
+            </Button>
+            <Button 
+              variant="danger" 
+              size="sm" 
+              onClick={() => handleDelete(banner._id)}
+            >
+              <Trash size={18} />
+            </Button>
+          </td>
+        </tr>
+      ))}
+    </tbody>
                   </Table>
                 </div>
               ) : (

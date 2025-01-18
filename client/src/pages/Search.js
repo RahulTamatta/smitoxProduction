@@ -17,7 +17,9 @@ const Search = () => {
     </h6>
     <div className="row g-4 mt-4">
       {values?.results.map((p) => (
-        <div className="col-md-4 col-sm-6 col-12" key={p._id}>
+  
+             <div className="col-lg-3 col-md-4 col-sm-6 mb-3" key={p._id}>
+   
           <div
             className="card product-card h-100"
             style={{ cursor: "pointer", position: "relative" }}
@@ -27,7 +29,7 @@ const Search = () => {
               src={p.photos}
               className="card-img-top product-image img-fluid"
               alt={p.name}
-              style={{ height: "200px", objectFit: "fill" }}
+              style={{ height: "200px", objectFit: "contain" }}
             />
             <div className="p-4 flex flex-col h-full">
               <h5
