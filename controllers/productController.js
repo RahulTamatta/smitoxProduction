@@ -768,7 +768,7 @@ export const processPaymentController = async (req, res) => {
       });
     }
 
-    const { products, paymentMethod, amount, cardType } = req.body;
+    const { products, paymentMethod, amount, amountPending } = req.body;
 
     // Validation
     if (!products || !Array.isArray(products) || products.length === 0 || !paymentMethod) {
@@ -779,8 +779,8 @@ export const processPaymentController = async (req, res) => {
       });
     }
 
-    // Handle COD orders immediately
-    if (paymentMethod === "COD") {
+    // Handle COD and Advance orders immediately
+    if (paymentMethod === "COD" || paymentMethod === "Advance") {
       const order = new orderModel({
         products: products.map(item => ({
           product: item.product,
@@ -789,32 +789,33 @@ export const processPaymentController = async (req, res) => {
         })),
         payment: {
           paymentMethod,
-          transactionId: `COD-${Date.now()}`,
+          transactionId: `${paymentMethod}-${Date.now()}`,
         },
         buyer: req.user._id,
         amount: amount,
+        amountPending: amountPending,
         status: "Pending",
       });
 
       await order.save();
       return res.json({
         success: true,
-        message: "COD order placed successfully",
+        message: `${paymentMethod} order placed successfully`,
         order
       });
     }
 
-    // For Razorpay payments - only create Razorpay order, don't save to DB yet
+    // For Razorpay payments
     const razorpayOrderData = {
       amount: Math.round(amount * 100),
       currency: 'INR',
       receipt: `order_${Date.now()}`,
       notes: {
         paymentMethod,
-        cardType,
         baseAmount: amount,
+        amountPending: amountPending,
         userId: req.user._id.toString(),
-        products: JSON.stringify(products) // Store products in notes for later use
+        products: JSON.stringify(products)
       }
     };
 

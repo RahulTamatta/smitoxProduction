@@ -91,7 +91,7 @@ const HomePage = () => {
     top: 0,
     zIndex: 1000,
     backgroundColor: '#2874f0',
-    padding: '10px',
+    padding: '0px 0px 0px 0px',
     display: isMobile ? 'block' : 'none',
   };
   const getAllCategory = async () => {
@@ -348,9 +348,10 @@ const bannerSettings = {
 
   return (
     <Layout title={"All Products - Best offers"}>
-    <div style={{mobileSearchStyle,padding:'55px 0px'}}>
+    <div  className="searchInput" style={{mobileSearchStyle,padding:'80px 0px'}}>
     {isMobile && (
-        <div style={{ padding: "2px 0px" }}>
+
+        <div   className="searchInput"  style={{mobileSearchStyle, padding: "40px 0px" }}>
           <SearchInput style={{ paddingTop: '1000px' }} />
         </div>
       )}
@@ -361,8 +362,8 @@ const bannerSettings = {
   style={{
     height: '300px',
     overflow: 'hidden',
-    marginTop: isMobile ? '10px' : '0',
-    padding: '0 0px',
+    marginTop: isMobile ? '0px' : '0',
+    padding: '0px 0px',
     position: 'relative'  // Added this
   }}
 >

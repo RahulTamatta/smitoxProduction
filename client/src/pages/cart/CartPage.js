@@ -252,6 +252,28 @@ const CartPage = () => {
     setOrderErrorMessage("");
   
     try {
+      let amount = 0;
+      let amountPending = 0;
+  
+      // Set amounts based on payment method
+      switch(paymentMethod) {
+        case "Razorpay":
+          amount = total;
+          amountPending = 0;
+          break;
+        case "COD":
+          amount = 0;
+          amountPending = total;
+          break;
+        case "Advance":
+          amount = total * 0.1; // 10% of total
+          amountPending = total * 0.9; // 90% of total
+          break;
+        default:
+          amount = 0;
+          amountPending = total;
+      }
+  
       const payload = {
         products: Array.isArray(cart)
           ? cart.map(item => ({
@@ -260,20 +282,19 @@ const CartPage = () => {
               price: getPriceForProduct(item.product, item.quantity),
             }))
           : [],
-        paymentMethod: paymentMethod === "Razorpay" ? "Razorpay" : "COD",
-        amount: total,
-        amountPending: paymentMethod === "Razorpay" ?0:total
-
+        paymentMethod,
+        amount,
+        amountPending
       };
   
-      if (paymentMethod === "COD") {
+      if (paymentMethod === "COD" || paymentMethod === "Advance") {
         const { data } = await axios.post("/api/v1/product/process-payment", payload);
         if (data.success) {
           await clearCart();
           toast.success("Order Placed Successfully!");
           navigate("/dashboard/user/orders");
         } else {
-          throw new Error(data.message || "Failed to place COD order");
+          throw new Error(data.message || "Failed to place order");
         }
         return;
       }
@@ -347,16 +368,13 @@ const CartPage = () => {
       setOrderErrorMessage(errorMessage);
       toast.error(errorMessage);
       console.error("Payment error:", error);
-      setLoading(false);
-      setOrderPlacementInProgress(false);
     } finally {
-      if (paymentMethod === "COD") {
+      if (paymentMethod === "COD" || paymentMethod === "Advance") {
         setLoading(false);
         setOrderPlacementInProgress(false);
       }
     }
   };
-
   const handleProductClick = (slug) => {
     navigate(`/product/${slug}`);
   };

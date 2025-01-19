@@ -314,7 +314,7 @@ const ProductDetails = () => {
   };
 
   const headingStyle = {
-    fontSize: '28px',
+    fontSize: '20px',
     fontWeight: 'bold',
     color: '#333',
     marginBottom: '15px',

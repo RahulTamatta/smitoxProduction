@@ -26,7 +26,7 @@ const SearchInput = () => {
     alignItems: 'center',
     backgroundColor: '#fff',
     borderRadius: '4px',
-    padding: '5px 100px',
+    padding: '5px 10px',
     boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
   };
 
