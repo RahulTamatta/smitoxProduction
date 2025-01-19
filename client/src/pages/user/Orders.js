@@ -39,12 +39,11 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
       discount
     );
   };
-
   const calculateAmountPending = () => {
     const total = calculateTotal();
     const amountPaid = order.amount || 0;
     return Math.max(total - amountPaid, 0);
-  };
+};
 
   const updateProductQuantity = (index, quantity) => {
     const updatedProducts = [...order.products];
@@ -152,12 +151,13 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
                   <strong>Total:</strong> ₹{calculateTotal().toFixed(2)}
                 </p>
                 <p>
-                  <strong>Amount Paid:</strong> ₹{(order.amount || 0).toFixed(2)}
-                </p>
-                <p>
-                  <strong>Amount Pending:</strong> ₹
-                  {calculateAmountPending().toFixed(2)}
-                </p>
+    <strong>Amount Paid:</strong> ₹{(order.amount || 0).toFixed(2)}
+</p>
+<p>
+    <strong>Amount Pending:</strong> ₹{calculateAmountPending().toFixed(2)}
+</p>
+
+
               </div>
             </div>
           </div>
