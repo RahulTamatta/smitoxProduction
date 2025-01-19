@@ -8,7 +8,7 @@ import crypto from 'crypto';
 import fs from "fs";
 import slugify from "slugify";
 import dotenv from "dotenv";
-import { v4 as uuidv4 } from 'uuid';
+// import { v4 as uuidv4 } from 'uuid';
 dotenv.config();
 export const createProductController = async (req, res) => {
   try {

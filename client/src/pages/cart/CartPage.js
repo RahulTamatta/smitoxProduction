@@ -262,6 +262,8 @@ const CartPage = () => {
           : [],
         paymentMethod: paymentMethod === "Razorpay" ? "Razorpay" : "COD",
         amount: total,
+        amountPending: paymentMethod === "Razorpay" ?0:total
+
       };
   
       if (paymentMethod === "COD") {
