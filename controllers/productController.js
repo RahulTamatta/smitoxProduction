@@ -410,7 +410,7 @@ export const productCategoryController = async (req, res) => {
 // get photo
 export const productPhotoController = async (req, res) => {
   try {
-    const product = await productModel.findById(req.params.pid).select("photos");
+    const product = await productModel.findById(req.params._id).select("photos");
     if (product == null) {
       return res.status(404).send({
         success: false,
