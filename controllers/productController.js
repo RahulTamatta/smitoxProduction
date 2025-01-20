@@ -436,7 +436,7 @@ export const productPhotoController = async (req, res) => {
         message: "Product not found",
       });
     }
-    if (product.photo.data) {
+    if (product.photos.data) {
       res.set("Content-type", product.photo.contentType);
       return res.status(200).send(product.photo.data);
     }
