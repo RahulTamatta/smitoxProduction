@@ -1,0 +1,16 @@
+@keyframes heartbeat {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.2);
+    }
+  }
+  
+  .icon.heartbeat {
+    animation: heartbeat 1.5s infinite !important; /* Ensure priority */
+    color: white !important; /* Ensure priority */
+    font-size: 15px !important; /* Ensure priority */
+    margin-right: 5px !important; /* Ensure priority */
+  }
+  

@@ -200,12 +200,12 @@ const HomePage = () => {
 
   const handleBannerClick = (banner) => {
     if (banner.categoryId) {
-      navigate(`/category/${banner.subcategoryId.name}`, {
+      navigate(`/category/${banner.subcategoryId._id}`, {
         state: { 
           selectedSubcategory: banner.subcategoryId._id || null,
           fromBanner: true,
           bannerName:banner._id,
-          slug: banner.subcategoryId.slug,
+          slug: banner.subcategoryId,
         }
       });
     } else {
@@ -327,12 +327,13 @@ const bannerSettings = {
       style={{
         width: '8px',
         height: '8px',
-        backgroundColor: currentSlide === i ? '#fff' : 'rgba(255,255,255,0.5)',
+        backgroundColor: currentSlide === i ? 'red' : 'rgba(255,0,0,0.5)', // Active dot: solid red, Inactive dots: transparent red
         borderRadius: '50%',
-        transition: 'all 0.3s ease'
+        transition: 'all 0.3s ease',
       }}
     />
   )
+  
 };
   
   if (isBlocked) {
@@ -348,75 +349,74 @@ const bannerSettings = {
 
   return (
     <Layout title={"All Products - Best offers"}>
-    <div  className="searchInput" style={{mobileSearchStyle,padding:'80px 0px'}}>
-    {isMobile && (
-
-        <div   className="searchInput"  style={{mobileSearchStyle, padding: "40px 0px" }}>
-          <SearchInput style={{ paddingTop: '1000px' }} />
+      {/* Mobile Search */}
+      {isMobile && (
+        <div 
+          className="searchInput" 
+          style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 1000,
+            backgroundColor: 'white',
+            padding: '10px 15px',
+            marginTop: '110px'
+          }}
+        >
+          <SearchInput />
         </div>
       )}
-</div>
-
-<div
-  className="banner-container"
-  style={{
-    height: '300px',
-    overflow: 'hidden',
-    marginTop: isMobile ? '0px' : '0',
-    padding: '0px 0px',
-    position: 'relative'  // Added this
-  }}
->
-  <Slider {...bannerSettings}>
-    {banners.map((banner) => (
+  
+      {/* Banner Section */}
       <div
-        key={banner._id}
-        onClick={() => handleBannerClick(banner)}
-        style={{ cursor: 'pointer' }}
+        className="banner-container"
+        style={{
+          height: isMobile ? '30vh' : '30vh',
+          overflow: 'hidden',
+          margin: isMobile ? '10px' : '20px',
+          borderRadius: '15px',
+          position: 'relative',
+        
+        }}
       >
-        <img
-          src={banner.photos}
-          alt={banner.bannerName}
-          className="banner-image"
-          style={{
-            width: '100%',
-            height: '300px',
-            objectFit: 'cover',
-            borderRadius: '20px',
-          }}
-        />
+        <Slider {...bannerSettings}>
+          {banners.map((banner) => (
+            <div key={banner._id} onClick={() => handleBannerClick(banner)}>
+              <img
+                src={banner.photos}
+                alt={banner.bannerName}
+                style={{
+                  width: '100%',
+                  height: '280px',
+                  objectFit: 'cover',
+                  borderRadius: '15px',
+                }}
+              />
+            </div>
+          ))}
+        </Slider>
+        
+
       </div>
-    ))}
-  </Slider>
-  <div
-    style={{
-      position: 'absolute',
-      bottom: '20px',
-      right: '40px',
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      color: 'white',
-      padding: '4px 8px',
-      borderRadius: '12px',
-      fontSize: '12px',
-      zIndex: 1
-    }}
-  >
-    {currentSlide + 1} / {banners.length}
-  </div>
-</div>
-      <div style={{ width: '100%', padding: '20px 0', marginTop: '20px' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Categories</h2>
+  
+      {/* Categories Section */}
+      <div style={{ padding: '20px 0', marginTop: '20px' }}>
+        <h2 style={{ 
+          textAlign: 'center', 
+          marginBottom: '20px',
+          fontSize: isMobile ? '1.5rem' : '2rem'
+        }}>
+          Shop by Category
+        </h2>
         <div style={{ 
-          width: '100%', 
-          overflowX: 'auto', 
+          overflowX: 'auto',
           WebkitOverflowScrolling: 'touch',
-          padding: '0 15px'
+          padding: '0 10px'
         }}>
           <div style={{
             display: 'flex',
-            gap: '20px',
-            padding: '10px 5px',
-            minWidth: 'min-content'
+            gap: '15px',
+            padding: '10px',
+            minWidth: 'fit-content'
           }}>
             {categories.map((c) => (
               <div 
@@ -426,19 +426,20 @@ const bannerSettings = {
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  minWidth: isMobile ? '100px' : '120px',
-                  cursor: 'pointer'
+                  minWidth: isMobile ? '90px' : '120px',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s'
                 }}
               >
                 <div style={{
-                  width: '80px',
-                  height: '80px',
+                  width: isMobile ? '70px' : '80px',
+                  height: isMobile ? '70px' : '80px',
                   borderRadius: '50%',
                   overflow: 'hidden',
-                  border: '1px solid #eee'
+                  border: '2px solid #f0f0f0'
                 }}>
                   <LazyLoadImage
-                    src={c.photos }
+                    src={c.photos}
                     alt={c.name}
                     effect="blur"
                     style={{
@@ -449,13 +450,11 @@ const bannerSettings = {
                   />
                 </div>
                 <h6 style={{
-                  margin: '8px 0 0',
+                  marginTop: '10px',
                   fontSize: isMobile ? '12px' : '14px',
                   textAlign: 'center',
-                  maxWidth: '100px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
+                  fontWeight: '500',
+                  color: '#333'
                 }}>
                   {c.name}
                 </h6>
@@ -464,88 +463,97 @@ const bannerSettings = {
           </div>
         </div>
       </div>
+  
+      {/* All Products Section */}
       <div className="container mt-4">
-        <h2 className="text-center mb-4">All Products</h2>
-        <div className="row">
-          <Suspense fallback={<div>Loading products...</div>}>
-            {products.map((p) => (
-              <div key={p._id} className="col-xl-3 col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
-                <ProductCard product={p} />
-              </div>
-            ))}
-          </Suspense>
+        <h2 className="text-center mb-4" style={{ fontSize: isMobile ? '1.5rem' : '2rem' }}>
+          Trending Products
+        </h2>
+        <div className="row g-3">
+          {products.map((p) => (
+            <div 
+              key={p._id} 
+              className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-2"
+              style={{ padding: '8px' }}
+            >
+              <ProductCard 
+                product={p}
+                style={{
+                  height: '100%',
+                  borderRadius: '12px',
+                  overflow: 'hidden'
+                }}
+              />
+            </div>
+          ))}
         </div>
+        
         {products.length < total && (
-  <div className="text-center mt-4">
-    <button
-      className="btn btn-primary"
-      onClick={loadMore}
-      disabled={loading}
-      style={{
-        backgroundColor: 'red',
-        border: 'none',
-        color: 'white',
-        padding: '10px 20px',
-        borderRadius: '5px',
-        fontSize: '16px',
-        cursor: 'pointer',
-        boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)',
-        transition: 'all 0.3s ease',
-      }}
-      onMouseEnter={(e) => (e.target.style.backgroundColor = '#cc0000')}
-      onMouseLeave={(e) => (e.target.style.backgroundColor = 'red')}
-    >
-      {loading ? 'Loading...' : 'Show More'}
-    </button>
-  </div>
-)}
-
+          <div className="text-center mt-4 mb-5">
+            <button
+              className="btn btn-primary"
+              onClick={loadMore}
+              disabled={loading}
+              style={{
+                backgroundColor: '#e53935',
+                border: 'none',
+                padding: isMobile ? '8px 16px' : '12px 24px',
+                fontSize: isMobile ? '14px' : '16px',
+                borderRadius: '25px',
+                width: isMobile ? '80%' : 'auto',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+              }}
+            >
+              {loading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2"></span>
+                  Loading...
+                </>
+              ) : (
+                'Show More Products'
+              )}
+            </button>
+          </div>
+        )}
       </div>
-
+  
+      {/* Products For You Section */}
       {productsForYou.length > 0 && (
         <div className="container mt-5">
-          <h2 className="text-center mb-4">Products For You</h2>
-          <div className="row">
-            <Suspense fallback={<div>Loading recommended products...</div>}>
-              {productsForYou.slice(0, 10).map((item, index) => (
-                <div key={item.productId?._id || index} className="col-lg-4 col-md-4 col-sm-4 col-6 mb-3">
-                  <ProductCard product={item.productId} />
-                </div>
-              ))}
-            </Suspense>
+          <h2 className="text-center mb-4" style={{ fontSize: isMobile ? '1.5rem' : '2rem' }}>
+            Recommended for You
+          </h2>
+          <div className="row g-3">
+            {productsForYou.map((item, index) => (
+              <div 
+                key={item.productId?._id || index} 
+                className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-2"
+                style={{ padding: '8px' }}
+              >
+                <ProductCard 
+                  product={item.productId}
+                  style={{
+                    height: '100%',
+                    borderRadius: '12px'
+                  }}
+                />
+              </div>
+            ))}
           </div>
-          {productsForYou.length > 10 && (
-  <div className="text-center mt-4">
-    <button
-      className="btn btn-primary"
-      onClick={() => setProductsForYou(productsForYou.slice(0, productsForYou.length + 10))}
-      style={{
-        backgroundColor: 'red',
-        border: 'none',
-        color: 'white',
-        padding: '10px 20px',
-        borderRadius: '5px',
-        fontSize: '16px',
-        cursor: 'pointer',
-        boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)',
-        transition: 'all 0.3s ease',
-      }}
-      onMouseEnter={(e) => (e.target.style.backgroundColor = '#cc0000')}
-      onMouseLeave={(e) => (e.target.style.backgroundColor = 'red')}
-    >
-      Show More
-    </button>
-  </div>
-)}
-
         </div>
       )}
-
+  
       <Suspense fallback={null}>
-        <WhatsAppButton />
+        <WhatsAppButton 
+          style={{
+            position: 'fixed',
+            bottom: isMobile ? '70px' : '30px',
+            right: '20px',
+            zIndex: 1000
+          }}
+        />
       </Suspense>
     </Layout>
-  );
-};
+  );}
 
 export default HomePage;

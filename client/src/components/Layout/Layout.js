@@ -10,7 +10,7 @@ const Layout = ({ children, title, description, keywords, author }) => {
     <div className="layout-container" style={{ 
       display: "flex", 
       flexDirection: "column", 
-      minHeight: "100vh",
+      minHeight: "80vh",
       position: "relative",
       backgroundColor: "#f1f3f6"
     }}>
@@ -39,8 +39,8 @@ const Layout = ({ children, title, description, keywords, author }) => {
       {/* Main Content */}
       <main style={{
         flex: 1,
-        marginTop: "0px", // Adjust this value based on your header height
-        padding: window.innerWidth <= 768 ? "0.5rem" : "1rem",
+        marginTop:window.innerWidth <= 768 ? "0rem" : "1rem",
+        padding: window.innerWidth <= 768 ? "0rem" : "5rem 1rem 1rem 1rem",
         display: "flex",
         flexDirection: "column",
         width: "100%",
@@ -48,8 +48,8 @@ const Layout = ({ children, title, description, keywords, author }) => {
         overflow: "hidden",
         boxSizing: "border-box"
       }}>
-        <div style={{ position: "fixed", zIndex: 1001 }}>
-          <Toaster 
+        <div style={{ position: "fixed", zIndex: 0 }}>
+          <Toaster
             position="top-right"
             toastOptions={{
               style: {
@@ -65,64 +65,7 @@ const Layout = ({ children, title, description, keywords, author }) => {
       <Footer />
 
       {/* Add responsive styles */}
-      <style>
-        {`
-          /* Base styles */
-          body {
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden;
-          }
 
-          /* Layout container styles */
-          .layout-container {
-            width: 100%;
-            max-width: 100vw;
-            overflow-x: hidden;
-          }
-
-          /* Main content responsive padding */
-          @media (max-width: 768px) {
-            main {
-              padding: 0.5rem;
-              margin-top: 50px; /* Adjust for mobile header height */
-            }
-          }
-
-          @media (max-width: 480px) {
-            main {
-              padding: 0.25rem;
-            }
-          }
-
-          /* Fix iOS momentum scrolling */
-          @supports (-webkit-overflow-scrolling: touch) {
-            .layout-container {
-              -webkit-overflow-scrolling: touch;
-            }
-          }
-
-          /* Prevent horizontal scroll */
-          html, body {
-            max-width: 100%;
-            overflow-x: hidden;
-          }
-
-          /* Smooth scrolling when not using momentum scroll */
-          @media screen and (min-width: 768px) {
-            html {
-              scroll-behavior: smooth;
-            }
-          }
-
-          /* Fix for position: fixed on iOS */
-          .fixed-ios {
-            position: fixed;
-            width: 100%;
-            -webkit-transform: translateZ(0);
-          }
-        `}
-      </style>
     </div>
   );
 };

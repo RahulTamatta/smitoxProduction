@@ -106,24 +106,7 @@ const ProductCard = ({ product }) => {
         style={{ cursor: "pointer", position: "relative" }}
         onClick={() => navigate(`/product/${product.slug}`)}
       >
-        <button
-          onClick={toggleWishlist}
-          style={{
-            position: "absolute",
-            top: "10px",
-            right: "10px",
-            zIndex: 2,
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-          }}
-        >
-          <Heart
-            size={24}
-            fill={isInWishlist ? "#e47911" : "none"}
-            color={isInWishlist ? "#e47911" : "#000000"}
-          />
-        </button>
+    
 
         {!imageLoaded && (
           <div
@@ -158,8 +141,26 @@ const ProductCard = ({ product }) => {
             }}
           >
             {product.name.length > 20
-              ? `${product.name.slice(0, 20)}.....`
+              ? `${product.name.slice(0, 18)}.....`
               : product.name}
+                  <button
+          onClick={toggleWishlist}
+          style={{
+            position: "absolute",
+          
+            right: "10px",
+            zIndex: 2,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          <Heart
+            size={24}
+            fill={isInWishlist ? "#e47911" : "none"}
+            color={isInWishlist ? "#e47911" : "#000000"}
+          />
+        </button>
           </h5>
         </div>
         

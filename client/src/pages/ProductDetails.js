@@ -336,8 +336,8 @@ const ProductDetails = () => {
   // Styles
   const containerStyle = {
     maxWidth: "1200px",
-    // margin: "0 auto",
-    paddingTop: "8rem",
+    margin: "0 auto",
+    paddingTop: "1rem",
     fontFamily: "Arial, sans-serif",
     backgroundColor: "#f5f5f5",
     borderRadius: "8px",
@@ -573,7 +573,7 @@ const ProductDetails = () => {
             )}
 
             <h3
-              style={{ ...headingStyle, fontSize: "20px", marginTop: "20px" }}
+              style={{ ...headingStyle, fontSize: "18px", marginTop: "20px" }}
             >
               Bulk Pricing
             </h3>
@@ -669,12 +669,12 @@ const ProductDetails = () => {
             }
 
             <h3
-              style={{ ...headingStyle, fontSize: "20px", marginTop: "20px" }}
+              style={{ ...headingStyle, fontSize: "15px", marginTop: "20px" }}
             >
-              Description{" "}
+              Description
             </h3>
 
-            <p style={{ ...headingStyle, fontSize: "18px", marginTop: "20px" }}>
+            <p style={{  fontSize: "1wpx", marginTop: "0px" }}>
               {product.description}
             </p>
           </div>
@@ -702,7 +702,7 @@ const ProductDetails = () => {
                       src={item.productId.photos}
                       className="card-img-top product-image img-fluid"
                       alt={item.productId.name}
-                      style={{ height: "200px", objectFit: "fill" }}
+                      style={{ height: "200px", objectFit: "contain" }}
                     />
                     <div className="p-4 flex flex-col h-full">
                       <h5 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
