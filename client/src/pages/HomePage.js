@@ -71,6 +71,7 @@ const HomePage = () => {
   const [isBlocked, setIsBlocked] = useState(false);
   const [productsForYou, setProductsForYou] = useState([]);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [hasMore, setHasMore] = useState(true); // Add this new state
 
   useEffect(() => {
     getAllCategory();
@@ -147,14 +148,35 @@ const HomePage = () => {
   const loadMore = async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get(`/api/v1/product/product-list/${page}`);
+      const nextPage = page + 1;
+      const { data } = await axios.get(`/api/v1/product/product-list/${nextPage}`);
+      
+      if(data.products.length === 0) {
+        setHasMore(false);
+      } else {
+        setProducts([...products, ...data.products]);
+        setPage(nextPage);
+      }
       setLoading(false);
-      setProducts([...products, ...data?.products]);
     } catch (error) {
       console.log(error);
       setLoading(false);
     }
   };
+  
+  // Update your "Show More" button
+  {hasMore && products.length < total && (
+    <div className="text-center mt-4 mb-5">
+      <button
+        className="btn btn-primary"
+        onClick={loadMore} // Directly call loadMore
+        disabled={loading}
+        style={{/* your styles */}}
+      >
+        {/* button content */}
+      </button>
+    </div>
+  )}
 
   const handleFilter = (value, id) => {
     let all = [...checked];
@@ -409,7 +431,7 @@ const bannerSettings = {
               left: 0,
               width: '100%',
               height: '100%',
-              objectFit: 'cover',
+              objectFit: 'fill',
               borderRadius: '15px',
             }}
           />

@@ -541,7 +541,7 @@ const CartPage = () => {
               >
                 <option value="COD">COD</option>
                 <option value="Razorpay">Razorpay</option>
-                <option value="Advance">Advance</option>
+                {/* <option value="Advance">Advance</option> */}
               </select>
             </div>
             <button
