@@ -216,7 +216,7 @@ export const productListController = async (req, res) => {
 
     // Fetch only the required fields for the product card
     const products = await productModel
-      .find({ isActive: "1" }, "name photo photos perPiecePrice mrp stock slug")
+      .find({ isActive: "1" }, "name photo photos _id perPiecePrice mrp stock slug")
       .skip((page - 1) * perPage)
       .limit(perPage)
       .sort({ createdAt: -1 });

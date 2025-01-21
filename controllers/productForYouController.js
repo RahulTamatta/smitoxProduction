@@ -195,7 +195,7 @@ export const getBannersController = async (req, res) => {
       .find({})
       .populate("categoryId", "name")
       .populate("subcategoryId", "name")
-      .populate("productId", "name photos price slug") // Include price and slug
+      .populate("productId", "name photos perPiecePrice price slug") // Include price and slug
       .select("categoryId subcategoryId productId")
       .limit(12)
       .sort({ createdAt: -1 });
