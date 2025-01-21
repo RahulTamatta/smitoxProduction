@@ -101,21 +101,34 @@ const ProductDetails = () => {
 
   const getApplicableBulkProduct = (quantity) => {
     if (!product.bulkProducts || product.bulkProducts.length === 0) return null;
-
+  
     const sortedBulkProducts = [...product.bulkProducts]
       .filter((bulk) => bulk && bulk.minimum)
       .sort((a, b) => b.minimum - a.minimum);
-
+  
+    // If quantity is greater than or equal to the minimum of the highest tier
+    // Return the highest tier pricing regardless of maximum
+    if (
+      sortedBulkProducts.length > 0 && 
+      quantity >= sortedBulkProducts[0].minimum * unitSet
+    ) {
+      return sortedBulkProducts[0];
+    }
+  
+    // For quantities less than the highest tier minimum,
+    // find the applicable bulk price tier
     for (let i = 0; i < sortedBulkProducts.length; i++) {
       const bulk = sortedBulkProducts[i];
-      if (quantity >= bulk.minimum * unitSet) {
+      if (
+        quantity >= bulk.minimum * unitSet && 
+        (!bulk.maximum || quantity <= bulk.maximum * unitSet)
+      ) {
         return bulk;
       }
     }
-
+  
     return null;
   };
-
   const calculateTotalPrice = (bulk, quantity) => {
     if (bulk) {
       setTotalPrice(quantity * parseFloat(bulk.selling_price_set));

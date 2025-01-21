@@ -39,6 +39,15 @@ const CartPage = () => {
         .filter(bp => bp && bp.minimum)
         .sort((a, b) => b.minimum - a.minimum);
   
+      // If quantity is greater than the maximum quantity of the first bulk price
+      // (which is the highest one due to descending sort), use that price
+      if (
+        sortedBulkProducts.length > 0 && 
+        quantity >= (sortedBulkProducts[0].minimum * unitSet)
+      ) {
+        return parseFloat(sortedBulkProducts[0].selling_price_set);
+      }
+  
       // Find the bulk price that applies to the current quantity
       const applicableBulk = sortedBulkProducts.find(
         (bp) =>
@@ -55,7 +64,6 @@ const CartPage = () => {
     // Fallback: return the regular price
     return parseFloat(product.perPiecePrice || product.price || 0);
   };
-  
 
   useEffect(() => {
     if (auth?.token && auth?.user?._id) {
@@ -471,16 +479,14 @@ const CartPage = () => {
                             </button>
                           </div>
                         </td>
+                      
                         <td>
-                          {minimumOrderCurrency}{" "}
+                    
                           {getPriceForProduct(item.product, item.quantity).toFixed(2)}
                         </td>
                         <td>
-                          {minimumOrderCurrency}{" "}
-                          {totalPrice().toLocaleString("en-US", {
-                style: "currency",
-                currency: minimumOrderCurrency || "INR",
-              })}
+                          
+                          {item.quantity *getPriceForProduct(item.product, item.quantity).toFixed(2)}
                         </td>
                         <td>
                           <button

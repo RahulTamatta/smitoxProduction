@@ -406,7 +406,7 @@ export const getAllOrdersController = async (req, res) => {
       path: "products.product",
       select: "name photos gst price " // Ensure name is selected
     })
-    .populate("buyer", "user_fullname email_id address pincode gst amount")
+    .populate("buyer", "user_fullname email_id mobile_no address pincode gst amount")
     .sort({ createdAt: "-1" });
     res.json(orders);
   } catch (error) {

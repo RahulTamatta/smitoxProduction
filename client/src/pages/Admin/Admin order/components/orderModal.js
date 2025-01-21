@@ -5,6 +5,7 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable'; // Add this import for better table handling
 import { useEffect,useState } from 'react';
 import axios from 'axios';
+
 const OrderModal = ({
   show,
   handleClose,
@@ -204,6 +205,66 @@ const OrderModal = ({
     generatePDFWithLogo();
   };
 
+  const shareToWhatsApp = () => {
+    if (!selectedOrder) {
+      alert('No order selected');
+      return;
+    }
+  
+    // Validate buyer and mobile number
+    if (!selectedOrder.buyer?.mobile_no) {
+      alert('Customer mobile number not available');
+      return;
+    }
+  
+    // Convert to string and clean the phone number
+    const phoneNumber = String(selectedOrder.buyer.mobile_no)
+      .replace(/\D/g, '') // Remove all non-digit characters
+      .replace(/^0+/, ''); // Remove leading zeros
+  
+    if (!phoneNumber) {
+      alert('Invalid mobile number format');
+      return;
+    }
+  
+    // Ensure country code is present (default to India +91 if missing)
+    const formattedNumber = phoneNumber.startsWith('+') 
+      ? phoneNumber 
+      : `91${phoneNumber}`; // Default to India country code
+  
+    const totals = calculateTotals();
+    
+    // Create message content
+    const message = `
+  *Order Details from Smitox B2b*
+  ---------------------------
+  Order ID: ${selectedOrder._id}
+  Customer: ${selectedOrder.buyer?.user_fullname}
+  Date: ${moment().format('DD/MM/YYYY')}
+  
+  *Order Summary*
+  Subtotal: ₹${totals.subtotal.toFixed(2)}
+  GST: ₹${totals.gst.toFixed(2)}
+  Delivery Charges: ₹${Number(selectedOrder.deliveryCharges || 0).toFixed(2)}
+  COD Charges: ₹${Number(selectedOrder.codCharges || 0).toFixed(2)}
+  Discount: ₹${Number(selectedOrder.discount || 0).toFixed(2)}
+  *Total Amount: ₹${totals.total.toFixed(2)}*
+  Amount Paid: ₹${Number(selectedOrder.amount || 0).toFixed(2)}
+  Amount Pending: ₹${(totals.total - Number(selectedOrder.amount || 0)).toFixed(2)}
+  
+  Thank you for your business!
+  `;
+  
+    // Encode the message for URL
+    const encodedMessage = encodeURIComponent(message);
+    
+    // Create WhatsApp link
+    const whatsappLink = `https://wa.me/${formattedNumber}?text=${encodedMessage}`;
+    
+    // Open in new tab
+    window.open(whatsappLink, '_blank');
+  };
+
   const refreshOrderData = async () => {
     try {
       const response = await axios.get(`/api/v1/auth/order/${orderId}`);
@@ -233,7 +294,7 @@ const OrderModal = ({
           <div>
             <h2>Order ID: {orderId}</h2>
             <p>Buyer: {selectedOrder.buyer?.user_fullname}</p>
-            <p>Email: {selectedOrder.buyer?.email}</p>
+            <p>Email: {selectedOrder.buyer?.email_id}</p>
             <p>Created At: {moment(selectedOrder.createdAt).format("LLLL")}</p>
 
             <h3>Order Details:</h3>
@@ -490,6 +551,13 @@ const OrderModal = ({
           <Button variant="primary" onClick={generatePDF}>
             Download PDF
           </Button>
+          <Button 
+          variant="success" 
+          onClick={shareToWhatsApp}
+          style={{ backgroundColor: '#25D366', borderColor: '#25D366' }}
+        >
+          Share to WhatsApp
+        </Button>
         </Modal.Footer>
       </Modal>
     );
