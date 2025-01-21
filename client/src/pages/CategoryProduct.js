@@ -172,8 +172,8 @@ const CategoryProduct = () => {
 
   return (
     <Layout>
-      <div className="container mt-3 category">
-        <h4 className="text-center mb-4" style={{ paddingTop: "1rem" }}>
+      <div className="container mt-3 category" style={{ paddingTop: "110px" }}>
+        <h4 className="text-center mb-4" >
           {category?.name}
         </h4>
   

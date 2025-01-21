@@ -367,36 +367,57 @@ const bannerSettings = {
       )}
   
       {/* Banner Section */}
-      <div
-        className="banner-container"
-        style={{
-          height: isMobile ? '30vh' : '30vh',
-          overflow: 'hidden',
-          margin: isMobile ? '10px' : '20px',
-          borderRadius: '15px',
+    {/* Banner Section */}
+<div
+  className="banner-container"
+  style={{
+    height: 'auto', // Remove fixed height
+    overflow: 'hidden',
+    margin: isMobile ? '10px' : '20px',
+    borderRadius: '15px',
+    position: 'relative',
+  }}
+>
+  <Slider {...{
+    ...bannerSettings,
+    // Update banner settings for better responsiveness
+    responsive: [
+      {
+        breakpoint: 768, // Mobile breakpoint
+        settings: {
+          arrows: false, // Hide arrows on mobile
+          dots: true,
+          autoplay: true,
+          autoplaySpeed: 3000,
+        }
+      }
+    ]
+  }}>
+    {banners.map((banner) => (
+      <div key={banner._id} onClick={() => handleBannerClick(banner)}>
+        <div style={{
           position: 'relative',
-        
-        }}
-      >
-        <Slider {...bannerSettings}>
-          {banners.map((banner) => (
-            <div key={banner._id} onClick={() => handleBannerClick(banner)}>
-              <img
-                src={banner.photos}
-                alt={banner.bannerName}
-                style={{
-                  width: '100%',
-                  height: '280px',
-                  objectFit: 'cover',
-                  borderRadius: '15px',
-                }}
-              />
-            </div>
-          ))}
-        </Slider>
-        
-
+          paddingTop: isMobile ? '56.25%' : '35%', // 16:9 aspect ratio for mobile, wider for desktop
+          width: '100%',
+        }}>
+          <img
+            src={banner.photos}
+            alt={banner.bannerName}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              borderRadius: '15px',
+            }}
+          />
+        </div>
       </div>
+    ))}
+  </Slider>
+</div>
   
       {/* Categories Section */}
       <div style={{ padding: '20px 0', marginTop: '20px' }}>
