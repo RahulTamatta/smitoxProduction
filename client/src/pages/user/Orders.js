@@ -180,16 +180,15 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
 const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [auth] = useAuth();
-const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   useEffect(() => {
-    // Fetch orders only when auth.user._id is available
     if (auth?.user?._id) {
       getOrders();
     } else {
       console.warn("auth.user._id is not available yet");
     }
-  }, [auth?.user?._id]); // Watch for changes in user ID
+  }, [auth?.user?._id]);
 
   const getOrders = async () => {
     try {
@@ -201,13 +200,19 @@ const [selectedOrder, setSelectedOrder] = useState(null);
 
       const { data } = await axios.get(`/api/v1/auth/orders/${auth.user._id}`);
       console.log("Received orders:", data);
-      setOrders(data);
+      
+      // Sort orders by createdAt date in descending order (latest first)
+      const sortedOrders = data.sort((a, b) => 
+        new Date(b.createdAt) - new Date(a.createdAt)
+      );
+      
+      setOrders(sortedOrders);
     } catch (error) {
       console.error("Error fetching orders:", error);
     }
   };
   
-  const calculateTotalsad = (order) => {
+  const calculateTotals = (order) => {
     if (!order || !order.products) return { subtotal: 0, gst: 0, total: 0 };
   
     const subtotal = order.products.reduce(
@@ -228,16 +233,20 @@ const [selectedOrder, setSelectedOrder] = useState(null);
   
     return { subtotal, gst, total };
   };
+
   const navigateToOrderDetails = (order) => {
     setSelectedOrder(order);
   };
 
   const handleUpdateOrder = (updatedOrder) => {
-    // Update the order in your orders list
     const updatedOrders = orders.map(o => 
       o._id === updatedOrder._id ? updatedOrder : o
     );
-    setOrders(updatedOrders);
+    // Maintain the sort order after updates
+    const sortedUpdatedOrders = updatedOrders.sort((a, b) => 
+      new Date(b.createdAt) - new Date(a.createdAt)
+    );
+    setOrders(sortedUpdatedOrders);
   };
 
   const closeOrderModal = () => {
@@ -257,13 +266,13 @@ const [selectedOrder, setSelectedOrder] = useState(null);
               <p className="text-center">No orders found.</p>
             ) : (
               orders
-                ?.filter((o) => o && o._id) // Ensure valid orders
+                ?.filter((o) => o && o._id)
                 .map((o, i) => (
                   <div 
-                  className="border shadow cursor-pointer" 
-                  key={o._id}
-                  onClick={() => navigateToOrderDetails(o)}
-                >
+                    className="border shadow cursor-pointer" 
+                    key={o._id}
+                    onClick={() => navigateToOrderDetails(o)}
+                  >
                     <table className="table">
                       <thead>
                         <tr>
@@ -272,10 +281,8 @@ const [selectedOrder, setSelectedOrder] = useState(null);
                           <th scope="col">Order Id</th>
                           <th scope="col">Date</th>
                           <th scope="col">Payment Method</th>
-                            
-                  <th>Total</th>
+                          <th>Total</th>
                           <th scope="col">Tracking Id</th>
-                     
                         </tr>
                       </thead>
                       <tbody>
@@ -285,15 +292,15 @@ const [selectedOrder, setSelectedOrder] = useState(null);
                           <td>{o?._id || "N/A"}</td>
                           <td>{o?.createdAt ? moment(o.createdAt).format("YYYY-MM-DD") : "N/A"}</td>
                           <td>{o?.payment?.paymentMethod || "Unknown"}</td>
-                          <td>{calculateTotalsad(o).total.toFixed(2)}</td> 
-                          
-                          <td>  {o.tracking ? (
-                        `${o.tracking.company}: ${o.tracking.id}`
-                      ) : "nothing"}</td>
+                          <td>{calculateTotals(o).total.toFixed(2)}</td> 
+                          <td>
+                            {o.tracking ? (
+                              `${o.tracking.company}: ${o.tracking.id}`
+                            ) : "nothing"}
+                          </td>
                         </tr>
                       </tbody>
                     </table>
-                   
                   </div>
                 ))
             )}
@@ -309,8 +316,8 @@ const [selectedOrder, setSelectedOrder] = useState(null);
       )}
     </Layout>
   );
-  
 };
 
-
 export default Orders;
+
+
