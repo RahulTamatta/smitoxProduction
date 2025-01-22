@@ -516,7 +516,8 @@ const bannerSettings = {
           {products.map((p) => (
             <div 
               key={p._id} 
-              className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-2"
+              className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3" // Change col-lg-3 to col-lg-4
+      
               style={{ padding: '8px' }}
             >
               <ProductCard 

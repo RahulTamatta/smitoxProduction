@@ -133,7 +133,7 @@ const OrderModal = ({
   
         doc.setFontSize(12);
         doc.text('Smitox B2b', 20, 30);
-        doc.text(`Address : ${selectedOrder.buyer?.address}`, 20, 35);
+        doc.text(`Address : Mumbai,Maharashtra`, 20, 35);
   
         // Add invoice details with text width check
         const invoiceText = `Invoice No: ${selectedOrder._id || 'N/A'}`;
@@ -151,6 +151,8 @@ const OrderModal = ({
         // Add customer details
         doc.text('Bill To:', 20, 50);
         doc.text(`Name: ${selectedOrder.buyer.user_fullname || 'N/A'}`, 20, 55);
+        doc.text(`Address: ${selectedOrder.buyer.address || 'N/A'}`, 20, 60);
+        doc.text(`Mobile No: ${selectedOrder.buyer.mobile_no || 'N/A'}`, 20, 65);
   
         // Create table for products
         const tableColumn = ['Product', 'Qty', 'Price', 'GST%', 'Net Amount', 'Tax Amount', 'Total'];
@@ -294,7 +296,9 @@ const OrderModal = ({
           <div>
             <h2>Order ID: {orderId}</h2>
             <p>Buyer: {selectedOrder.buyer?.user_fullname}</p>
-            <p>Email: {selectedOrder.buyer?.email_id}</p>
+            <p>Mobile No: {selectedOrder.buyer?.mobile_no}</p>
+            <p>Address No: {selectedOrder.buyer?.address}</p>
+            
             <p>Created At: {moment(selectedOrder.createdAt).format("LLLL")}</p>
 
             <h3>Order Details:</h3>

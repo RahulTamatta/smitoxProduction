@@ -44,25 +44,36 @@ const Products = () => {
   }, [location]);
 
   // Get all products
-  const getAllProducts = async (page = 1) => {
-    try {
-      setLoading(true);
-      const { data } = await axios.get(`/api/v1/product/get-product?page=${page}&limit=${itemsPerPage}`);
-      if (data.success) {
-        setProducts(data.products);
-        setTotalProducts(data.total);
-        
-        // Update URL without triggering a navigation
-        const newUrl = `${window.location.pathname}?page=${page}`;
-        window.history.replaceState({}, '', newUrl);
-      }
-    } catch (error) {
-      console.log(error);
-      toast.error("Something Went Wrong");
-    } finally {
-      setLoading(false);
+// In your Products component:
+const getAllProducts = async (page = 1, search = "") => {
+  try {
+    setLoading(true);
+    const { data } = await axios.get(
+      `/api/v1/product/get-product?page=${page}&limit=${itemsPerPage}&search=${search}`
+    );
+    if (data.success) {
+      setProducts(data.products);
+      setTotalProducts(data.total);
+      
+      // Update URL with both page and search parameters
+      const newUrl = `${window.location.pathname}?page=${page}&search=${search}`;
+      window.history.replaceState({}, '', newUrl);
     }
-  };
+  } catch (error) {
+    console.log(error);
+    toast.error("Something Went Wrong");
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Update the search handler
+const handleSearch = (value) => {
+  setSearchTerm(value);
+  setCurrentPage(1); // Reset to first page when searching
+  getAllProducts(1, value); // Fetch results with search term
+};
+
 
   // Fetch products when page changes
   useEffect(() => {
@@ -225,14 +236,14 @@ const Products = () => {
           </div>
 
           <div className="mb-4 flex items-center space-x-4">
-            <input
-              type="text"
-              className="border px-3 py-2"
-              placeholder="Search by name"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ borderRadius: "4px", width: "200px" }}
-            />
+          <input
+  type="text"
+  className="border px-3 py-2"
+  placeholder="Search by name"
+  value={searchTerm}
+  onChange={(e) => handleSearch(e.target.value)}
+  style={{ borderRadius: "4px", width: "200px" }}
+/>
             <span style={{ fontSize: "14px", color: "#666" }}>
               Showing {currentProducts.length} of {filteredProducts.length}{" "}
               products

@@ -374,7 +374,7 @@ export const getOrdersController = async (req, res) => {
     // Fetch orders based on the user_id passed in the route
     const orders = await orderModel
       .find({ buyer: user_id })
-      .populate("buyer", "user_fullname") // Use the user_id directly
+      .populate("buyer", "user_fullname address mobile_no pincode") // Use the user_id directly
       .populate({
         path: "products.product",
         select: "name photos price  sku"

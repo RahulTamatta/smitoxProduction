@@ -4,7 +4,7 @@ import { MessageCircle, Edit } from 'lucide-react';
 import Layout from "../../components/Layout/Layout";
 import AdminMenu from "../../components/Layout/AdminMenu";
 import CartSearchModal from "./addTocartModal.js";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import AddToCartPage from "./userCart.js";
 
 const UserList = () => {
@@ -20,10 +20,95 @@ const UserList = () => {
   const [usersPerPage] = useState(20);
   const [activeRegularFilter, setActiveRegularFilter] = useState('all');
   const [showSearchModal, setShowSearchModal] = useState(false);
-
-
   const [selectedUserId, setSelectedUserId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [totalUsers, setTotalUsers] = useState(0);
   
+  const location = useLocation();
+
+  useEffect(() => {
+    // Initialize search term from URL if present
+    const params = new URLSearchParams(location.search);
+    const searchFromUrl = params.get('search') || "";
+    setSearchTerm(searchFromUrl);
+    fetchUsers(searchFromUrl);
+  }, [location]);
+
+  const fetchUsers = async (search = "") => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get(`/api/v1/usersLists/users?search=${search}`);
+      const usersList = response.data.list || [];
+      setUsers(usersList);
+      setTotalUsers(usersList.length);
+      filterUsers(usersList);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setError('Failed to fetch users. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSearch = (value) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+    
+    // Update URL with search term
+    const params = new URLSearchParams(location.search);
+    if (value) {
+      params.set('search', value);
+    } else {
+      params.delete('search');
+    }
+    navigate(`${location.pathname}?${params.toString()}`);
+    
+    fetchUsers(value);
+  };
+
+  const filterUsers = (usersList = users) => {
+    let result = usersList;
+    
+    if (activeStatusFilter !== 'all') {
+      result = result.filter(user => user.status === activeStatusFilter);
+    }
+    if (activeOrderTypeFilter !== 'all') {
+      result = result.filter(user => getOrderType(user.order_type) === activeOrderTypeFilter.toLowerCase());
+    }
+    if (activeRegularFilter !== 'all') {
+      result = result.filter(user => user.regular === (activeRegularFilter));
+    }
+    
+    setFilteredUsers(result);
+  };
+
+  // Add search input to the existing render content
+  const renderSearchSection = () => (
+    <div style={{ marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => handleSearch(e.target.value)}
+          placeholder="Search by name, email, phone, or address..."
+          style={{
+            padding: '0.5rem',
+            border: '1px solid #e0e0e0',
+            borderRadius: '0.25rem',
+            width: '300px',
+            fontSize: '1rem'
+          }}
+        />
+        <span style={{ color: '#666', fontSize: '0.875rem' }}>
+          Showing {filteredUsers.length} of {totalUsers} users
+        </span>
+      </div>
+    </div>
+  );
+
+
+
   const styles = {
     headerText: { color: '#1a237e' },
     errorText: { color: '#d32f2f' },
@@ -54,35 +139,7 @@ const UserList = () => {
     filterUsers();
   }, [users, activeStatusFilter, activeOrderTypeFilter,activeRegularFilter]);
 
-  const fetchUsers = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await axios.get('/api/v1/usersLists/users');
-      setUsers(response.data.list || []);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      setError('Failed to fetch users. Please try again later.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const filterUsers = () => {
-    let result = users;
-    if (activeStatusFilter !== 'all') {
-      result = result.filter(user => user.status === activeStatusFilter);
-    }
-    if (activeOrderTypeFilter !== 'all') {
-      result = result.filter(user => getOrderType(user.order_type) === activeOrderTypeFilter.toLowerCase());
-    }
-    if (activeRegularFilter !== 'all') {
-      result = result.filter(user => user.regular === (activeRegularFilter));
-    }
-    setFilteredUsers(result);
-    setCurrentPage(1);
-  };
-  
   // const handleOpenSearchModal = (userId) => {
   //   setSelectedUserId(userId);
   //   setShowSearchModal(true);
@@ -217,7 +274,6 @@ console.log(`New Status: ${newStatus}`);
       </nav>
     );
   };
-
   const renderContent = () => {
     if (isLoading) {
       return <div style={{ color: '#666', textAlign: 'center', padding: '2rem' }}>Loading...</div>;
@@ -244,6 +300,8 @@ console.log(`New Status: ${newStatus}`);
           User List
         </h1>
         
+      
+       
         <div style={{ marginBottom: '1.5rem' }}>
   <h3 style={{ ...styles.headerText, fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.5rem' }}>
     Status Filter:
@@ -280,7 +338,7 @@ console.log(`New Status: ${newStatus}`);
 </div>
 
     
-        
+{renderSearchSection()}
 
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', ...styles.tableBorder }}>

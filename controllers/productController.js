@@ -174,19 +174,26 @@ export const createProductController = async (req, res) => {
 //get all products
 export const getProductController = async (req, res) => {
   try {
-    const page = Math.max(parseInt(req.query.page, 10) || 1, 1); // Ensure page is at least 1
-    const limit = Math.max(parseInt(req.query.limit, 10) || 10, 1); // Ensure limit is at least 1
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.max(parseInt(req.query.limit, 10) || 10, 1);
+    const search = req.query.search?.trim() || "";
     const skip = (page - 1) * limit;
 
+    // Create search query object
+    const searchQuery = search 
+      ? { name: { $regex: search, $options: "i" } }
+      : {};
+
     const products = await productModel
-      .find({})
+      .find(searchQuery)  // Add search filter here
       .populate("category", "name")
       .populate("subcategory", "name")
       .select("name category subcategory isActive perPiecePrice slug stock photos")
       .skip(skip)
       .limit(limit);
 
-    const total = await productModel.countDocuments();
+    // Count should also use the search query
+    const total = await productModel.countDocuments(searchQuery);
 
     res.status(200).send({
       success: true,

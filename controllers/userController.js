@@ -8,13 +8,29 @@ import Wishlist from '../models/wishlistModel.js';
 // Get all users with populated products, wishlist, and cart
 export const getUsers = async (req, res) => {
   try {
-    const users = await userModel.find().populate('products').populate('wishlist').populate('cart.product');
+    const search = req.query.search?.trim() || "";
+    
+    // Create search query
+    const searchQuery = search ? {
+      $or: [
+        { user_fullname: { $regex: search, $options: "i" } },
+        { email_id: { $regex: search, $options: "i" } },
+        { mobile_no: { $regex: search, $options: "i" } },
+        { address: { $regex: search, $options: "i" } }
+      ]
+    } : {};
+
+    const users = await userModel
+      .find(searchQuery)
+      .populate('products')
+      .populate('wishlist')
+      .populate('cart.product');
+
     res.json({ status: 'success', list: users });
   } catch (error) {
     res.status(500).json({ status: 'error', message: error.message });
   }
 };
-
 // Update user information by ID
 export const updateUser = async (req, res) => {
   try {
