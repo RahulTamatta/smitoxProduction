@@ -66,7 +66,7 @@ const AddToCartPages = () => {
       setCart(data.cart || []);
     } catch (error) {
       console.error("Error fetching cart:", error);
-      toast.error("Error fetching cart");
+      //toast.error("Error fetching cart");
       setCart([]);
     }
   };
@@ -80,7 +80,7 @@ const AddToCartPages = () => {
       }
     } catch (error) {
       console.error("Error fetching minimum order:", error);
-      toast.error("Error fetching minimum order amount");
+      //toast.error("Error fetching minimum order amount");
     }
   };
 
@@ -91,7 +91,7 @@ const AddToCartPages = () => {
       toast.success("Item removed from cart");
     } catch (error) {
       console.error("Error removing item:", error);
-      toast.error("Error removing item from cart");
+      //toast.error("Error removing item from cart");
     }
   };
 
@@ -112,7 +112,7 @@ const AddToCartPages = () => {
       toast.success("Quantity updated successfully");
     } catch (error) {
       console.error("Quantity update error:", error);
-      toast.error("Failed to update quantity");
+      //toast.error("Failed to update quantity");
     }
   };
 
@@ -179,7 +179,7 @@ const AddToCartPages = () => {
                 >
                   <div className="col-md-4 col-12">
                     <img
-                      src={`/api/v1/product/product-photo/${p.product._id}`}
+                      src={p.product.photos}
                       className="card-img-top"
                       alt={p.product.name}
                       width="100%"
@@ -214,22 +214,44 @@ const AddToCartPages = () => {
                         -
                       </button>
                       <input
-                        type="number"
-                        min="1"
-                        value={p.quantity}
-                        onChange={(e) => {
-                          const newQuantity = parseInt(e.target.value);
-                          handleQuantityChange(p.product._id, newQuantity);
-                        }}
-                        className="quantity-input"
-                        style={{ 
-                          width: '60px', 
-                          textAlign: 'center',
-                          padding: '5px',
-                          border: '1px solid #ddd',
-                          borderRadius: '4px'
-                        }}
-                      />
+  type="number"
+  min="1"
+  value={p.quantity}
+  readOnly // Makes the input non-editable
+  style={{ 
+    width: 'auto', // Auto width to accommodate larger numbers
+    minWidth: '70px', // Minimum width for smaller numbers
+    height: '40px', // Fixed height for better touch targets
+    fontSize: '1.1rem', // Larger text
+    textAlign: 'center',
+    padding: '8px 12px', // More padding
+    border: '2px solid #007bff', // More visible border
+    borderRadius: '6px', // Rounded corners
+    transition: 'all 0.3s ease', // Smooth transitions
+    boxSizing: 'border-box',
+    backgroundColor: '#f8f9fa', // Background color to indicate non-editable state
+    cursor: 'not-allowed', // Cursor to indicate non-editable state
+    overflow: 'visible', // Ensure content is not cut off
+    // Responsive styles
+    '@media (max-width: 768px)': {
+      width: '100%', // Full width on mobile
+      height: '48px',
+      fontSize: '1.2rem',
+      padding: '12px'
+    }
+  }}
+  // Add hover and focus states
+  onMouseEnter={(e) => e.target.style.borderColor = '#0056b3'}
+  onMouseLeave={(e) => e.target.style.borderColor = '#007bff'}
+  onFocus={(e) => {
+    e.target.style.borderColor = '#0056b3';
+    e.target.style.boxShadow = '0 0 0 2px rgba(0,123,255,0.25)';
+  }}
+  onBlur={(e) => {
+    e.target.style.borderColor = '#007bff';
+    e.target.style.boxShadow = 'none';
+  }}
+/>
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();

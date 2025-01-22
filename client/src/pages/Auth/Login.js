@@ -70,7 +70,7 @@ const Login = () => {
       }
     } catch (error) {
       console.log(error);
-      toast.error("Something went wrong");
+      //toast.error("Something went wrong");
     }
   }
   const sendOTP = async () => {
@@ -85,7 +85,7 @@ const Login = () => {
       }
     } catch (error) {
       console.log(error);
-      toast.error("Error sending OTP");
+      //toast.error("Error sending OTP");
     }
   };
 

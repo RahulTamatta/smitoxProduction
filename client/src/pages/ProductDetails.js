@@ -76,7 +76,7 @@ const ProductDetails = () => {
       setQuantity(data?.product?.quantity || 1);
     } catch (error) {
       console.error(error);
-      toast.error("Error fetching product details");
+      //toast.error("Error fetching product details");
     }
   };
 
@@ -95,7 +95,7 @@ const ProductDetails = () => {
       }
     } catch (error) {
       console.error("Error fetching products for you:", error);
-      toast.error("Failed to fetch products for you");
+      //toast.error("Failed to fetch products for you");
     }
   };
 
@@ -139,12 +139,12 @@ const ProductDetails = () => {
 
   const addToCart = async () => {
     if (!auth.user) {
-      toast.error("Please log in to add items to cart");
+      //toast.error("Please log in to add items to cart");
       return;
     }
 
     // if (!isPincodeAvailable) {
-    //   toast.error("Delivery not available for your pincode");
+    //   //toast.error("Delivery not available for your pincode");
     //   return;
     // }
 
@@ -174,7 +174,7 @@ const ProductDetails = () => {
       }
     } catch (error) {
       console.error(error);
-      toast.error("Error adding item to cart");
+      //toast.error("Error adding item to cart");
     }
   };
 
@@ -188,13 +188,13 @@ const ProductDetails = () => {
           toast.success("Delivery available for your pincode");
         } else {
           setIsPincodeAvailable(false);
-          toast.error("Delivery not available for your pincode");
+          //toast.error("Delivery not available for your pincode");
         }
       }
     } catch (error) {
       console.log(error);
       setIsPincodeAvailable(false);
-      toast.error("Error checking pincode");
+      //toast.error("Error checking pincode");
     }
   };
 
@@ -219,13 +219,13 @@ const ProductDetails = () => {
       calculateTotalPrice(applicableBulk, updatedQuantity);
     } catch (error) {
       console.error("Error updating quantity:", error);
-      toast.error("Failed to update quantity");
+      //toast.error("Failed to update quantity");
     }
   };
 
   const updateQuantity = async (quantity) => {
     if (!auth?.user?._id) {
-      toast.error("Please log in to update quantity");
+      //toast.error("Please log in to update quantity");
       return;
     }
 
@@ -246,7 +246,7 @@ const ProductDetails = () => {
       }
     } catch (error) {
       console.error("Quantity update error:", error);
-      toast.error("Failed to update quantity");
+      //toast.error("Failed to update quantity");
     }
   };
 
@@ -269,11 +269,11 @@ const ProductDetails = () => {
       } else {
         const responseBody = await response.text();
         console.error("Error removing item:", responseBody);
-        toast.error("Failed to remove item from cart");
+        //toast.error("Failed to remove item from cart");
       }
     } catch (error) {
       console.error("Remove from cart failed:", error.message);
-      toast.error("Failed to remove item from cart");
+      //toast.error("Failed to remove item from cart");
     }
   };
 
@@ -308,7 +308,7 @@ const ProductDetails = () => {
   // Copy the styles and return statement from your original code
   const toggleWishlist = async () => {
     if (!auth.user) {
-      toast.error("Please log in to manage your wishlist");
+      //toast.error("Please log in to manage your wishlist");
       return;
     }
 
@@ -328,7 +328,7 @@ const ProductDetails = () => {
       }
     } catch (error) {
       console.error("Error toggling wishlist:", error);
-      toast.error("Error updating wishlist");
+      //toast.error("Error updating wishlist");
     }
   };
 
@@ -513,11 +513,15 @@ const ProductDetails = () => {
                   -
                 </button>
                 <input
-                  type="number"
-                  value={displayQuantity}
-                  readOnly
-                  style={inputStyle}
-                />
+  type="number"
+  value={displayQuantity}
+  readOnly
+  style={{
+    ...inputStyle,
+    width: `${Math.max(displayQuantity.toString().length, 4) * 20}px`, // Adjust the width for larger digits
+  }}
+/>
+
                 <button
                   onClick={() => {
                     if (displayQuantity != 0) {
@@ -693,71 +697,53 @@ const ProductDetails = () => {
           </div>
         </div>
       </div>
-
       <div className="container mt-5">
-        <h2 className="text-center mb-4">Products For You</h2>
-        <div className="row">
-          {productsForYou.map((item) => (
-            <div
-              key={item.productId?._id}
-              className="col-lg-4 col-md-4 col-sm-4 col-6 mb-3"
-            >
-              <div className="col-md-10 col-sm-6 col-12 mb-3">
-                {
-                  <div
-                    className="card product-card h-100"
-                    style={{ cursor: "pointer", position: "relative" }}
-                    onClick={() =>
-                      (window.location.href = `/product/${item.productId.slug}`)
-                    } // Full reload
-                  >
-                    <img
-                      src={item.productId.photos}
-                      className="card-img-top product-image img-fluid"
-                      alt={item.productId.name}
-                      style={{ height: "200px", objectFit: "contain" }}
-                    />
-                    <div className="p-4 flex flex-col h-full">
-                      <h5 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                        {item.productId.name}
-                      </h5>
-                      <div className="mt-auto">
-                        <h5 className="text-base font-bold text-gray-900 dark:text-white">
-                          {item.productId.perPiecePrice?.toLocaleString(
-                            "en-US",
-                            {
-                              style: "currency",
-                              currency: "INR",
-                            }
-                          ) || "Price not available"}
-                        </h5>
-                        {item.productId.perPiecePrice && (
-                          <h6
-                            className="text-xs text-red-500"
-                            style={{ textDecoration: "line-through" }}
-                          ></h6>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                }
+  <h2 className="text-center mb-4">Products For You</h2>
+  <div className="row">
+    {productsForYou.map((item) => (
+      <div
+        key={item.productId?._id}
+        className="col-lg-4 col-md-4 col-sm-6 col-6 mb-3"
+      >
+        <div className="card product-card h-100" style={{ position: "relative" }}>
+          <div
+            style={{ cursor: "pointer" }}
+            onClick={() =>
+              (window.location.href = `/product/${item.productId.slug}`)
+            } // Full reload
+          >
+            <img
+              src={item.productId.photos}
+              className="card-img-top product-image img-fluid"
+              alt={item.productId.name}
+              style={{
+                height: "200px",
+                objectFit: "contain",
+                padding: "10px",
+              }}
+            />
+            <div className="p-3 d-flex flex-column h-100">
+              {/* Product Name */}
+              <div className="text-sm font-semibold text-gray-900 dark:text-white mb-2 text-nowrap overflow-hidden text-ellipsis">
+                {item.productId.name.slice(0, 15)}
+                {item.productId.name.length > 15 && "..."}
+              </div>
+              {/* Price Section */}
+              <div className="d-flex flex-column h-100">
+                <h5 className="text-base  text-red dark:text-red">
+                  {item.productId.perPiecePrice}
+                </h5>
+              
               </div>
             </div>
-          ))}
-        </div>
-
-        {productsForYou.length > 10 && (
-          <div className="text-center mt-3">
-            {/* Optional button for viewing more products */}
-            {/* <button 
-        className="btn btn-primary"
-        onClick={() => navigate('/products-for-you')}
-      >
-        View More
-      </button> */}
           </div>
-        )}
+        </div>
       </div>
+    ))}
+  </div>
+
+</div>
+
     </Layout>
   );
 };

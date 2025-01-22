@@ -195,11 +195,13 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
                     
                   </table>
                   <p className="text-danger">
-                Order total is below the minimum order amount.
-                Courier charge will be added  (depends on weight n cod amount)
-                10 % you have to pay advance now for confirming the order
+  <ul>
+    <li>Order total is below the minimum order amount.</li>
+    <li>Courier charge will be added (depends on weight and COD amount).</li>
+    <li>10% advance payment is required to confirm the order.</li>
+  </ul>
+</p>
 
-              </p>
                 </div>
               </div>
             </div>

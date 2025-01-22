@@ -60,7 +60,7 @@ const ProductForYou = () => {
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
-      toast.error("Something went wrong in getting categories");
+      //toast.error("Something went wrong in getting categories");
       setCategories([]);
     }
   };
@@ -75,7 +75,7 @@ const ProductForYou = () => {
       }
     } catch (error) {
       console.log(error);
-      toast.error("Something went wrong in getting subcategories");
+      //toast.error("Something went wrong in getting subcategories");
       setSubcategories([]);
     }
   };
@@ -94,7 +94,7 @@ const ProductForYou = () => {
       setFilteredProducts(data?.products || []);
     } catch (error) {
       console.log(error);
-      toast.error("Error fetching products");
+      //toast.error("Error fetching products");
       setFilteredProducts([]);
     } finally {
       setLoading(false);
@@ -135,7 +135,7 @@ const ProductForYou = () => {
       resetForm();
     } catch (error) {
       console.error("Error submitting banner:", error);
-      toast.error("Failed to submit banner");
+      //toast.error("Failed to submit banner");
     }
   };
 
@@ -149,7 +149,7 @@ const ProductForYou = () => {
       toast.success("Banner deleted successfully");
     } catch (error) {
       console.error("Error deleting banner:", error);
-      toast.error("Failed to delete banner");
+      //toast.error("Failed to delete banner");
     }
   };
 
@@ -279,7 +279,7 @@ const ProductForYou = () => {
                                   <td>
                                     {banner.productId?._id ? (
                                       <Image
-                                        src={`/api/v1/product/product-photo/${banner.productId._id}`}
+                                        src={banner.productId.photos}
                                         alt={banner.productId?.name}
                                         thumbnail
                                         style={{

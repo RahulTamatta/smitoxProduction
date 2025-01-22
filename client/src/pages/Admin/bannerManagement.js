@@ -52,7 +52,7 @@ const BannerManagement = () => {
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
-      toast.error("Something went wrong in getting categories");
+      //toast.error("Something went wrong in getting categories");
       setCategories([]);
     }
   };
@@ -67,7 +67,7 @@ const BannerManagement = () => {
       }
     } catch (error) {
       console.log(error);
-      toast.error("Something went wrong in getting subcategories");
+      //toast.error("Something went wrong in getting subcategories");
       setSubcategories([]);
     }
   };

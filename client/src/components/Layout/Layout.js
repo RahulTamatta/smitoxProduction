@@ -39,8 +39,8 @@ const Layout = ({ children, title, description, keywords, author }) => {
       {/* Main Content */}
       <main style={{
         flex: 1,
-        marginTop:window.innerWidth <= 768 ? "0rem" : "1rem",
-        padding: window.innerWidth <= 768 ? "0rem" : "5rem 1rem 1rem 1rem",
+        marginTop:window.innerWidth <= 768 ? "5rem 0 0 0" : "2rem",
+        padding: window.innerWidth <= 768 ? "5rem 0 0 0" : "5rem 1rem 1rem 1rem",
         display: "flex",
         flexDirection: "column",
         width: "100%",

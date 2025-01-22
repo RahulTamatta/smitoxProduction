@@ -61,7 +61,7 @@ const getAllProducts = async (page = 1, search = "") => {
     }
   } catch (error) {
     console.log(error);
-    toast.error("Something Went Wrong");
+    //toast.error("Something Went Wrong");
   } finally {
     setLoading(false);
   }
@@ -173,11 +173,11 @@ const handleSearch = (value) => {
           }!`
         );
       } else {
-        toast.error("Failed to update product status.");
+        //toast.error("Failed to update product status.");
       }
     } catch (error) {
       console.error(error);
-      toast.error("An error occurred while updating product status.");
+      //toast.error("An error occurred while updating product status.");
     }
   };
 

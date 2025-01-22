@@ -9,16 +9,19 @@ import Wishlist from '../models/wishlistModel.js';
 export const getUsers = async (req, res) => {
   try {
     const search = req.query.search?.trim() || "";
-    
+
     // Create search query
-    const searchQuery = search ? {
-      $or: [
-        { user_fullname: { $regex: search, $options: "i" } },
-        { email_id: { $regex: search, $options: "i" } },
-        { mobile_no: { $regex: search, $options: "i" } },
-        { address: { $regex: search, $options: "i" } }
-      ]
-    } : {};
+    const searchQuery = search
+      ? {
+          $or: [
+            { user_fullname: { $regex: search, $options: "i" } }, // String field
+            { email_id: { $regex: search, $options: "i" } }, // String field
+            { address: { $regex: search, $options: "i" } }, // String field
+            // Handle mobile_no separately (only if search is a valid number)
+            ...(isNaN(search) ? [] : [{ mobile_no: Number(search) }]), // Number field
+          ],
+        }
+      : {};
 
     const users = await userModel
       .find(searchQuery)

@@ -7,6 +7,10 @@ import CartSearchModal from "./addTocartModal.js";
 import { useNavigate, useLocation } from 'react-router-dom';
 import AddToCartPage from "./userCart.js";
 
+
+
+
+
 const UserList = () => {
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -19,12 +23,102 @@ const UserList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [usersPerPage] = useState(20);
   const [activeRegularFilter, setActiveRegularFilter] = useState('all');
-  const [showSearchModal, setShowSearchModal] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [totalUsers, setTotalUsers] = useState(0);
-  
+
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Initialize states from URL params
+  const urlParams = new URLSearchParams(location.search);
+  const pageFromUrl = parseInt(urlParams.get('page')) || 1;
+  const searchFromUrl = urlParams.get('search') || '';
+
+  // Handle browser history changes
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const params = new URLSearchParams(location.search);
+      const page = parseInt(params.get('page')) || 1;
+      const search = params.get('search') || '';
+      setCurrentPage(page);
+      setSearchTerm(search);
+    };
+
+    handleLocationChange();
+    window.addEventListener('popstate', handleLocationChange);
+    return () => window.removeEventListener('popstate', handleLocationChange);
+  }, [location]);
+
+  // Debounce the search term
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(debounceTimer); // Cleanup on unmount or re-render
+  }, [searchTerm]);
+
+  // Fetch users when debouncedSearchTerm changes
+  useEffect(() => {
+    fetchUsers(currentPage, debouncedSearchTerm);
+  }, [debouncedSearchTerm, currentPage]);
+
+  const handleSearch = (value) => {
+    setSearchTerm(value);
+    setCurrentPage(1); // Reset to the first page when searching
+  };
+
+  const fetchUsers = async (page = currentPage, search = searchTerm) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get(`/api/v1/usersLists/users?page=${page}&limit=${usersPerPage}&search=${search}`);
+      const usersList = response.data.list || [];
+      setUsers(usersList);
+      setTotalUsers(response.data.total || usersList.length);
+      filterUsers(usersList);
+
+      // Update URL with search and page params
+      const params = new URLSearchParams();
+      if (page > 1) params.set('page', page);
+      if (search) params.set('search', search);
+      const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
+      window.history.replaceState({}, '', newUrl);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setError('Failed to fetch users. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    filterUsers();
+  }, [users, activeStatusFilter, activeOrderTypeFilter, activeRegularFilter]);
+  
+  const filterUsers = (usersList = users) => {
+    let result = usersList;
+  
+    if (activeStatusFilter !== 'all') {
+      result = result.filter(user => user.status === activeStatusFilter);
+    }
+    if (activeOrderTypeFilter !== 'all') {
+      result = result.filter(user => getOrderType(user.order_type) === activeOrderTypeFilter.toLowerCase());
+    }
+    if (activeRegularFilter !== 'all') {
+      result = result.filter(user => user.regular === activeRegularFilter);
+    }
+  
+    setFilteredUsers(result);
+  };
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1) {
+      setCurrentPage(newPage);
+      fetchUsers(newPage, searchTerm);
+    }
+  };
 
   useEffect(() => {
     // Initialize search term from URL if present
@@ -34,56 +128,8 @@ const UserList = () => {
     fetchUsers(searchFromUrl);
   }, [location]);
 
-  const fetchUsers = async (search = "") => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await axios.get(`/api/v1/usersLists/users?search=${search}`);
-      const usersList = response.data.list || [];
-      setUsers(usersList);
-      setTotalUsers(usersList.length);
-      filterUsers(usersList);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      setError('Failed to fetch users. Please try again later.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const handleSearch = (value) => {
-    setSearchTerm(value);
-    setCurrentPage(1);
-    
-    // Update URL with search term
-    const params = new URLSearchParams(location.search);
-    if (value) {
-      params.set('search', value);
-    } else {
-      params.delete('search');
-    }
-    navigate(`${location.pathname}?${params.toString()}`);
-    
-    fetchUsers(value);
-  };
 
-  const filterUsers = (usersList = users) => {
-    let result = usersList;
-    
-    if (activeStatusFilter !== 'all') {
-      result = result.filter(user => user.status === activeStatusFilter);
-    }
-    if (activeOrderTypeFilter !== 'all') {
-      result = result.filter(user => getOrderType(user.order_type) === activeOrderTypeFilter.toLowerCase());
-    }
-    if (activeRegularFilter !== 'all') {
-      result = result.filter(user => user.regular === (activeRegularFilter));
-    }
-    
-    setFilteredUsers(result);
-  };
-
-  // Add search input to the existing render content
   const renderSearchSection = () => (
     <div style={{ marginBottom: '1.5rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -106,8 +152,6 @@ const UserList = () => {
       </div>
     </div>
   );
-
-
 
   const styles = {
     headerText: { color: '#1a237e' },
@@ -137,33 +181,24 @@ const UserList = () => {
 
   useEffect(() => {
     filterUsers();
-  }, [users, activeStatusFilter, activeOrderTypeFilter,activeRegularFilter]);
+  }, [users, activeStatusFilter, activeOrderTypeFilter, activeRegularFilter]);
 
-
-  // const handleOpenSearchModal = (userId) => {
-  //   setSelectedUserId(userId);
-  //   setShowSearchModal(true);
-  // };
-  const handleOpenSearchModal = (userId,user_fullname) => {
-    // If you have any logic to handle modal opening, you can include it here.
-    // For now, it just navigates to the add-to-cart page for the given user.
+  const handleOpenSearchModal = (userId, user_fullname) => {
     const encodedName = encodeURIComponent(user_fullname);
-    navigate(`/add-to-cart/${userId}/${encodedName}`); // Replace with your actual route
+    navigate(`/add-to-cart/${userId}/${encodedName}`);
   };
-  
+
   const toggleStatus = async (id, currentStatus) => {
     try {
       const newStatus = currentStatus === 1 ? 0 : 1;
-      console.log(`Current Status: ${currentStatus}`);
-console.log(`New Status: ${newStatus}`);
       await axios.put(`/api/v1/usersLists/users/${id}/status`, { status: newStatus });
-      console.log("user id",id);
       fetchUsers();
     } catch (error) {
       console.error('Error toggling user status:', error);
       setError('Failed to update user status. Please try again.');
     }
   };
+
   const toggleRegular = async (id, currentRegular) => {
     try {
       const newRegular = currentRegular === 1 ? 0 : 1;
@@ -174,10 +209,11 @@ console.log(`New Status: ${newStatus}`);
       setError('Failed to update user regular status. Please try again.');
     }
   };
+
   const updateOrderType = async (id, orderType) => {
     try {
       await axios.put(`/api/v1/usersLists/users/${id}/order-type`, { order_type: orderType });
-      setUsers(users.map(user => 
+      setUsers(users.map(user =>
         user._id === id ? { ...user, order_type: orderType } : user
       ));
     } catch (error) {
@@ -190,13 +226,23 @@ console.log(`New Status: ${newStatus}`);
     if (!orderType || orderType === "0") return "";
     return orderType.toLowerCase();
   };
-
   const redirectToWhatsApp = (phoneNumber) => {
-    const whatsappUrl = `https://wa.me/${phoneNumber.replace(/\D/g, '')}`;
+    if (!phoneNumber) {
+        console.error('Phone number is undefined or null');
+        return;
+    }
+    const cleanNumber = String(phoneNumber).replace(/\D/g, ''); // Convert to string and remove non-digits
+    if (!cleanNumber) {
+        console.error('Phone number is invalid or empty');
+        return;
+    }
+    const whatsappUrl = `https://wa.me/${cleanNumber}`;
     window.open(whatsappUrl, '_blank');
-  };
+};
+
 
   const openEditModal = (user) => {
+    console.log("Opening edit modal for user:", user); // Debugging
     setEditingUser(user);
     setIsEditModalOpen(true);
   };
@@ -210,8 +256,8 @@ console.log(`New Status: ${newStatus}`);
     e.preventDefault();
     try {
       await axios.put(`/api/v1/usersLists/users/${editingUser._id}`, editingUser);
-      fetchUsers();
-      closeEditModal();
+      fetchUsers(); // Refresh the user list
+      closeEditModal(); // Close the modal
     } catch (error) {
       console.error('Error updating user:', error);
       setError('Failed to update user. Please try again.');
@@ -274,6 +320,7 @@ console.log(`New Status: ${newStatus}`);
       </nav>
     );
   };
+
   const renderContent = () => {
     if (isLoading) {
       return <div style={{ color: '#666', textAlign: 'center', padding: '2rem' }}>Loading...</div>;
@@ -281,7 +328,7 @@ console.log(`New Status: ${newStatus}`);
 
     if (error) {
       return (
-        <div style={{ 
+        <div style={{
           border: '1px solid #d32f2f',
           padding: '1rem',
           margin: '1rem',
@@ -299,53 +346,49 @@ console.log(`New Status: ${newStatus}`);
         <h1 style={{ ...styles.headerText, fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
           User List
         </h1>
-        
-      
-       
+
         <div style={{ marginBottom: '1.5rem' }}>
-  <h3 style={{ ...styles.headerText, fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-    Status Filter:
-  </h3>
-  <div>
-    <TabButton label="All" isActive={activeStatusFilter === 'all'} onClick={() => setActiveStatusFilter('all')} />
-    <TabButton label="Active" isActive={activeStatusFilter === 'active'} onClick={() => setActiveStatusFilter('active')} />
-    <TabButton label="Blocked" isActive={activeStatusFilter === 'blocked'} onClick={() => setActiveStatusFilter('blocked')} />
-    <TabButton label="Pending" isActive={activeStatusFilter === 'pending'} onClick={() => setActiveStatusFilter('pending')} />
-  </div>
-</div>
+          <h3 style={{ ...styles.headerText, fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+            Status Filter:
+          </h3>
+          <div>
+            <TabButton label="All" isActive={activeStatusFilter === 'all'} onClick={() => setActiveStatusFilter('all')} />
+            <TabButton label="Active" isActive={activeStatusFilter === 'active'} onClick={() => setActiveStatusFilter('active')} />
+            <TabButton label="Blocked" isActive={activeStatusFilter === 'blocked'} onClick={() => setActiveStatusFilter('blocked')} />
+            <TabButton label="Pending" isActive={activeStatusFilter === 'pending'} onClick={() => setActiveStatusFilter('pending')} />
+          </div>
+        </div>
 
-<div style={{ marginBottom: '1.5rem' }}>
-  <h3 style={{ ...styles.headerText, fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-    Order Type Filter:
-  </h3>
-  <div>
-    <TabButton label="All" isActive={activeOrderTypeFilter === 'all'} onClick={() => setActiveOrderTypeFilter('all')} />
-    <TabButton label="COD" isActive={activeOrderTypeFilter === 'COD'} onClick={() => setActiveOrderTypeFilter('COD')} />
-    {/* <TabButton label="Prepaid" isActive={activeOrderTypeFilter === 'Prepaid'} onClick={() => setActiveOrderTypeFilter('Prepaid')} /> */}
-    <TabButton label="Advance" isActive={activeOrderTypeFilter === 'Advance'} onClick={() => setActiveOrderTypeFilter('Advance')} />
-  </div>
-</div>
+        <div style={{ marginBottom: '1.5rem' }}>
+          <h3 style={{ ...styles.headerText, fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+            Order Type Filter:
+          </h3>
+          <div>
+            <TabButton label="All" isActive={activeOrderTypeFilter === 'all'} onClick={() => setActiveOrderTypeFilter('all')} />
+            <TabButton label="COD" isActive={activeOrderTypeFilter === 'COD'} onClick={() => setActiveOrderTypeFilter('COD')} />
+            <TabButton label="Advance" isActive={activeOrderTypeFilter === 'Advance'} onClick={() => setActiveOrderTypeFilter('Advance')} />
+          </div>
+        </div>
 
-<div style={{ marginBottom: '1.5rem' }}>
-  <h3 style={{ ...styles.headerText, fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-    Regular Filter:
-  </h3>
-  <div>
-    <TabButton label="All" isActive={activeRegularFilter === 'all'} onClick={() => setActiveRegularFilter('all')} />
-    <TabButton label="Regular" isActive={activeRegularFilter === 1} onClick={() => setActiveRegularFilter(1)} />
-    <TabButton label="Non-regular" isActive={activeRegularFilter ===0} onClick={() => setActiveRegularFilter(0)} />
-  </div>
-</div>
+        <div style={{ marginBottom: '1.5rem' }}>
+          <h3 style={{ ...styles.headerText, fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+            Regular Filter:
+          </h3>
+          <div>
+            <TabButton label="All" isActive={activeRegularFilter === 'all'} onClick={() => setActiveRegularFilter('all')} />
+            <TabButton label="Regular" isActive={activeRegularFilter === 1} onClick={() => setActiveRegularFilter(1)} />
+            <TabButton label="Non-regular" isActive={activeRegularFilter === 0} onClick={() => setActiveRegularFilter(0)} />
+          </div>
+        </div>
 
-    
-{renderSearchSection()}
+        {renderSearchSection()}
 
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', ...styles.tableBorder }}>
             <thead>
               <tr>
                 {['Name', 'Email', 'Phone', 'Address', 'Status', 'Order Type', 'Actions'].map(header => (
-                  <th 
+                  <th
                     key={header}
                     style={{
                       ...styles.tableHeader,
@@ -381,7 +424,7 @@ console.log(`New Status: ${newStatus}`);
                     <button
                       onClick={() => toggleRegular(user._id, user.regular)}
                       style={{
-                        ...(user.regular === 1 ? styles.actionButton.success  :styles.actionButton.danger ),
+                        ...(user.regular === 1 ? styles.actionButton.success : styles.actionButton.danger),
                         marginRight: '0.5rem',
                         padding: '0.25rem 0.75rem',
                         borderRadius: '0.25rem',
@@ -391,15 +434,12 @@ console.log(`New Status: ${newStatus}`);
                       }}
                     >
                       {user.regular === 1 ? 'Regular' : 'Non-regular'}
-
-                      {/* {user.status === 'active' ? 'Block' : user.status === 'blocked' ? 'Pending' : 'Activate'} */}
                     </button>
-               
                   </td>
                   <td style={{ padding: '0.75rem' }}>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      {['COD',  'Advance'].map((type) => (
-                        <label key={type} style={{ 
+                      {['COD', 'Advance'].map((type) => (
+                        <label key={type} style={{
                           display: 'flex',
                           alignItems: 'center',
                           cursor: 'pointer',
@@ -419,61 +459,50 @@ console.log(`New Status: ${newStatus}`);
                     </div>
                   </td>
                   <td style={{ padding: '0.75rem' }}>
-                    <button
-                      onClick={() => toggleStatus(user._id, user.status)}
-                      style={{
-                        ...(user.status === 1 ? styles.actionButton.danger : styles.actionButton.success),
-                        marginRight: '0.5rem',
-                        padding: '0.25rem 0.75rem',
-                        borderRadius: '0.25rem',
-                        border: 'none',
-                        cursor: 'pointer',
-                        transition: 'all 0.3s ease'
-                      }}
-                    >
-                      {user.status === 1 ? 'Block' : 'Activate'}
-
-                      {/* {user.status === 'active' ? 'Block' : user.status === 'blocked' ? 'Pending' : 'Activate'} */}
-                    </button>
-                    <button
-                      onClick={() => openEditModal(user)}
-                      style={{
-                        ...styles.actionButton.primary,
-                        padding: '0.25rem 0.75rem',
-                        borderRadius: '0.25rem',
-                        border: 'none',
-                        cursor: 'pointer',
-                        transition: 'all 0.3s ease',
-                        display: 'inline-flex',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <Edit size={16} style={{ marginRight: '0.25rem' }} /> Edit
-                    </button>
-                    <td style={{ padding: '0.75rem' }}>
-                    <button
-      onClick={() => handleOpenSearchModal(user._id,user.user_fullname)}
-      style={{
-        marginTop: '0.5rem',
-        padding: '0.5rem 1rem',
-        backgroundColor: '#007bff',
-        color: '#ffffff',
-        border: 'none',
-        borderRadius: '0.25rem',
-        cursor: 'pointer',
-      }}
-    >
-      Cart
-    </button>
-
-</td>
-
-
-              {/* <CartSearchModal
-        show={showSearchModal}
-        userId={selectedUserId}
-        handleClose={() => setShowSearchModal(false)}
-      /> */}
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        onClick={() => toggleStatus(user._id, user.status)}
+                        style={{
+                          ...(user.status === 1 ? styles.actionButton.danger : styles.actionButton.success),
+                          marginRight: '0.5rem',
+                          padding: '0.25rem 0.75rem',
+                          borderRadius: '0.25rem',
+                          border: 'none',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease'
+                        }}
+                      >
+                        {user.status === 1 ? 'Block' : 'Activate'}
+                      </button>
+                      <button
+                        onClick={() => openEditModal(user)}
+                        style={{
+                          ...styles.actionButton.primary,
+                          padding: '0.25rem 0.75rem',
+                          borderRadius: '0.25rem',
+                          border: 'none',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          display: 'inline-flex',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <Edit size={16} style={{ marginRight: '0.25rem' }} /> Edit
+                      </button>
+                      <button
+                        onClick={() => handleOpenSearchModal(user._id, user.user_fullname)}
+                        style={{
+                          backgroundColor: '#007bff',
+                          color: '#ffffff',
+                          padding: '0.5rem 1rem',
+                          borderRadius: '0.25rem',
+                          border: 'none',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Cart
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -485,191 +514,53 @@ console.log(`New Status: ${newStatus}`);
 
         {isEditModalOpen && (
   <div style={{
-    ...styles.modal.overlay,
     position: 'fixed',
     inset: 0,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     zIndex: 1000
   }}>
     <div style={{
-      ...styles.modal.content,
+      backgroundColor: 'white',
       padding: '1.5rem',
       borderRadius: '0.5rem',
       width: '90%',
       maxWidth: '500px'
     }}>
-      <h2 style={{ ...styles.headerText, fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+      <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
         Edit User
       </h2>
       <form onSubmit={handleEditUser}>
-        {/* User Full Name */}
         <div style={{ marginBottom: '1rem' }}>
-          <label
-            htmlFor="user_fullname"
-            style={{
-              display: 'block',
-              marginBottom: '0.25rem',
-              color: '#2c3e50',
-              fontWeight: '500',
-              textTransform: 'capitalize'
-            }}
-          >
-            User Full Name
-          </label>
+          <label>User Full Name</label>
           <input
-            id="user_fullname"
             type="text"
-            value={editingUser.user_fullname}
+            value={editingUser?.user_fullname || ''}
             onChange={(e) => setEditingUser({ ...editingUser, user_fullname: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '0.5rem',
-              borderRadius: '0.25rem',
-              border: '1px solid #e0e0e0',
-              fontSize: '1rem',
-              transition: 'border-color 0.3s ease',
-              outline: 'none'
-            }}
-            onFocus={(e) => e.target.style.borderColor = '#1976d2'}
-            onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+            style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
           />
         </div>
-
-        {/* Email ID */}
         <div style={{ marginBottom: '1rem' }}>
-          <label
-            htmlFor="email_id"
-            style={{
-              display: 'block',
-              marginBottom: '0.25rem',
-              color: '#2c3e50',
-              fontWeight: '500',
-              textTransform: 'capitalize'
-            }}
-          >
-            Email ID
-          </label>
+          <label>Mobile Number</label>
           <input
-            id="email_id"
-            type="email"
-            value={editingUser.email_id}
-            onChange={(e) => setEditingUser({ ...editingUser, email_id: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '0.5rem',
-              borderRadius: '0.25rem',
-              border: '1px solid #e0e0e0',
-              fontSize: '1rem',
-              transition: 'border-color 0.3s ease',
-              outline: 'none'
-            }}
-            onFocus={(e) => e.target.style.borderColor = '#1976d2'}
-            onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
-          />
-        </div>
-
-        {/* Mobile No */}
-        <div style={{ marginBottom: '1rem' }}>
-          <label
-            htmlFor="mobile_no"
-            style={{
-              display: 'block',
-              marginBottom: '0.25rem',
-              color: '#2c3e50',
-              fontWeight: '500',
-              textTransform: 'capitalize'
-            }}
-          >
-            Mobile No
-          </label>
-          <input
-            id="mobile_no"
             type="text"
-            value={editingUser.mobile_no}
+            value={editingUser?.mobile_no || ''}
             onChange={(e) => setEditingUser({ ...editingUser, mobile_no: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '0.5rem',
-              borderRadius: '0.25rem',
-              border: '1px solid #e0e0e0',
-              fontSize: '1rem',
-              transition: 'border-color 0.3s ease',
-              outline: 'none'
-            }}
-            onFocus={(e) => e.target.style.borderColor = '#1976d2'}
-            onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+            style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
           />
         </div>
-
-        {/* Address */}
         <div style={{ marginBottom: '1rem' }}>
-          <label
-            htmlFor="address"
-            style={{
-              display: 'block',
-              marginBottom: '0.25rem',
-              color: '#2c3e50',
-              fontWeight: '500',
-              textTransform: 'capitalize'
-            }}
-          >
-            Address
-          </label>
+          <label>Address</label>
           <input
-            id="address"
             type="text"
-            value={editingUser.address}
+            value={editingUser?.address || ''}
             onChange={(e) => setEditingUser({ ...editingUser, address: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '0.5rem',
-              borderRadius: '0.25rem',
-              border: '1px solid #e0e0e0',
-              fontSize: '1rem',
-              transition: 'border-color 0.3s ease',
-              outline: 'none'
-            }}
-            onFocus={(e) => e.target.style.borderColor = '#1976d2'}
-            onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+            style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
           />
         </div>
-
-        {/* Pincode */}
-        <div style={{ marginBottom: '1rem' }}>
-          <label
-            htmlFor="pincode"
-            style={{
-              display: 'block',
-              marginBottom: '0.25rem',
-              color: '#2c3e50',
-              fontWeight: '500',
-              textTransform: 'capitalize'
-            }}
-          >
-            Pincode
-          </label>
-          <input
-            id="pincode"
-            type="text"
-            value={editingUser.pincode}
-            onChange={(e) => setEditingUser({ ...editingUser, pincode: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '0.5rem',
-              borderRadius: '0.25rem',
-              border: '1px solid #e0e0e0',
-              fontSize: '1rem',
-              transition: 'border-color 0.3s ease',
-              outline: 'none'
-            }}
-            onFocus={(e) => e.target.style.borderColor = '#1976d2'}
-            onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
-          />
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
           <button
             type="button"
             onClick={closeEditModal}
@@ -678,10 +569,7 @@ console.log(`New Status: ${newStatus}`);
               borderRadius: '0.25rem',
               border: 'none',
               backgroundColor: '#e0e0e0',
-              color: '#455a64',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              fontWeight: '500'
+              cursor: 'pointer'
             }}
           >
             Cancel
@@ -689,13 +577,12 @@ console.log(`New Status: ${newStatus}`);
           <button
             type="submit"
             style={{
-              ...styles.actionButton.primary,
               padding: '0.5rem 1rem',
               borderRadius: '0.25rem',
               border: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              fontWeight: '500'
+              backgroundColor: '#1976d2',
+              color: 'white',
+              cursor: 'pointer'
             }}
           >
             Save changes
@@ -705,12 +592,9 @@ console.log(`New Status: ${newStatus}`);
     </div>
   </div>
 )}
-
-
       </>
     );
   };
-  const navigate = useNavigate();
 
   return (
     <Layout title="User List">

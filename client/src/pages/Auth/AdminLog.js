@@ -36,7 +36,7 @@ const AdminLogin = () => {
       }
     } catch (error) {
       console.log(error);
-      toast.error("Login failed");
+      //toast.error("Login failed");
     }
   };
 

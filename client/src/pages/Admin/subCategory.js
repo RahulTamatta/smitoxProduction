@@ -61,7 +61,7 @@ const SubcategoryList = () => {
       }
     } catch (error) {
       console.error(error);
-      toast.error("Failed to fetch categories.");
+      //toast.error("Failed to fetch categories.");
     }
   };
 
@@ -76,7 +76,7 @@ const SubcategoryList = () => {
       }
     } catch (error) {
       console.error(error);
-      toast.error("Failed to fetch subcategories.");
+      //toast.error("Failed to fetch subcategories.");
     } finally {
       setLoading(false);
     }
@@ -114,7 +114,7 @@ const SubcategoryList = () => {
     } catch (error) {
       console.error(error);
       toast.dismiss();
-      toast.error("Failed to create subcategory.");
+      //toast.error("Failed to create subcategory.");
     }
   };
 
@@ -151,7 +151,7 @@ const SubcategoryList = () => {
     } catch (error) {
       console.error(error);
       toast.dismiss();
-      toast.error("Failed to update subcategory.");
+      //toast.error("Failed to update subcategory.");
     }
   };
 
@@ -167,7 +167,7 @@ const SubcategoryList = () => {
       }
     } catch (error) {
       console.error(error);
-      toast.error("Failed to delete subcategory.");
+      //toast.error("Failed to delete subcategory.");
     }
   };
 
@@ -183,7 +183,7 @@ const SubcategoryList = () => {
       }
     } catch (error) {
       console.error(error);
-      toast.error("Failed to update status.");
+      //toast.error("Failed to update status.");
     }
   };
 

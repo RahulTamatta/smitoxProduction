@@ -31,7 +31,7 @@ const CartSearchModal = ({ show, handleClose, userId }) => {
 
   const updateQuantity = async (product, quantity) => {
       if (!auth?.user?._id) {
-          toast.error("Please log in to update quantity");
+          //toast.error("Please log in to update quantity");
           return;
       }
 
@@ -62,7 +62,7 @@ const CartSearchModal = ({ show, handleClose, userId }) => {
           }
       } catch (error) {
           console.error("Quantity update error:", error);
-          toast.error("Failed to update quantity");
+          //toast.error("Failed to update quantity");
           throw error;
       }
   };
@@ -155,7 +155,7 @@ const CartSearchModal = ({ show, handleClose, userId }) => {
 
   const addToCart = async (product) => {
       if (!auth.user) {
-          toast.error("Please log in to add items to cart");
+          //toast.error("Please log in to add items to cart");
           return;
       }
 
@@ -193,7 +193,7 @@ const CartSearchModal = ({ show, handleClose, userId }) => {
           }
       } catch (error) {
           console.error(error);
-          toast.error("Error adding item to cart");
+          //toast.error("Error adding item to cart");
       }
   };
 

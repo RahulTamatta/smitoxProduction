@@ -80,7 +80,7 @@ const CreateCategory = () => {
     } catch (error) {
       console.log(error);
       toast.dismiss();
-      toast.error("Something went wrong in input form");
+      //toast.error("Something went wrong in input form");
     }
   };
 
@@ -93,7 +93,7 @@ const CreateCategory = () => {
       }
     } catch (error) {
       console.log(error);
-      toast.error("Something went wrong in getting category");
+      //toast.error("Something went wrong in getting category");
     }
   };
 
@@ -135,7 +135,7 @@ const CreateCategory = () => {
     } catch (error) {
       console.log(error);
       toast.dismiss();
-      toast.error("Something went wrong while updating");
+      //toast.error("Something went wrong while updating");
     }
   };
 
@@ -152,7 +152,7 @@ const CreateCategory = () => {
         toast.error(data.message);
       }
     } catch (error) {
-      toast.error("Something went wrong");
+      //toast.error("Something went wrong");
     }
   };
 

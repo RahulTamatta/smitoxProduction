@@ -171,7 +171,7 @@ export const createProductController = async (req, res) => {
     });
   }
 };
-//get all products
+// getProductController
 export const getProductController = async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
@@ -179,20 +179,19 @@ export const getProductController = async (req, res) => {
     const search = req.query.search?.trim() || "";
     const skip = (page - 1) * limit;
 
-    // Create search query object
-    const searchQuery = search 
-      ? { name: { $regex: search, $options: "i" } }
-      : {};
+    const searchQuery = {
+      ...(search && { name: { $regex: search, $options: "i" } }),
+      stock: { $gt: 0 }, // Only products with stock > 0
+    };
 
     const products = await productModel
-      .find(searchQuery)  // Add search filter here
+      .find(searchQuery)
       .populate("category", "name")
       .populate("subcategory", "name")
       .select("name category subcategory isActive perPiecePrice slug stock photos")
       .skip(skip)
       .limit(limit);
 
-    // Count should also use the search query
     const total = await productModel.countDocuments(searchQuery);
 
     res.status(200).send({
@@ -213,27 +212,31 @@ export const getProductController = async (req, res) => {
   }
 };
 
-
-
-
+// productListController
 export const productListController = async (req, res) => {
   try {
     const perPage = 10;
     const page = req.params.page ? req.params.page : 1;
 
-    // Fetch only the required fields for the product card
     const products = await productModel
-      .find({ isActive: "1" }, "name photo photos _id perPiecePrice mrp stock slug")
+      .find(
+        {
+          isActive: "1",
+          stock: { $gt: 0 }, // Only products with stock > 0
+        },
+        "name photo photos _id perPiecePrice mrp stock slug"
+      )
       .skip((page - 1) * perPage)
       .limit(perPage)
       .sort({ createdAt: -1 });
 
-    // Format response to include Base64-encoded photos
-    const productsWithPhotos = products.map(product => {
+    const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject();
       if (productObj.photo && productObj.photo.data) {
-        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString('base64')}`;
-        delete productObj.photo; // Remove the buffer data
+        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString(
+          "base64"
+        )}`;
+        delete productObj.photo;
       }
       return productObj;
     });
@@ -252,7 +255,7 @@ export const productListController = async (req, res) => {
   }
 };
 
-// Modified search controller with direct photo data
+// searchProductController
 export const searchProductController = async (req, res) => {
   try {
     const { keyword } = req.params;
@@ -260,28 +263,36 @@ export const searchProductController = async (req, res) => {
 
     const results = await productModel
       .find({
-        $or: [
-          { name: { $regex: keyword, $options: "i" } },
-          { description: { $regex: keyword, $options: "i" } },
-          { tag: { $regex: keyword, $options: "i" } },
-          { sku: { $regex: `^${keyword}`, $options: "i" } },
-          { slug: { $regex: keyword, $options: "i" } },
-          ...(isObjectId ? [
-            { category: keyword },
-            { subcategory: keyword },
-            { brand: keyword },
-          ] : []),
+        $and: [
+          {
+            $or: [
+              { name: { $regex: keyword, $options: "i" } },
+              { description: { $regex: keyword, $options: "i" } },
+              { tag: { $regex: keyword, $options: "i" } },
+              { sku: { $regex: `^${keyword}`, $options: "i" } },
+              { slug: { $regex: keyword, $options: "i" } },
+              ...(isObjectId
+                ? [
+                    { category: keyword },
+                    { subcategory: keyword },
+                    { brand: keyword },
+                  ]
+                : []),
+            ],
+          },
+          { stock: { $gt: 0 } }, // Only products with stock > 0
         ],
       })
       .populate("category", "name")
       .populate("subcategory", "name")
       .populate("brand", "name");
 
-    // Convert photos to base64
-    const resultsWithPhotos = results.map(product => {
+    const resultsWithPhotos = results.map((product) => {
       const productObj = product.toObject();
       if (productObj.photo && productObj.photo.data) {
-        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString('base64')}`;
+        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString(
+          "base64"
+        )}`;
         delete productObj.photo;
       }
       return productObj;
@@ -298,23 +309,26 @@ export const searchProductController = async (req, res) => {
   }
 };
 
-// Modified related products controller with direct photo data
+// realtedProductController
 export const realtedProductController = async (req, res) => {
   try {
     const { pid, cid } = req.params;
+
     const products = await productModel
       .find({
         category: cid,
         _id: { $ne: pid },
+        stock: { $gt: 0 }, // Only products with stock > 0
       })
       .limit(3)
       .populate("category");
 
-    // Convert photos to base64
-    const productsWithPhotos = products.map(product => {
+    const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject();
       if (productObj.photo && productObj.photo.data) {
-        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString('base64')}`;
+        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString(
+          "base64"
+        )}`;
         delete productObj.photo;
       }
       return productObj;
@@ -328,11 +342,146 @@ export const realtedProductController = async (req, res) => {
     console.log(error);
     res.status(400).send({
       success: false,
-      message: "error while getting related product",
+      message: "Error while getting related product",
       error,
     });
   }
 };
+
+// productCategoryController
+export const productCategoryController = async (req, res) => {
+  try {
+    const category = await categoryModel.findOne({ slug: req.params.slug });
+    if (!category) {
+      return res.status(404).send({
+        success: false,
+        message: "Category not found",
+      });
+    }
+
+    const products = await productModel
+      .find({
+        category: category._id,
+        stock: { $gt: 0 }, // Only products with stock > 0
+      })
+      .populate("category")
+      .sort({ createdAt: -1 });
+
+    const productsWithPhotos = products.map((product) => {
+      const productObj = product.toObject();
+      if (productObj.photo && productObj.photo.data) {
+        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString(
+          "base64"
+        )}`;
+        delete productObj.photo;
+      }
+      return productObj;
+    });
+
+    res.status(200).send({
+      success: true,
+      category,
+      products: productsWithPhotos,
+      count: products.length,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      error: error.message,
+      message: "Error while getting products",
+    });
+  }
+};
+
+// productSubcategoryController
+export const productSubcategoryController = async (req, res) => {
+  try {
+    const { subcategoryId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(subcategoryId)) {
+      return res.status(400).send({
+        success: false,
+        message: "Invalid subcategory ID",
+      });
+    }
+
+    const subcategory = await subcategoryModel.findById(subcategoryId);
+
+    if (!subcategory) {
+      return res.status(404).send({
+        success: false,
+        message: "Subcategory not found",
+      });
+    }
+
+    const products = await productModel.find({
+      subcategory: subcategoryId,
+      stock: { $gt: 0 }, // Only products with stock > 0
+    });
+
+    res.status(200).send({
+      success: true,
+      message: "Products fetched successfully",
+      subcategory,
+      products,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      error: error.message,
+      message: "Error while getting products",
+    });
+  }
+};
+
+// productFiltersController
+export const productFiltersController = async (req, res) => {
+  try {
+    const { checked, radio } = req.body;
+    let args = {
+      ...(checked.length > 0 && { category: checked }),
+      ...(radio.length && { price: { $gte: radio[0], $lte: radio[1] } }),
+      stock: { $gt: 0 }, // Only products with stock > 0
+    };
+
+    const products = await productModel.find(args);
+    res.status(200).send({
+      success: true,
+      products,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(400).send({
+      success: false,
+      message: "Error while filtering products",
+      error,
+    });
+  }
+};
+
+// productCountController
+export const productCountController = async (req, res) => {
+  try {
+    const total = await productModel.countDocuments({ stock: { $gt: 0 } }); // Only products with stock > 0
+    res.status(200).send({
+      success: true,
+      total,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(400).send({
+      message: "Error in product count",
+      error,
+      success: false,
+    });
+  }
+};
+
+
+
+
 
 // Modified single product controller with direct photo data
 export const getSingleProductController = async (req, res) => {
@@ -372,48 +521,7 @@ export const getSingleProductController = async (req, res) => {
   }
 };
 
-// Modified product category controller with direct photo data
-export const productCategoryController = async (req, res) => {
-  try {
-    const category = await categoryModel.findOne({ slug: req.params.slug });
-    if (!category) {
-      return res.status(404).send({
-        success: false,
-        message: "Category not found",
-      });
-    }
 
-    // Fetch all products without pagination
-    const products = await productModel
-      .find({ category: category._id })
-      .populate("category")
-      .sort({ createdAt: -1 });
-
-    // Convert photos to base64
-    const productsWithPhotos = products.map(product => {
-      const productObj = product.toObject();
-      if (productObj.photo && productObj.photo.data) {
-        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString('base64')}`;
-        delete productObj.photo;
-      }
-      return productObj;
-    });
-
-    res.status(200).send({
-      success: true,
-      category,
-      products: productsWithPhotos,
-      count: products.length // Total number of products
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).send({
-      success: false,
-      error: error.message,
-      message: "Error while getting products",
-    });
-  }
-};
 // get photo
 export const productPhotoController = async (req, res) => {
   try {
@@ -656,87 +764,8 @@ export const updateProductController = async (req, res) => {
     });
   }
 };
-// filters
-export const productFiltersController = async (req, res) => {
-  try {
-    const { checked, radio } = req.body;
-    let args = {};
-    if (checked.length > 0) args.category = checked;
-    if (radio.length) args.price = { $gte: radio[0], $lte: radio[1] };
-    const products = await productModel.find(args);
-    res.status(200).send({
-      success: true,
-      products,
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(400).send({
-      success: false,
-      message: "Error WHile Filtering Products",
-      error,
-    });
-  }
-};
-
-// product count
-export const productCountController = async (req, res) => {
-  try {
-    const total = await productModel.find({}).estimatedDocumentCount();
-    res.status(200).send({
-      success: true,
-      total,
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(400).send({
-      message: "Error in product count",
-      error,
-      success: false,
-    });
-  }
-};
 
 
-
-
-export const productSubcategoryController = async (req, res) => {
-  try {
-    const { subcategoryId } = req.params;
-
-    // Validate that subcategoryId is a valid ObjectId
-    if (!mongoose.Types.ObjectId.isValid(subcategoryId)) {
-      return res.status(400).send({
-        success: false,
-        message: "Invalid subcategory ID",
-      });
-    }
-
-    const subcategory = await subcategoryModel.findById(subcategoryId);
-
-    if (!subcategory) {
-      return res.status(404).send({
-        success: false,
-        message: "Subcategory not found",
-      });
-    }
-
-    const products = await productModel.find({ subcategory: subcategoryId });
-
-    res.status(200).send({
-      success: true,
-      message: "Products fetched successfully",
-      subcategory,
-      products,
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).send({
-      success: false,
-      error: error.message,
-      message: "Error while getting products",
-    });
-  }
-};
 
 
 // Initialize Razorpay
@@ -957,3 +986,8 @@ export const getProductPhoto = async (req, res) => {
     });
   }
 };
+
+
+
+
+

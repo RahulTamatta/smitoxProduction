@@ -5,7 +5,7 @@ import { comparePassword, hashPassword } from "./../helpers/authHelper.js";
 import JWT from "jsonwebtoken";
 import axios from "axios";
 import Pincode from '../models/pincodeModel.js';
-
+import mongoose from 'mongoose';
 // send OTP
 export const sendOTPController = async (req, res) => {
   try {
@@ -391,34 +391,70 @@ export const getOrdersController = async (req, res) => {
     });
   }
 };
+
 export const getAllOrdersController = async (req, res) => {
   try {
-    const { status } = req.query;
-    let query = {};
+    const { status, page = 1, limit = 10, search = "" } = req.query;
+    const pageNumber = Math.max(1, parseInt(page, 10)) || 1;
+    const limitNumber = Math.max(1, parseInt(limit, 10)) || 10;
+    const skip = (pageNumber - 1) * limitNumber;
 
+    let query = {};
     if (status && status !== 'all-orders') {
       query.status = status;
     }
 
+    const userSearchQuery = search
+      ? {
+          $or: [
+            { user_fullname: { $regex: search, $options: "i" } },
+            ...(isNaN(search) ? [] : [{ mobile_no: Number(search) }]),
+          ],
+        }
+      : {};
+
+    let matchingUserIds = [];
+    if (search) {
+      const matchingUsers = await mongoose.model('User').find(userSearchQuery).select('_id');
+      matchingUserIds = matchingUsers.map(user => user._id);
+
+      query.$or = [
+        ...(mongoose.Types.ObjectId.isValid(search) ? [{ _id: new mongoose.Types.ObjectId(search) }] : []),
+        ...(matchingUserIds.length > 0 ? [{ buyer: { $in: matchingUserIds } }] : []),
+        { "tracking.id": { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const total = await orderModel.countDocuments(query);
+
     const orders = await orderModel
-    .find(query)
-    .populate({
-      path: "products.product",
-      select: "name photos gst price " // Ensure name is selected
-    })
-    .populate("buyer", "user_fullname email_id mobile_no address pincode gst amount")
-    .sort({ createdAt: "-1" });
-    res.json(orders);
+      .find(query)
+      .populate({
+        path: "buyer",
+        select: "user_fullname email_id mobile_no address pincode gst amount",
+      })
+      .populate({
+        path: "products.product",
+        select: "name photos gst price",
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNumber);
+
+    res.json({
+      success: true,
+      total,
+      orders,
+    });
   } catch (error) {
-    console.log(error);
-    res.status(500).send({
+    console.error("Error in getAllOrdersController:", error);
+    res.status(500).json({
       success: false,
-      message: "Error While Getting Orders",
-      error,
+      message: "Error while fetching orders",
+      error: error.message,
     });
   }
 };
-
 export const addProductToOrderController = async (req, res) => {
   try {
     const { orderId } = req.params;

@@ -82,7 +82,7 @@ const CartPage = () => {
       setCart(data.cart || []);
     } catch (error) {
       console.log(error);
-      toast.error("Error fetching cart");
+      //toast.error("Error fetching cart");
       setCart([]);
     }
   };
@@ -97,7 +97,7 @@ const CartPage = () => {
       }
     } catch (error) {
       console.error('Error fetching minimum order:', error);
-      toast.error("Error fetching minimum order amount");
+      //toast.error("Error fetching minimum order amount");
     }
   };
 
@@ -119,7 +119,7 @@ const CartPage = () => {
       toast.success("Item removed from cart");
     } catch (error) {
       console.log(error);
-      toast.error("Error removing item from cart");
+      //toast.error("Error removing item from cart");
     }
   };
 
@@ -133,11 +133,11 @@ const CartPage = () => {
         setCart([]);
         toast.success("Cart cleared successfully");
       } else {
-        toast.error("Failed to clear cart");
+        //toast.error("Failed to clear cart");
       }
     } catch (error) {
       console.log(error);
-      toast.error("Error clearing cart");
+      //toast.error("Error clearing cart");
     }
   };
   useEffect(() => {
@@ -192,7 +192,7 @@ const CartPage = () => {
       toast.success("Quantity updated successfully");
     } catch (error) {
       console.error("Quantity update error:", error);
-      toast.error("Failed to update quantity");
+      //toast.error("Failed to update quantity");
     }
   };
 
@@ -228,20 +228,20 @@ const CartPage = () => {
           toast.success("Delivery available for your pincode");
         } else {
           setIsPincodeAvailable(false);
-          toast.error("Delivery not available for your pincode");
+          //toast.error("Delivery not available for your pincode");
         }
       }
     } catch (error) {
       console.log(error);
       setIsPincodeAvailable(false);
-      toast.error("Error checking pincode");
+      //toast.error("Error checking pincode");
     }
   };
   const handlePayment = async () => {
     const total = totalPrice();
   
     if (!isPincodeAvailable) {
-      toast.error("Service is not available in your area or pincode.");
+      //toast.error("Service is not available in your area or pincode.");
       return;
     }
   
@@ -251,7 +251,7 @@ const CartPage = () => {
     }
   
     if (!auth?.user?._id) {
-      toast.error("Please login to proceed with payment");
+      //toast.error("Please login to proceed with payment");
       return;
     }
   
@@ -366,7 +366,7 @@ const CartPage = () => {
         rzp.open();
   
         rzp.on('payment.failed', function (response) {
-          toast.error("Payment failed. Please try again.");
+          //toast.error("Payment failed. Please try again.");
           setLoading(false);
           setOrderPlacementInProgress(false);
         });
@@ -531,12 +531,14 @@ const CartPage = () => {
               })}
             </p>
             {totalPrice() < minimumOrder && (
-              <p className="text-danger">
-                Order total is below the minimum order amount.
-                Courier charge will be added  (depends on weight n cod amount)
-                10 % you have to pay advance now for confirming the order
-
-              </p>
+          <p className="text-danger">
+          <ul>
+            <li>Order total is below the minimum order amount.</li>
+            <li>Courier charge will be added (depends on weight and COD amount).</li>
+            <li>10% advance payment is required to confirm the order.</li>
+          </ul>
+        </p>
+        
               
               
               

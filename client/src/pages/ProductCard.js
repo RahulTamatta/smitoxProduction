@@ -39,7 +39,7 @@ const ProductCard = ({ product }) => {
     e.stopPropagation();
 
     if (!auth.user) {
-      toast.error("Please log in to manage your wishlist");
+      //toast.error("Please log in to manage your wishlist");
       return;
     }
 
@@ -59,7 +59,7 @@ const ProductCard = ({ product }) => {
       }
     } catch (error) {
       console.error("Error toggling wishlist:", error);
-      toast.error("Error updating wishlist");
+      //toast.error("Error updating wishlist");
     }
   };
 
@@ -100,7 +100,7 @@ const ProductCard = ({ product }) => {
   }
 
   return (
-    <div className="col-md-10 col-sm-6 col-12 mb-3">
+    <div className="col-md-10 col-sm-10 col-12 mb-3">
       <div
         className="card product-card h-100"
         style={{ cursor: "pointer", position: "relative" }}

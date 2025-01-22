@@ -66,7 +66,7 @@ const ProductDetails = () => {
       }
     } catch (error) {
       console.error("Error fetching product details:", error);
-      toast.error("Error fetching product details");
+      //toast.error("Error fetching product details");
     }
   };
 
@@ -117,7 +117,7 @@ const ProductDetails = () => {
       calculateTotalPrice(bulk, initialQuantity);
     } catch (error) {
       console.error("Error fetching cart data:", error);
-      toast.error("Failed to initialize cart quantity");
+      //toast.error("Failed to initialize cart quantity");
     }
   };
     const getProductsForYou = async () => {
@@ -128,7 +128,7 @@ const ProductDetails = () => {
         }
       } catch (error) {
         console.error(error);
-        toast.error("Failed to fetch products for you");
+        //toast.error("Failed to fetch products for you");
       }
     };
     const checkPincode = async (pincode) => {
@@ -141,16 +141,16 @@ const ProductDetails = () => {
             toast.success("Delivery available for your pincode");
           } else {
             setIsPincodeAvailable(false);
-            toast.error("Delivery not available for your pincode");
+            //toast.error("Delivery not available for your pincode");
           }
         } else {
           setIsPincodeAvailable(false);
-          toast.error("Error fetching pincodes");
+          //toast.error("Error fetching pincodes");
         }
       } catch (error) {
         console.log(error);
         setIsPincodeAvailable(false);
-        toast.error("Error checking pincode");
+        //toast.error("Error checking pincode");
       }
     };
   
@@ -184,7 +184,7 @@ const ProductDetails = () => {
     const handleQuantityChange = async (increment) => {
       // Guard clause for unauthenticated users
       if (!auth?.user?._id) {
-        toast.error("Please log in to modify quantity");
+        //toast.error("Please log in to modify quantity");
         return;
       }
   
@@ -208,13 +208,13 @@ const ProductDetails = () => {
         }
       } catch (error) {
         console.error("Error updating quantity in cart:", error);
-        toast.error("Error updating quantity");
+        //toast.error("Error updating quantity");
       }
     };
   
     const addToCart = async () => {
       if (!auth.user) {
-        toast.error("Please log in to add items to your cart");
+        //toast.error("Please log in to add items to your cart");
         return;
       }
   
@@ -238,7 +238,7 @@ const ProductDetails = () => {
         }
       } catch (error) {
         console.error("Error adding item to cart:", error);
-        toast.error("Error adding item to cart");
+        //toast.error("Error adding item to cart");
       }
     };
   
@@ -248,7 +248,7 @@ const ProductDetails = () => {
   
   const toggleWishlist = async () => {
     if (!auth.user) {
-      toast.error("Please log in to manage your wishlist");
+      //toast.error("Please log in to manage your wishlist");
       return;
     }
 
@@ -266,7 +266,7 @@ const ProductDetails = () => {
       }
     } catch (error) {
       console.error("Error toggling wishlist:", error);
-      toast.error("Error updating wishlist");
+      //toast.error("Error updating wishlist");
     }
   };
 
@@ -397,7 +397,7 @@ const ProductDetails = () => {
           <div style={imageStyle}>
             {product._id ? (
               <img
-                src={`/api/v1/product/product-photo/${product._id}`}
+                src={product.photos}
                 alt={product.name}
                 style={{ width: '100%', height: 'auto', borderRadius: '8px' }}
               />
@@ -501,31 +501,41 @@ const ProductDetails = () => {
 
 
         <div className="container mt-5">
-          <h2 className="text-center mb-4">Products For You</h2>
-          <div className="row">
-  {productsForYou
-    .slice(0, 6)
-    .filter(item => item.productId)
-    .map(item => (
-      <div key={item.productId?._id} className="col-lg-4 col-md-4 col-sm-4 col-6 mb-3"> {/* Three columns on small devices */}
-        <ProductCard product={item.productId} />
-      </div>
-    ))}
+  <h2 className="text-center mb-4">Products For You</h2>
+  <div className="row g-3"> {/* Added gutter spacing */}
+    {productsForYou
+      .slice(0, 6)
+      .filter(item => item.productId)
+      .map(item => (
+        <div 
+          key={item.productId?._id} 
+          className="col-lg-4 col-md-4 col-sm-6 col-6 mb-3" // Adjusted column sizing
+        >
+          <div className="card h-100 shadow-sm"> {/* Added card container */}
+            <div className="ratio ratio-1x1"> {/* Fixed aspect ratio for images */}
+              <img
+                src={item.productId.photos[0]}
+                className="card-img-top img-fluid p-2 object-fit-cover"
+                alt={item.productId.name}
+                style={{ maxHeight: '250px' }}
+              />
+            </div>
+            <div className="card-body">
+              <h6 className="card-title text-truncate">{item.productId.name}</h6>
+              <div className="d-flex justify-content-between align-items-center">
+                <div className="text-danger fw-bold">
+                  ${item.productId.price.toFixed(2)}
+                </div>
+                {/* <button className="btn btn-sm btn-outline-primary">
+                  <i className="bi bi-cart-plus"></i>
+                </button> */}
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+  </div>  </div>
 </div>
-
-  {productsForYou.length > 10 && (
-    <div className="text-center mt-3">
-      {/* Optional button for viewing more products */}
-      {/* <button 
-        className="btn btn-primary"
-        onClick={() => navigate('/products-for-you')}
-      >
-        View More
-      </button> */}
-    </div>
-  )}
-</div>
-      </div>
     </Layout>
   );
 }

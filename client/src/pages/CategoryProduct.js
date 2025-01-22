@@ -37,34 +37,41 @@ const CategoryProduct = () => {
       fetchProductsByCategoryOrSubcategory(selectedSubcategory);
     }
   }, [fromBanner, selectedSubcategory]);
-
+  useEffect(() => {
+    if (auth?.user?._id && products.length > 0) {
+      checkWishlistStatus(products);
+    }
+  }, [auth?.user?._id, products]);
   const checkWishlistStatus = async (products) => {
-    if (!auth?.user?._id) return;
-
+    if (!auth?.user?._id) {
+      console.error("User ID not found.");
+      return;
+    }
+  
     try {
       const statuses = {};
-      await Promise.all(
-        products.map(async (product) => {
-          try {
-            const { data } = await axios.get(
-              `/api/v1/carts/users/${auth.user._id}/wishlist/check/${product._id}`
-            );
-            statuses[product._id] = data.exists;
-          } catch (error) {
-            console.error(
-              `Error checking wishlist status for product ${product._id}:`,
-              error
-            );
-            statuses[product._id] = false;
-          }
-        })
-      );
+      const requests = products.map(async (product) => {
+        try {
+          const { data } = await axios.get(
+            `/api/v1/carts/users/${auth.user._id}/wishlist/check/${product._id}`
+          );
+          statuses[product._id] = data.exists; // Ensure `data.exists` matches API response structure
+        } catch (error) {
+          console.error(
+            `Error checking wishlist status for product ${product._id}:`,
+            error.response?.data || error.message
+          );
+          statuses[product._id] = false; // Default to `false` if the API call fails
+        }
+      });
+  
+      await Promise.all(requests);
       setWishlistStatus(statuses);
     } catch (error) {
-      console.error("Error checking wishlist statuses:", error);
+      console.error("Error checking wishlist statuses:", error.response?.data || error.message);
     }
   };
-
+  
   const getCategoryAndSubcategories = async () => {
     try {
       const { data } = await axios.get(
@@ -168,187 +175,160 @@ const CategoryProduct = () => {
     }
   };
 
-  
-
   return (
     <Layout>
-    <div className="container mt-3 category" style={{ 
-  paddingTop: "110px",
-  maxWidth: "100%", // Add this
-  paddingLeft: 0,    // Add these
-  paddingRight: 0    //
-}}>
-        <h4 className="text-center mb-4" >
-          {category?.name}
-        </h4>
-  
-        <div className="row">
-          {/* Subcategories Column - Fixed Vertical */}
+      <div className="container-fluid px-0">
+        <div className="row mx-0">
+          <div className="col-12 px-3 mb-4 mt-4">
+            <h4 className="text-center">{category?.name}</h4>
+          </div>
+          
           {!fromBanner && subcategories.length > 0 && (
-          <div className="col-12 col-md-2 col-mb-4">
-            <div className="sticky-top" style={{ 
-              top: "10px",
-              maxHeight: "calc(100vh - 200px)", // Set maximum height
-              zIndex: 1
-            }}>
-              <div 
-                className="d-flex flex-row flex-md-column" 
-                style={{ 
-                  gap: "1.5rem",
+            <div className="col-12 col-md-2">
+              <div className="sticky-top" style={{ top: "80px" }}>
+                <div className="d-flex flex-row flex-md-column gap-4 px-2" style={{
                   overflowX: "auto",
                   overflowY: "auto",
-                  padding: "0.5rem",
-                  msOverflowStyle: "none", // Hide scrollbar for IE and Edge
-                  scrollbarWidth: "none", // Hide scrollbar for Firefox
-                  WebkitOverflowScrolling: "touch", // Smooth scrolling for iOS
-                }}
-              >
-                {/* Style for hiding scrollbar in WebKit browsers */}
-                <style>
-                  {`
-                    .d-flex::-webkit-scrollbar {
-                      display: none;
-                    }
-                    @media (min-width: 768px) {
-                      .d-flex {
-                        max-height: calc(100vh - 220px);
+                  maxHeight: "calc(100vh - 200px)",
+                  msOverflowStyle: "none",
+                  scrollbarWidth: "none",
+                  WebkitOverflowScrolling: "touch"
+                }}>
+                  <style>
+                    {`
+                      .d-flex::-webkit-scrollbar {
+                        display: none;
                       }
-                    }
-                  `}
-                </style>
+                    `}
+                  </style>
 
-                <div
-                  className={`flex-shrink-0 ${!selectedSubcategory ? "active-subcategory" : ""}`}
-                  onClick={() => {
-                    setSelectedSubcategory(null);
-                    fetchProductsByCategoryOrSubcategory(null);
-                  }}
-                  style={{ cursor: "pointer", minWidth: "80px" }}
-                >
-                  <div className="d-flex flex-column align-items-center">
-                    <div
-                      className="subcategory-circle mb-2"
-                      style={{
+                  <div
+                    className={`flex-shrink-0 ${!selectedSubcategory ? "active-subcategory" : ""}`}
+                    onClick={() => {
+                      setSelectedSubcategory(null);
+                      fetchProductsByCategoryOrSubcategory(null);
+                    }}
+                    style={{ cursor: "pointer", minWidth: "80px" }}
+                  >
+                    <div className="d-flex flex-column align-items-center">
+                      <div className="subcategory-circle mb-2" style={{
                         width: "64px",
                         height: "64px",
                         borderRadius: "50%",
                         overflow: "hidden",
-                        border: !selectedSubcategory ? "2px solid #e47911" : "2px solid #ddd",
-                      }}
-                    >
-                      <img
-                        src="https://via.placeholder.com/64"
-                        alt="All"
-                        className="w-100 h-100 object-fit-cover"
-                      />
+                        border: !selectedSubcategory ? "2px solid #e47911" : "2px solid #ddd"
+                      }}>
+                        <img
+                          src="https://via.placeholder.com/64"
+                          alt="All"
+                          className="w-100 h-100 object-fit-cover"
+                        />
+                      </div>
+                      <span className="text-center small text-muted">All</span>
                     </div>
-                    <span className="text-center small text-muted">All</span>
                   </div>
-                </div>
 
-                {subcategories.map((s) => (
-                  <div
-                    key={s._id}
-                    className={`flex-shrink-0 ${selectedSubcategory === s._id ? "active-subcategory" : ""}`}
-                    onClick={() => filterBySubcategory(s._id)}
-                    style={{ cursor: "pointer", minWidth: "80px" }}
-                  >
-                    <div className="d-flex flex-column align-items-center">
-                      <div
-                        className="subcategory-circle mb-2"
-                        style={{
+                  {subcategories.map((s) => (
+                    <div
+                      key={s._id}
+                      className={`flex-shrink-0 ${selectedSubcategory === s._id ? "active-subcategory" : ""}`}
+                      onClick={() => filterBySubcategory(s._id)}
+                      style={{ cursor: "pointer", minWidth: "80px" }}
+                    >
+                      <div className="d-flex flex-column align-items-center">
+                        <div className="subcategory-circle mb-2" style={{
                           width: "64px",
                           height: "64px",
                           borderRadius: "50%",
                           overflow: "hidden",
-                          border: selectedSubcategory === s._id ? "2px solid #e47911" : "2px solid #ddd",
-                        }}
-                      >
-                        <img
-                          src={s.photos}
-                          alt={s.name}
-                          className="w-100 h-100 object-fit-cover"
-                          onError={(e) => {
-                            e.target.src = "https://via.placeholder.com/64";
-                          }}
-                        />
+                          border: selectedSubcategory === s._id ? "2px solid #e47911" : "2px solid #ddd"
+                        }}>
+                          <img
+                            src={s.photos}
+                            alt={s.name}
+                            className="w-100 h-100 object-fit-cover"
+                            onError={(e) => {
+                              e.target.src = "https://via.placeholder.com/64";
+                            }}
+                          />
+                        </div>
+                        <span className="text-center small text-muted">{s.name}</span>
                       </div>
-                      <span className="text-center small text-muted">{s.name}</span>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-  
-          {/* Products Column - Scrollable */}
-          <div className={`col-8 ${!fromBanner && subcategories.length > 0 ? 'col-md-10' : ''}`}
-  style={{
-    height: "calc(100vh - 180px)",
-    overflowY: "auto",
-    padding: 0 // Changed from "0 15px"
-  }}
->
-            {loading ? (
-              <div className="col-12 text-center my-5">
-                <div className="spinner-border text-primary" role="status">
-                  <span className="visually-hidden">Loading...</span>
+                  ))}
                 </div>
               </div>
-            ) : products?.length > 0 ? (
-              <div className="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2 mx-1"> 
-                {products.map((p) => (
-                  <div className="col" key={p._id}>
-                    <div
-                      className="card h-100 product-card shadow-sm"
-                      style={{ cursor: "pointer", position: "relative" }}
-                      onClick={() => navigate(`/product/${p.slug}`)}
-                    >
-                  <div className="card-img-top" style={{ 
-  height: "200px",
-  overflow: "hidden",
-  padding: "10px" // Added padding instead of margin
-}}>
-                        <img
-                          src={p.photos }
-                          className="w-100 h-100 object-fit-contain p-3"
-                          alt={p.name}
-                        
-                        />
-                      </div>
-                      <div className="card-body flex-column">
-                      <h6 className="card-title mb-2" style={{ 
-  fontSize: "0.9rem",
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis"
-}}>
-                          {p.name.length > 10 ? `${p.name.substring(0, 15)}...` : p.name}
-                          <button
-                        onClick={(e) => toggleWishlist(e, p._id)}
-                        className="btn btn-link p-0"
-                        style={{
-                          position: "absolute",
-                          // top: "10px",
-                          right: "20px",
-                          zIndex: 2,
-                        }
-                      }
-                      >
-                        <Heart
-                          size={24}
-                          fill={wishlistStatus[p._id] ? "#e47911" : "transparent"}
-                          color={wishlistStatus[p._id] ? "#e47911" : "#6c757d"}
-                          strokeWidth={1.5}
-                        />
-                      </button>
-                        </h6>
-                        
-                        <div className="mt-auto">
-                          <div className="align-items-center gap-2">
-                            <span className="text-primary fw-bold" style={{ fontSize: "1.1rem" }}>
+            </div>
+          )}
+
+          <div className={`col ${!fromBanner && subcategories.length > 0 ? "col-md-10" : "col-12"} px-3`}>
+            <div style={{ minHeight: "calc(100vh - 200px)" }}>
+              {loading ? (
+                <div className="text-center my-5">
+                  <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                  </div>
+                </div>
+              ) : products?.length > 0 ? (
+                <div className="row g-3">
+                  {products.map((p) => (
+                    <div className="col-6 col-md-4 col-lg-3" key={p._id}>
+                      <div className="card h-100 product-card shadow-sm border-0" style={{
+                        cursor: "pointer",
+                        position: "relative",
+                        transition: "transform 0.2s"
+                      }}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleWishlist(e, p._id);
+                          }}
+                          className="btn btn-link p-0 bg-white rounded-circle shadow-sm"
+                          style={{
+                            position: "absolute",
+                            top: "8px",
+                            right: "8px",
+                            zIndex: 2,
+                            width: "32px",
+                            height: "32px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Heart
+                            size={18}
+                            fill={wishlistStatus[p._id] ? "#dc3545" : "transparent"}
+                            color={wishlistStatus[p._id] ? "#dc3545" : "#6c757d"}
+                          />
+                        </button>
+
+                        <div className="ratio ratio-1x1">
+                          <img
+                            src={p.photos}
+                            className="card-img-top p-2"
+                            alt={p.name}
+                            style={{
+                              objectFit: "contain",
+                              objectPosition: "center"
+                            }}
+                          />
+                        </div>
+
+                        <div className="card-body p-2">
+                          <h6 className="card-title mb-2" style={{
+                            fontSize: "0.9rem",
+                            lineHeight: "1.2",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden"
+                          }}>
+                            {p.name}
+                          </h6>
+
+                          <div className="d-flex flex-column">
+                            <span className="text-primary fw-bold">
                               {p.perPiecePrice?.toLocaleString("en-IN", {
                                 style: "currency",
                                 currency: "INR",
@@ -356,7 +336,7 @@ const CategoryProduct = () => {
                               })}
                             </span>
                             {p.mrp && (
-                              <span className="text-muted text-decoration-line-through" style={{ fontSize: "0.9rem" }}>
+                              <span className="text-muted text-decoration-line-through" style={{ fontSize: "0.8rem" }}>
                                 {p.mrp.toLocaleString("en-IN", {
                                   style: "currency",
                                   currency: "INR",
@@ -368,14 +348,14 @@ const CategoryProduct = () => {
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="col-12 text-center my-5">
-                <h5 className="text-muted">No products found in this category</h5>
-              </div>
-            )}
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center my-5">
+                  <h5 className="text-muted">No products found in this category</h5>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -384,5 +364,3 @@ const CategoryProduct = () => {
 };
 
 export default CategoryProduct;
-
-

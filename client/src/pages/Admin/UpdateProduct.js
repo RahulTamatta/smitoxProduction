@@ -212,7 +212,7 @@ const handleUpdate = async (e) => {
     }
   } catch (error) {
     console.log(error);
-    toast.error("Error fetching product data");
+    //toast.error("Error fetching product data");
   }
 };
 
@@ -226,7 +226,7 @@ const handleUpdate = async (e) => {
       }
     } catch (error) {
       console.log(error);
-      toast.error("Something went wrong in getting categories");
+      //toast.error("Something went wrong in getting categories");
     }
   };
 
@@ -239,7 +239,7 @@ const handleUpdate = async (e) => {
       }
     } catch (error) {
       console.log(error);
-      toast.error("Something went wrong in getting brands");
+      //toast.error("Something went wrong in getting brands");
     }
   };
 
@@ -252,7 +252,7 @@ const handleUpdate = async (e) => {
       }
     } catch (error) {
       console.log(error);
-      toast.error("Something went wrong in getting subcategories");
+      //toast.error("Something went wrong in getting subcategories");
     }
   };
 
@@ -379,7 +379,7 @@ const handleUpdate = async (e) => {
       navigate("/dashboard/admin/products");
     } catch (error) {
       console.log(error);
-      toast.error("Something went wrong");
+      //toast.error("Something went wrong");
     }
   };
 
