@@ -512,7 +512,9 @@ const CartPage = () => {
           {/* Cart Summary */}
           <div className="col-md-4">
             <h2>Cart Summary</h2>
+            
             <hr />
+            
             <p>
               Total:{" "}
               {totalPrice().toLocaleString("en-US", {
@@ -520,6 +522,7 @@ const CartPage = () => {
                 currency: minimumOrderCurrency || "INR",
               })}
             </p>
+
             <p>
               Minimum Order:{" "}
               {minimumOrder.toLocaleString("en-US", {
@@ -530,7 +533,13 @@ const CartPage = () => {
             {totalPrice() < minimumOrder && (
               <p className="text-danger">
                 Order total is below the minimum order amount.
+                Courier charge will be added  (depends on weight n cod amount)
+                10 % you have to pay advance now for confirming the order
+
               </p>
+              
+              
+              
             )}
             <div className="mb-3">
               <label className="form-label">Payment Method</label>
