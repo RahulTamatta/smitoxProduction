@@ -182,32 +182,56 @@ const CategoryProduct = () => {
           <div className="col-12 px-3 mb-4 mt-4">
             <h4 className="text-center">{category?.name}</h4>
           </div>
-          
+  
           {!fromBanner && subcategories.length > 0 && (
-            <div className="col-12 col-md-2">
-              <div className="sticky-top" style={{ top: "80px" }}>
-                <div className="d-flex flex-row flex-md-column gap-4 px-2" style={{
-                  overflowX: "auto",
-                  overflowY: "auto",
-                  maxHeight: "calc(100vh - 200px)",
-                  msOverflowStyle: "none",
-                  scrollbarWidth: "none",
-                  WebkitOverflowScrolling: "touch"
-                }}>
-                  <style>
-                    {`
-                      .d-flex::-webkit-scrollbar {
-                        display: none;
-                      }
-                    `}
-                  </style>
-
+            <div className="col-12 col-md-2" style={{ position: "sticky", top: "80px", height: "fit-content" }}>
+              <div className="d-flex flex-row flex-md-column gap-4 px-2" style={{
+                overflowX: "auto",
+                overflowY: "auto",
+                maxHeight: "calc(100vh - 200px)",
+                msOverflowStyle: "none",
+                scrollbarWidth: "none",
+                WebkitOverflowScrolling: "touch"
+              }}>
+                <style>
+                  {`
+                    .d-flex::-webkit-scrollbar {
+                      display: none;
+                    }
+                  `}
+                </style>
+  
+                <div
+                  className={`flex-shrink-0 ${!selectedSubcategory ? "active-subcategory" : ""}`}
+                  onClick={() => {
+                    setSelectedSubcategory(null);
+                    fetchProductsByCategoryOrSubcategory(null);
+                  }}
+                  style={{ cursor: "pointer", minWidth: "80px" }}
+                >
+                  <div className="d-flex flex-column align-items-center">
+                    <div className="subcategory-circle mb-2" style={{
+                      width: "64px",
+                      height: "64px",
+                      borderRadius: "50%",
+                      overflow: "hidden",
+                      border: !selectedSubcategory ? "2px solid #e47911" : "2px solid #ddd"
+                    }}>
+                      <img
+                        src="https://via.placeholder.com/64"
+                        alt="All"
+                        className="w-100 h-100 object-fit-cover"
+                      />
+                    </div>
+                    <span className="text-center small text-muted">All</span>
+                  </div>
+                </div>
+  
+                {subcategories.map((s) => (
                   <div
-                    className={`flex-shrink-0 ${!selectedSubcategory ? "active-subcategory" : ""}`}
-                    onClick={() => {
-                      setSelectedSubcategory(null);
-                      fetchProductsByCategoryOrSubcategory(null);
-                    }}
+                    key={s._id}
+                    className={`flex-shrink-0 ${selectedSubcategory === s._id ? "active-subcategory" : ""}`}
+                    onClick={() => filterBySubcategory(s._id)}
                     style={{ cursor: "pointer", minWidth: "80px" }}
                   >
                     <div className="d-flex flex-column align-items-center">
@@ -216,52 +240,32 @@ const CategoryProduct = () => {
                         height: "64px",
                         borderRadius: "50%",
                         overflow: "hidden",
-                        border: !selectedSubcategory ? "2px solid #e47911" : "2px solid #ddd"
+                        border: selectedSubcategory === s._id ? "2px solid #e47911" : "2px solid #ddd"
                       }}>
                         <img
-                          src="https://via.placeholder.com/64"
-                          alt="All"
+                          src={s.photos}
+                          alt={s.name}
                           className="w-100 h-100 object-fit-cover"
+                          onError={(e) => {
+                            e.target.src = "https://via.placeholder.com/64";
+                          }}
                         />
                       </div>
-                      <span className="text-center small text-muted">All</span>
+                      <span className="text-center small text-muted">{s.name}</span>
                     </div>
                   </div>
-
-                  {subcategories.map((s) => (
-                    <div
-                      key={s._id}
-                      className={`flex-shrink-0 ${selectedSubcategory === s._id ? "active-subcategory" : ""}`}
-                      onClick={() => filterBySubcategory(s._id)}
-                      style={{ cursor: "pointer", minWidth: "80px" }}
-                    >
-                      <div className="d-flex flex-column align-items-center">
-                        <div className="subcategory-circle mb-2" style={{
-                          width: "64px",
-                          height: "64px",
-                          borderRadius: "50%",
-                          overflow: "hidden",
-                          border: selectedSubcategory === s._id ? "2px solid #e47911" : "2px solid #ddd"
-                        }}>
-                          <img
-                            src={s.photos}
-                            alt={s.name}
-                            className="w-100 h-100 object-fit-cover"
-                            onError={(e) => {
-                              e.target.src = "https://via.placeholder.com/64";
-                            }}
-                          />
-                        </div>
-                        <span className="text-center small text-muted">{s.name}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                ))}
               </div>
             </div>
           )}
-
-          <div className={`col ${!fromBanner && subcategories.length > 0 ? "col-md-10" : "col-12"} px-3`}>
+  
+  <div 
+          className={`col ${!fromBanner && subcategories.length > 0 ? "col-md-10" : "col-12"} px-3`}
+          style={{ 
+            height: "calc(100vh - 120px)", 
+            overflowY: "auto" 
+          }}
+        >
             <div style={{ minHeight: "calc(100vh - 200px)" }}>
               {loading ? (
                 <div className="text-center my-5">
@@ -273,11 +277,11 @@ const CategoryProduct = () => {
                 <div className="row g-3">
                   {products.map((p) => (
                     <div className="col-6 col-md-4 col-lg-3" key={p._id}>
-                      <div className="card h-100 product-card shadow-sm border-0" style={{
-                        cursor: "pointer",
-                        position: "relative",
-                        transition: "transform 0.2s"
-                      }}>
+                      <div
+                        className="card h-100 product-card shadow-sm"
+                        style={{ cursor: "pointer", position: "relative" }}
+                        onClick={() => navigate(`/product/${p.slug}`)}
+                      >
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -302,7 +306,7 @@ const CategoryProduct = () => {
                             color={wishlistStatus[p._id] ? "#dc3545" : "#6c757d"}
                           />
                         </button>
-
+  
                         <div className="ratio ratio-1x1">
                           <img
                             src={p.photos}
@@ -314,7 +318,7 @@ const CategoryProduct = () => {
                             }}
                           />
                         </div>
-
+  
                         <div className="card-body p-2">
                           <h6 className="card-title mb-2" style={{
                             fontSize: "0.9rem",
@@ -326,7 +330,7 @@ const CategoryProduct = () => {
                           }}>
                             {p.name}
                           </h6>
-
+  
                           <div className="d-flex flex-column">
                             <span className="text-primary fw-bold">
                               {p.perPiecePrice?.toLocaleString("en-IN", {

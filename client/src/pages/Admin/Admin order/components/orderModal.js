@@ -110,13 +110,13 @@ const OrderModal = ({
       try {
         const doc = new jsPDF();
         const totals = calculateTotals();
-  
+    
         // Define PDF dimensions
         const pageWidth = doc.internal.pageSize.width;
         const marginLeft = 10;
         const marginRight = 10;
         const maxTextWidth = pageWidth - marginLeft - marginRight;
-  
+    
         try {
           // Load and add logo
           const logoData = await loadImage('https://smitox.com/img/logo.png');
@@ -126,38 +126,47 @@ const OrderModal = ({
           console.warn('Failed to load logo:', imageError);
           // Continue PDF generation without logo
         }
-  
+    
         // Add company header
         doc.setFontSize(20);
         doc.text('TAX INVOICE', 105, 20, { align: 'center' });
-  
+    
         doc.setFontSize(12);
         doc.text('Smitox B2b', 20, 30);
-        doc.text(`Address : Mumbai,Maharashtra`, 20, 35);
-  
+        doc.text(`Address : Mumbai, Maharashtra`, 20, 35);
+    
         // Add invoice details with text width check
         const invoiceText = `Invoice No: ${selectedOrder._id || 'N/A'}`;
         let textWidth = doc.getTextWidth(invoiceText);
-  
+    
         if (textWidth > maxTextWidth) {
           let lines = doc.splitTextToSize(invoiceText, maxTextWidth);
           doc.text(lines, 130, 30);
         } else {
           doc.text(invoiceText, 130, 30);
         }
-  
+    
         doc.text(`Date: ${moment().format('DD/MM/YYYY')}`, 130, 35);
-  
+    
         // Add customer details
         doc.text('Bill To:', 20, 50);
         doc.text(`Name: ${selectedOrder.buyer.user_fullname || 'N/A'}`, 20, 55);
-        doc.text(`Address: ${selectedOrder.buyer.address || 'N/A'}`, 20, 60);
-        // doc.text(`Mobile No: ${selectedOrder.buyer.mobile_no || 'N/A'}`, 20, 65);
-  
+    
+        // Handle long address by splitting into multiple lines
+        const address = selectedOrder.buyer.address || 'N/A';
+        const addressLines = doc.splitTextToSize(address, maxTextWidth);
+        doc.text(`Address:`, 20, 60);
+        doc.text(addressLines, 30, 65); // Indent address lines for better readability
+    
+        // Calculate Y position after address
+        const addressY = 65 + (addressLines.length - 1) * 5; // 5 is the line height
+    
+        doc.text(`Pincode: ${selectedOrder.buyer.pincode || 'N/A'}`, 20, addressY + 5);
+    
         // Create table for products
         const tableColumn = ['Product', 'Qty', 'Price', 'GST%', 'Net Amount', 'Tax Amount', 'Total'];
         const tableRows = products.map(product => [
-      product.product.name,
+          product.product.name,
           product.quantity,
           Number(product.price).toFixed(2),
           `${product.product.gst}%`,
@@ -165,44 +174,64 @@ const OrderModal = ({
           Number((product.price * product.quantity) * product.product.gst).toFixed(2),
           Number((product.price * product.quantity) * (1 + product.product.gst)).toFixed(2)
         ]);
-  
+    
         doc.autoTable({
           head: [tableColumn],
           body: tableRows,
-          startY: 70,
+          startY: addressY + 15, // Adjust startY based on address height
           theme: 'grid',
           styles: { fontSize: 8 },
           headStyles: { fillColor: [66, 139, 202] }
         });
-  
+    
         const finalY = doc.lastAutoTable.finalY + 10;
-  
+    
         // Add totals
         doc.text(`Subtotal: ${Number(totals.subtotal).toFixed(2)}`, 20, finalY + 10);
         doc.text(`GST: ${Number(totals.gst).toFixed(2)}`, 20, finalY + 15);
         doc.text(`Delivery Charges: ${Number(selectedOrder.deliveryCharges || 0).toFixed(2)}`, 20, finalY + 20);
         doc.text(`COD Charges: ${Number(selectedOrder.codCharges || 0).toFixed(2)}`, 20, finalY + 25);
-        doc.text(`Discount: ${Number(selectedOrder.discount || 0).toFixed(2)}`, 20, finalY + 30);
+ 
         doc.text(`Total Amount: ${Number(totals.total).toFixed(2)}`, 20, finalY + 35);
+        doc.text(`Discount: ${Number(selectedOrder.discount || 0).toFixed(2)}`, 20, finalY + 30);
         doc.text(`Amount Paid: ${Number(selectedOrder.amount || 0).toFixed(2)}`, 20, finalY + 40);
         doc.text(`Amount Pending: ${Number(totals.total - (selectedOrder.amount || 0)).toFixed(2)}`, 20, finalY + 45);
-  
+    
         // Add amount in words
         doc.text(`Amount in Words: ${convertToWords(Math.round(totals.total))}`, 20, finalY + 60);
-  
+   
+        {
+          selectedOrder.tracking
+            ? doc.text(
+                `Tracking Company: ${convertToWords(Math.round(selectedOrder.tracking.company))}:${convertToWords(Math.round(selectedOrder.tracking._id))}`,
+                20,
+                finalY + 65
+              )
+            : doc.text("Tracking Id is not assigned", 20, finalY + 65);
+        }
+        // Add disclaimer text
+        const disclaimerText = [
+          'Check Bill 2-3 Times Before Making Payment',
+          'Once Payment Received It Will Not Refundable',
+          'There Is No Any Warranty Or Guarantee On Any Products',
+          'Don\'t Ask For Replacement Or Warranty'
+        ];
+        disclaimerText.forEach((line, index) => {
+          doc.text(line, 20, finalY + 75 + (index * 5));
+        });
+    
         // Add footer
-        doc.text('For Smitox B2b', 20, finalY + 80);
-        doc.text('Authorized Signature', 150, finalY + 80);
-  
+        doc.text('From Smitox B2B', 20, finalY + 100);
+        doc.text('Authorized Signature', 150, finalY + 100);
+    
         // Save PDF
         doc.save(`Invoice_${selectedOrder.orderNumber || 'Order'}.pdf`);
-  
+    
       } catch (error) {
         console.error('PDF Generation Error:', error);
         alert('Failed to generate PDF. Please try again.');
       }
     };
-  
     // Call the async function
     generatePDFWithLogo();
   };
@@ -285,256 +314,287 @@ const OrderModal = ({
     await refreshOrderData();
     await getOrders(orderType);
   };
+
   return (
-    <Modal
-      show={show}
-      onHide={handleClose}
-      style={{
-        maxWidth: "95%",
-        margin: "10px auto",
-        fontSize: "0.8rem",
-      }}
-    >
-      {/* Modal Header */}
-      <Modal.Header closeButton style={{ padding: "8px" }}>
-        <Modal.Title style={{ fontSize: "1rem", fontWeight: "bold" }}>
-          Edit Order #{orderId}
-        </Modal.Title>
+    <Modal show={show} onHide={handleClose} size="lg">
+      <Modal.Header closeButton>
+        <Modal.Title>Edit Order</Modal.Title>
       </Modal.Header>
-  
-      {/* Modal Body */}
-      <Modal.Body style={{ padding: "10px", maxHeight: "80vh", overflowY: "auto" }}>
+      <Modal.Body>
         {selectedOrder ? (
           <div>
-            {/* Order Info */}
-            <div style={{ marginBottom: "10px" }}>
-              <p style={{ margin: "2px 0", fontSize: "0.8rem" }}>
-                <strong>Buyer:</strong> {selectedOrder.buyer?.user_fullname}
-              </p>
-              <p style={{ margin: "2px 0", fontSize: "0.8rem" }}>
-                <strong>Mobile:</strong> {selectedOrder.buyer?.mobile_no}
-              </p>
-              <p style={{ margin: "2px 0", fontSize: "0.8rem" }}>
-                <strong>Address:</strong> {selectedOrder.buyer?.address}
-              </p>
-              <p style={{ margin: "2px 0", fontSize: "0.8rem" }}>
-                <strong>Date:</strong> {moment(selectedOrder.createdAt).format("lll")}
-              </p>
-            </div>
-  
-            {/* Products Table */}
-            <div style={{ overflowX: "auto" }}>
-              <Table bordered style={{ minWidth: "800px", fontSize: "0.75rem" }}>
-                <thead>
-                  <tr>
-                    {["Photo", "Product", "Qty", "Price", "Net", "Tax", "Total", ""].map(
-                      (header, idx) => (
-                        <th
-                          key={idx}
-                          style={{
-                            padding: "6px",
-                            textAlign: idx >= 3 ? "right" : "left",
-                            backgroundColor: "#f8f9fa",
-                          }}
-                        >
-                          {header}
-                        </th>
-                      )
-                    )}
-                  </tr>
-                </thead>
-  
-                <tbody>
-                  {products.map((product, index) => (
+            <h2>Order ID: {orderId}</h2>
+            <p>Buyer: {selectedOrder.buyer?.user_fullname}</p>
+            <p>Mobile No: {selectedOrder.buyer?.mobile_no}</p>
+            <p>Address No: {selectedOrder.buyer?.address}</p>
+
+            <p>Pincode : {selectedOrder.buyer?.pincode}</p>            
+            <p>Created At: {moment(selectedOrder.createdAt).format("LLLL")}</p>
+
+            <h3>Order Details:</h3>
+            <Table responsive striped bordered hover>
+              <thead>
+                <tr>
+                  <th>Product Photo</th>
+                  <th>Product</th>
+                  <th>Quantity</th>
+                  <th>Unit Price</th>
+                  <th>Net Amount</th>
+                  <th>Tax Amount</th>
+                  <th>Total</th>
+                  <th>Delete</th>
+                </tr>
+              </thead>
+              <tbody>
+                {products.length > 0 ? (
+                  products.map((product, index) => (
                     <tr key={product._id || index}>
-                      <td style={{ padding: "4px", width: "60px" }}>
-                        <img
-                          src={product.product.photos}
-                          alt="product"
-                          style={{ width: "40px", height: "40px", objectFit: "cover" }}
-                        />
+                      <td>
+                        {
+                          <img
+                            src={product.product.photos}
+                            alt={product.photos}
+                            width="50"
+                            className="img-fluid"
+                          />
+                         }
                       </td>
-                      <td style={{ padding: "4px", maxWidth: "150px" }}>
-                        {product.product.name}
-                      </td>
-                      <td style={{ padding: "4px" }}>
+                      <td>{product.product.name}</td>
+                      <td>
                         <Form.Control
                           type="number"
                           value={product.quantity}
                           onChange={(e) => handleProductChange(index, "quantity", e.target.value)}
-                          style={{ width: "60px", padding: "2px", fontSize: "0.7rem" }}
-                          min="1"
                         />
                       </td>
-                      <td style={{ padding: "4px" }}>
+                      <td>
                         <Form.Control
                           type="number"
                           value={product.price}
                           onChange={(e) => handleProductChange(index, "price", e.target.value)}
-                          style={{ width: "80px", padding: "2px", fontSize: "0.7rem" }}
+                          style={{ width: "100px" }}
                         />
                       </td>
-                      <td style={{ padding: "4px", textAlign: "right" }}>
-                        ₹{(product.price * product.quantity).toFixed(2)}
-                      </td>
-                      <td style={{ padding: "4px", textAlign: "right" }}>
-                        ₹{((product.price * product.quantity * product.product.gst) || 0).toFixed(2)}
-                      </td>
-                      <td style={{ padding: "4px", textAlign: "right" }}>
-                        ₹{(
-                          product.product.gst !== "0"
-                            ? product.price * product.quantity * (1 + product.product.gst)
-                            : product.price * product.quantity
-                        ).toFixed(2)}
-                      </td>
-                      <td style={{ padding: "4px", textAlign: "center" }}>
+                      <td>₹{(Number(product.price) * Number(product.quantity)).toFixed(2)}</td>
+                      <td>₹{((Number(product.price) * Number(product.quantity)) * product.product.gst).toFixed(2)}</td>
+                      <td>
+  ₹{
+    product.product.gst !== "0"
+      ? ((Number(product.price) * Number(product.quantity)) * (1 + product.product.gst)).toFixed(2)
+      : ((Number(product.price) * Number(product.quantity)) ).toFixed(2)
+  }
+</td>
+
+                      <td>
                         <Button
-                          variant="outline-danger"
+                          variant="danger"
+                          size="sm"
                           onClick={() => handleDeleteProduct(index)}
-                          style={{ padding: "2px 4px", fontSize: "0.7rem" }}
                         >
-                          ✕
+                          Delete
                         </Button>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-  
-                {/* Totals Section */}
-                <tbody>
+                  ))
+                ) : (
                   <tr>
-                    <td colSpan="8" style={{ padding: "4px" }}>
-                      <Button
-                        variant="outline-primary"
-                        onClick={handleAddClick}
-                        style={{ padding: "4px 8px", fontSize: "0.7rem" }}
-                      >
-                        + Add Product
-                      </Button>
-                    </td>
+                    <td colSpan="8">No products in this order</td>
                   </tr>
-  
-                  {[
-                    { label: "Subtotal:", value: calculateTotals().subtotal },
-                    { label: "GST:", value: calculateTotals().gst },
-                    { label: "Delivery Charges:", value: selectedOrder.deliveryCharges, field: "deliveryCharges" },
-                    { label: "COD Charges:", value: selectedOrder.codCharges, field: "codCharges" },
-                    { label: "Discount:", value: selectedOrder.discount, field: "discount" },
-                    { label: "Total:", value: calculateTotals().total, bold: true },
-                    { label: "Amount Paid:", value: selectedOrder.amount, field: "amount" },
-                    { label: "Amount Pending:", value: calculateTotals().total - (selectedOrder.amount || 0) },
-                  ].map((row, idx) => (
-                    <tr key={idx}>
-                      <td colSpan="4"></td>
-                      <td style={{ padding: "4px", fontWeight: row.bold ? "bold" : "normal" }}>
-                        {row.label}
-                      </td>
-                      {row.field ? (
-                        <>
-                          <td style={{ padding: "4px" }}>
-                            <Form.Control
-                              type="number"
-                              value={row.value || 0}
-                              onChange={(e) => handleInputChange(row.field, e.target.value)}
-                              style={{ width: "90px", padding: "2px", fontSize: "0.7rem" }}
-                            />
-                          </td>
-                          <td style={{ padding: "4px", textAlign: "right" }}>
-                            ₹{Number(row.value || 0).toFixed(2)}
-                          </td>
-                        </>
-                      ) : (
-                        <td colSpan={2} style={{ padding: "4px", textAlign: "right" }}>
-                          ₹{typeof row.value === "number" ? row.value.toFixed(2) : "0.00"}
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </div>
+                )}
+                <tr>
+                  <td colSpan="7">
+                    <Button onClick={handleAddClick}>Add Product</Button>
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan="4"></td>
+                  <td>Subtotal:</td>
+                  <td>₹{calculateTotals().subtotal.toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td colSpan="4"></td>
+                  <td>GST:</td>
+                  <td>₹{calculateTotals().gst.toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td colSpan="4"></td>
+                  <td>Delivery Charges:</td>
+                  <td>
+                    <Form.Control
+                      type="number"
+                      value={selectedOrder.deliveryCharges || 0}
+                      onChange={(e) => handleInputChange("deliveryCharges", e.target.value)}
+                    />
+                  </td>
+                  <td>₹{Number(selectedOrder.deliveryCharges || 0).toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td colSpan="4"></td>
+                  <td>COD Charges:</td>
+                  <td>
+                    <Form.Control
+                      type="number"
+                      value={selectedOrder.codCharges || 0}
+                      onChange={(e) => handleInputChange("codCharges", e.target.value)}
+                    />
+                  </td>
+                  <td>₹{Number(selectedOrder.codCharges || 0).toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td colSpan="4"></td>
+                  <td>Discount:</td>
+                  <td>
+                    <Form.Control
+                      type="number"
+                      value={selectedOrder.discount || 0}
+                      onChange={(e) => handleInputChange("discount", e.target.value)}
+                    />
+                  </td>
+                  <td>₹{Number(selectedOrder.discount || 0).toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td colSpan="4"></td>
+                  <td><strong>Total:</strong></td>
+                  <td><strong>₹{calculateTotals().total.toFixed(2)}</strong></td>
+                </tr>
+                <tr>
+                  <td colSpan="4"></td>
+                  <td>Amount Paid:</td>
+                  <td>
+                    <Form.Control
+                      type="number"
+                      value={selectedOrder.amount || 0}
+                      onChange={(e) => handleInputChange("amount", e.target.value)}
+                    />
+                  </td>
+                  <td>₹{Number(selectedOrder.amount || 0).toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td colSpan="4"></td>
+                  <td>Amount Pending:</td>
+                  <td>₹{(calculateTotals().total - Number(selectedOrder.amount || 0)).toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </Table>
           </div>
         ) : (
-          <p style={{ textAlign: "center", padding: "10px" }}>Loading order details...</p>
+          <p>No order selected</p>
         )}
       </Modal.Body>
-  
-      {/* Modal Footer */}
-      <Modal.Footer style={{ padding: "8px", display: "flex", flexWrap: "wrap", gap: "4px" }}>
-        {/* Status Buttons */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-          {selectedOrder?.status === "Pending" && (
-            <>
+      <Modal.Footer>
+        <div>
+          {selectedOrder && selectedOrder.status === "Pending" && (
+            <div>
               <Button
                 variant="success"
-                size="sm"
                 onClick={() => handleStatusChange(selectedOrder._id, "Confirmed")}
-                style={{ fontSize: "0.7rem", padding: "4px 8px" }}
               >
                 Confirm
               </Button>
               <Button
                 variant="danger"
-                size="sm"
                 onClick={() => handleStatusChange(selectedOrder._id, "Cancelled")}
-                style={{ fontSize: "0.7rem", padding: "4px 8px" }}
               >
                 Cancel
               </Button>
-            </>
+              <Button
+                variant="warning"
+                onClick={() => handleStatusChange(selectedOrder._id, "Rejected")}
+              >
+                Reject
+              </Button>
+            </div>
           )}
+          
+          {selectedOrder && selectedOrder.status === "Confirmed" && (
+            <div>
+              <Button
+                variant="success"
+                onClick={() => handleStatusChange(selectedOrder._id, "Accepted")}
+                >
+                  Accept
+                </Button>
+              </div>
+            )}
+            
+            {selectedOrder && selectedOrder.status === "Dispatched" && (
+              <div>
+                <Button
+                  variant="success"
+                  onClick={() => handleStatusChange(selectedOrder._id, "Delivered")}
+                >
+                  Delivered
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => handleStatusChange(selectedOrder._id, "Returned")}
+                >
+                  RTO
+                </Button>
+              </div>
+            )}
+            
+            {selectedOrder && (selectedOrder.status === "Cancelled" || selectedOrder.status === "Rejected") && (
+              <div>
+                <Button
+                  variant="primary"
+                  onClick={() => handleStatusChange(selectedOrder._id, "Pending")}
+                >
+                  Set to Pending
+                </Button>
+              </div>
+            )}
+            
+            {selectedOrder && selectedOrder.status === "Accepted" && (
+              <div>
+                <Button
+                  variant="primary"
+                  onClick={() => handleStatusChange(selectedOrder._id, "Dispatched")}
+                >
+                  Dispatched
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => handleStatusChange(selectedOrder._id, "Rejected")}
+                >
+                  Reject
+                </Button>
+              </div>
+            )}
+            
+            {selectedOrder && (selectedOrder.status === "Delivered" || selectedOrder.status === "Returned") && (
+              <div>
+                <Button variant="success" onClick={handleDelivered}>
+                  Delivered
+                </Button>
+                <Button variant="danger" onClick={handleReturned}>
+                  Returned
+                </Button>
+              </div>
+            )}
+          </div>
   
-          {selectedOrder?.status === "Confirmed" && (
-            <Button
-              variant="warning"
-              size="sm"
-              onClick={() => handleStatusChange(selectedOrder._id, "Accepted")}
-              style={{ fontSize: "0.7rem", padding: "4px 8px" }}
-            >
-              Accept
-            </Button>
-          )}
-        </div>
-  
-        {/* Action Buttons */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-          <Button
-            variant="secondary"
-            onClick={handleClose}
-            style={{ fontSize: "0.7rem", padding: "4px 8px" }}
-          >
+          <Button variant="secondary" onClick={handleClose}>
             Close
           </Button>
-          <Button
-            variant="primary"
-            onClick={handleUpdateOrder}
-            style={{ fontSize: "0.7rem", padding: "4px 8px" }}
-          >
-            Save
+  
+          <Button variant="primary" onClick={handleUpdateOrder}>
+            Update Order
           </Button>
-          <Button
-            variant="info"
-            onClick={generatePDF}
-            style={{ fontSize: "0.7rem", padding: "4px 8px" }}
-          >
-            PDF
+  
+          <Button variant="primary" onClick={generatePDF}>
+            Download PDF
           </Button>
-          <Button
-            variant="success"
-            onClick={shareToWhatsApp}
-            style={{
-              fontSize: "0.7rem",
-              padding: "4px 8px",
-              backgroundColor: "#25D366",
-              borderColor: "#25D366",
-            }}
-          >
-            WhatsApp
-          </Button>
-        </div>
-      </Modal.Footer>
-    </Modal>
-  );
+          <Button 
+          variant="success" 
+          onClick={shareToWhatsApp}
+          style={{ backgroundColor: '#25D366', borderColor: '#25D366' }}
+        >
+          Share to WhatsApp
+        </Button>
+        </Modal.Footer>
+      </Modal>
+    );
   };
   
   export default OrderModal;

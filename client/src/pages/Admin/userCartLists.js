@@ -240,30 +240,36 @@ const UserList = () => {
     window.open(whatsappUrl, '_blank');
 };
 
+const openEditModal = (user) => {
+  console.log("Opening edit modal for user:", user); // Debugging
+  setEditingUser({
+    ...user,
+    pincode: user.pincode || '', // Initialize pincode if it exists
+  });
+  setIsEditModalOpen(true);
+};
 
-  const openEditModal = (user) => {
-    console.log("Opening edit modal for user:", user); // Debugging
-    setEditingUser(user);
-    setIsEditModalOpen(true);
-  };
+const handleEditUser = async (e) => {
+  e.preventDefault();
+  try {
+    await axios.put(`/api/v1/usersLists/users/${editingUser._id}`, {
+      ...editingUser,
+      pincode: editingUser.pincode || null, // Ensure pincode is sent to the API
+    });
+    fetchUsers(); // Refresh the user list
+    closeEditModal(); // Close the modal
+  } catch (error) {
+    console.error('Error updating user:', error);
+    setError('Failed to update user. Please try again.');
+  }
+};
 
   const closeEditModal = () => {
     setEditingUser(null);
     setIsEditModalOpen(false);
   };
 
-  const handleEditUser = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.put(`/api/v1/usersLists/users/${editingUser._id}`, editingUser);
-      fetchUsers(); // Refresh the user list
-      closeEditModal(); // Close the modal
-    } catch (error) {
-      console.error('Error updating user:', error);
-      setError('Failed to update user. Please try again.');
-    }
-  };
-
+ 
   const TabButton = ({ label, isActive, onClick }) => (
     <button
       onClick={onClick}
@@ -387,7 +393,7 @@ const UserList = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse', ...styles.tableBorder }}>
             <thead>
               <tr>
-                {['Name', 'Email', 'Phone', 'Address', 'Status', 'Order Type', 'Actions'].map(header => (
+                {['Name', 'Email', 'Phone', 'Address', 'Pincode','Status', 'Order Type', 'Actions'].map(header => (
                   <th
                     key={header}
                     style={{
@@ -420,6 +426,7 @@ const UserList = () => {
                     )}
                   </td>
                   <td style={{ padding: '0.75rem' }}>{user.address || 'N/A'}</td>
+                  <td style={{ padding: '0.75rem' }}>{user.pincode || 'N/A'}</td>
                   <td style={{ padding: '0.75rem' }}>
                     <button
                       onClick={() => toggleRegular(user._id, user.regular)}
@@ -614,6 +621,96 @@ const UserList = () => {
           </div>
         </div>
       </div>
+
+      {isEditModalOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '1.5rem',
+            borderRadius: '0.5rem',
+            width: '90%',
+            maxWidth: '500px'
+          }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+              Edit User
+            </h2>
+            <form onSubmit={handleEditUser}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label>User Full Name</label>
+                <input
+                  type="text"
+                  value={editingUser?.user_fullname || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, user_fullname: e.target.value })}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
+                />
+              </div>
+              <div style={{ marginBottom: '1rem' }}>
+                <label>Mobile Number</label>
+                <input
+                  type="text"
+                  value={editingUser?.mobile_no || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, mobile_no: e.target.value })}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
+                />
+              </div>
+              <div style={{ marginBottom: '1rem' }}>
+                <label>Address</label>
+                <input
+                  type="text"
+                  value={editingUser?.address || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, address: e.target.value })}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
+                />
+              </div>
+              <div style={{ marginBottom: '1rem' }}>
+                <label>Pincode</label>
+                <input
+                  type="text"
+                  value={editingUser?.pincode || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, pincode: e.target.value })}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    borderRadius: '0.25rem',
+                    border: 'none',
+                    backgroundColor: '#e0e0e0',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: '0.5rem 1rem',
+                    borderRadius: '0.25rem',
+                    border: 'none',
+                    backgroundColor: '#1976d2',
+                    color: 'white',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Save changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };

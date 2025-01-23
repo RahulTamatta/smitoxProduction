@@ -175,13 +175,14 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
                         <td><strong>COD Charges</strong></td>
                         <td className="text-end">₹{(order.codCharges || 0).toFixed(2)}</td>
                       </tr>
-                      <tr>
-                        <td><strong>Discount</strong></td>
-                        <td className="text-end">₹{(order.discount || 0).toFixed(2)}</td>
-                      </tr>
+                     
                       <tr className="table-active">
                         <td><strong>Total Amount</strong></td>
                         <td className="text-end">₹{calculateTotal().toFixed(2)}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Discount</strong></td>
+                        <td className="text-end">₹{(order.discount || 0).toFixed(2)}</td>
                       </tr>
                       <tr>
                         <td><strong>Amount Paid</strong></td>
@@ -196,7 +197,7 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
                   </table>
                   <p className="text-danger">
   <ul>
-    <li>Order total is below the minimum order amount.</li>
+   
     <li>Courier charge will be added (depends on weight and COD amount).</li>
     <li>10% advance payment is required to confirm the order.</li>
   </ul>

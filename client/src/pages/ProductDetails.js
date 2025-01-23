@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect,useRef } from "react";
 import Layout from "./../components/Layout/Layout";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
@@ -26,7 +26,135 @@ const ProductDetails = () => {
   const [productIds, setProductId] = useState();
   const [categoryId, setCategoryId] = useState();
   const [subcategoryId, setSubcategoryId] = useState();
+
+
+
 // In ProductDetails component
+
+
+const [isAddingToCart, setIsAddingToCart] = useState(false); // Track if addToCart is in progress
+
+// Debounce addToCart function
+const isAddingToCartRef = useRef(false);
+
+useEffect(() => {
+  const scrollPosition = sessionStorage.getItem("productDetailsScrollPosition");
+  if (scrollPosition) {
+    window.scrollTo(0, parseInt(scrollPosition, 10));
+    sessionStorage.removeItem("productDetailsScrollPosition");
+  }
+
+  return () => {
+    sessionStorage.setItem("productDetailsScrollPosition", window.scrollY);
+  };
+}, [params?.slug]);
+
+useEffect(() => {
+  window.scrollTo(0, 0);
+  if (params?.slug) {
+    if (auth?.user?.pincode) {
+      checkPincode(auth.user.pincode);
+    }
+    getProduct();
+    getProductsForYou();
+  }
+}, [params?.slug, auth?.user?.pincode]);
+
+useEffect(() => {
+  if (product._id && auth?.user?._id) {
+    checkWishlistStatus(product._id);
+    fetchInitialQuantity(product._id);
+  }
+}, [product._id, auth?.user?._id]);
+
+const getProduct = async () => {
+  try {
+    const { data } = await axios.get(`/api/v1/product/get-product/${params.slug}`);
+    if (data.success === true) {
+      setProduct(data.product);
+      setUnitSet(data?.product?.unitSet || 1);
+    }
+  } catch (error) {
+    console.error(error);
+    toast.error("Error fetching product details");
+  }
+};
+
+const getProductsForYou = async () => {
+  try {
+    const { data } = await axios.get(
+      `/api/v1/productForYou/products/${product.category?._id}/${product.subcategory?._id}`
+    );
+    if (data?.success) {
+      setProductsForYou(data.products || []);
+    }
+  } catch (error) {
+    console.error("Error fetching products for you:", error);
+    toast.error("Failed to fetch products for you");
+  }
+};
+
+const addToCart = async () => {
+  if (!auth.user) {
+    toast.error("Please log in to add items to cart");
+    return;
+  }
+
+  if (isAddingToCartRef.current) return; // Prevent multiple clicks
+  isAddingToCartRef.current = true; // Lock the function
+
+  try {
+    const initialQuantity = unitSet * 1; // Add 1 unit at a time
+    const applicableBulk = getApplicableBulkProduct(initialQuantity);
+
+    const response = await axios.post(`/api/v1/carts/users/${auth.user._id}/cart`, {
+      productId: product._id,
+      quantity: initialQuantity,
+      price: applicableBulk ? parseFloat(applicableBulk.selling_price_set) : parseFloat(product.price),
+      bulkProductDetails: applicableBulk,
+    });
+
+    if (response.data.status === "success") {
+      setCart(response.data.cart);
+      setDisplayQuantity(initialQuantity);
+      setSelectedBulk(applicableBulk);
+      calculateTotalPrice(applicableBulk, initialQuantity);
+      setShowQuantitySelector(true);
+      toast.success("Item added to cart");
+    }
+  } catch (error) {
+    console.error(error);
+    toast.error("Error adding item to cart");
+  } finally {
+    isAddingToCartRef.current = false; // Unlock the function
+  }
+};
+
+const handleQuantityChange = async (increment) => {
+  const newQuantity = displayQuantity + (increment ? 1 : -1) * unitSet;
+  const updatedQuantity = Math.max(0, newQuantity);
+
+  if (updatedQuantity === 0) {
+    await removeFromCart(product._id);
+    setShowQuantitySelector(false);
+    setDisplayQuantity(0);
+    setSelectedBulk(null);
+    setTotalPrice(0);
+    return;
+  }
+
+  try {
+    await updateQuantity(updatedQuantity);
+    setDisplayQuantity(updatedQuantity);
+    const applicableBulk = getApplicableBulkProduct(updatedQuantity);
+    setSelectedBulk(applicableBulk);
+    calculateTotalPrice(applicableBulk, updatedQuantity);
+  } catch (error) {
+    console.error("Error updating quantity:", error);
+    toast.error("Failed to update quantity");
+  }
+};
+
 useEffect(() => {
   const scrollPosition = sessionStorage.getItem('productDetailsScrollPosition');
   if (scrollPosition) {
@@ -66,51 +194,6 @@ useEffect(() => {
   //   }
   // }, [categoryId, subcategoryId,productsForYou]);
 
-  const getProduct = async () => {
-    try {
-      const { data } = await axios.get(
-        `/api/v1/product/get-product/${params.slug}`
-      );
-
-      if (data.success === true) {
-        const productData = {
-          ...data.product,
-          photoUrl: data.product?._id
-            ? `/api/v1/product/product-photo/${data.product._id}`
-            : "/placeholder-image.jpg",
-        };
-        setProduct(productData);
-        setCategoryId(data?.product?.category._id);
-        setSubcategoryId(data?.product?.subcategory._id || {});
-      }
-      console.log("PProduct", data);
-
-      setUnitSet(data?.product?.unitSet || 1);
-      setQuantity(data?.product?.quantity || 1);
-    } catch (error) {
-      console.error(error);
-      //toast.error("Error fetching product details");
-    }
-  };
-
-  const getProductsForYou = async () => {
-    try {
-      const { data } = await axios.get(
-        `/api/v1/productForYou/products/${categoryId}/${subcategoryId}`
-      );
-
-      // Log the response data for debugging
-      console.log("Response Data:", data);
-
-      if (data?.success) {
-        setProductsForYou(data.products || []);
-        console.log("Ha", data.products);
-      }
-    } catch (error) {
-      console.error("Error fetching products for you:", error);
-      //toast.error("Failed to fetch products for you");
-    }
-  };
 
   const getApplicableBulkProduct = (quantity) => {
     if (!product.bulkProducts || product.bulkProducts.length === 0) return null;
@@ -150,46 +233,7 @@ useEffect(() => {
     }
   };
 
-  const addToCart = async () => {
-    if (!auth.user) {
-      //toast.error("Please log in to add items to cart");
-      return;
-    }
 
-    // if (!isPincodeAvailable) {
-    //   //toast.error("Delivery not available for your pincode");
-    //   return;
-    // }
-
-    try {
-      const initialQuantity = unitSet * quantity;
-      const applicableBulk = getApplicableBulkProduct(initialQuantity);
-
-      const response = await axios.post(
-        `/api/v1/carts/users/${auth.user._id}/cart`,
-        {
-          productId: product._id,
-          quantity: initialQuantity,
-          price: applicableBulk
-            ? parseFloat(applicableBulk.selling_price_set)
-            : parseFloat(product.price),
-          bulkProductDetails: applicableBulk,
-        }
-      );
-
-      if (response.data.status === "success") {
-        setCart(response.data.cart);
-        setDisplayQuantity(initialQuantity);
-        setSelectedBulk(applicableBulk);
-        calculateTotalPrice(applicableBulk, initialQuantity);
-        setShowQuantitySelector(true);
-        toast.success("Item added to cart");
-      }
-    } catch (error) {
-      console.error(error);
-      //toast.error("Error adding item to cart");
-    }
-  };
 
   const checkPincode = async (pincode) => {
     try {
@@ -211,30 +255,7 @@ useEffect(() => {
     }
   };
 
-  const handleQuantityChange = async (increment) => {
-    const newQuantity = displayQuantity + (increment ? 1 : -1) * unitSet;
-    const updatedQuantity = Math.max(0, newQuantity);
 
-    if (updatedQuantity === 0) {
-      await removeFromCart(product._id);
-      setShowQuantitySelector(false);
-      setDisplayQuantity(0);
-      setSelectedBulk(null);
-      setTotalPrice(0);
-      return;
-    }
-
-    try {
-      await updateQuantity(updatedQuantity);
-      setDisplayQuantity(updatedQuantity);
-      const applicableBulk = getApplicableBulkProduct(updatedQuantity);
-      setSelectedBulk(applicableBulk);
-      calculateTotalPrice(applicableBulk, updatedQuantity);
-    } catch (error) {
-      console.error("Error updating quantity:", error);
-      //toast.error("Failed to update quantity");
-    }
-  };
 
   const updateQuantity = async (quantity) => {
     if (!auth?.user?._id) {
@@ -482,90 +503,66 @@ useEffect(() => {
     <Layout>
       <div style={containerStyle}>
         <div style={productDetailStyle}>
-          {/* Copy your existing JSX structure here */}
-          {/* Replace the quantity selector and add to cart button section with: */}
+          {/* Product Image */}
           <div style={imageStyle}>
-            {product._id ? (
-              <img
-                src={product.photos}
-                alt={product.name}
-                style={{
-                  width: "100%",
-                  height: "auto",
-                  borderRadius: "8px",
-                  objectFit: "cover",
-                }}
-                onError={(e) => {
-                  e.target.src = "/placeholder-image.jpg";
-                }}
-              />
-            ) : (
-              <p>Loading product image...</p>
-            )}
+            <img
+              src={product.photos}
+              alt={product.name}
+              style={{ width: "100%", height: "auto", borderRadius: "8px", objectFit: "cover" }}
+              onError={(e) => {
+                e.target.src = "/placeholder-image.jpg";
+              }}
+            />
           </div>
+
+          {/* Product Info */}
           <div style={infoStyle}>
             <h1 style={headingStyle}>{product.name}</h1>
             <div style={priceStyle}>
               <span style={strikeThroughStyle}>₹{product.mrp}</span>
               <span style={{ color: "red" }}>₹{product.perPiecePrice}</span>
             </div>
-            <p
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
+            <p style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span>Total Price: ₹{totalPrice.toFixed(2)}</span>
-
               <div style={quantitySelectorStyle}>
-                <button
-                  onClick={() => handleQuantityChange(false)}
-                  style={buttonStyle}
-                >
+                <button onClick={() => handleQuantityChange(false)} style={buttonStyle}>
                   -
                 </button>
-           <input
-  type="number"
-  value={displayQuantity}
-  readOnly
-  style={{
-    ...inputStyle,
-    width: `${Math.max(displayQuantity.toString().length, 4) * 20}px`, // Adjust the width for larger digits
-  }}
-/>
-
+                <input
+                  type="number"
+                  value={displayQuantity}
+                  readOnly
+                  style={{ ...inputStyle, width: `${Math.max(displayQuantity.toString().length, 4) * 20}px` }}
+                />
                 <button
                   onClick={() => {
-                    if (displayQuantity != 0) {
+                    if (displayQuantity === 0) {
+                      addToCart();
+                    } else {
                       handleQuantityChange(true);
                     }
-                    if (displayQuantity == 0) {
-                      addToCart();
-                    } // Replace with your second function
                   }}
                   style={buttonStyle}
+                  disabled={isAddingToCartRef.current} // Disable button while adding to cart
                 >
                   +
                 </button>
               </div>
             </p>
 
-            {
-              <button
-                onClick={toggleWishlist}
-                style={{
-                  ...buttonStyle,
-                  backgroundColor: isInWishlist ? "#1157e4" : "red", // Set background color to red when not in wishlist
-                  color: isInWishlist ? "#ffffff" : "#ffffff", // Keep text color white for contrast
-                  marginTop: "10px",
-                  width: "100%",
-                }}
-              >
-                {isInWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
-              </button>
-            }
-
+            {/* Wishlist Button */}
+            <button
+              onClick={toggleWishlist}
+              style={{
+                ...buttonStyle,
+                backgroundColor: isInWishlist ? "#1157e4" : "red",
+                color: "#ffffff",
+                marginTop: "10px",
+                width: "100%",
+              }}
+            >
+              {isInWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
+            </button>
             {!isPincodeAvailable && (
               <div style={{ textAlign: "center", marginTop: "10px" }}>
                 <p

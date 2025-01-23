@@ -2,77 +2,76 @@ import React from "react";
 import Layout from "./../components/Layout/Layout";
 const About = () => {
   return (
-    <Layout title={"About us - Ecommer app"}>
-      {/* Banner Section */}
-      <div className="banner-section" style={{ position: "relative", width: "100%" }}>
-        <img
-          src="/images/banner.jpg" // Ensure the correct path for the uploaded banner
-          alt="B2B Platform Banner"
-          style={{
-            width: "100%",
-            height: "300px",
-            objectFit: "cover",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            color: "#000",
-            backgroundColor: "rgba(255, 255, 255, 0.85)",
-            padding: "15px 25px",
-            borderRadius: "8px",
-            textAlign: "center",
-            boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
-          }}
-        >
-          <h2 style={{ margin: 0, fontSize: "1.8rem" }}>
-            India's largest <span style={{ color: "red" }}>B2B</span> Platform
-          </h2>
-          <p style={{ margin: "8px 0 0", fontSize: "1rem" }}>
-            for businesses & shop-owners
-          </p>
-        </div>
+    <Layout title={"About us - Smitox"}>
+      {/* Image Background Banner */}
+      <div style={{ 
+        position: "relative", 
+        width: "100%", 
+        height: "60vh",
+        minHeight: "400px",
+        backgroundImage: "url(https://smitox.com/img/99.jpg)",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        marginBottom: "40px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
+      }}>
+     
       </div>
 
-      {/* About Section */}
-      <div className="row contactus mt-4" style={{ margin: "0 15px" }}>
-        <div className="col-md-6">
-          <img
-             src="https://smitox.com/img/99.jpg" 
-            alt="About Us"
-            style={{
-              width: "100%",
-              borderRadius: "8px",
-              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
-            }}
-          />
-        </div>
-        <div className="col-md-6">
-          <p className="text-justify mt-2" style={{ fontSize: "1rem", lineHeight: "1.8" }}>
-            Get <strong>Smitox</strong> Now! It is <strong>free</strong> and you
-            will love it.<br />
-            Smitox is solving core trade problems faced by small and medium
-            businesses, that are unique to India, through its unique India-fit
-            low-cost business model by leveraging technology and bringing the
-            benefits of eCommerce to them. It is a one-stop shop for all
-            business requirements in the B2B space.
-            <br />
-            Smitox has built inclusive tech tools for Bharat, specially catering
-            to the needs of brands, retailers, and manufacturers, providing them
-            a level playing field to scale, trade, and grow business. We only
-            generate leads and orders; rest is decided between the customer and
-            seller as per their conditions.
-          </p>
+      {/* Content Section */}
+      <div style={{
+        maxWidth: "1200px",
+        margin: "0 auto",
+        padding: "0 20px 60px"
+      }}>
+        <div style={{
+          padding: "40px 20px",
+          borderRadius: "12px",
+          background: "#f8f9fa"
+        }}>
+          <h2 style={{
+            fontSize: "2.2rem",
+            color: "#00416a",
+            marginBottom: "30px",
+            fontWeight: "600",
+            textAlign: "center"
+          }}>
+            Transform Your Business with Smitox
+          </h2>
+          
+          <div style={{
+            fontSize: "1.1rem",
+            lineHeight: "1.8",
+            color: "#555",
+            maxWidth: "800px",
+            margin: "0 auto"
+          }}>
+            <p style={{ marginBottom: "20px" }}>
+              Get <strong style={{ color: "red" }}>Smitox</strong> Now! It's{" "}
+              <strong style={{ color: "red" }}>FREE</strong> and you'll love it.
+            </p>
+            
+            <p style={{ marginBottom: "20px" }}>
+              Smitox solves core trade challenges faced by Indian SMEs through our 
+              unique India-fit, low-cost business model. We leverage technology to 
+              bring eCommerce benefits to traditional businesses, creating a 
+              one-stop B2B solution.
+            </p>
+
+            <p style={{ marginBottom: "20px" }}>
+              Our inclusive tech tools empower Bharat's brands, retailers, and 
+              manufacturers with a level playing field to scale, trade, and grow. 
+              We focus on generating quality leads and orders while letting 
+              businesses maintain control over their transactions.
+            </p>
+          </div>
         </div>
       </div>
     </Layout>
   );
 };
-
-
 
 
 

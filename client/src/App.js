@@ -30,10 +30,12 @@ import CartPage from "./pages/cart/CartPage.js";
 import AdminOrders from "./pages/Admin/Admin order/AdminOrders.js";
 import PincodeList from "./pages/Admin/PinCode.js";
 import Terms from "./pages/TermsofUse";
+import ReturnPolicy from "./pages/returnPolicy.js";
 import BannerManagement from "./pages/Admin/bannerManagement";
 import ProductForYou from "./pages/Admin/ProductForYou.js";
 import WishlistPage from "./pages/wishlists.js";
 import AddToCartPage from "../../client/src/pages/Admin/userCart.js";
+
 import AdminLogin from "./pages/Auth/AdminLog.js";
 import ScrollSaver from '../src/pages/scroll.js';
 import ScrollRestorer from '../src/pages/scrollreestore.js';
@@ -85,6 +87,7 @@ function App() {
         <Route path="/wishlist" element={<WishlistPage />} />
         <Route path="/policy" element={<Policy />} />
         <Route path="/terms" element={<Terms />} />
+        <Route path="/returnPolicy" element={<ReturnPolicy />} />
         <Route path="/add-to-cart/:userId/:user_fullname" element={<AddToCartPage />} />
 
         <Route path="*" element={<Pagenotfound />} />
