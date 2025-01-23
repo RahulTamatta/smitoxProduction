@@ -35,10 +35,14 @@ import ProductForYou from "./pages/Admin/ProductForYou.js";
 import WishlistPage from "./pages/wishlists.js";
 import AddToCartPage from "../../client/src/pages/Admin/userCart.js";
 import AdminLogin from "./pages/Auth/AdminLog.js";
-
+import ScrollSaver from '../src/pages/scroll.js';
+import ScrollRestorer from '../src/pages/scrollreestore.js';
+import { Provider } from 'react-redux';
+import store from './pages/store.js';
 function App() {
   return (
     <>
+   <Provider store={store}>
       <Routes>
         <Route path="/" element={<HomePage />} />
        <Route path="/product/:slug" element={<ProductDetails />} />
@@ -85,6 +89,7 @@ function App() {
 
         <Route path="*" element={<Pagenotfound />} />
       </Routes>
+      </Provider>,
     </>
   );
 }

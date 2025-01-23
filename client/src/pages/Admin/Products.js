@@ -23,6 +23,7 @@ const Products = () => {
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [totalProducts, setTotalProducts] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [bulkAction, setBulkAction] = useState(""); // Added state for bulk action
 
   // Listen to browser history changes (back/forward buttons)
   useEffect(() => {
@@ -44,36 +45,34 @@ const Products = () => {
   }, [location]);
 
   // Get all products
-// In your Products component:
-const getAllProducts = async (page = 1, search = "") => {
-  try {
-    setLoading(true);
-    const { data } = await axios.get(
-      `/api/v1/product/get-product?page=${page}&limit=${itemsPerPage}&search=${search}`
-    );
-    if (data.success) {
-      setProducts(data.products);
-      setTotalProducts(data.total);
-      
-      // Update URL with both page and search parameters
-      const newUrl = `${window.location.pathname}?page=${page}&search=${search}`;
-      window.history.replaceState({}, '', newUrl);
+  const getAllProducts = async (page = 1, search = "") => {
+    try {
+      setLoading(true);
+      const { data } = await axios.get(
+        `/api/v1/product/get-product?page=${page}&limit=${itemsPerPage}&search=${search}`
+      );
+      if (data.success) {
+        setProducts(data.products);
+        setTotalProducts(data.total);
+
+        // Update URL with both page and search parameters
+        const newUrl = `${window.location.pathname}?page=${page}&search=${search}`;
+        window.history.replaceState({}, '', newUrl);
+      }
+    } catch (error) {
+      console.log(error);
+      //toast.error("Something Went Wrong");
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.log(error);
-    //toast.error("Something Went Wrong");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
-// Update the search handler
-const handleSearch = (value) => {
-  setSearchTerm(value);
-  setCurrentPage(1); // Reset to first page when searching
-  getAllProducts(1, value); // Fetch results with search term
-};
-
+  // Update the search handler
+  const handleSearch = (value) => {
+    setSearchTerm(value);
+    setCurrentPage(1); // Reset to first page when searching
+    getAllProducts(1, value); // Fetch results with search term
+  };
 
   // Fetch products when page changes
   useEffect(() => {
@@ -84,7 +83,7 @@ const handleSearch = (value) => {
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
-      
+
       // Update URL with the new page number
       const newUrl = `${window.location.pathname}?page=${newPage}`;
       window.history.pushState({}, '', newUrl);
@@ -93,7 +92,6 @@ const handleSearch = (value) => {
 
   // Calculate total pages
   const totalPages = Math.ceil(totalProducts / itemsPerPage);
-
 
   useEffect(() => {
     getAllProducts();
@@ -151,6 +149,7 @@ const handleSearch = (value) => {
       prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
     );
   };
+
   const toggleIsActive = async (productId, newStatus) => {
     try {
       const response = await axios.put(
@@ -202,7 +201,6 @@ const handleSearch = (value) => {
     indexOfLastItem
   );
 
-
   return (
     <Layout>
       <div className="flex" style={{ display: "flex", flexDirection: "row" }}>
@@ -236,19 +234,22 @@ const handleSearch = (value) => {
           </div>
 
           <div className="mb-4 flex items-center space-x-4">
-          <input
-  type="text"
-  className="border px-3 py-2"
-  placeholder="Search by name"
-  value={searchTerm}
-  onChange={(e) => handleSearch(e.target.value)}
-  style={{ borderRadius: "4px", width: "200px" }}
-/>
+            <input
+              type="text"
+              className="border px-3 py-2"
+              placeholder="Search by name"
+              value={searchTerm}
+              onChange={(e) => handleSearch(e.target.value)}
+              style={{ borderRadius: "4px", width: "200px" }}
+            />
             <span style={{ fontSize: "14px", color: "#666" }}>
               Showing {currentProducts.length} of {filteredProducts.length}{" "}
               products
             </span>
           </div>
+
+          {/* Bulk Action Select */}
+    
 
           <div className="mb-4">
             <button
@@ -277,13 +278,24 @@ const handleSearch = (value) => {
             </button>
           </div>
 
-        {/* Update the products display section */}
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse border border-gray-200">
-            <thead>
-              <tr>
-                {/* Table header content */}
-                <th className="border p-2">#</th>
+          {/* Update the products display section */}
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse border border-gray-200">
+              <thead>
+                <tr>
+                  <th className="border p-2">
+                    <input
+                      type="checkbox"
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedProducts(products.map(p => p._id));
+                        } else {
+                          setSelectedProducts([]);
+                        }
+                      }}
+                    />
+                  </th>
+                  <th className="border p-2">#</th>
                   <th className="border p-2">Photo</th>
                   <th className="border p-2">Name</th>
                   <th className="border p-2">Category</th>
@@ -291,132 +303,100 @@ const handleSearch = (value) => {
                   <th className="border p-2">Price</th>
                   <th className="border p-2">Stock</th>
                   <th className="border p-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="5" className="text-center py-4">
-                    Loading...
-                  </td>
                 </tr>
-              ) : (
-                products.map((p, index) => (
-                  <tr key={p._id} className="hover:bg-gray-50">
-                    <td className="border border-gray-300 px-4 py-2">
-                      {(currentPage - 1) * itemsPerPage + index + 1}
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan="9" className="text-center py-4">
+                      Loading...
                     </td>
-                          {/* Product image */}
-      <td className="border p-2 text-center">
-        <img
-          src={p.photos || "/placeholder-image.png"} // Fallback image if photos is undefined
-          alt={p.name}
-          className="border p-2"
-          style={{
-            width: "50px",
-            height: "50px",
-            objectFit: "cover",
-            borderRadius: "4px",
-          }}
-        />
-      </td>
-                    <td className="border border-gray-300 px-4 py-2">{p.name}</td>
-                    <td className="border border-gray-300 px-4 py-2">{p.category.name}</td>
-                    <td className="border border-gray-300 px-4 py-2">{p.subcategory.name}</td>
-                    <td className="border border-gray-300 px-4 py-2">{p.perPiecePrice}</td>
-                    <td className="border border-gray-300 px-4 py-2">{p.stock}</td>
-              
-                    <td className="border p-2">
-        <div className="flex justify-center space-x-2">
-          {/* Toggle active/inactive status */}
-          <button
-            onClick={() => toggleIsActive(p._id, p.isActive === "1" ? "0" : "1")}
-            className={`${
-              p.isActive === "1" ? "text-yellow-500 hover:text-yellow-700" : "text-green-500 hover:text-green-700"
-            }`}
-          >
-            {p.isActive === "1" ? "Active" : "Deactivate"}
-          </button>
-          
-          {/* Edit p link */}
-          <Link
-            to={`/dashboard/admin/product/${p.slug}`}
-            aria-label={`Edit product ${p.name}`}
-          >
-            <Edit className="text-green-500 hover:text-green-700" />
-          </Link>
-        </div>
-      </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Update the pagination controls */}
-        <div className="flex justify-between items-center mt-4">
-          <div className="flex space-x-2">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1 || loading}
-              className="px-4 py-2 border bg-gray-300 disabled:opacity-50"
-            >
-              Prev
-            </button>
-
-            {/* Add page numbers */}
-            <div className="flex space-x-1">
-              {[...Array(totalPages)].map((_, index) => {
-                const pageNumber = index + 1;
-                if (
-                  pageNumber === 1 ||
-                  pageNumber === totalPages ||
-                  (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
-                ) {
-                  return (
-                    <button
-                      key={pageNumber}
-                      onClick={() => handlePageChange(pageNumber)}
-                      className={`px-4 py-2 border ${
-                        currentPage === pageNumber
-                          ? "bg-blue-500 text-white"
-                          : "bg-gray-100"
-                      }`}
-                      disabled={loading}
-                    >
-                      {pageNumber}
-                    </button>
-                  );
-                }
-                if (
-                  pageNumber === currentPage - 2 ||
-                  pageNumber === currentPage + 2
-                ) {
-                  return <span key={pageNumber} className="px-4 py-2">...</span>;
-                }
-                return null;
-              })}
-            </div>
-
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages || loading}
-              className="px-4 py-2 border bg-gray-300 disabled:opacity-50"
-            >
-              Next
-            </button>
+                ) : (
+                  currentProducts.map((p, index) => (
+                    <tr key={p._id} className="hover:bg-gray-50">
+                      <td className="border border-gray-300 px-4 py-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedProducts.includes(p._id)}
+                          onChange={() => toggleSelectProduct(p._id)}
+                        />
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2">
+                        {(currentPage - 1) * itemsPerPage + index + 1}
+                      </td>
+                      <td className="border p-2 text-center">
+                        <img
+                          src={p.photos || "/placeholder-image.png"} // Fallback image if photos is undefined
+                          alt={p.name}
+                          className="border p-2"
+                          style={{
+                            width: "50px",
+                            height: "50px",
+                            objectFit: "cover",
+                            borderRadius: "4px",
+                          }}
+                        />
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2">{p.name}</td>
+                      <td className="border border-gray-300 px-4 py-2">{p.category.name}</td>
+                      <td className="border border-gray-300 px-4 py-2">{p.subcategory.name}</td>
+                      <td className="border border-gray-300 px-4 py-2">{p.perPiecePrice}</td>
+                      <td className="border border-gray-300 px-4 py-2">{p.stock}</td>
+                      <td className="border p-2">
+                        <div className="flex justify-center space-x-2">
+                          <button
+                            onClick={() => toggleIsActive(p._id, p.isActive === "1" ? "0" : "1")}
+                            className={`${
+                              p.isActive === "1"
+                                ? "text-yellow-500 hover:text-yellow-700"
+                                : "text-green-500 hover:text-green-700"
+                            }`}
+                          >
+                            {p.isActive === "1" ? "Active" : "Deactivate"}
+                          </button>
+                          <Link
+                            to={`/dashboard/admin/product/${p.slug}`}
+                            aria-label={`Edit product ${p.name}`}
+                          >
+                            <Edit className="text-green-500 hover:text-green-700" />
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-          <span className="text-sm text-gray-600">
-            Showing {(currentPage - 1) * itemsPerPage + 1} to {" "}
-            {Math.min(currentPage * itemsPerPage, totalProducts)} of {" "}
-            {totalProducts} products
-          </span>
+
+          {/* Update the pagination controls */}
+          <div className="flex justify-between items-center mt-4">
+            <div>
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-4 py-2 border bg-gray-300"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 border bg-gray-300 ml-2"
+              >
+                Next
+              </button>
+            </div>
+            <span>
+              Page {currentPage} of {totalPages}
+            </span>
+          </div>
         </div>
-      </div>
       </div>
     </Layout>
   );
 };
 
 export default Products;
+

@@ -26,7 +26,20 @@ const ProductDetails = () => {
   const [productIds, setProductId] = useState();
   const [categoryId, setCategoryId] = useState();
   const [subcategoryId, setSubcategoryId] = useState();
+// In ProductDetails component
+useEffect(() => {
+  const scrollPosition = sessionStorage.getItem('productDetailsScrollPosition');
+  if (scrollPosition) {
+    window.scrollTo(0, parseInt(scrollPosition, 10));
+    sessionStorage.removeItem('productDetailsScrollPosition');
+  }
 
+  // Save scroll position when leaving the page
+  return () => {
+    sessionStorage.setItem('productDetailsScrollPosition', window.scrollY);
+  };
+}, [params?.slug]);
+  
   useEffect(() => {
     window.scrollTo(0, 0);
     if (params?.slug) {
@@ -512,7 +525,7 @@ const ProductDetails = () => {
                 >
                   -
                 </button>
-                <input
+           <input
   type="number"
   value={displayQuantity}
   readOnly

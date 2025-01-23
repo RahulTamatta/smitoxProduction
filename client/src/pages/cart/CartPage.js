@@ -452,19 +452,18 @@ const CartPage = () => {
                               -
                             </button>
                             <input
-                              type="number"
-                              min="1"
-                              value={item.quantity}
-                              onChange={(e) => {
-                                const newQuantity = parseInt(e.target.value);
-                                handleQuantityChange(
-                                  item.product._id,
-                                  newQuantity
-                                );
-                              }}
-                              className="form-control mx-2"
-                              style={{ width: "60px", textAlign: "center" }}
-                            />
+  type="number"
+  min="1"
+  max="10000" // Allow up to 10,000
+  value={item.quantity}
+  onChange={(e) => {
+    const newQuantity = parseInt(e.target.value);
+    handleQuantityChange(item.product._id, newQuantity);
+  }}
+  className="form-control mx-2"
+  style={{ width: "100px", textAlign: "center" }} // Increased width for better usability
+/>
+
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -530,19 +529,14 @@ const CartPage = () => {
                 currency: minimumOrderCurrency || "INR",
               })}
             </p>
-            {totalPrice() < minimumOrder && (
-          <p className="text-danger">
+            {   
+             <p className="text-danger">
           <ul>
             <li>Order total is below the minimum order amount.</li>
             <li>Courier charge will be added (depends on weight and COD amount).</li>
             <li>10% advance payment is required to confirm the order.</li>
           </ul>
-        </p>
-        
-              
-              
-              
-            )}
+        </p>}
             <div className="mb-3">
               <label className="form-label">Payment Method</label>
               <select

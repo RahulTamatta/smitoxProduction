@@ -87,32 +87,34 @@ const WishlistPage = () => {
 
   return (
     <Layout>
-  <div className="container mx-auto px-4 py-8" style={{ paddingTop: "8rem" }}>
+<div className="container mx-auto px-4 py-8" style={{ paddingTop: "8rem" }}>
+  <h2 className="text-center text-2xl sm:text-3xl font-bold mb-6 md:mb-8">My Wishlist</h2>
 
-
-        <h2 className="text-center text-2xl sm:text-3xl font-bold mb-6 md:mb-8">My Wishlist</h2>
-
-        {!wishlist || wishlist.length === 0 ? (
-          <div className="text-center py-8">
-            <p>Your wishlist is empty</p>
+  {!wishlist || wishlist.length === 0 ? (
+    <div className="text-center py-8">
+      <p>Your wishlist is empty</p>
+    </div>
+  ) : (
+    <div className="row">
+      {wishlist.map((item) => (
+        item?.product && (
+          <div
+            key={item.product._id}
+            className="col-lg-4 col-md-6 col-sm-12 mb-3"
+          >
+            <ProductCard
+              product={item.product}
+              handleRemoveFromWishlist={handleRemoveFromWishlist}
+              handleAddToCart={handleAddToCart}
+              isWishlistItem={true}
+            />
           </div>
-        ) : (
-          <div className="row">
-            {wishlist.map((item) => (
-              item?.product && (
-                <div key={item.product._id} className="col-lg-4 col-md-4 col-sm-4 col-6 mb-3">
-                  <ProductCard
-                    product={item.product}
-                    handleRemoveFromWishlist={handleRemoveFromWishlist}
-                    handleAddToCart={handleAddToCart}
-                    isWishlistItem={true}
-                  />
-                </div>
-              )
-            ))}
-          </div>
-        )}
-      </div>
+        )
+      ))}
+    </div>
+  )}
+</div>
+
     </Layout>
   );
 };

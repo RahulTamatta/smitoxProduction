@@ -5,7 +5,7 @@ import { useAuth } from '../context/auth';
 import { Heart } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, onClick }) => {  
   const navigate = useNavigate();
   const [auth] = useAuth();
   const [isInWishlist, setIsInWishlist] = useState(false);
@@ -63,6 +63,19 @@ const ProductCard = ({ product }) => {
     }
   };
 
+  const handleProductClick = () => {
+    // Save current scroll position before navigating
+    localStorage.setItem('homePageScrollPosition', window.scrollY.toString());
+    
+    // Navigate to product details with scroll position state
+    navigate(`/product/${product.slug}`, { 
+      state: { 
+        fromHomePage: true,
+        scrollPosition: window.scrollY 
+      } 
+    });
+  };
+
   const getFontSizes = () => {
     if (screenWidth <= 576) {
       return {
@@ -104,10 +117,8 @@ const ProductCard = ({ product }) => {
       <div
         className="card product-card h-100"
         style={{ cursor: "pointer", position: "relative" }}
-        onClick={() => navigate(`/product/${product.slug}`)}
+        onClick={handleProductClick}
       >
-    
-
         {!imageLoaded && (
           <div
             style={{
@@ -143,24 +154,23 @@ const ProductCard = ({ product }) => {
             {product.name.length > 20
               ? `${product.name.slice(0, 18)}.....`
               : product.name}
-                  <button
-          onClick={toggleWishlist}
-          style={{
-            position: "absolute",
-          
-            right: "10px",
-            zIndex: 2,
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-          }}
-        >
-          <Heart
-            size={24}
-            fill={isInWishlist ? "#e47911" : "none"}
-            color={isInWishlist ? "#e47911" : "#000000"}
-          />
-        </button>
+            <button
+              onClick={toggleWishlist}
+              style={{
+                position: "absolute",
+                right: "10px",
+                zIndex: 2,
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              <Heart
+                size={24}
+                fill={isInWishlist ? "#e47911" : "none"}
+                color={isInWishlist ? "#e47911" : "#000000"}
+              />
+            </button>
           </h5>
         </div>
         

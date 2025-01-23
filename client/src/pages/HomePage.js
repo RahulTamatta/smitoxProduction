@@ -12,7 +12,7 @@ import { useCart } from "../context/cart";
 import SearchInput from "../components/Form/SearchInput";
 import ProductCard from "./ProductCard"; // Import the new ProductCard component
 import WhatsAppButton from './whatsapp'; // Adjust the import path as needed
-
+import { useLocation } from 'react-router-dom';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 
 
@@ -72,7 +72,7 @@ const HomePage = () => {
   const [productsForYou, setProductsForYou] = useState([]);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [hasMore, setHasMore] = useState(true); // Add this new state
-
+  const location = useLocation();
   useEffect(() => {
     getAllCategory();
     getTotal();
@@ -357,6 +357,24 @@ const bannerSettings = {
   )
   
 };
+const handleProductClick = (product) => {
+  // Save current scroll position before navigating
+  sessionStorage.setItem(`scrollPosition_${location.pathname}`, window.scrollY.toString());
+  navigate(`/product/${product.slug}`);
+};
+useEffect(() => {
+  // Restore scroll position on component mount
+  const savedScrollPosition = sessionStorage.getItem(`scrollPosition_${location.pathname}`);
+  if (savedScrollPosition) {
+    window.scrollTo(0, parseInt(savedScrollPosition, 10));
+    sessionStorage.removeItem(`scrollPosition_${location.pathname}`);
+  }
+
+  // Save scroll position on component unmount
+  return () => {
+    sessionStorage.setItem(`scrollPosition_${location.pathname}`, window.scrollY);
+  };
+}, [location.pathname]);
   
   if (isBlocked) {
     return (
@@ -370,8 +388,10 @@ const bannerSettings = {
   }
 
   return (
+    
     <Layout title={"All Products - Best offers"}>
       {/* Mobile Search */}
+    
       {isMobile && (
         <div 
           className="searchInput" 
@@ -520,14 +540,10 @@ const bannerSettings = {
       
               style={{ padding: '8px' }}
             >
-              <ProductCard 
-                product={p}
-                style={{
-                  height: '100%',
-                  borderRadius: '12px',
-                  overflow: 'hidden'
-                }}
-              />
+            <ProductCard 
+  product={p}
+  handleProductClick={handleProductClick}
+/>
             </div>
           ))}
         </div>
@@ -597,6 +613,7 @@ const bannerSettings = {
           }}
         />
       </Suspense>
+   
     </Layout>
   );}
 
