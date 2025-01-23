@@ -400,7 +400,7 @@ export const getAllOrdersController = async (req, res) => {
     const skip = (pageNumber - 1) * limitNumber;
 
     let query = {};
-    if (status && status !== 'all-orders') {
+    if (status && status !== "all-orders") {
       query.status = status;
     }
 
@@ -415,13 +415,15 @@ export const getAllOrdersController = async (req, res) => {
 
     let matchingUserIds = [];
     if (search) {
-      const matchingUsers = await mongoose.model('User').find(userSearchQuery).select('_id');
-      matchingUserIds = matchingUsers.map(user => user._id);
+      const matchingUsers = await mongoose.model("User").find(userSearchQuery).select("_id");
+      matchingUserIds = matchingUsers.map((user) => user._id);
 
       query.$or = [
         ...(mongoose.Types.ObjectId.isValid(search) ? [{ _id: new mongoose.Types.ObjectId(search) }] : []),
         ...(matchingUserIds.length > 0 ? [{ buyer: { $in: matchingUserIds } }] : []),
-        { "tracking.id": { $regex: search, $options: 'i' } }
+        { "tracking.id": { $regex: search, $options: "i" } },
+        { "tracking.company": { $regex: search, $options: "i" } },
+        { "payment.transactionId": { $regex: search, $options: "i" } },
       ];
     }
 
@@ -455,6 +457,7 @@ export const getAllOrdersController = async (req, res) => {
     });
   }
 };
+
 export const addProductToOrderController = async (req, res) => {
   try {
     const { orderId } = req.params;

@@ -14,389 +14,359 @@ const Products = () => {
   // Initialize state from URL search params
   const urlParams = new URLSearchParams(location.search);
   const pageFromUrl = parseInt(urlParams.get('page')) || 1;
+  const searchFromUrl = urlParams.get('search') || "";
+  const filterFromUrl = urlParams.get('filter') || "all";
 
   const [products, setProducts] = useState([]);
-  const [filter, setFilter] = useState("all");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [filter, setFilter] = useState(filterFromUrl);
+  const [searchTerm, setSearchTerm] = useState(searchFromUrl);
   const [currentPage, setCurrentPage] = useState(pageFromUrl);
   const [itemsPerPage] = useState(10);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [totalProducts, setTotalProducts] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [bulkAction, setBulkAction] = useState(""); // Added state for bulk action
 
-  // Listen to browser history changes (back/forward buttons)
+  // Handle browser navigation (back/forward)
   useEffect(() => {
     const handleLocationChange = () => {
       const params = new URLSearchParams(location.search);
-      const page = parseInt(params.get('page')) || 1;
-      setCurrentPage(page);
+      setCurrentPage(parseInt(params.get('page')) || 1);
+      setSearchTerm(params.get('search') || "");
+      setFilter(params.get('filter') || "all");
     };
 
-    // Initial check
-    handleLocationChange();
-
-    // Listen for location changes
     window.addEventListener('popstate', handleLocationChange);
-
-    return () => {
-      window.removeEventListener('popstate', handleLocationChange);
-    };
+    return () => window.removeEventListener('popstate', handleLocationChange);
   }, [location]);
 
-  // Get all products
-  const getAllProducts = async (page = 1, search = "") => {
+  // Fetch products with current filters
+  // Fetch products with filters
+  const getAllProducts = async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get(
-        `/api/v1/product/get-product?page=${page}&limit=${itemsPerPage}&search=${search}`
-      );
+      const { data } = await axios.get(`/api/v1/product/get-product`, {
+        params: {
+          page: currentPage,
+          limit: itemsPerPage,
+          search: searchTerm,
+          filter: filter,
+        }
+      });
+
       if (data.success) {
         setProducts(data.products);
         setTotalProducts(data.total);
-
-        // Update URL with both page and search parameters
-        const newUrl = `${window.location.pathname}?page=${page}&search=${search}`;
-        window.history.replaceState({}, '', newUrl);
+        // Update URL without reload
+        const params = new URLSearchParams({
+          page: currentPage,
+          ...(searchTerm && { search: searchTerm }),
+          ...(filter !== 'all' && { filter: filter })
+        }).toString();
+        window.history.replaceState({}, '', `?${params}`);
       }
     } catch (error) {
-      console.log(error);
-      //toast.error("Something Went Wrong");
+      toast.error('Failed to load products');
     } finally {
       setLoading(false);
     }
   };
 
-  // Update the search handler
-  const handleSearch = (value) => {
-    setSearchTerm(value);
-    setCurrentPage(1); // Reset to first page when searching
-    getAllProducts(1, value); // Fetch results with search term
-  };
-
-  // Fetch products when page changes
   useEffect(() => {
-    getAllProducts(currentPage);
-  }, [currentPage]);
+    getAllProducts();
+  }, [currentPage, searchTerm, filter]);
 
-  // Handle page change
-  const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setCurrentPage(newPage);
-
-      // Update URL with the new page number
-      const newUrl = `${window.location.pathname}?page=${newPage}`;
-      window.history.pushState({}, '', newUrl);
-    }
-  };
-
-  // Calculate total pages
-  const totalPages = Math.ceil(totalProducts / itemsPerPage);
+  // Responsive filter buttons
+  const FilterButton = ({ value, label }) => (
+    <button
+      onClick={() => setFilter(value)}
+      className={`px-4 py-2 rounded-lg text-sm md:text-base ${
+        filter === value 
+          ? 'bg-blue-600 text-white'
+          : 'bg-white text-gray-600 border hover:bg-gray-50'
+      }`}
+    >
+      {label}
+    </button>
+  );
 
   useEffect(() => {
     getAllProducts();
-  }, []);
+  }, [currentPage, searchTerm, filter]);
 
-  // Handle bulk actions
+  const handleFilterChange = (newFilter) => {
+    setFilter(newFilter);
+    setCurrentPage(1);
+  };
+
+  const handleSearch = (value) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  // Pagination
+  const totalPages = Math.ceil(totalProducts / itemsPerPage);
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  // Bulk actions
   const handleBulkAction = async (action) => {
+    if (selectedProducts.length === 0) return;
+    
     try {
-      if (
-        action === "delete" &&
-        !window.confirm("Are you sure you want to delete selected products?")
-      ) {
-        return; // Prevent deletion if the user cancels
-      }
-
-      if (action === "delete") {
-        await Promise.all(
-          selectedProducts.map((id) =>
-            axios.delete(`/api/v1/product/delete-product/${id}`)
-          )
-        );
-        toast.success("Selected products deleted!");
-        setProducts((prevProducts) =>
-          prevProducts.filter(
-            (product) => !selectedProducts.includes(product._id)
-          )
-        );
-      } else {
-        await Promise.all(
-          selectedProducts.map((id) =>
-            axios.put(`/api/v1/product/updateStatus/products/${id}`, {
-              isActive: action === "activate" ? "1" : "0",
-            })
-          )
-        );
-        toast.success(`Selected products ${action}d!`);
-        setProducts((prevProducts) =>
-          prevProducts.map((product) =>
-            selectedProducts.includes(product._id)
-              ? { ...product, isActive: action === "activate" ? "1" : "0" }
-              : product
-          )
-        );
-      }
-      setSelectedProducts([]);
-    } catch (error) {
-      console.log(error);
-      toast.error(`Error performing bulk ${action}`);
-    }
-  };
-
-  // Handle product selection
-  const toggleSelectProduct = (id) => {
-    setSelectedProducts((prev) =>
-      prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
-    );
-  };
-
-  const toggleIsActive = async (productId, newStatus) => {
-    try {
-      const response = await axios.put(
-        `/api/v1/product/updateStatus/products/${productId}`,
-        {
-          isActive: newStatus,
+      if (action === "delete" && !window.confirm("Are you sure?")) return;
+      
+      const endpoints = selectedProducts.map(id => {
+        if (action === "delete") {
+          return axios.delete(`/api/v1/product/delete-product/${id}`);
         }
-      );
-      if (response.data.success) {
-        setProducts((prevProducts) =>
-          prevProducts.map((product) =>
-            product._id === productId
-              ? { ...product, isActive: newStatus }
-              : product
-          )
-        );
-        toast.success(
-          `Product status updated to ${
-            newStatus === "1" ? "Active" : "Inactive"
-          }!`
-        );
-      } else {
-        //toast.error("Failed to update product status.");
-      }
+        return axios.put(`/api/v1/product/updateStatus/products/${id}`, {
+          isActive: action === "activate" ? "1" : "0"
+        });
+      });
+
+      await Promise.all(endpoints);
+      await getAllProducts();
+      setSelectedProducts([]);
+      toast.success(`Bulk ${action} successful`);
     } catch (error) {
-      console.error(error);
-      //toast.error("An error occurred while updating product status.");
+      toast.error(`Bulk ${action} failed`);
     }
   };
 
-  // Filtered and searched products
-  const filteredProducts = products.filter((product) => {
-    if (filter === "outOfStock" && product.stock !== 0) return false;
-    if (filter === "active" && product.isActive !== "1") return false;
-    if (filter === "inactive" && product.isActive !== "0") return false;
-    if (
-      searchTerm &&
-      !product.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-      return false;
-    return true;
-  });
-
-  // Paginated products
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentProducts = filteredProducts.slice(
-    indexOfFirstItem,
-    indexOfLastItem
-  );
+  // Toggle selection
+  const toggleSelectAll = () => {
+    if (selectedProducts.length === products.length) {
+      setSelectedProducts([]);
+    } else {
+      setSelectedProducts(products.map(p => p._id));
+    }
+  };
 
   return (
     <Layout>
-      <div className="flex" style={{ display: "flex", flexDirection: "row" }}>
-        {/* Admin Menu in row with product list */}
-        <div className="w-1/5" style={{ paddingRight: "20px" }}>
-          <AdminMenu />
-        </div>
-        <div className="w-4/5 p-4" style={{ backgroundColor: "#f4f4f9" }}>
-          <h1 className="text-2xl font-bold mb-4" style={{ color: "#4a4a4a" }}>
-            Products List
-          </h1>
-
-          <div className="mb-4">
-            <div className="flex space-x-4">
-              {["all", "active", "inactive", "outOfStock"].map((tab) => (
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <AdminMenu />
+        <div style={{ 
+          width: '100%',
+          padding: '16px',
+          backgroundColor: '#f3f4f6',
+          marginLeft: '0',
+          overflowX: 'auto'
+        }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '16px' }}>Products List</h1>
+  
+          {/* Filters */}
+          <div style={{ 
+            marginBottom: '16px',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '8px'
+          }}>
+            {["all", "active", "inactive", "outOfStock"].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => handleFilterChange(tab)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '4px',
+                  backgroundColor: filter === tab ? '#3b82f6' : 'white',
+                  color: filter === tab ? 'white' : 'black',
+                  border: '1px solid #e5e7eb',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
+          </div>
+  
+          {/* Search and Bulk Actions */}
+          <div style={{ 
+            marginBottom: '16px',
+            display: 'flex',
+            flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+            gap: '16px',
+            justifyContent: 'space-between'
+          }}>
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={(e) => handleSearch(e.target.value)}
+              style={{
+                border: '1px solid #e5e7eb',
+                padding: '8px',
+                borderRadius: '4px',
+                width: window.innerWidth < 768 ? '100%' : '256px'
+              }}
+            />
+            <div style={{ 
+              display: 'flex',
+              gap: '8px',
+              flexWrap: 'wrap',
+              justifyContent: window.innerWidth < 768 ? 'flex-start' : 'flex-end'
+            }}>
+              {['delete', 'activate', 'deactivate'].map((action) => (
                 <button
-                  key={tab}
-                  onClick={() => setFilter(tab)}
-                  className={`px-4 py-2 border ${
-                    filter === tab ? "bg-blue-500 text-white" : "bg-gray-100"
-                  }`}
+                  key={action}
+                  onClick={() => handleBulkAction(action)}
+                  disabled={!selectedProducts.length}
                   style={{
-                    color: filter === tab ? "white" : "#333",
-                    borderRadius: "4px",
+                    backgroundColor: 
+                      action === 'delete' ? '#ef4444' :
+                      action === 'activate' ? '#22c55e' : '#eab308',
+                    color: action === 'deactivate' ? 'black' : 'white',
+                    padding: '8px 16px',
+                    borderRadius: '4px',
+                    opacity: !selectedProducts.length ? 0.5 : 1,
+                    cursor: !selectedProducts.length ? 'not-allowed' : 'pointer',
+                    whiteSpace: 'nowrap'
                   }}
                 >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {action.charAt(0).toUpperCase() + action.slice(1)} Selected
                 </button>
               ))}
             </div>
           </div>
-
-          <div className="mb-4 flex items-center space-x-4">
-            <input
-              type="text"
-              className="border px-3 py-2"
-              placeholder="Search by name"
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-              style={{ borderRadius: "4px", width: "200px" }}
-            />
-            <span style={{ fontSize: "14px", color: "#666" }}>
-              Showing {currentProducts.length} of {filteredProducts.length}{" "}
-              products
-            </span>
-          </div>
-
-          {/* Bulk Action Select */}
-    
-
-          <div className="mb-4">
-            <button
-              onClick={() => handleBulkAction("delete")}
-              disabled={selectedProducts.length === 0}
-              className="px-4 py-2 border bg-red-500 text-white"
-              style={{ backgroundColor: "#e53e3e", color: "white" }}
-            >
-              Delete Selected
-            </button>
-            <button
-              onClick={() => handleBulkAction("activate")}
-              disabled={selectedProducts.length === 0}
-              className="px-4 py-2 border bg-green-500 text-white ml-2"
-              style={{ backgroundColor: "#48bb78", color: "white" }}
-            >
-              Activate Selected
-            </button>
-            <button
-              onClick={() => handleBulkAction("deactivate")}
-              disabled={selectedProducts.length === 0}
-              className="px-4 py-2 border bg-yellow-500 text-white ml-2"
-              style={{ backgroundColor: "#f6e05e", color: "black" }}
-            >
-              Deactivate Selected
-            </button>
-          </div>
-
-          {/* Update the products display section */}
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse border border-gray-200">
+  
+          {/* Products Table */}
+          <div style={{ 
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            overflowX: 'auto'
+          }}>
+            <table style={{ width: '100%', minWidth: '800px' }}>
               <thead>
-                <tr>
-                  <th className="border p-2">
-                    <input
-                      type="checkbox"
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedProducts(products.map(p => p._id));
-                        } else {
-                          setSelectedProducts([]);
-                        }
-                      }}
-                    />
-                  </th>
-                  <th className="border p-2">#</th>
-                  <th className="border p-2">Photo</th>
-                  <th className="border p-2">Name</th>
-                  <th className="border p-2">Category</th>
-                  <th className="border p-2">Subcategory</th>
-                  <th className="border p-2">Price</th>
-                  <th className="border p-2">Stock</th>
-                  <th className="border p-2">Actions</th>
+                <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+                  {['', 'Photo', 'Name', 'Category', 'Price', 'Stock', 'Status', 'Actions'].map((header) => (
+                    <th key={header} style={{ 
+                      padding: '8px',
+                      textAlign: 'left',
+                      display: window.innerWidth < 640 && header === 'Category' ? 'none' : 'table-cell'
+                    }}>
+                      {header === '' ? (
+                        <input
+                          type="checkbox"
+                          checked={selectedProducts.length === products.length && products.length > 0}
+                          onChange={toggleSelectAll}
+                        />
+                      ) : header}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="9" className="text-center py-4">
-                      Loading...
+                    <td colSpan="8" style={{ textAlign: 'center', padding: '16px' }}>Loading...</td>
+                  </tr>
+                ) : products.map((product) => (
+                  <tr key={product._id} style={{ borderBottom: '1px solid #e5e7eb', hover: { backgroundColor: '#f9fafb' } }}>
+                    <td style={{ padding: '8px' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedProducts.includes(product._id)}
+                        onChange={() => setSelectedProducts(prev =>
+                          prev.includes(product._id)
+                            ? prev.filter(id => id !== product._id)
+                            : [...prev, product._id]
+                        )}
+                      />
+                    </td>
+                    <td style={{ padding: '8px' }}>
+                      <img
+                        src={product.photos || '/placeholder.jpg'}
+                        alt={product.name}
+                        style={{ 
+                          width: '48px',
+                          height: '48px',
+                          objectFit: 'cover',
+                          borderRadius: '4px'
+                        }}
+                      />
+                    </td>
+                    <td>{product.name}</td>
+                    <td style={{ display: window.innerWidth < 640 ? 'none' : 'table-cell' }}>
+                      {product.category?.name}
+                    </td>
+                    <td>{product.perPiecePrice}</td>
+                    <td>{product.stock}</td>
+                    <td>
+                      <span style={{ 
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        backgroundColor: product.isActive === "1" ? '#dcfce7' : '#fee2e2',
+                        color: product.isActive === "1" ? '#166534' : '#991b1b'
+                      }}>
+                        {product.isActive === "1" ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td>
+                      <Link
+                        to={`/dashboard/admin/product/${product.slug}`}
+                        style={{ color: '#3b82f6', textDecoration: 'none' }}
+                      >
+                        Edit
+                      </Link>
                     </td>
                   </tr>
-                ) : (
-                  currentProducts.map((p, index) => (
-                    <tr key={p._id} className="hover:bg-gray-50">
-                      <td className="border border-gray-300 px-4 py-2">
-                        <input
-                          type="checkbox"
-                          checked={selectedProducts.includes(p._id)}
-                          onChange={() => toggleSelectProduct(p._id)}
-                        />
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2">
-                        {(currentPage - 1) * itemsPerPage + index + 1}
-                      </td>
-                      <td className="border p-2 text-center">
-                        <img
-                          src={p.photos || "/placeholder-image.png"} // Fallback image if photos is undefined
-                          alt={p.name}
-                          className="border p-2"
-                          style={{
-                            width: "50px",
-                            height: "50px",
-                            objectFit: "cover",
-                            borderRadius: "4px",
-                          }}
-                        />
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2">{p.name}</td>
-                      <td className="border border-gray-300 px-4 py-2">{p.category.name}</td>
-                      <td className="border border-gray-300 px-4 py-2">{p.subcategory.name}</td>
-                      <td className="border border-gray-300 px-4 py-2">{p.perPiecePrice}</td>
-                      <td className="border border-gray-300 px-4 py-2">{p.stock}</td>
-                      <td className="border p-2">
-                        <div className="flex justify-center space-x-2">
-                          <button
-                            onClick={() => toggleIsActive(p._id, p.isActive === "1" ? "0" : "1")}
-                            className={`${
-                              p.isActive === "1"
-                                ? "text-yellow-500 hover:text-yellow-700"
-                                : "text-green-500 hover:text-green-700"
-                            }`}
-                          >
-                            {p.isActive === "1" ? "Active" : "Deactivate"}
-                          </button>
-                          <Link
-                            to={`/dashboard/admin/product/${p.slug}`}
-                            aria-label={`Edit product ${p.name}`}
-                          >
-                            <Edit className="text-green-500 hover:text-green-700" />
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                ))}
               </tbody>
             </table>
           </div>
-
-          {/* Update the pagination controls */}
-          <div className="flex justify-between items-center mt-4">
-            <div>
+  
+          {/* Pagination */}
+          <div style={{ 
+            marginTop: '16px',
+            display: 'flex',
+            flexDirection: window.innerWidth < 640 ? 'column' : 'row',
+            gap: '16px',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <span style={{ marginBottom: window.innerWidth < 640 ? '8px' : '0' }}>
+              Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
+              {Math.min(currentPage * itemsPerPage, totalProducts)} of{' '}
+              {totalProducts} products
+            </span>
+            <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="px-4 py-2 border bg-gray-300"
+                style={{
+                  backgroundColor: 'white',
+                  border: '1px solid #e5e7eb',
+                  padding: '8px 16px',
+                  borderRadius: '4px',
+                  opacity: currentPage === 1 ? 0.5 : 1,
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
+                }}
               >
                 Previous
               </button>
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="px-4 py-2 border bg-gray-300 ml-2"
+                style={{
+                  backgroundColor: 'white',
+                  border: '1px solid #e5e7eb',
+                  padding: '8px 16px',
+                  borderRadius: '4px',
+                  opacity: currentPage === totalPages ? 0.5 : 1,
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer'
+                }}
               >
                 Next
               </button>
             </div>
-            <span>
-              Page {currentPage} of {totalPages}
-            </span>
           </div>
         </div>
       </div>
     </Layout>
   );
 };
-
 export default Products;
-
