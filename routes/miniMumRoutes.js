@@ -9,7 +9,7 @@ import { isAdmin, requireSignIn } from "./../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-router.get('/getMinimumOrder',   requireSignIn,
+router.get('/getMinimumOrder',
 getMinimumOrder);
 router.post('/createMinimumOrder',  requireSignIn,
 isAdmin, createMinimumOrder);
