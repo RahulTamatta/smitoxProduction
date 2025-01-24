@@ -45,7 +45,7 @@ const CreateProduct = () => {
   const [tags, setTags] = useState([]); // Added to match controller
   const [fk_tags, setFkTags] = useState([]); // Added to match controller
   const [sku, setSku] = useState(""); // Added to match controller
-  
+  const [customOrder, setCustomOrder] = useState("");
   const [photos, setPhotos] = useState(""); 
   const [multipleimages, setMultipleImages] = useState([]);
 
@@ -237,7 +237,9 @@ const CreateProduct = () => {
           maximum: parseFloat(p.maximum) || 0,
           discount_mrp: parseFloat(p.discount_mrp) || 0,
           selling_price_set: parseFloat(p.selling_price_set) || 0
-        })))
+          
+        }))),
+        custom_order: customOrder || "" 
       };
   
       Object.entries(formFields).forEach(([key, value]) => {
@@ -434,6 +436,28 @@ const CreateProduct = () => {
     ) : null}
   </div>
 </div>
+{/* Custom Order */}
+<div className="mb-3">
+  <label htmlFor="customOrder" className="form-label">
+    Custom Order
+  </label>
+  <input
+    id="customOrder"
+    type="number"
+    name="custom_order"
+    placeholder="Enter custom order position (optional)"
+    className="form-control"
+    value={customOrder}
+    onChange={(e) => setCustomOrder(e.target.value)}
+  />
+  <small className="text-muted">
+    Optional: Specify a specific position for this product in the product list. 
+    If left blank, it will be automatically assigned the next available position.
+  </small>
+</div>
+
+
+
               <div className="mb-3">
                 <label htmlFor="productName" className="form-label">
                   Product Name

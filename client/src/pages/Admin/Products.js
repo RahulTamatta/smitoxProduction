@@ -167,6 +167,7 @@ const Products = () => {
           }}
         />
         <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 'bold' }}>{product.custom_order}</div>
           <div style={{ fontWeight: 'bold' }}>{product.name}</div>
           <div style={{ color: 'gray', fontSize: '0.875rem' }}>
             {product.category?.name} - {product.subcategory.name}
@@ -332,7 +333,7 @@ const Products = () => {
               <table style={{ width: '100%', minWidth: '800px' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-                    {['', 'Photo', 'Name', 'Category', 'Subcategory', 'Price', 'Stock', 'Status', 'Actions'].map((header) => (
+                    {['','Sr.', 'Photo', 'Name', 'Category', 'Subcategory', 'Price', 'Stock', 'Status', 'Actions'].map((header) => (
                       <th key={header} style={{ 
                         padding: '8px',
                         textAlign: 'left'
@@ -367,6 +368,8 @@ const Products = () => {
                             )}
                           />
                         </td>
+                        <td>{product.custom_order}</td>
+                        
                         <td style={{ padding: '8px' }}>
                           <img
                             src={product.photos || '/placeholder.jpg'}
@@ -380,6 +383,7 @@ const Products = () => {
                           />
                         </td>
                         <td>{product.name}</td>
+                      
                         <td>{product.category?.name}</td>
                         <td>{product.subcategory.name}</td>
                         <td>{product.perPiecePrice}</td>

@@ -11,6 +11,7 @@ const productSchema = new Schema(
       type: String,
       required: true,
     },
+    custom_order: { type: Number, default: 0 },
     description: {
       type: String,
       required: true,
@@ -178,6 +179,68 @@ productSchema.statics.generateSKU = async function(name, category, subcategory) 
   }
 
   return `${basePrefix}-${newNumber.toString().padStart(5, '0')}`;
+};
+// Custom Order Management Service
+class CustomOrderService {
+  static async assignCustomOrder(proposedOrder) {
+    // If no proposed order, auto-generate last+1
+    if (!proposedOrder) {
+      const lastProduct = await productModel
+        .findOne()
+        .sort({ custom_order: -1 })
+        .select('custom_order');
+      
+      return lastProduct 
+        ? lastProduct.custom_order + 1 
+        : 1;
+    }
+
+    // Check if proposed order already exists
+    const existingProduct = await productModel.findOne({ 
+      custom_order: proposedOrder 
+    });
+
+    if (!existingProduct) {
+      return proposedOrder; // Order available
+    }
+
+    // Order exists - shift existing products
+    await productModel.updateMany(
+      { custom_order: { $gte: proposedOrder } },
+      { $inc: { custom_order: 1 } }
+    );
+
+    return proposedOrder;
+  }
+}
+
+// In Product Controller
+export const createProductController = async (req, res) => {
+  try {
+    const { custom_order, /* other fields */ } = req.fields;
+
+    // Get unique custom order
+    const finalCustomOrder = await CustomOrderService.assignCustomOrder(custom_order);
+
+    const newProduct = new productModel({
+      // ... other fields
+      custom_order: finalCustomOrder
+    });
+
+    await newProduct.save();
+
+    res.status(201).send({
+      success: true,
+      message: "Product Created Successfully",
+      product: newProduct,
+    });
+  } catch (error) {
+    res.status(500).send({
+      success: false,
+      message: "Error in creating product",
+      error: error.message
+    });
+  }
 };
 
 export default mongoose.model("Product", productSchema);

@@ -49,6 +49,7 @@ const UpdateProduct = () => {
     { minimum: "", maximum: "", discount_mrp: "", selling_price_set: "" },
   ]);
   const [existingPhotoObject, setExistingPhotoObject] = useState(null); // To store the full photo object
+  const [customOrder, setCustomOrder] = useState("");
 
 const [photos, setPhotos] = useState(""); // For single photo URL
 // For new image uploads
@@ -130,7 +131,8 @@ const handleUpdate = async (e) => {
         maximum: parseFloat(p.maximum) || 0,
         discount_mrp: parseFloat(p.discount_mrp) || 0,
         selling_price_set: parseFloat(p.selling_price_set) || 0
-      })))
+      }))),
+      custom_order: customOrder || "" 
     };
 
     Object.entries(formFields).forEach(([key, value]) => {
@@ -191,7 +193,8 @@ const handleUpdate = async (e) => {
         setBulkProducts(product.bulkProducts || [{ minimum: "", maximum: "", discount_mrp: "", selling_price_set: "" }]);
         setProducts(product.photo);
     setPhotos(product.photos || "");  // Set the single photo URL
-    
+    setCustomOrder(product.custom_order || "");
+
 
       if (product.multipleimages && product.multipleimages.length > 0) {
         try {
@@ -393,6 +396,20 @@ const handleUpdate = async (e) => {
           <div className="col-md-9">
             <h1>Update Product</h1>
             <div className="m-1 w-75">
+            <div className="col-md-4">
+  <label htmlFor="customOrder" className="form-label">
+    Custom Order
+  </label>
+  <input
+    id="customOrder"
+    type="number"
+    value={customOrder}
+    name="custom_order"
+    placeholder="Enter custom order"
+    className="form-control"
+    onChange={(e) => setCustomOrder(e.target.value)}
+  />
+</div>
               {/* Category dropdown */}
               <div className="mb-3">
                 <label htmlFor="categorySelect" className="form-label">

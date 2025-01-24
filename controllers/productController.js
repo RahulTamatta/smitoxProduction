@@ -10,6 +10,36 @@ import slugify from "slugify";
 import dotenv from "dotenv";
 // import { v4 as uuidv4 } from 'uuid';
 dotenv.config();
+
+class CustomOrderService {
+  static async assignCustomOrder(proposedOrder) {
+    // If no proposed order, auto-generate last+1
+    if (!proposedOrder) {
+      const lastProduct = await productModel
+        .findOne()
+        .sort({ custom_order: -1 })
+        .select('custom_order');
+      
+      return lastProduct 
+        ? lastProduct.custom_order + 1 
+        : 1;
+    }
+    // Check if proposed order already exists
+    const existingProduct = await productModel.findOne({ 
+      custom_order: proposedOrder 
+    });
+    if (!existingProduct) {
+      return proposedOrder; // Order available
+    }
+    // Order exists - shift existing products
+    await productModel.updateMany(
+      { custom_order: { $gte: proposedOrder } },
+      { $inc: { custom_order: 1 } }
+    );
+    return proposedOrder;
+  }
+}
+
 export const createProductController = async (req, res) => {
   try {
     const {
@@ -41,8 +71,9 @@ export const createProductController = async (req, res) => {
       youtubeUrl,
       sku,
       tag,
-      photos, // Cloudinary URL
-      multipleimages, // Array of Cloudinary URLs
+      photos,
+      multipleimages,
+      custom_order, // Add custom order to destructured fields
     } = req.fields;
 
     // Handle files from request
@@ -100,6 +131,9 @@ export const createProductController = async (req, res) => {
       }
     }
 
+    // Get unique custom order
+    const finalCustomOrder = await CustomOrderService.assignCustomOrder(custom_order);
+
     // Create product instance
     const newProduct = new productModel({
       name,
@@ -132,9 +166,9 @@ export const createProductController = async (req, res) => {
       variants: JSON.parse(variants || '[]'),
       sets: JSON.parse(sets || '[]'),
       tag: Array.isArray(tag) ? tag : tag ? [tag] : [],
-      // Handle Cloudinary URLs
       photos: photos || null,
       multipleimages: Array.isArray(multipleimages) ? multipleimages : multipleimages ? [multipleimages] : [],
+      custom_order: finalCustomOrder, // Add the finalized custom order
     });
 
     // Handle Buffer-based photo
@@ -166,11 +200,214 @@ export const createProductController = async (req, res) => {
     console.error("Error creating product:", error);
     res.status(500).send({
       success: false,
-      error: error.message || "Internal Server Error",
       message: "Error in creating product",
+      error: error.message
     });
   }
 };
+
+export const updateProductController = async (req, res) => {
+  try {
+    const {
+      name,
+      description,
+      price,
+      category,
+      subcategory,
+      brand,
+      quantity,
+      shipping,
+      hsn,
+      unit,
+      unitSet,
+      additionalUnit,
+      stock,
+      minimumqty,
+      gst,
+      gstType,
+      purchaseRate,
+      mrp,
+      perPiecePrice,
+      setPrice,
+      weight,
+      allowCOD,
+      returnProduct,
+      userId,
+      variants,
+      sets,
+      bulkProducts,
+      sku,
+      fk_tags,
+      youtubeUrl,
+      tag,
+      photos, // Cloudinary URL
+      multipleimages, // Array of Cloudinary URLs
+    } = req.fields;
+
+    // Handle files from request
+    const { photo, images } = req.files;
+
+    // Validation
+    switch (true) {
+      case !name:
+        return res.status(400).send({ error: "Name is Required" });
+      case !description:
+        return res.status(400).send({ error: "Description is Required" });
+      case !price:
+        return res.status(400).send({ error: "Price is Required" });
+      case !category:
+        return res.status(400).send({ error: "Category is Required" });
+      case !quantity:
+        return res.status(400).send({ error: "Quantity is Required" });
+      case photo && photo.size > 1000000:
+        return res.status(400).send({ error: "Photo should be less than 1MB" });
+      case youtubeUrl && !/^(https?:\/\/)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)\/(watch\?v=|embed\/|v\/|e\/|playlist\?list=)[\w-]+$/.test(youtubeUrl):
+        return res.status(400).send({ error: "Invalid YouTube URL" });
+    }
+
+    // Validate additional images if provided
+    if (images) {
+      const imageArray = Array.isArray(images) ? images : [images];
+      for (let img of imageArray) {
+        if (img.size > 1000000) {
+          return res.status(400).send({ error: "Each additional image should be less than 1MB" });
+        }
+      }
+    }
+    const finalCustomOrder = await CustomOrderService.assignCustomOrder(req.fields.custom_order);
+
+    // Convert numeric fields and prepare updated fields
+    const updatedFields = {
+      name,
+      description,
+      slug: slugify(name),
+      price: parseFloat(price),
+      category: mongoose.Types.ObjectId(category),
+      subcategory: mongoose.Types.ObjectId(subcategory),
+      brand: mongoose.Types.ObjectId(brand),
+      quantity: parseInt(quantity),
+      stock: parseInt(stock) || 0,
+      minimumqty: parseInt(minimumqty),
+      shipping: shipping === "1",
+      hsn,
+      unit,
+      unitSet: parseInt(unitSet),
+      additionalUnit,
+      gst: parseFloat(gst),
+      gstType,
+      purchaseRate: parseFloat(purchaseRate),
+      mrp: parseFloat(mrp),
+      perPiecePrice: parseFloat(perPiecePrice),
+      setPrice: parseFloat(setPrice),
+      weight: parseFloat(weight),
+      allowCOD: allowCOD === "1",
+      returnProduct: returnProduct === "1",
+      userId,
+      isActive: "1",
+      variants: JSON.parse(variants || "[]"),
+      sets: JSON.parse(sets || "[]"),
+      sku,
+      youtubeUrl: youtubeUrl || "",
+      tag: Array.isArray(tag) ? tag : tag ? [tag] : [],
+      // Handle Cloudinary URLs
+      photos: photos || null,
+      custom_order: finalCustomOrder, 
+      multipleimages: Array.isArray(multipleimages) ? multipleimages : multipleimages ? [multipleimages] : [],
+    };
+
+    // Handle FK Tags
+    if (fk_tags) {
+      let parsedFkTags = [];
+      if (typeof fk_tags === 'string') {
+        try {
+          parsedFkTags = JSON.parse(fk_tags);
+        } catch (error) {
+          console.error("Error parsing fk_tags:", error);
+          return res.status(400).send({ error: "Invalid fk_tags data" });
+        }
+      } else if (Array.isArray(fk_tags)) {
+        parsedFkTags = fk_tags;
+      }
+
+      if (!Array.isArray(parsedFkTags)) {
+        return res.status(400).send({ error: "fk_tags must be an array" });
+      }
+
+      updatedFields.fk_tags = parsedFkTags;
+    }
+
+    // Handle bulkProducts
+    if (bulkProducts) {
+      let formattedBulkProducts = null;
+      if (typeof bulkProducts === 'string') {
+        try {
+          formattedBulkProducts = JSON.parse(bulkProducts);
+        } catch (error) {
+          console.error("Error parsing bulkProducts:", error);
+          return res.status(400).send({ error: "Invalid bulkProducts data" });
+        }
+      }
+
+      if (formattedBulkProducts && !Array.isArray(formattedBulkProducts)) {
+        return res.status(400).send({ error: "bulkProducts must be an array" });
+      }
+
+      if (Array.isArray(formattedBulkProducts)) {
+        formattedBulkProducts = formattedBulkProducts.map((item) => ({
+          minimum: parseInt(item.minimum),
+          maximum: parseInt(item.maximum),
+          discount_mrp: parseFloat(item.discount_mrp),
+          selling_price_set: parseFloat(item.selling_price_set),
+        }));
+      }
+
+      updatedFields.bulkProducts = formattedBulkProducts;
+    }
+
+    // Find the product to update
+    const products = await productModel.findById(req.params.pid);
+    if (!products) {
+      return res.status(404).send({ error: "Product not found" });
+    }
+
+    // Update the product with new fields
+    Object.assign(products, updatedFields);
+
+    // Handle Buffer-based photo if provided
+    if (photo) {
+      products.photo = {
+        data: fs.readFileSync(photo.path),
+        contentType: photo.type
+      };
+    }
+
+    // Handle Buffer-based multiple images if provided
+    if (images) {
+      const imageArray = Array.isArray(images) ? images : [images];
+      products.images = imageArray.map(img => ({
+        data: fs.readFileSync(img.path),
+        contentType: img.type
+      }));
+    }
+
+    // Save the updated product
+    await products.save();
+
+    res.status(200).send({
+      success: true,
+      message: "Product Updated Successfully",
+      products,
+    });
+  } catch (error) {
+    console.error("Error updating product:", error);
+    res.status(500).send({
+      success: false,
+      error: error.message || "Internal Server Error",
+      message: "Error in Updating Product",
+    });
+  }
+};
+
 // getProductController
 export const getProductController = async (req, res) => {
   try {
@@ -183,7 +420,7 @@ export const getProductController = async (req, res) => {
       ...(search && { name: { $regex: search, $options: "i" } }),
     };
 
-    // Add filter if provided in the query
+    // Existing filter logic remains the same
     if (req.query.filter && req.query.filter !== 'all') {
       switch(req.query.filter) {
         case 'active':
@@ -198,13 +435,20 @@ export const getProductController = async (req, res) => {
       }
     }
 
+    // Modify sorting to prioritize custom order
+    const sortQuery = { 
+      custom_order: 1,  // Primary sort by custom order
+      createdAt: -1     // Secondary sort by creation date
+    };
+
     const products = await productModel
       .find(searchQuery)
       .populate("category", "name")
       .populate("subcategory", "name")
-      .select("name category subcategory isActive perPiecePrice slug stock photos")
+      .select("name category subcategory isActive perPiecePrice slug stock photos custom_order")
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .sort(sortQuery);
 
     const total = await productModel.countDocuments(searchQuery);
 
@@ -225,25 +469,56 @@ export const getProductController = async (req, res) => {
     });
   }
 };
-
+// productListController
 // productListController
 export const productListController = async (req, res) => {
   try {
     const perPage = 10;
     const page = req.params.page ? req.params.page : 1;
+    const isActiveFilter = req.query.isActive || "1"; // Default to "1" (active)
+    const stocks = req.query.stock || "1"; // Default to "1" (active)
 
+    // Do not proceed if isActiveFilter is "0" or stocks is "0"
+    if (isActiveFilter === "0" || stocks === "0") {
+      return res.status(200).send({
+        success: true,
+        products: [], // Return an empty product list
+        message: "No products available for the given filter.",
+      });
+    }
+
+    // Build the filter query
+    const filterQuery = {
+      isActive: isActiveFilter, // Filter by isActive value
+      stock: { $gt: 0 }, // Only products with stock > 0
+    };
+
+    // Fetch products from the database
     const products = await productModel
-      .find(
-        {
-          isActive: "1",
-          stock: { $gt: 0 }, // Only products with stock > 0
-        },
-        "name photo photos _id perPiecePrice mrp stock slug"
-      )
+      .find(filterQuery, "name photo photos _id perPiecePrice mrp stock slug custom_order")
       .skip((page - 1) * perPage)
       .limit(perPage)
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 }); // Default sorting by createdAt
 
+    // If custom order is provided, sort the products manually
+    if (req.query.customOrder) {
+      const customOrder = req.query.customOrder.split(',');
+
+      // Custom sorting based on the custom_order field
+      const customOrderMap = customOrder.reduce((acc, id, index) => {
+        acc[id] = index;
+        return acc;
+      }, {});
+
+      // Sort products based on the custom_order field
+      products.sort((a, b) => {
+        const aIndex = customOrderMap[a._id.toString()];
+        const bIndex = customOrderMap[b._id.toString()];
+        return aIndex - bIndex; // Ascending order
+      });
+    }
+
+    // Process products to attach photo URLs
     const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject();
       if (productObj.photo && productObj.photo.data) {
@@ -268,6 +543,7 @@ export const productListController = async (req, res) => {
     });
   }
 };
+
 
 // searchProductController
 export const searchProductController = async (req, res) => {
@@ -579,205 +855,6 @@ export const deleteProductController = async (req, res) => {
 };
 
 //upate producta
-export const updateProductController = async (req, res) => {
-  try {
-    const {
-      name,
-      description,
-      price,
-      category,
-      subcategory,
-      brand,
-      quantity,
-      shipping,
-      hsn,
-      unit,
-      unitSet,
-      additionalUnit,
-      stock,
-      minimumqty,
-      gst,
-      gstType,
-      purchaseRate,
-      mrp,
-      perPiecePrice,
-      setPrice,
-      weight,
-      allowCOD,
-      returnProduct,
-      userId,
-      variants,
-      sets,
-      bulkProducts,
-      sku,
-      fk_tags,
-      youtubeUrl,
-      tag,
-      photos, // Cloudinary URL
-      multipleimages, // Array of Cloudinary URLs
-    } = req.fields;
-
-    // Handle files from request
-    const { photo, images } = req.files;
-
-    // Validation
-    switch (true) {
-      case !name:
-        return res.status(400).send({ error: "Name is Required" });
-      case !description:
-        return res.status(400).send({ error: "Description is Required" });
-      case !price:
-        return res.status(400).send({ error: "Price is Required" });
-      case !category:
-        return res.status(400).send({ error: "Category is Required" });
-      case !quantity:
-        return res.status(400).send({ error: "Quantity is Required" });
-      case photo && photo.size > 1000000:
-        return res.status(400).send({ error: "Photo should be less than 1MB" });
-      case youtubeUrl && !/^(https?:\/\/)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)\/(watch\?v=|embed\/|v\/|e\/|playlist\?list=)[\w-]+$/.test(youtubeUrl):
-        return res.status(400).send({ error: "Invalid YouTube URL" });
-    }
-
-    // Validate additional images if provided
-    if (images) {
-      const imageArray = Array.isArray(images) ? images : [images];
-      for (let img of imageArray) {
-        if (img.size > 1000000) {
-          return res.status(400).send({ error: "Each additional image should be less than 1MB" });
-        }
-      }
-    }
-
-    // Convert numeric fields and prepare updated fields
-    const updatedFields = {
-      name,
-      description,
-      slug: slugify(name),
-      price: parseFloat(price),
-      category: mongoose.Types.ObjectId(category),
-      subcategory: mongoose.Types.ObjectId(subcategory),
-      brand: mongoose.Types.ObjectId(brand),
-      quantity: parseInt(quantity),
-      stock: parseInt(stock) || 0,
-      minimumqty: parseInt(minimumqty),
-      shipping: shipping === "1",
-      hsn,
-      unit,
-      unitSet: parseInt(unitSet),
-      additionalUnit,
-      gst: parseFloat(gst),
-      gstType,
-      purchaseRate: parseFloat(purchaseRate),
-      mrp: parseFloat(mrp),
-      perPiecePrice: parseFloat(perPiecePrice),
-      setPrice: parseFloat(setPrice),
-      weight: parseFloat(weight),
-      allowCOD: allowCOD === "1",
-      returnProduct: returnProduct === "1",
-      userId,
-      isActive: "1",
-      variants: JSON.parse(variants || "[]"),
-      sets: JSON.parse(sets || "[]"),
-      sku,
-      youtubeUrl: youtubeUrl || "",
-      tag: Array.isArray(tag) ? tag : tag ? [tag] : [],
-      // Handle Cloudinary URLs
-      photos: photos || null,
-      multipleimages: Array.isArray(multipleimages) ? multipleimages : multipleimages ? [multipleimages] : [],
-    };
-
-    // Handle FK Tags
-    if (fk_tags) {
-      let parsedFkTags = [];
-      if (typeof fk_tags === 'string') {
-        try {
-          parsedFkTags = JSON.parse(fk_tags);
-        } catch (error) {
-          console.error("Error parsing fk_tags:", error);
-          return res.status(400).send({ error: "Invalid fk_tags data" });
-        }
-      } else if (Array.isArray(fk_tags)) {
-        parsedFkTags = fk_tags;
-      }
-
-      if (!Array.isArray(parsedFkTags)) {
-        return res.status(400).send({ error: "fk_tags must be an array" });
-      }
-
-      updatedFields.fk_tags = parsedFkTags;
-    }
-
-    // Handle bulkProducts
-    if (bulkProducts) {
-      let formattedBulkProducts = null;
-      if (typeof bulkProducts === 'string') {
-        try {
-          formattedBulkProducts = JSON.parse(bulkProducts);
-        } catch (error) {
-          console.error("Error parsing bulkProducts:", error);
-          return res.status(400).send({ error: "Invalid bulkProducts data" });
-        }
-      }
-
-      if (formattedBulkProducts && !Array.isArray(formattedBulkProducts)) {
-        return res.status(400).send({ error: "bulkProducts must be an array" });
-      }
-
-      if (Array.isArray(formattedBulkProducts)) {
-        formattedBulkProducts = formattedBulkProducts.map((item) => ({
-          minimum: parseInt(item.minimum),
-          maximum: parseInt(item.maximum),
-          discount_mrp: parseFloat(item.discount_mrp),
-          selling_price_set: parseFloat(item.selling_price_set),
-        }));
-      }
-
-      updatedFields.bulkProducts = formattedBulkProducts;
-    }
-
-    // Find the product to update
-    const products = await productModel.findById(req.params.pid);
-    if (!products) {
-      return res.status(404).send({ error: "Product not found" });
-    }
-
-    // Update the product with new fields
-    Object.assign(products, updatedFields);
-
-    // Handle Buffer-based photo if provided
-    if (photo) {
-      products.photo = {
-        data: fs.readFileSync(photo.path),
-        contentType: photo.type
-      };
-    }
-
-    // Handle Buffer-based multiple images if provided
-    if (images) {
-      const imageArray = Array.isArray(images) ? images : [images];
-      products.images = imageArray.map(img => ({
-        data: fs.readFileSync(img.path),
-        contentType: img.type
-      }));
-    }
-
-    // Save the updated product
-    await products.save();
-
-    res.status(200).send({
-      success: true,
-      message: "Product Updated Successfully",
-      products,
-    });
-  } catch (error) {
-    console.error("Error updating product:", error);
-    res.status(500).send({
-      success: false,
-      error: error.message || "Internal Server Error",
-      message: "Error in Updating Product",
-    });
-  }
-};
 
 
 

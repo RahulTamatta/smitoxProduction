@@ -43,12 +43,13 @@ const authenticateUser = (req, res, next) => {
         }
 
         // Generate JWT token with standardized user ID
-        const token = jwt.sign({ 
-            _id: user._id,
-            username: user.username
-        }, JWT_SECRET, { 
-            expiresIn: '24h' 
-        });
+        const token = jwt.sign(
+            { 
+                _id: user._id,
+                username: user.username
+            }, 
+            JWT_SECRET // No `expiresIn` specified, so the token never expires
+        );
         
         // Ensure consistent user object structure
         const userResponse = {
