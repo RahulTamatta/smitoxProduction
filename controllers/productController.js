@@ -181,8 +181,22 @@ export const getProductController = async (req, res) => {
 
     const searchQuery = {
       ...(search && { name: { $regex: search, $options: "i" } }),
-      stock: { $gt: 0 }, // Only products with stock > 0
     };
+
+    // Add filter if provided in the query
+    if (req.query.filter && req.query.filter !== 'all') {
+      switch(req.query.filter) {
+        case 'active':
+          searchQuery.isActive = "1";
+          break;
+        case 'inactive':
+          searchQuery.isActive = "0";
+          break;
+        case 'outOfStock':
+          searchQuery.stock = 0;
+          break;
+      }
+    }
 
     const products = await productModel
       .find(searchQuery)

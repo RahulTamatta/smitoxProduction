@@ -567,6 +567,7 @@ const AdminOrders = () => {
       <th style={{ fontSize: '0.8rem', padding: '4px' }}>Order Id</th>
       {/* <th style={{ fontSize: '0.8rem', padding: '4px' }}>Tracking Information</th> */}
       <th style={{ fontSize: '0.8rem', padding: '4px' }}>Total</th>
+      <th style={{ fontSize: '0.8rem', padding: '4px' }}>Payment</th>
       <th style={{ fontSize: '0.8rem', padding: '4px' }}>Status</th>
       <th style={{ fontSize: '0.8rem', padding: '4px' }}>Created</th>
       <th style={{ fontSize: '0.8rem', padding: '4px' }}>Actions</th>
@@ -640,6 +641,7 @@ const AdminOrders = () => {
             )}
           </td>
           <td style={{ fontSize: '0.7rem', padding: '2px' }}>{totals.total.toFixed(2)}</td>
+          <td style={{ fontSize: '0.7rem', padding: '2px' }}>{o.payment.paymentMethod}</td>
           <td style={{ fontSize: '0.7rem', padding: '2px' }}>{o.status}</td>
           <td style={{ fontSize: '0.7rem', padding: '2px' }}>
             {moment(o.createdAt).format('DD-MM-YYYY')}

@@ -28,6 +28,53 @@ const Header = () => {
     }
   };
 
+
+  const fetchCartCount = async () => {
+    try {
+      if (auth?.user) {
+        const { data } = await axios.get(`/api/v1/carts/users/${auth.user._id}/cart`);
+        setCartCount(data.cart.length);
+      }
+    } catch (error) {
+      console.error("Error fetching cart count:", error);
+    }
+  };
+
+  const fetchWishlistCount = async () => {
+    try {
+      if (auth?.user) {
+        const { data } = await axios.get(`/api/v1/carts/users/${auth.user._id}/wishlist`);
+        setWishlistCount(data.wishlist.length);
+      }
+    } catch (error) {
+      console.error("Error fetching wishlist count:", error);
+    }
+  };
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    if (auth?.user) {
+      fetchCartCount();
+      fetchWishlistCount();
+
+      const cartInterval = setInterval(fetchCartCount, 5000);
+      const wishlistInterval = setInterval(fetchWishlistCount, 5000);
+
+      return () => {
+        window.removeEventListener("resize", handleResize);
+        clearInterval(cartInterval);
+        clearInterval(wishlistInterval);
+      };
+    }
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, [auth?.user]);
+
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth <= 768);

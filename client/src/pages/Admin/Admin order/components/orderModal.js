@@ -324,9 +324,9 @@ const OrderModal = ({
         {selectedOrder ? (
           <div>
             <h2>Order ID: {orderId}</h2>
-            <p>Buyer: {selectedOrder.buyer?.user_fullname}</p>
+            <p>Name: {selectedOrder.buyer?.user_fullname}</p>
             <p>Mobile No: {selectedOrder.buyer?.mobile_no}</p>
-            <p>Address No: {selectedOrder.buyer?.address}</p>
+            <p>Address: {selectedOrder.buyer?.address}</p>
 
             <p>Pincode : {selectedOrder.buyer?.pincode}</p>            
             <p>Created At: {moment(selectedOrder.createdAt).format("LLLL")}</p>
