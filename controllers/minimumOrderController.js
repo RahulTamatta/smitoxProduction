@@ -4,41 +4,13 @@ import MinimumOrder from "../models/miniMumOrderModel.js";
 
 export const getMinimumOrder = async (req, res) => {
   try {
-    // Fetch the minimum order data
     const minimumOrder = await MinimumOrder.findOne();
-
-    // If no minimum order data is found
-    if (!minimumOrder) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Minimum order data not found",
-        data: null,
-      });
-    }
-
-    // Return the minimum order data
-    res.status(200).json({ 
-      success: true,
-      message: "Minimum order data fetched successfully",
-      data: {
-        amount: minimumOrder.amount,
-        currency: minimumOrder.currency,
-        advancePercentage: minimumOrder.advancePercentage,
-      },
-    });
+    res.json(minimumOrder);
   } catch (error) {
-    // Log the error on the server
-    console.error('Error fetching minimum order:', error);
-
-    // Return a generic error message to the client
-    res.status(500).json({ 
-      success: false,
-      message: "Error fetching minimum order data",
-      error: error.message, // Include the error message for debugging
-      data: null,
-    });
+    res.status(500).json({ message: error.message });
   }
 };
+
 export const createMinimumOrder = async (req, res) => {
   const minimumOrder = new MinimumOrder({
     amount: req.body.amount,
