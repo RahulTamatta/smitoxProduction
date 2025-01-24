@@ -105,7 +105,7 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
           <div className="modal-body">
             <div className="row mb-4">
               <div className="col-md-6">
-                <p><strong>Customer:</strong> {order.buyer?.user_fullname}</p>
+                <p><strong>Name:</strong> {order.buyer?.user_fullname}</p>
                 <p><strong>Address:</strong> {order.buyer?.address}</p>
                 <p><strong>Mobile:</strong> {order.buyer?.mobile_no}</p>
               </div>

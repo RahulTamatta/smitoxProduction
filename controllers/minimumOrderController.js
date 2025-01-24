@@ -5,7 +5,11 @@ import MinimumOrder from "../models/miniMumOrderModel.js";
 export const getMinimumOrder = async (req, res) => {
   try {
     const minimumOrder = await MinimumOrder.findOne();
-    res.json(minimumOrder);
+    res.status(200).send({
+      success: true,
+      message: "All Minimum ",
+      minimumOrder,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
