@@ -66,15 +66,15 @@ export const getAllProductsForYouController = async (req, res) => {
     const products = await productForYouModel.find()
       .populate("categoryId", "name") // Populate category with name only
       .populate("subcategoryId", "name") // Populate subcategory with name only
-      .populate("productId", "name photos price slug perPiecePrice") // Include necessary fields
+      .populate("productId", "name photos price slug perPiecePrice custom_order") // Include custom_order
       .select("categoryId subcategoryId productId")
-      .sort({ createdAt: -1 });
+      .sort({ "productId.custom_order": 1, createdAt: -1 }); // Sort by custom_order (ascending), then by createdAt (descending)
 
     // Process products to handle photos conversion
     const productsWithBase64Photos = products.map((productForYou) => {
       const productObj = productForYou.toObject();
 
-      // If the product has a photos, convert it to base64
+      // If the product has photos, convert them to base64
       if (
         productObj.productId &&
         productObj.productId.photos &&

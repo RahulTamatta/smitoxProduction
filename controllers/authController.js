@@ -365,21 +365,38 @@ export const updateProfileController = async (req, res) => {
   }
 };
 
-
 export const getOrdersController = async (req, res) => {
   try {
-    // Get user_id from route params
-    const { user_id } = req.params;
+    const { search } = req.query;
 
-    // Fetch orders based on the user_id passed in the route
+    // Build search query with more flexible matching
+    const searchQuery = search ? {
+      $or: [
+        { _id: search }, // Exact match for order ID
+        { 'buyer.user_fullname': { $regex: `^${search}`, $options: 'i' } }, // Starts with search term
+        { 
+          'buyer.mobile_no': search.length > 0 
+            ? { 
+                $expr: { 
+                  $regexMatch: { 
+                    input: { $toString: "$buyer.mobile_no" }, 
+                    regex: search 
+                  } 
+                } 
+              }
+            : {} 
+        }, // Partial match for mobile number
+        { 'payment.transactionId': { $regex: `^${search}`, $options: 'i' } }
+      ]
+    } : {};
+
     const orders = await orderModel
-      .find({ buyer: user_id })
-      .populate("buyer", "user_fullname address mobile_no pincode") // Use the user_id directly
+      .find(searchQuery)
+      .populate("buyer", "user_fullname address mobile_no pincode")
       .populate({
         path: "products.product",
-        select: "name photos price  sku"
-        // Populate all fields in Product schema
-      }); // Include only `user_fullname` for the buyer
+        select: "name photos price sku"
+      });
 
     res.json(orders);
   } catch (error) {
@@ -391,7 +408,6 @@ export const getOrdersController = async (req, res) => {
     });
   }
 };
-
 export const getAllOrdersController = async (req, res) => {
   try {
     const { status, page = 1, limit = 10, search = "" } = req.query;
@@ -404,11 +420,15 @@ export const getAllOrdersController = async (req, res) => {
       query.status = status;
     }
 
+    // Check if search is numeric
+    const isNumericSearch = /^\d+$/.test(search);
+
     const userSearchQuery = search
       ? {
           $or: [
             { user_fullname: { $regex: search, $options: "i" } },
-            ...(isNaN(search) ? [] : [{ mobile_no: Number(search) }]),
+            // Only search mobile_no if the input is numeric
+            ...(isNumericSearch ? [{ mobile_no: Number(search) }] : []),
           ],
         }
       : {};
@@ -460,7 +480,7 @@ export const getAllOrdersController = async (req, res) => {
 
 export const addProductToOrderController = async (req, res) => {
   try {
-    const { orderId } = req.params;
+    const { orderId } = req.params
     const { productId, quantity, price } = req.body;
 
     // Validate input
@@ -473,7 +493,6 @@ export const addProductToOrderController = async (req, res) => {
 
     // Find the existing order
     const order = await orderModel.findById(orderId);
-
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -481,13 +500,28 @@ export const addProductToOrderController = async (req, res) => {
       });
     }
 
-    // Find the product
-    const product = await productModel.findById(productId);
-
+    // Find the product with necessary fields
+    const product = await productModel.findById(productId).select('+isActive +stock');
     if (!product) {
       return res.status(404).json({
         success: false,
         message: "Product not found"
+      });
+    }
+
+    // Check product availability
+    const errorMessages = [];
+    if (product.isActive === "0") {
+      errorMessages.push("product is inactive");
+    }
+    if (product.stock < quantity) {  // Changed to check against quantity being added
+      errorMessages.push("insufficient stock");
+    }
+    
+    if (errorMessages.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot add product: ${errorMessages.join(" and ")}`
       });
     }
 
@@ -496,11 +530,10 @@ export const addProductToOrderController = async (req, res) => {
       p => p.product.toString() === productId
     );
 
+    // Update or add product
     if (existingProductIndex !== -1) {
-      // Update quantity if product exists
       order.products[existingProductIndex].quantity += quantity;
     } else {
-      // Add new product to order
       order.products.push({
         product: productId,
         quantity,
@@ -518,12 +551,19 @@ export const addProductToOrderController = async (req, res) => {
     // Save updated order
     await order.save();
 
-    // Populate the updated order with product details
+    // Update product stock  ********** KEY ADDITION **********
+    await productModel.findByIdAndUpdate(
+      productId,
+      { $inc: { stock: -quantity } }, // Decrease stock by ordered quantity
+      { new: true }
+    );
+
+    // Populate the updated order
     const updatedOrder = await orderModel
       .findById(orderId)
       .populate({
         path: "products.product",
-        select: "name photo price images sku gst"
+        select: "name photo price images sku gst isActive stock"
       })
       .populate("buyer", "name email");
 
@@ -542,9 +582,6 @@ export const addProductToOrderController = async (req, res) => {
     });
   }
 };
-
-
-
 //order status'
 export const orderStatusController = async (req, res) => {
   try {

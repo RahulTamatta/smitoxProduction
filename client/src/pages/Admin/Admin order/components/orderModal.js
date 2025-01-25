@@ -28,7 +28,8 @@ const OrderModal = ({
   const orderId = selectedOrder?._id;
   const products = selectedOrder?.products || [];
   const [localOrder, setLocalOrder] = useState(selectedOrder);
-
+  const [addProductError, setAddProductError] = useState(null);
+  
   // Update local state when selectedOrder changes
   useEffect(() => {
     setLocalOrder(selectedOrder);
@@ -170,9 +171,11 @@ const OrderModal = ({
           product.quantity,
           Number(product.price).toFixed(2),
           `${product.product.gst}%`,
-          Number(product.price * product.quantity).toFixed(2),
-          Number((product.price * product.quantity) * product.product.gst).toFixed(2),
-          Number((product.price * product.quantity) * (1 + product.product.gst)).toFixed(2)
+          Number(product.price * product.quantity).toFixed(2), // Net Amount
+          Number((product.price * product.quantity) * (product.product.gst / 100)).toFixed(2), // Tax Amount
+          product.product.gst !== "0"
+            ? ((Number(product.price) * Number(product.quantity)) * (1 + product.product.gst / 100)).toFixed(2) // Total with GST
+            : (Number(product.price) * Number(product.quantity)).toFixed(2) // Total without GST
         ]);
     
         doc.autoTable({
@@ -191,24 +194,25 @@ const OrderModal = ({
         doc.text(`GST: ${Number(totals.gst).toFixed(2)}`, 20, finalY + 15);
         doc.text(`Delivery Charges: ${Number(selectedOrder.deliveryCharges || 0).toFixed(2)}`, 20, finalY + 20);
         doc.text(`COD Charges: ${Number(selectedOrder.codCharges || 0).toFixed(2)}`, 20, finalY + 25);
- 
-        doc.text(`Total Amount: ${Number(totals.total).toFixed(2)}`, 20, finalY + 35);
         doc.text(`Discount: ${Number(selectedOrder.discount || 0).toFixed(2)}`, 20, finalY + 30);
+        doc.text(`Total Amount: ${Number(totals.total).toFixed(2)}`, 20, finalY + 35);
         doc.text(`Amount Paid: ${Number(selectedOrder.amount || 0).toFixed(2)}`, 20, finalY + 40);
         doc.text(`Amount Pending: ${Number(totals.total - (selectedOrder.amount || 0)).toFixed(2)}`, 20, finalY + 45);
     
         // Add amount in words
         doc.text(`Amount in Words: ${convertToWords(Math.round(totals.total))}`, 20, finalY + 60);
-   
-        {
-          selectedOrder.tracking
-            ? doc.text(
-                `Tracking Company: ${convertToWords(Math.round(selectedOrder.tracking.company))}:${convertToWords(Math.round(selectedOrder.tracking._id))}`,
-                20,
-                finalY + 65
-              )
-            : doc.text("Tracking Id is not assigned", 20, finalY + 65);
+    
+        // Add tracking information if available
+        if (selectedOrder.tracking) {
+          doc.text(
+            `Tracking Company: ${selectedOrder.tracking.company}: ${selectedOrder.tracking.id}`,
+            20,
+            finalY + 65
+          );
+        } else {
+          doc.text("Tracking Id is not assigned", 20, finalY + 65);
         }
+    
         // Add disclaimer text
         const disclaimerText = [
           'Check Bill 2-3 Times Before Making Payment',
@@ -317,6 +321,20 @@ const OrderModal = ({
 
   return (
     <Modal show={show} onHide={handleClose} size="lg">
+          <Modal show={!!addProductError} onHide={() => setAddProductError(null)}>
+      <Modal.Header closeButton>
+        <Modal.Title>Cannot Add Product</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        {addProductError}
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="secondary" onClick={() => setAddProductError(null)}>
+          Close
+        </Button>
+      </Modal.Footer>
+    </Modal>
+
       <Modal.Header closeButton>
         <Modal.Title>Edit Order</Modal.Title>
       </Modal.Header>
@@ -324,7 +342,14 @@ const OrderModal = ({
         {selectedOrder ? (
           <div>
             <h2>Order ID: {orderId}</h2>
-            <p>Name: {selectedOrder.buyer?.user_fullname}</p>
+            <p>
+        Name: {selectedOrder.buyer?.user_fullname}{" "}
+        {selectedOrder.payment?.paymentMethod === "Razorpay" && (
+          <span style={{ marginLeft: "300px" }}>
+            Razorpay ID: {selectedOrder.payment.transactionId}
+          </span>
+        )}
+      </p>
             <p>Mobile No: {selectedOrder.buyer?.mobile_no}</p>
             <p>Address: {selectedOrder.buyer?.address}</p>
 
@@ -360,6 +385,7 @@ const OrderModal = ({
                          }
                       </td>
                       <td>{product.product.name}</td>
+                      
                       <td>
                         <Form.Control
                           type="number"
@@ -405,7 +431,9 @@ const OrderModal = ({
                   <td colSpan="7">
                     <Button onClick={handleAddClick}>Add Product</Button>
                   </td>
+                
                 </tr>
+                
                 <tr>
                   <td colSpan="4"></td>
                   <td>Subtotal:</td>

@@ -12,7 +12,15 @@ import dotenv from "dotenv";
 dotenv.config();
 
 class CustomOrderService {
-  static async assignCustomOrder(proposedOrder) {
+  static async assignCustomOrder(proposedOrder, originalOrder = null, productId = null) {
+    // If updating, first decrement orders above original position
+    if (originalOrder !== null) {
+      await productModel.updateMany(
+        { custom_order: { $gt: originalOrder } },
+        { $inc: { custom_order: -1 } }
+      );
+    }
+
     // If no proposed order, auto-generate last+1
     if (!proposedOrder) {
       const lastProduct = await productModel
@@ -20,25 +28,32 @@ class CustomOrderService {
         .sort({ custom_order: -1 })
         .select('custom_order');
       
-      return lastProduct 
-        ? lastProduct.custom_order + 1 
-        : 1;
+      return lastProduct?.custom_order + 1 || 1;
     }
-    // Check if proposed order already exists
-    const existingProduct = await productModel.findOne({ 
-      custom_order: proposedOrder 
-    });
-    if (!existingProduct) {
-      return proposedOrder; // Order available
+
+    // Check if proposed order already exists (excluding current product)
+    const query = { custom_order: proposedOrder };
+    if (productId) {
+      query._id = { $ne: productId };
     }
-    // Order exists - shift existing products
-    await productModel.updateMany(
-      { custom_order: { $gte: proposedOrder } },
-      { $inc: { custom_order: 1 } }
-    );
+
+    const existingProduct = await productModel.findOne(query);
+
+    if (!existingProduct) return proposedOrder;
+
+    // Shift orders only if new position is different from original
+    if (proposedOrder !== originalOrder) {
+      await productModel.updateMany(
+        { custom_order: { $gte: proposedOrder } },
+        { $inc: { custom_order: 1 } }
+      );
+    }
+    
     return proposedOrder;
   }
 }
+
+// export default CustomOrderService;
 
 export const createProductController = async (req, res) => {
   try {
@@ -240,41 +255,29 @@ export const updateProductController = async (req, res) => {
       fk_tags,
       youtubeUrl,
       tag,
-      photos, // Cloudinary URL
-      multipleimages, // Array of Cloudinary URLs
+      photos,
+      multipleimages,
+      custom_order,
     } = req.fields;
 
     // Handle files from request
     const { photo, images } = req.files;
 
-    // Validation
-    switch (true) {
-      case !name:
-        return res.status(400).send({ error: "Name is Required" });
-      case !description:
-        return res.status(400).send({ error: "Description is Required" });
-      case !price:
-        return res.status(400).send({ error: "Price is Required" });
-      case !category:
-        return res.status(400).send({ error: "Category is Required" });
-      case !quantity:
-        return res.status(400).send({ error: "Quantity is Required" });
-      case photo && photo.size > 1000000:
-        return res.status(400).send({ error: "Photo should be less than 1MB" });
-      case youtubeUrl && !/^(https?:\/\/)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)\/(watch\?v=|embed\/|v\/|e\/|playlist\?list=)[\w-]+$/.test(youtubeUrl):
-        return res.status(400).send({ error: "Invalid YouTube URL" });
+    // Get original product data first
+    const product = await productModel.findById(req.params.pid);
+    if (!product) {
+      return res.status(404).send({ error: "Product not found" });
     }
 
-    // Validate additional images if provided
-    if (images) {
-      const imageArray = Array.isArray(images) ? images : [images];
-      for (let img of imageArray) {
-        if (img.size > 1000000) {
-          return res.status(400).send({ error: "Each additional image should be less than 1MB" });
-        }
-      }
-    }
-    const finalCustomOrder = await CustomOrderService.assignCustomOrder(req.fields.custom_order);
+    // Get original custom_order before updating
+    const originalOrder = product.custom_order;
+
+    // Pass product ID to service for exclusion
+    const finalCustomOrder = await CustomOrderService.assignCustomOrder(
+      custom_order,
+      originalOrder,
+      req.params.pid // Pass product ID explicitly
+    );
 
     // Convert numeric fields and prepare updated fields
     const updatedFields = {
@@ -309,9 +312,8 @@ export const updateProductController = async (req, res) => {
       sku,
       youtubeUrl: youtubeUrl || "",
       tag: Array.isArray(tag) ? tag : tag ? [tag] : [],
-      // Handle Cloudinary URLs
       photos: photos || null,
-      custom_order: finalCustomOrder, 
+      custom_order: finalCustomOrder,
       multipleimages: Array.isArray(multipleimages) ? multipleimages : multipleimages ? [multipleimages] : [],
     };
 
@@ -364,18 +366,12 @@ export const updateProductController = async (req, res) => {
       updatedFields.bulkProducts = formattedBulkProducts;
     }
 
-    // Find the product to update
-    const products = await productModel.findById(req.params.pid);
-    if (!products) {
-      return res.status(404).send({ error: "Product not found" });
-    }
-
     // Update the product with new fields
-    Object.assign(products, updatedFields);
+    Object.assign(product, updatedFields);
 
     // Handle Buffer-based photo if provided
     if (photo) {
-      products.photo = {
+      product.photo = {
         data: fs.readFileSync(photo.path),
         contentType: photo.type
       };
@@ -384,19 +380,19 @@ export const updateProductController = async (req, res) => {
     // Handle Buffer-based multiple images if provided
     if (images) {
       const imageArray = Array.isArray(images) ? images : [images];
-      products.images = imageArray.map(img => ({
+      product.images = imageArray.map(img => ({
         data: fs.readFileSync(img.path),
         contentType: img.type
       }));
     }
 
     // Save the updated product
-    await products.save();
+    await product.save();
 
     res.status(200).send({
       success: true,
       message: "Product Updated Successfully",
-      products,
+      product,
     });
   } catch (error) {
     console.error("Error updating product:", error);
@@ -408,6 +404,7 @@ export const updateProductController = async (req, res) => {
   }
 };
 
+
 // getProductController
 export const getProductController = async (req, res) => {
   try {
@@ -416,13 +413,14 @@ export const getProductController = async (req, res) => {
     const search = req.query.search?.trim() || "";
     const skip = (page - 1) * limit;
 
+    // Build the search query
     const searchQuery = {
       ...(search && { name: { $regex: search, $options: "i" } }),
     };
 
-    // Existing filter logic remains the same
+    // Apply filters if provided
     if (req.query.filter && req.query.filter !== 'all') {
-      switch(req.query.filter) {
+      switch (req.query.filter) {
         case 'active':
           searchQuery.isActive = "1";
           break;
@@ -432,26 +430,32 @@ export const getProductController = async (req, res) => {
         case 'outOfStock':
           searchQuery.stock = 0;
           break;
+        default:
+          // Handle unexpected filter values
+          break;
       }
     }
 
-    // Modify sorting to prioritize custom order
+    // Define the sorting logic
     const sortQuery = { 
-      custom_order: 1,  // Primary sort by custom order
-      createdAt: -1     // Secondary sort by creation date
+      custom_order: 1,  // Primary sort by custom_order (ascending)
+      createdAt: -1     // Secondary sort by createdAt (descending)
     };
 
+    // Fetch products with pagination, sorting, and population
     const products = await productModel
       .find(searchQuery)
       .populate("category", "name")
       .populate("subcategory", "name")
       .select("name category subcategory isActive perPiecePrice slug stock photos custom_order")
+      .sort(sortQuery) // Apply sorting here
       .skip(skip)
-      .limit(limit)
-      .sort(sortQuery);
+      .limit(limit);
 
+    // Get the total count of matching products
     const total = await productModel.countDocuments(searchQuery);
 
+    // Send the response
     res.status(200).send({
       success: true,
       total,
@@ -474,49 +478,31 @@ export const getProductController = async (req, res) => {
 export const productListController = async (req, res) => {
   try {
     const perPage = 10;
-    const page = req.params.page ? req.params.page : 1;
-    const isActiveFilter = req.query.isActive || "1"; // Default to "1" (active)
-    const stocks = req.query.stock || "1"; // Default to "1" (active)
-
-    // Do not proceed if isActiveFilter is "0" or stocks is "0"
-    if (isActiveFilter === "0" || stocks === "0") {
-      return res.status(200).send({
-        success: true,
-        products: [], // Return an empty product list
-        message: "No products available for the given filter.",
-      });
-    }
+    const page = req.params.page ? parseInt(req.params.page, 10) : 1;
+    const isActiveFilter = req.query.isActive || "1";
+    const stocks = req.query.stock || "1";
 
     // Build the filter query
     const filterQuery = {
-      isActive: isActiveFilter, // Filter by isActive value
-      stock: { $gt: 0 }, // Only products with stock > 0
+      ...(isActiveFilter === "1" && { isActive: "1" }),
+      ...(stocks === "1" && { stock: { $gt: 0 } }),
     };
 
-    // Fetch products from the database
+    // Modified sorting logic to match getProductController
+    const sortQuery = { 
+      custom_order: 1,    // Primary sort by custom order
+      createdAt: -1       // Secondary sort by creation date
+    };
+
+    // Fetch products with database-level sorting
     const products = await productModel
       .find(filterQuery, "name photo photos _id perPiecePrice mrp stock slug custom_order")
       .skip((page - 1) * perPage)
       .limit(perPage)
-      .sort({ createdAt: -1 }); // Default sorting by createdAt
+      .sort(sortQuery); // Use the defined sort query
 
-    // If custom order is provided, sort the products manually
-    if (req.query.customOrder) {
-      const customOrder = req.query.customOrder.split(',');
-
-      // Custom sorting based on the custom_order field
-      const customOrderMap = customOrder.reduce((acc, id, index) => {
-        acc[id] = index;
-        return acc;
-      }, {});
-
-      // Sort products based on the custom_order field
-      products.sort((a, b) => {
-        const aIndex = customOrderMap[a._id.toString()];
-        const bIndex = customOrderMap[b._id.toString()];
-        return aIndex - bIndex; // Ascending order
-      });
-    }
+    // Remove manual sorting logic and customOrder parameter handling
+    // since sorting is now handled at the database level
 
     // Process products to attach photo URLs
     const productsWithPhotos = products.map((product) => {
@@ -544,12 +530,25 @@ export const productListController = async (req, res) => {
   }
 };
 
-
 // searchProductController
 export const searchProductController = async (req, res) => {
   try {
     const { keyword } = req.params;
     const isObjectId = mongoose.Types.ObjectId.isValid(keyword);
+    const keywordNumber = Number(keyword);
+    const isNumber = !isNaN(keywordNumber);
+
+    // Fetch category IDs based on name match
+    const categories = await categoryModel.find({
+      name: { $regex: keyword, $options: 'i' }
+    }).select('_id').lean();
+    const categoryIds = categories.map(c => c._id);
+
+    // Fetch subcategory IDs based on name match
+    const subcategories = await subcategoryModel.find({
+      name: { $regex: keyword, $options: 'i' }
+    }).select('_id').lean();
+    const subcategoryIds = subcategories.map(s => s._id);
 
     const results = await productModel
       .find({
@@ -568,6 +567,11 @@ export const searchProductController = async (req, res) => {
                     { brand: keyword },
                   ]
                 : []),
+              // Include perPiecePrice if keyword is a valid number
+              ...(isNumber ? [{ perPiecePrice: keywordNumber }] : []),
+              // Include category and subcategory IDs from name matches
+              { category: { $in: categoryIds } },
+              { subcategory: { $in: subcategoryIds } },
             ],
           },
           { stock: { $gt: 0 } }, // Only products with stock > 0
@@ -598,7 +602,6 @@ export const searchProductController = async (req, res) => {
     });
   }
 };
-
 // realtedProductController
 export const realtedProductController = async (req, res) => {
   try {
@@ -688,7 +691,10 @@ export const productCategoryController = async (req, res) => {
 export const productSubcategoryController = async (req, res) => {
   try {
     const { subcategoryId } = req.params;
+    const isActiveFilter = req.query.isActive || "1"; // Default to "1" (active)
+    const stocks = req.query.stock || "1"; // Default to "1" (products with stock > 0)
 
+    // Validate subcategory ID
     if (!mongoose.Types.ObjectId.isValid(subcategoryId)) {
       return res.status(400).send({
         success: false,
@@ -696,8 +702,8 @@ export const productSubcategoryController = async (req, res) => {
       });
     }
 
+    // Fetch the subcategory
     const subcategory = await subcategoryModel.findById(subcategoryId);
-
     if (!subcategory) {
       return res.status(404).send({
         success: false,
@@ -705,19 +711,40 @@ export const productSubcategoryController = async (req, res) => {
       });
     }
 
-    const products = await productModel.find({
+    // Build the filter query
+    const filterQuery = {
       subcategory: subcategoryId,
-      stock: { $gt: 0 }, // Only products with stock > 0
+      ...(isActiveFilter === "1" && { isActive: "1" }), // Only active products
+      ...(stocks === "1" && { stock: { $gt: 0 } }),    // Only products with stock > 0
+    };
+
+    // Fetch products with the filter applied
+    const products = await productModel
+      .find(filterQuery)
+      .sort({ custom_order: 1, createdAt: -1 }) // Sort by custom order and fallback to createdAt
+      .select("name photo photos _id perPiecePrice mrp stock slug custom_order");
+
+    // Process products to include photo URLs if necessary
+    const productsWithPhotos = products.map((product) => {
+      const productObj = product.toObject();
+      if (productObj.photo && productObj.photo.data) {
+        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString(
+          "base64"
+        )}`;
+        delete productObj.photo;
+      }
+      return productObj;
     });
 
+    // Send response
     res.status(200).send({
       success: true,
       message: "Products fetched successfully",
       subcategory,
-      products,
+      products: productsWithPhotos,
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).send({
       success: false,
       error: error.message,
@@ -872,7 +899,7 @@ export const processPaymentController = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: "Authentication required",
-        reason: "User not authenticated"
+        reason: "User not authenticated",
       });
     }
 
@@ -883,17 +910,17 @@ export const processPaymentController = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Invalid request body. Missing products or paymentMethod.",
-        reason: "Missing or invalid fields in request body"
+        reason: "Missing or invalid fields in request body",
       });
     }
 
     // Handle COD and Advance orders immediately
     if (paymentMethod === "COD" || paymentMethod === "Advance") {
       const order = new orderModel({
-        products: products.map(item => ({
+        products: products.map((item) => ({
           product: item.product,
           quantity: item.quantity,
-          price: item.price
+          price: item.price,
         })),
         payment: {
           paymentMethod,
@@ -906,25 +933,37 @@ export const processPaymentController = async (req, res) => {
       });
 
       await order.save();
+
+      // Update stock for each product
+      await Promise.all(
+        products.map(async (item) => {
+          await productModel.findByIdAndUpdate(
+            item.product,
+            { $inc: { stock: -item.quantity } }, // Decrease stock
+            { new: true }
+          );
+        })
+      );
+
       return res.json({
         success: true,
         message: `${paymentMethod} order placed successfully`,
-        order
+        order,
       });
     }
 
     // For Razorpay payments
     const razorpayOrderData = {
       amount: Math.round(amount * 100),
-      currency: 'INR',
+      currency: "INR",
       receipt: `order_${Date.now()}`,
       notes: {
         paymentMethod,
         baseAmount: amount,
         amountPending: amountPending,
         userId: req.user._id.toString(),
-        products: JSON.stringify(products)
-      }
+        products: JSON.stringify(products),
+      },
     };
 
     const razorpayOrder = await razorpay.orders.create(razorpayOrderData);
@@ -933,15 +972,14 @@ export const processPaymentController = async (req, res) => {
       success: true,
       message: "Razorpay order initiated",
       razorpayOrder,
-      key: process.env.RAZORPAY_KEY_ID
+      key: process.env.RAZORPAY_KEY_ID,
     });
-
   } catch (error) {
     console.error("Error in processPaymentController:", error);
     res.status(500).json({
       success: false,
       message: "Error in payment processing",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -949,30 +987,26 @@ export const processPaymentController = async (req, res) => {
 // Verify payment and create order only after successful payment
 export const verifyPaymentController = async (req, res) => {
   try {
-    const {
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature
-    } = req.body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return res.status(400).json({
         success: false,
-        message: "Missing required payment verification parameters"
+        message: "Missing required payment verification parameters",
       });
     }
 
     // Verify signature
     const body = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(body)
-      .digest('hex');
+      .digest("hex");
 
     if (expectedSignature !== razorpay_signature) {
       return res.status(400).json({
         success: false,
-        message: "Invalid payment signature"
+        message: "Invalid payment signature",
       });
     }
 
@@ -982,10 +1016,10 @@ export const verifyPaymentController = async (req, res) => {
 
     // Create order in database only after successful payment verification
     const order = new orderModel({
-      products: products.map(item => ({
+      products: products.map((item) => ({
         product: item.product,
         quantity: item.quantity,
-        price: item.price
+        price: item.price,
       })),
       payment: {
         paymentMethod: "Razorpay",
@@ -1000,21 +1034,32 @@ export const verifyPaymentController = async (req, res) => {
 
     await order.save();
 
+    // Update stock for each product
+    await Promise.all(
+      products.map(async (item) => {
+        await productModel.findByIdAndUpdate(
+          item.product,
+          { $inc: { stock: -item.quantity } }, // Decrease stock
+          { new: true }
+        );
+      })
+    );
+
     res.json({
       success: true,
       message: "Payment verified and order created successfully",
-      order
+      order,
     });
-
   } catch (error) {
     console.error("Error in verifyPaymentController:", error);
     res.status(500).json({
       success: false,
       message: "Error in payment verification",
-      error: error.message
+      error: error.message,
     });
   }
 };
+
 
 // Get payment status
 export const getPaymentStatusController = async (req, res) => {

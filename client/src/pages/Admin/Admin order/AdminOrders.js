@@ -44,7 +44,7 @@ const AdminOrders = () => {
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showTrackingModal, setShowTrackingModal] = useState(false);
   const [trackingInfo, setTrackingInfo] = useState({ company: "", id: "" });
-
+  const [addProductError, setAddProductError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -63,7 +63,7 @@ const AdminOrders = () => {
           status: type,
           page,
           limit: itemsPerPage,
-          search,
+          search, // Send search query to backend
         },
       });
       setOrders(Array.isArray(data.orders) ? data.orders : []);
@@ -187,6 +187,15 @@ const AdminOrders = () => {
 
   const handleAddToOrder = async (product) => {
     try {
+          // Check if product is inactive or out of stock
+    if (product.isActive === "0" || product.stock <= 0) {
+      let errorMessage = "Cannot add product: ";
+      if (product.isActive === "0") errorMessage += "Product is inactive";
+      if (product.stock <= 0) errorMessage += "Product is out of stock";
+      
+      message.error(errorMessage);
+      return; // Exit the function without adding
+    }
       // Function to get price based on product and quantity
       const getPriceForProduct = (product, quantity = 1) => {
         const unitSet = product.unitSet || 1;
@@ -214,6 +223,7 @@ const AdminOrders = () => {
 
         return parseFloat(product.perPiecePrice || product.price || 0);
       };
+
 
       // Calculate the price for the product
       const productPrice = getPriceForProduct(product, 1);
@@ -247,15 +257,15 @@ const AdminOrders = () => {
       // Update local state
       setSelectedOrder(updatedOrder);
 
-      // First, add the product
       const addResponse = await axios.put(
         `/api/v1/auth/order/${selectedOrder._id}/add`,
-        {
-          productId: product._id,
-          quantity: 1,
-          price: productPrice,
-        }
+        { productId: product._id, quantity: product.unitSet, price: productPrice }
       );
+  
+      if (!addResponse.data.success) {
+        throw new Error(addResponse.data.message);
+      }
+  
 
       if (!addResponse.data.success) {
         throw new Error(addResponse.data.message);
@@ -289,7 +299,7 @@ const AdminOrders = () => {
       }
     } catch (error) {
       console.log(error);
-      message.error("Error adding product to order");
+      setAddProductError(error.response?.data?.message || "Error adding product to order");
     }
   };
 
@@ -534,14 +544,14 @@ const AdminOrders = () => {
           </Nav>
 
           <div className="mb-4">
-            <input
-              type="text"
-              className="form-control w-25"
-              placeholder="Search orders by ID, buyer name..."
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-            />
-          </div>
+  <input
+    type="text"
+    className="form-control w-25"
+    placeholder="Search orders by ID, buyer name..."
+    value={searchTerm}
+    onChange={(e) => handleSearch(e.target.value)}
+  />
+</div>
 
           {loading ? (
             <Spinner animation="border" role="status">
@@ -734,7 +744,7 @@ const AdminOrders = () => {
       </div>
 
       {selectedOrder && (
-        <OrderModal
+        <OrderModal 
           show={show}
           handleClose={handleClose}
           selectedOrder={selectedOrder}
@@ -749,7 +759,9 @@ const AdminOrders = () => {
           handleUpdateOrder={handleUpdateOrder}
           handleDelivered={handleDelivered}
           handleReturned={handleReturned}
-          handleAddToOrder={handleAddToOrder}
+          handleAddToOrder={(product) => handleAddToOrder(product).catch(error => {
+            setAddProductError(error.message);
+          })}
         />
       )}
 

@@ -575,7 +575,7 @@ useEffect(() => {
                   Service is not available in your area or pincode.
                 </p>
                 <a
-                  href="https://wa.me/918291541168"
+                  href="https://wa.me/918850832942"
                   target="_blank"
                   style={{
                     display: "flex",
