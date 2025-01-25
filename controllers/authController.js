@@ -369,24 +369,43 @@ export const getOrdersController = async (req, res) => {
   try {
     const { search } = req.query;
 
-    // Build search query with more flexible matching
     const searchQuery = search ? {
       $or: [
-        { _id: search }, // Exact match for order ID
-        { 'buyer.user_fullname': { $regex: `^${search}`, $options: 'i' } }, // Starts with search term
+        // Match order ID
+        { _id: search }, 
+
+        // Handle null buyer or user_fullname
         { 
-          'buyer.mobile_no': search.length > 0 
-            ? { 
-                $expr: { 
-                  $regexMatch: { 
-                    input: { $toString: "$buyer.mobile_no" }, 
-                    regex: search 
-                  } 
-                } 
-              }
-            : {} 
-        }, // Partial match for mobile number
-        { 'payment.transactionId': { $regex: `^${search}`, $options: 'i' } }
+          $expr: { 
+            $regexMatch: { 
+              input: { $ifNull: ["$buyer.user_fullname", ""] }, 
+              regex: search, 
+              options: 'i' 
+            } 
+          } 
+        },
+
+        // Handle null buyer or mobile_no
+        { 
+          $expr: { 
+            $regexMatch: { 
+              input: { $ifNull: [{ $toString: "$buyer.mobile_no" }, ""] }, 
+              regex: search, 
+              options: 'i' 
+            } 
+          } 
+        },
+
+        // Handle null payment or transactionId
+        { 
+          $expr: { 
+            $regexMatch: { 
+              input: { $ifNull: ["$payment.transactionId", ""] }, 
+              regex: search, 
+              options: 'i' 
+            } 
+          } 
+        }
       ]
     } : {};
 
