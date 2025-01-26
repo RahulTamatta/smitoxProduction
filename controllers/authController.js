@@ -367,55 +367,18 @@ export const updateProfileController = async (req, res) => {
 
 export const getOrdersController = async (req, res) => {
   try {
-    const { search } = req.query;
+    // Get user_id from route params
+    const { user_id } = req.params;
 
-    const searchQuery = search ? {
-      $or: [
-        // Match order ID
-        { _id: search }, 
-
-        // Handle null buyer or user_fullname
-        { 
-          $expr: { 
-            $regexMatch: { 
-              input: { $ifNull: ["$buyer.user_fullname", ""] }, 
-              regex: search, 
-              options: 'i' 
-            } 
-          } 
-        },
-
-        // Handle null buyer or mobile_no
-        { 
-          $expr: { 
-            $regexMatch: { 
-              input: { $ifNull: [{ $toString: "$buyer.mobile_no" }, ""] }, 
-              regex: search, 
-              options: 'i' 
-            } 
-          } 
-        },
-
-        // Handle null payment or transactionId
-        { 
-          $expr: { 
-            $regexMatch: { 
-              input: { $ifNull: ["$payment.transactionId", ""] }, 
-              regex: search, 
-              options: 'i' 
-            } 
-          } 
-        }
-      ]
-    } : {};
-
+    // Fetch orders based on the user_id passed in the route
     const orders = await orderModel
-      .find(searchQuery)
-      .populate("buyer", "user_fullname address mobile_no pincode")
+      .find({ buyer: user_id })
+      .populate("buyer", "user_fullname address mobile_no pincode") // Use the user_id directly
       .populate({
         path: "products.product",
-        select: "name photos price sku"
-      });
+        select: "name photos price  sku"
+        // Populate all fields in Product schema
+      }); // Include only `user_fullname` for the buyer
 
     res.json(orders);
   } catch (error) {
@@ -427,6 +390,49 @@ export const getOrdersController = async (req, res) => {
     });
   }
 };
+// export const getOrdersController = async (req, res) => {
+//   try {
+//     const { search } = req.query;
+
+//     // Build search query with more flexible matching
+//     const searchQuery = search ? {
+//       $or: [
+//         { _id: search }, // Exact match for order ID
+//         { 'buyer.user_fullname': { $regex: `^${search}`, $options: 'i' } }, // Starts with search term
+//         { 
+//           'buyer.mobile_no': search.length > 0 
+//             ? { 
+//                 $expr: { 
+//                   $regexMatch: { 
+//                     input: { $toString: "$buyer.mobile_no" }, 
+//                     regex: search 
+//                   } 
+//                 } 
+//               }
+//             : {} 
+//         }, // Partial match for mobile number
+//         { 'payment.transactionId': { $regex: `^${search}`, $options: 'i' } }
+//       ]
+//     } : {};
+
+//     const orders = await orderModel
+//       .find(searchQuery)
+//       .populate("buyer", "user_fullname address mobile_no pincode")
+//       .populate({
+//         path: "products.product",
+//         select: "name photos price sku"
+//       });
+
+//     res.json(orders);
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).send({
+//       success: false,
+//       message: "Error While Getting Orders",
+//       error,
+//     });
+//   }
+// };
 export const getAllOrdersController = async (req, res) => {
   try {
     const { status, page = 1, limit = 10, search = "" } = req.query;
