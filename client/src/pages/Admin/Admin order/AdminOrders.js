@@ -187,122 +187,48 @@ const AdminOrders = () => {
 
   const handleAddToOrder = async (product) => {
     try {
-          // Check if product is inactive or out of stock
-    if (product.isActive === "0" || product.stock <= 0) {
-      let errorMessage = "Cannot add product: ";
-      if (product.isActive === "0") errorMessage += "Product is inactive";
-      if (product.stock <= 0) errorMessage += "Product is out of stock";
-      
-      message.error(errorMessage);
-      return; // Exit the function without adding
-    }
-      // Function to get price based on product and quantity
-      const getPriceForProduct = (product, quantity = 1) => {
-        const unitSet = product.unitSet || 1;
-
-        // Check for bulk pricing
-        if (product.bulkProducts && product.bulkProducts.length > 0) {
-          const sortedBulkProducts = [...product.bulkProducts]
-            .filter((bp) => bp && bp.minimum)
-            .sort((a, b) => b.minimum - a.minimum);
-
-          const applicableBulk = sortedBulkProducts.find(
-            (bp) =>
-              quantity >= bp.minimum * unitSet &&
-              (!bp.maximum || quantity <= bp.maximum * unitSet)
-          );
-
-          if (applicableBulk) {
-            return parseFloat(
-              applicableBulk.selling_price_set ||
-                product.perPiecePrice ||
-                product.price
-            );
-          }
-        }
-
-        return parseFloat(product.perPiecePrice || product.price || 0);
-      };
-
-
-      // Calculate the price for the product
-      const productPrice = getPriceForProduct(product, 1);
-
-      // Prepare the new product object to be added
-      const newProductToAdd = {
-        product: product._id,
-        quantity: product.unitSet,
-        price: productPrice,
-      };
-
-      // Create a new products array that includes existing products and the new product
-      const updatedProducts = [
-        ...(selectedOrder.products || []),
-        newProductToAdd,
-      ];
-
-      // Calculate the new total amount
-      const totalAmount = updatedProducts.reduce(
-        (total, item) => total + item.quantity * item.price,
-        0
-      );
-
-      // Prepare the updated order object
-      const updatedOrder = {
-        ...selectedOrder,
-        products: updatedProducts,
-        amount: totalAmount,
-      };
-
-      // Update local state
-      setSelectedOrder(updatedOrder);
-
+      if (product.isActive === "0" || product.stock <= 0) {
+        let errorMessage = "Cannot add product: ";
+        if (product.isActive === "0") errorMessage += "Product is inactive";
+        if (product.stock <= 0) errorMessage += "Product is out of stock";
+        
+        message.error(errorMessage);
+        return;
+      }
+  
+      // Capture current paid amount before adding product
+      const originalAmount = selectedOrder.amount;
+  
+      // Send only essential data to server
       const addResponse = await axios.put(
         `/api/v1/auth/order/${selectedOrder._id}/add`,
-        { productId: product._id, quantity: product.unitSet, price: productPrice }
-      );
-  
-      if (!addResponse.data.success) {
-        throw new Error(addResponse.data.message);
-      }
-  
-
-      if (!addResponse.data.success) {
-        throw new Error(addResponse.data.message);
-      }
-
-      // Then, automatically update the entire order
-      const updateResponse = await axios.put(
-        `/api/v1/auth/order/${selectedOrder._id}`,
-        {
-          status: selectedOrder.status,
-          codCharges: Number(selectedOrder.codCharges) || 0,
-          deliveryCharges: Number(selectedOrder.deliveryCharges) || 0,
-          discount: Number(selectedOrder.discount) || 0,
-          amount: totalAmount,
-          products: updatedProducts.map((p) => ({
-            _id: p._id,
-            quantity: Number(p.quantity) || 0,
-            price: Number(p.price) || 0,
-          })),
+        { 
+          productId: product._id, 
+          quantity: product.unitSet || 1 // Ensure minimum quantity
         }
       );
-
-      if (updateResponse.data.success) {
-        setSelectedOrder(updateResponse.data.order);
-        message.success("Product added and order updated successfully");
-        handleCloseSearchModal();
-        // Refresh the orders list if needed
-        getOrders(orderType);
-      } else {
-        message.error(updateResponse.data.message);
+  
+      if (!addResponse.data.success) {
+        throw new Error(addResponse.data.message);
       }
+  
+      // Preserve original amount in the updated order data
+      const updatedOrder = {
+        ...addResponse.data.order,
+        amount: originalAmount // Maintain the original paid amount
+      };
+  
+      // Update local state with preserved amount
+      setSelectedOrder(updatedOrder);
+      message.success("Product added successfully");
+      handleCloseSearchModal();
+      getOrders(orderType);
+  
     } catch (error) {
-      console.log(error);
+      console.error("Add to order error:", error);
       setAddProductError(error.response?.data?.message || "Error adding product to order");
     }
   };
-
   // const handleCloseSearchModal = () => {
   //   setShowSearchModal(false);
   //   setSearchKeyword('');

@@ -1,10 +1,9 @@
-import React from 'react';
-import { Modal, Button, Table, Form } from 'react-bootstrap';
-import moment from 'moment';
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable'; // Add this import for better table handling
-import { useEffect,useState } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import { Modal, Button, Table, Form } from "react-bootstrap";
+import axios from "axios";
+import moment from "moment";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 const OrderModal = ({
   show,
@@ -21,298 +20,289 @@ const OrderModal = ({
   handleUpdateOrder,
   handleDelivered,
   handleReturned,
-  getOrders, // Add this prop
-  orderType ,
-  onOrderUpdate 
+  getOrders,
+  orderType,
+  onOrderUpdate,
 }) => {
   const orderId = selectedOrder?._id;
   const products = selectedOrder?.products || [];
   const [localOrder, setLocalOrder] = useState(selectedOrder);
   const [addProductError, setAddProductError] = useState(null);
-  
+
   // Update local state when selectedOrder changes
   useEffect(() => {
     setLocalOrder(selectedOrder);
   }, [selectedOrder]);
 
-  // Add useEffect to refresh data when modal is shown
+  // Refresh data when modal is shown
   useEffect(() => {
     if (show && orderId) {
       refreshOrderData();
     }
   }, [show, orderId]);
 
-
-
-  // const getProductName = (product) => {
-  //   if (!product) return "Unknown Product";
-    
-  //   if (product.product && product.product.name) {
-  //     return product.product.name;
-  //   }
-    
-  //   if (product.name) {
-  //     return product.name;
-  //   }
-    
-  //   if (product.product && product.product.sku) {
-  //     return `Product (${product.product.sku})`;
-  //   }
-    
-  //   if (product.sku) {
-  //     return `Product (${product.sku})`;
-  //   }
-    
-  //   return "Unknown Product";
-  // };
-
   const convertToWords = (num) => {
-    const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
-    const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const a = [
+      "",
+      "One ",
+      "Two ",
+      "Three ",
+      "Four ",
+      "Five ",
+      "Six ",
+      "Seven ",
+      "Eight ",
+      "Nine ",
+      "Ten ",
+      "Eleven ",
+      "Twelve ",
+      "Thirteen ",
+      "Fourteen ",
+      "Fifteen ",
+      "Sixteen ",
+      "Seventeen ",
+      "Eighteen ",
+      "Nineteen ",
+    ];
+    const b = [
+      "",
+      "",
+      "Twenty",
+      "Thirty",
+      "Forty",
+      "Fifty",
+      "Sixty",
+      "Seventy",
+      "Eighty",
+      "Ninety",
+    ];
 
-    if ((num = num.toString()).length > 9) return 'Overflow';
-    let n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+    if ((num = num.toString()).length > 9) return "Overflow";
+    let n = ("000000000" + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
     if (!n) return;
-    let str = '';
-    str += (n[1] != 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'Crore ' : '';
-    str += (n[2] != 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'Lakh ' : '';
-    str += (n[3] != 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'Thousand ' : '';
-    str += (n[4] != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'Hundred ' : '';
-    str += (n[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) + 'only' : '';
+    let str = "";
+    str += n[1] != 0 ? (a[Number(n[1])] || b[n[1][0]] + " " + a[n[1][1]]) + "Crore " : "";
+    str += n[2] != 0 ? (a[Number(n[2])] || b[n[2][0]] + " " + a[n[2][1]]) + "Lakh " : "";
+    str += n[3] != 0 ? (a[Number(n[3])] || b[n[3][0]] + " " + a[n[3][1]]) + "Thousand " : "";
+    str += n[4] != 0 ? (a[Number(n[4])] || b[n[4][0]] + " " + a[n[4][1]]) + "Hundred " : "";
+    str += n[5] != 0 ? ((str != "") ? "and " : "") + (a[Number(n[5])] || b[n[5][0]] + " " + a[n[5][1]]) + "only" : "";
     return str;
   };
 
-  const generatePDF = () => {
-    if (!selectedOrder) {
-      alert('No order selected');
-      return;
-    }
-  
-    // Create a function to load the image and return a promise
-    const loadImage = (url) => {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = 'Anonymous';  // Handle CORS
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0);
-          resolve(canvas.toDataURL('image/png'));
-        };
-        img.onerror = () => reject(new Error('Failed to load image'));
-        img.src = url;
-      });
-    };
-  
-    // Main PDF generation with image handling
-    const generatePDFWithLogo = async () => {
+const generatePDF = () => {
+  if (!selectedOrder) {
+    alert("No order selected");
+    return;
+  }
+
+  const generatePDFWithLogo = async () => {
+    try {
+      const doc = new jsPDF();
+      const totals = calculateTotals();
+
+      // PDF configuration
+      const margin = { top: 40, left: 20, right: 20 };
+      let currentY = margin.top;
+
+      // Add logo
       try {
-        const doc = new jsPDF();
-        const totals = calculateTotals();
-    
-        // Define PDF dimensions
-        const pageWidth = doc.internal.pageSize.width;
-        const marginLeft = 10;
-        const marginRight = 10;
-        const maxTextWidth = pageWidth - marginLeft - marginRight;
-    
-        try {
-          // Load and add logo
-          const logoData = await loadImage('https://smitox.com/img/logo.png');
-          // Add logo with proper scaling (80px height equivalent)
-          doc.addImage(logoData, 'PNG', 20, 10, 40, 15); // Adjust dimensions as needed
-        } catch (imageError) {
-          console.warn('Failed to load logo:', imageError);
-          // Continue PDF generation without logo
-        }
-    
-        // Add company header
-        doc.setFontSize(20);
-        doc.text('TAX INVOICE', 105, 20, { align: 'center' });
-    
-        doc.setFontSize(12);
-        doc.text('Smitox B2b', 20, 30);
-        doc.text(`Address : Mumbai, Maharashtra`, 20, 35);
-    
-        // Add invoice details with text width check
-        const invoiceText = `Invoice No: ${selectedOrder._id || 'N/A'}`;
-        let textWidth = doc.getTextWidth(invoiceText);
-    
-        if (textWidth > maxTextWidth) {
-          let lines = doc.splitTextToSize(invoiceText, maxTextWidth);
-          doc.text(lines, 130, 30);
-        } else {
-          doc.text(invoiceText, 130, 30);
-        }
-    
-        doc.text(`Date: ${moment().format('DD/MM/YYYY')}`, 130, 35);
-    
-        // Add customer details
-        doc.text('Bill To:', 20, 50);
-        doc.text(`Name: ${selectedOrder.buyer.user_fullname || 'N/A'}`, 20, 55);
-    
-        // Handle long address by splitting into multiple lines
-        const address = selectedOrder.buyer.address || 'N/A';
-        const addressLines = doc.splitTextToSize(address, maxTextWidth);
-        doc.text(`Address:`, 20, 60);
-        doc.text(addressLines, 30, 65); // Indent address lines for better readability
-    
-        // Calculate Y position after address
-        const addressY = 65 + (addressLines.length - 1) * 5; // 5 is the line height
-    
-        doc.text(`Pincode: ${selectedOrder.buyer.pincode || 'N/A'}`, 20, addressY + 5);
-    
-        // Create table for products
-        const tableColumn = ['Product', 'Qty', 'Price', 'GST%', 'Net Amount', 'Tax Amount', 'Total'];
-        const tableRows = products.map(product => [
-          product.product.name,
-          product.quantity,
-          Number(product.price).toFixed(2),
-          `${product.product.gst}%`,
-          Number(product.price * product.quantity).toFixed(2), // Net Amount
-          Number((product.price * product.quantity) * (product.product.gst / 100)).toFixed(2), // Tax Amount
-          product.product.gst !== "0"
-            ? ((Number(product.price) * Number(product.quantity)) * (1 + product.product.gst / 100)).toFixed(2) // Total with GST
-            : (Number(product.price) * Number(product.quantity)).toFixed(2) // Total without GST
-        ]);
-    
-        doc.autoTable({
-          head: [tableColumn],
-          body: tableRows,
-          startY: addressY + 15, // Adjust startY based on address height
-          theme: 'grid',
-          styles: { fontSize: 8 },
-          headStyles: { fillColor: [66, 139, 202] }
-        });
-    
-        const finalY = doc.lastAutoTable.finalY + 10;
-    
-        // Add totals
-        doc.text(`Subtotal: ${Number(totals.subtotal).toFixed(2)}`, 20, finalY + 10);
-        doc.text(`GST: ${Number(totals.gst).toFixed(2)}`, 20, finalY + 15);
-        doc.text(`Delivery Charges: ${Number(selectedOrder.deliveryCharges || 0).toFixed(2)}`, 20, finalY + 20);
-        doc.text(`COD Charges: ${Number(selectedOrder.codCharges || 0).toFixed(2)}`, 20, finalY + 25);
-        doc.text(`Discount: ${Number(selectedOrder.discount || 0).toFixed(2)}`, 20, finalY + 30);
-        doc.text(`Total Amount: ${Number(totals.total).toFixed(2)}`, 20, finalY + 35);
-        doc.text(`Amount Paid: ${Number(selectedOrder.amount || 0).toFixed(2)}`, 20, finalY + 40);
-        doc.text(`Amount Pending: ${Number(totals.total - (selectedOrder.amount || 0)).toFixed(2)}`, 20, finalY + 45);
-    
-        // Add amount in words
-        doc.text(`Amount in Words: ${convertToWords(Math.round(totals.total))}`, 20, finalY + 60);
-    
-        // Add tracking information if available
-        if (selectedOrder.tracking) {
-          doc.text(
-            `Tracking Company: ${selectedOrder.tracking.company}: ${selectedOrder.tracking.id}`,
-            20,
-            finalY + 65
-          );
-        } else {
-          doc.text("Tracking Id is not assigned", 20, finalY + 65);
-        }
-    
-        // Add disclaimer text
-        const disclaimerText = [
-          'Check Bill 2-3 Times Before Making Payment',
-          'Once Payment Received It Will Not Refundable',
-          'There Is No Any Warranty Or Guarantee On Any Products',
-          'Don\'t Ask For Replacement Or Warranty'
-        ];
-        disclaimerText.forEach((line, index) => {
-          doc.text(line, 20, finalY + 75 + (index * 5));
-        });
-    
-        // Add footer
-        doc.text('From Smitox B2B', 20, finalY + 100);
-        doc.text('Authorized Signature', 150, finalY + 100);
-    
-        // Save PDF
-        doc.save(`Invoice_${selectedOrder.orderNumber || 'Order'}.pdf`);
-    
-      } catch (error) {
-        console.error('PDF Generation Error:', error);
-        alert('Failed to generate PDF. Please try again.');
+        const logoData = await loadImage("https://smitox.com/img/logo.png");
+        doc.addImage(logoData, "PNG", 20, 10, 40, 15);
+      } catch (imageError) {
+        console.warn("Failed to load logo:", imageError);
       }
-    };
-    // Call the async function
-    generatePDFWithLogo();
+
+      // Header Section
+      doc.setFontSize(20);
+      doc.text("TAX INVOICE", 105, 20, { align: "center" });
+      doc.setFontSize(12);
+      doc.text("Smitox B2b", 20, 30);
+      doc.text(`Address: Mumbai, Maharashtra`, 20, 35);
+
+      // Invoice Details
+      doc.text(`Invoice No: ${selectedOrder._id || "N/A"}`, 130, 30);
+      doc.text(`Date: ${moment().format("DD/MM/YYYY")}`, 130, 35);
+
+      // Customer Details
+      doc.text("Bill To:", 20, 50);
+      doc.text(`Name: ${selectedOrder.buyer?.user_fullname || "N/A"}`, 20, 55);
+      const address = selectedOrder.buyer?.address || "N/A";
+      const addressLines = doc.splitTextToSize(address, 150);
+      doc.text(`Address:`, 20, 60);
+      doc.text(addressLines, 30, 65);
+
+      // Calculate Y position after address
+      const addressY = 65 + (addressLines.length - 1) * 5;
+      doc.text(`Pincode: ${selectedOrder.buyer?.pincode || "N/A"}`, 20, addressY + 5);
+
+      // Create product table with multi-page support
+      const tableColumns = ["Product", "Qty", "Price", "GST%", "Net Amount", "Tax Amount", "Total"];
+      const tableRows = products.map((product) => {
+        const productData = product.product || {};
+        return [
+          productData.name || "Unnamed Product",
+          product.quantity || 0,
+          Number(product.price || 0).toFixed(2),
+          `${productData.gst || 0}%`,
+          Number((product.price || 0) * (product.quantity || 0)).toFixed(2),
+          Number((product.price || 0) * (product.quantity || 0) * ((productData.gst || 0) / 100)).toFixed(2),
+          ((productData.gst || 0) !== 0
+            ? (Number(product.price || 0) * Number(product.quantity || 0) * (1 + (productData.gst || 0) / 100)).toFixed(2)
+            : (Number(product.price || 0) * Number(product.quantity || 0)).toFixed(2)),
+        ];
+      });
+
+      // AutoTable configuration for multi-page support
+      doc.autoTable({
+        head: [tableColumns],
+        body: tableRows,
+        startY: addressY + 15,
+        margin: { top: 20 },
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [66, 139, 202] },
+        bodyStyles: { minCellHeight: 10 },
+        pageBreak: "auto",
+        rowPageBreak: "auto",
+        didDrawPage: (data) => {
+          // Header on each page
+          doc.setFontSize(20);
+          doc.text("TAX INVOICE", 105, 20, { align: "center" });
+        },
+      });
+
+      // Get final Y position after table
+      let finalY = doc.lastAutoTable.finalY;
+
+      // Add totals section
+      if (finalY > doc.internal.pageSize.height - 100) {
+        doc.addPage();
+        finalY = margin.top;
+      }
+
+      // Add totals with proper formatting
+      doc.setFontSize(10);
+      doc.text(`Subtotal: Rs. ${Number(totals.subtotal).toFixed(2)}`, 20, finalY + 10);
+      doc.text(`GST: Rs. ${Number(totals.gst).toFixed(2)}`, 20, finalY + 15);
+      doc.text(`Delivery Charges: Rs. ${Number(selectedOrder.deliveryCharges || 0).toFixed(2)}`, 20, finalY + 20);
+      doc.text(`COD Charges: Rs. ${Number(selectedOrder.codCharges || 0).toFixed(2)}`, 20, finalY + 25);
+      doc.text(`Discount: Rs. ${Number(selectedOrder.discount || 0).toFixed(2)}`, 20, finalY + 30);
+      doc.text(`Total Amount: Rs. ${Number(totals.total).toFixed(2)}`, 20, finalY + 35);
+      doc.text(`Amount Paid: Rs. ${Number(selectedOrder.amount || 0).toFixed(2)}`, 20, finalY + 40);
+      doc.text(`Amount Pending: Rs. ${Number(totals.total - (selectedOrder.amount || 0)).toFixed(2)}`, 20, finalY + 45);
+
+      // Add amount in words
+      doc.text(`Amount in Words: ${convertToWords(Math.round(totals.total))}`, 20, finalY + 60);
+
+      // Add tracking information
+      if (selectedOrder.tracking) {
+        doc.text(`Tracking Company: ${selectedOrder.tracking.company}: ${selectedOrder.tracking.id}`, 20, finalY + 65);
+      } else {
+        doc.text("Tracking Id is not assigned", 20, finalY + 65);
+      }
+
+      // Add disclaimer text
+      const disclaimerText = [
+        "Check Bill 2-3 Times Before Making Payment",
+        "Once Payment Received It Will Not Refundable",
+        "There Is No Any Warranty Or Guarantee On Any Products",
+        "Don't Ask For Replacement Or Warranty",
+      ];
+      disclaimerText.forEach((line, index) => {
+        doc.text(line, 20, finalY + 75 + index * 5);
+      });
+
+      // Add footer
+      doc.text("From Smitox B2B", 20, finalY + 100);
+      doc.text("Authorized Signature", 150, finalY + 100);
+
+      // Save PDF
+      doc.save(`Invoice_${selectedOrder.orderNumber || "Order"}.pdf`);
+    } catch (error) {
+      console.error("PDF Generation Error:", error);
+      alert("Failed to generate PDF. Please try again.");
+    }
+  };
+
+  generatePDFWithLogo();
+};
+
+  const loadImage = (url) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "Anonymous";
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.onerror = () => reject(new Error("Failed to load image"));
+      img.src = url;
+    });
   };
 
   const shareToWhatsApp = () => {
     if (!selectedOrder) {
-      alert('No order selected');
+      alert("No order selected");
       return;
     }
-  
-    // Validate buyer and mobile number
+
     if (!selectedOrder.buyer?.mobile_no) {
-      alert('Customer mobile number not available');
+      alert("Customer mobile number not available");
       return;
     }
-  
-    // Convert to string and clean the phone number
+
     const phoneNumber = String(selectedOrder.buyer.mobile_no)
-      .replace(/\D/g, '') // Remove all non-digit characters
-      .replace(/^0+/, ''); // Remove leading zeros
-  
+      .replace(/\D/g, "")
+      .replace(/^0+/, "");
+
     if (!phoneNumber) {
-      alert('Invalid mobile number format');
+      alert("Invalid mobile number format");
       return;
     }
-  
-    // Ensure country code is present (default to India +91 if missing)
-    const formattedNumber = phoneNumber.startsWith('+') 
-      ? phoneNumber 
-      : `91${phoneNumber}`; // Default to India country code
-  
+
+    const formattedNumber = phoneNumber.startsWith("+") ? phoneNumber : `91${phoneNumber}`;
     const totals = calculateTotals();
-    
-    // Create message content
+
     const message = `
-  *Order Details from Smitox B2b*
-  ---------------------------
-  Order ID: ${selectedOrder._id}
-  Customer: ${selectedOrder.buyer?.user_fullname}
-  Date: ${moment().format('DD/MM/YYYY')}
-  
-  *Order Summary*
-  Subtotal: ₹${totals.subtotal.toFixed(2)}
-  GST: ₹${totals.gst.toFixed(2)}
-  Delivery Charges: ₹${Number(selectedOrder.deliveryCharges || 0).toFixed(2)}
-  COD Charges: ₹${Number(selectedOrder.codCharges || 0).toFixed(2)}
-  Discount: ₹${Number(selectedOrder.discount || 0).toFixed(2)}
-  *Total Amount: ₹${totals.total.toFixed(2)}*
-  Amount Paid: ₹${Number(selectedOrder.amount || 0).toFixed(2)}
-  Amount Pending: ₹${(totals.total - Number(selectedOrder.amount || 0)).toFixed(2)}
-  
-  Thank you for your business!
-  `;
-  
-    // Encode the message for URL
+*Order Details from Smitox B2b*
+---------------------------
+Order ID: ${selectedOrder._id}
+Customer: ${selectedOrder.buyer?.user_fullname}
+Date: ${moment().format("DD/MM/YYYY")}
+
+*Order Summary*
+Subtotal: Rs. ${totals.subtotal.toFixed(2)}
+GST: Rs. ${totals.gst.toFixed(2)}
+Delivery Charges: Rs. ${Number(selectedOrder.deliveryCharges || 0).toFixed(2)}
+COD Charges: Rs. ${Number(selectedOrder.codCharges || 0).toFixed(2)}
+Discount: Rs. ${Number(selectedOrder.discount || 0).toFixed(2)}
+*Total Amount: Rs. ${totals.total.toFixed(2)}*
+Amount Paid: Rs. ${Number(selectedOrder.amount || 0).toFixed(2)}
+Amount Pending: Rs. ${(totals.total - Number(selectedOrder.amount || 0)).toFixed(2)}
+
+Thank you for your business!
+`;
+
     const encodedMessage = encodeURIComponent(message);
-    
-    // Create WhatsApp link
     const whatsappLink = `https://wa.me/${formattedNumber}?text=${encodedMessage}`;
-    
-    // Open in new tab
-    window.open(whatsappLink, '_blank');
+    window.open(whatsappLink, "_blank");
   };
 
   const refreshOrderData = async () => {
     try {
       const response = await axios.get(`/api/v1/auth/order/${orderId}`);
       if (response.data.success) {
-        onOrderUpdate(response.data.order); // Update parent state
-        setLocalOrder(response.data.order); 
+        onOrderUpdate(response.data.order);
+        setLocalOrder(response.data.order);
       }
     } catch (error) {
-      console.error('Error refreshing order data:', error);
+      console.error("Error refreshing order data:", error);
     }
   };
 
-  // Modify handleUpdateOrder to refresh data after update
   const handleOrderUpdate = async () => {
     await handleUpdateOrder();
     await refreshOrderData();
@@ -321,19 +311,17 @@ const OrderModal = ({
 
   return (
     <Modal show={show} onHide={handleClose} size="lg">
-          <Modal show={!!addProductError} onHide={() => setAddProductError(null)}>
-      <Modal.Header closeButton>
-        <Modal.Title>Cannot Add Product</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        {addProductError}
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={() => setAddProductError(null)}>
-          Close
-        </Button>
-      </Modal.Footer>
-    </Modal>
+      <Modal show={!!addProductError} onHide={() => setAddProductError(null)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Cannot Add Product</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>{addProductError}</Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setAddProductError(null)}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       <Modal.Header closeButton>
         <Modal.Title>Edit Order</Modal.Title>
@@ -343,17 +331,16 @@ const OrderModal = ({
           <div>
             <h2>Order ID: {orderId}</h2>
             <p>
-        Name: {selectedOrder.buyer?.user_fullname}{" "}
-        {selectedOrder.payment?.paymentMethod === "Razorpay" && (
-          <span style={{ marginLeft: "300px" }}>
-            Razorpay ID: {selectedOrder.payment.transactionId}
-          </span>
-        )}
-      </p>
+              Name: {selectedOrder.buyer?.user_fullname}{" "}
+              {selectedOrder.payment?.paymentMethod === "Razorpay" && (
+                <span style={{ marginLeft: "300px" }}>
+                  Razorpay ID: {selectedOrder.payment.transactionId}
+                </span>
+              )}
+            </p>
             <p>Mobile No: {selectedOrder.buyer?.mobile_no}</p>
             <p>Address: {selectedOrder.buyer?.address}</p>
-
-            <p>Pincode : {selectedOrder.buyer?.pincode}</p>            
+            <p>Pincode: {selectedOrder.buyer?.pincode}</p>
             <p>Created At: {moment(selectedOrder.createdAt).format("LLLL")}</p>
 
             <h3>Order Details:</h3>
@@ -372,56 +359,60 @@ const OrderModal = ({
               </thead>
               <tbody>
                 {products.length > 0 ? (
-                  products.map((product, index) => (
-                    <tr key={product._id || index}>
-                      <td>
-                        {
+                  products.map((product, index) => {
+                    const productData = product.product || {};
+                    const quantity = product.quantity || 0;
+                    const price = product.price || 0;
+                    const gst = productData.gst || 0;
+
+                    const netAmount = (price * quantity).toFixed(2);
+                    const taxAmount = ((price * quantity) * (gst / 100)).toFixed(2);
+                    const total =
+                      gst !== 0
+                        ? ((price * quantity) * (1 + gst / 100)).toFixed(2)
+                        : (price * quantity).toFixed(2);
+
+                    return (
+                      <tr key={product._id || index}>
+                        <td>
                           <img
-                            src={product.product.photos}
-                            alt={product.photos}
+                            src={productData.photos || "https://via.placeholder.com/50"}
+                            alt={productData.name || "Product image"}
                             width="50"
                             className="img-fluid"
                           />
-                         }
-                      </td>
-                      <td>{product.product.name}</td>
-                      
-                      <td>
-                        <Form.Control
-                          type="number"
-                          value={product.quantity}
-                          onChange={(e) => handleProductChange(index, "quantity", e.target.value)}
-                        />
-                      </td>
-                      <td>
-                        <Form.Control
-                          type="number"
-                          value={product.price}
-                          onChange={(e) => handleProductChange(index, "price", e.target.value)}
-                          style={{ width: "100px" }}
-                        />
-                      </td>
-                      <td>₹{(Number(product.price) * Number(product.quantity)).toFixed(2)}</td>
-                      <td>₹{((Number(product.price) * Number(product.quantity)) * product.product.gst).toFixed(2)}</td>
-                      <td>
-  ₹{
-    product.product.gst !== "0"
-      ? ((Number(product.price) * Number(product.quantity)) * (1 + product.product.gst)).toFixed(2)
-      : ((Number(product.price) * Number(product.quantity)) ).toFixed(2)
-  }
-</td>
-
-                      <td>
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          onClick={() => handleDeleteProduct(index)}
-                        >
-                          Delete
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                        <td>{productData.name || "Unnamed Product"}</td>
+                        <td>
+                          <Form.Control
+                            type="number"
+                            value={quantity}
+                            onChange={(e) => handleProductChange(index, "quantity", e.target.value)}
+                          />
+                        </td>
+                        <td>
+                          <Form.Control
+                            type="number"
+                            value={price}
+                            onChange={(e) => handleProductChange(index, "price", e.target.value)}
+                            style={{ width: "100px" }}
+                          />
+                        </td>
+                        <td>₹{netAmount}</td>
+                        <td>₹{taxAmount}</td>
+                        <td>₹{total}</td>
+                        <td>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => handleDeleteProduct(index)}
+                          >
+                            Delete
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
                     <td colSpan="8">No products in this order</td>
@@ -431,9 +422,8 @@ const OrderModal = ({
                   <td colSpan="7">
                     <Button onClick={handleAddClick}>Add Product</Button>
                   </td>
-                
                 </tr>
-                
+
                 <tr>
                   <td colSpan="4"></td>
                   <td>Subtotal:</td>
@@ -482,8 +472,12 @@ const OrderModal = ({
                 </tr>
                 <tr>
                   <td colSpan="4"></td>
-                  <td><strong>Total:</strong></td>
-                  <td><strong>₹{calculateTotals().total.toFixed(2)}</strong></td>
+                  <td>
+                    <strong>Total:</strong>
+                  </td>
+                  <td>
+                    <strong>₹{calculateTotals().total.toFixed(2)}</strong>
+                  </td>
                 </tr>
                 <tr>
                   <td colSpan="4"></td>
@@ -533,96 +527,96 @@ const OrderModal = ({
               </Button>
             </div>
           )}
-          
+
           {selectedOrder && selectedOrder.status === "Confirmed" && (
             <div>
               <Button
                 variant="success"
                 onClick={() => handleStatusChange(selectedOrder._id, "Accepted")}
-                >
-                  Accept
-                </Button>
-              </div>
-            )}
-            
-            {selectedOrder && selectedOrder.status === "Dispatched" && (
-              <div>
-                <Button
-                  variant="success"
-                  onClick={() => handleStatusChange(selectedOrder._id, "Delivered")}
-                >
-                  Delivered
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={() => handleStatusChange(selectedOrder._id, "Returned")}
-                >
-                  RTO
-                </Button>
-              </div>
-            )}
-            
-            {selectedOrder && (selectedOrder.status === "Cancelled" || selectedOrder.status === "Rejected") && (
-              <div>
-                <Button
-                  variant="primary"
-                  onClick={() => handleStatusChange(selectedOrder._id, "Pending")}
-                >
-                  Set to Pending
-                </Button>
-              </div>
-            )}
-            
-            {selectedOrder && selectedOrder.status === "Accepted" && (
-              <div>
-                <Button
-                  variant="primary"
-                  onClick={() => handleStatusChange(selectedOrder._id, "Dispatched")}
-                >
-                  Dispatched
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={() => handleStatusChange(selectedOrder._id, "Rejected")}
-                >
-                  Reject
-                </Button>
-              </div>
-            )}
-            
-            {selectedOrder && (selectedOrder.status === "Delivered" || selectedOrder.status === "Returned") && (
-              <div>
-                <Button variant="success" onClick={handleDelivered}>
-                  Delivered
-                </Button>
-                <Button variant="danger" onClick={handleReturned}>
-                  Returned
-                </Button>
-              </div>
-            )}
-          </div>
-  
-          <Button variant="secondary" onClick={handleClose}>
-            Close
-          </Button>
-  
-          <Button variant="primary" onClick={handleUpdateOrder}>
-            Update Order
-          </Button>
-  
-          <Button variant="primary" onClick={generatePDF}>
-            Download PDF
-          </Button>
-          <Button 
-          variant="success" 
+              >
+                Accept
+              </Button>
+            </div>
+          )}
+
+          {selectedOrder && selectedOrder.status === "Dispatched" && (
+            <div>
+              <Button
+                variant="success"
+                onClick={() => handleStatusChange(selectedOrder._id, "Delivered")}
+              >
+                Delivered
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => handleStatusChange(selectedOrder._id, "Returned")}
+              >
+                RTO
+              </Button>
+            </div>
+          )}
+
+          {selectedOrder && (selectedOrder.status === "Cancelled" || selectedOrder.status === "Rejected") && (
+            <div>
+              <Button
+                variant="primary"
+                onClick={() => handleStatusChange(selectedOrder._id, "Pending")}
+              >
+                Set to Pending
+              </Button>
+            </div>
+          )}
+
+          {selectedOrder && selectedOrder.status === "Accepted" && (
+            <div>
+              <Button
+                variant="primary"
+                onClick={() => handleStatusChange(selectedOrder._id, "Dispatched")}
+              >
+                Dispatched
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => handleStatusChange(selectedOrder._id, "Rejected")}
+              >
+                Reject
+              </Button>
+            </div>
+          )}
+
+          {selectedOrder && (selectedOrder.status === "Delivered" || selectedOrder.status === "Returned") && (
+            <div>
+              <Button variant="success" onClick={handleDelivered}>
+                Delivered
+              </Button>
+              <Button variant="danger" onClick={handleReturned}>
+                Returned
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <Button variant="secondary" onClick={handleClose}>
+          Close
+        </Button>
+
+        <Button variant="primary" onClick={handleUpdateOrder}>
+          Update Order
+        </Button>
+
+        <Button variant="primary" onClick={generatePDF}>
+          Download PDF
+        </Button>
+        <Button
+          variant="success"
           onClick={shareToWhatsApp}
-          style={{ backgroundColor: '#25D366', borderColor: '#25D366' }}
+          style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
         >
           Share to WhatsApp
         </Button>
-        </Modal.Footer>
-      </Modal>
-    );
-  };
-  
-  export default OrderModal;
+      </Modal.Footer>
+    </Modal>
+  );
+};
+
+export default OrderModal;

@@ -245,10 +245,10 @@ const CartPage = () => {
       return;
     }
   
-    if (total < minimumOrder) {
-      toast.error(`Minimum order amount is ${minimumOrderCurrency} ${minimumOrder}`);
-      return;
-    }
+    // if (total < minimumOrder) {
+    //   toast.error(`Minimum order amount is ${minimumOrderCurrency} ${minimumOrder}`);
+    //   return;
+    // }
   
     if (!auth?.user?._id) {
       //toast.error("Please login to proceed with payment");
@@ -562,7 +562,6 @@ const CartPage = () => {
               disabled={
                 loading ||
                 orderPlacementInProgress ||
-                totalPrice() < minimumOrder ||
                 !isPincodeAvailable ||
                 (paymentMethod === "Braintree" && !instance)
               }

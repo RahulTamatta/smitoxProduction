@@ -13,7 +13,10 @@ const orderSchema = new mongoose.Schema(
           ref: "Product",
         },
         quantity: Number,
-        price: Number
+        price: {  // Made optional with default value
+          type: Number,
+          default: 0  // Add default value to prevent NaN errors
+        }
       },
     ],
     payment: {
