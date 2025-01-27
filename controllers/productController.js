@@ -567,14 +567,13 @@ export const searchProductController = async (req, res) => {
                     { brand: keyword },
                   ]
                 : []),
-              // Include perPiecePrice if keyword is a valid number
               ...(isNumber ? [{ perPiecePrice: keywordNumber }] : []),
-              // Include category and subcategory IDs from name matches
               { category: { $in: categoryIds } },
               { subcategory: { $in: subcategoryIds } },
             ],
           },
-          { stock: { $gt: 0 } }, // Only products with stock > 0
+          { stock: { $gt: 0 } }, // Exclude out-of-stock
+          { isActive: "1" },     // Exclude inactive products
         ],
       })
       .populate("category", "name")
