@@ -81,7 +81,7 @@ export const verifyOTPAndLoginController = async (req, res) => {
 
       // Generate JWT token with 365-day expiration
       const token = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
-        expiresIn: "365d",
+      
       });
 
       return res.status(200).json({
@@ -95,6 +95,9 @@ export const verifyOTPAndLoginController = async (req, res) => {
           address: user.address,
           role: user.role,
           pincode: user.pincode,
+          city:user.city,
+          landmark:user.landmark,
+          state:user.state,
           status: user.status,
           order_type: user.order_type, // return order_type as part of the user profile
           wishlist: user.wishlist,
@@ -125,10 +128,13 @@ export const registerController = async (req, res) => {
     user_fullname, 
     email_id, 
     mobile_no, 
-    address, 
-    pincode 
+    address,
+    pincode,
+    city,
+    landmark, 
+    state
   } = req.body;
-
+ 
   try {
     // Check if user already exists
     const existingUser = await userModel.findOne({ 
@@ -143,7 +149,7 @@ export const registerController = async (req, res) => {
           : "Mobile number already exists" 
       });
     }
-
+ 
     // Validations
     if (!user_fullname) {
       return res.status(400).send({ error: "Name is Required" });
@@ -160,13 +166,25 @@ export const registerController = async (req, res) => {
     if (!pincode) {
       return res.status(400).send({ message: "PIN Code is Required" });
     }
-
+    if (!city) {
+      return res.status(400).send({ message: "City is Required" }); 
+    }
+    if (!state) {
+      return res.status(400).send({ message: "State is Required" });
+    }
+ 
     // Check pincode and create if necessary
     let existingPincode = await Pincode.findOne({ code: pincode });
     if (!existingPincode) {
-      existingPincode = await new Pincode({ code: pincode, isAvailable: true }).save();
+      existingPincode = await new Pincode({ 
+        code: pincode,
+        isAvailable: true,
+        city,
+        state,
+        landmark 
+      }).save();
     }
-
+ 
     // Create new user
     const newUser = new userModel({
       user_fullname,
@@ -174,18 +192,20 @@ export const registerController = async (req, res) => {
       mobile_no,
       address,
       pincode,
+      city,
+      landmark,
+      state,
       role: 0, // Default role for new users
-    
     });
-
+ 
     // Save the new user
     await newUser.save();
-
+ 
     // Generate JWT token
     const token = JWT.sign({ _id: newUser._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
-
+ 
     // Send success response with user details and token
     res.status(201).json({
       success: true,
@@ -196,23 +216,23 @@ export const registerController = async (req, res) => {
         email_id: newUser.email_id,
         mobile_no: newUser.mobile_no,
         address: newUser.address,
-      
         pincode: newUser.pincode,
-
+        city: newUser.city,
+        landmark: newUser.landmark,
+        state: newUser.state
       },
       token,
     });
-
+ 
   } catch (error) {
     console.log(error);
     res.status(500).json({
       success: false,
-      message: "Registration failed. Try again later.",
+      message: "Registration failed. Try again later.", 
       error: error.message
     });
   }
-};
-
+ };
 
 // Login with email_id and password
 export const loginController = async (req, res) => {
@@ -329,7 +349,7 @@ export const forgotPasswordController = async (req, res) => {
 // Update Profile
 export const updateProfileController = async (req, res) => {
   try {
-    const { user_fullname, email_id, password, address, phone, pincode } = req.body; // Include pincode
+    const { user_fullname, email_id, password, address, phone, pincode,state,city,landmark } = req.body; // Include pincode
     const user = await userModel.findById(req.user._id);
 
     if (password && password.length < 6) {
@@ -345,6 +365,10 @@ export const updateProfileController = async (req, res) => {
         password: hashedPassword || user.password,
         phone: phone || user.phone,
         address: address || user.address,
+        city:city||user.city,
+        state:state||user.state,
+        landmark:landmark||user.landmark,
+
         pincode: pincode || user.pincode, // Update pincode
       },
       { new: true }

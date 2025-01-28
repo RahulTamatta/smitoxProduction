@@ -13,6 +13,10 @@ const Register = () => {
   const [address, setAddress] = useState("");
   const [pincode, setPincode] = useState("");
   const [sessionId, setSessionId] = useState(""); // State to store sessionId
+// In Register.jsx, add these state variables at the top with other useState declarations:
+const [city, setCity] = useState("");
+const [landmark, setLandmark] = useState("");
+const [state, setState] = useState("");
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -32,16 +36,20 @@ const Register = () => {
     }
   }, [location.state]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await axios.post("/api/v1/auth/register", {
-        user_fullname,
-        email_id,
-        mobile_no,
-        address,
-        pincode,
-      });
+// Update the handleSubmit function to include these new fields:
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    const res = await axios.post("/api/v1/auth/register", {
+      user_fullname,
+      email_id,
+      mobile_no,
+      address,
+      pincode,
+      city,     // Add these
+      landmark,  // new
+      state,     // fields
+    });
       if (res && res.data.success) {
         // Create a consistent auth object
         const authData = {
@@ -124,6 +132,35 @@ const Register = () => {
               required
             />
           </div>
+          <div className="mb-3">
+  <input
+    type="text"
+    value={city}
+    onChange={(e) => setCity(e.target.value)}
+    className="form-control"
+    placeholder="Enter Your City"
+    required
+  />
+</div>
+<div className="mb-3">
+  <input
+    type="text"
+    value={landmark}
+    onChange={(e) => setLandmark(e.target.value)}
+    className="form-control"
+    placeholder="Enter Your Landmark"
+  />
+</div>
+<div className="mb-3">
+  <input
+    type="text"
+    value={state}
+    onChange={(e) => setState(e.target.value)}
+    className="form-control"
+    placeholder="Enter Your State"
+    required
+  />
+</div>
           <button type="submit" className="btn btn-primary">
             REGISTER
           </button>
