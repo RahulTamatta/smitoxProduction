@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+const { Schema } = mongoose;  // Extract Schema from mongoose
 
 const userSchema = new mongoose.Schema(
   {
