@@ -6,6 +6,7 @@ import {
   getAllPincodesController,
   getSinglePincodeController,
   deletePincodeController,
+  checkPincodeController
 } from "./../controllers/pincodeController.js";
 
 const router = express.Router();
@@ -28,6 +29,8 @@ router.put(
 
 // Get all pincodes
 router.get("/get-pincodes", getAllPincodesController);
+router.get("/get-pincodes", getAllPincodesController);
+router.get('/check-pincode', checkPincodeController);
 
 // Get single pincode
 router.get("/single-pincode/:id", getSinglePincodeController);

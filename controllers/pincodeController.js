@@ -153,3 +153,37 @@ export const deletePincodeController = async (req, res) => {
     });
   }
 };
+export const checkPincodeController = async (req, res) => {
+  try {
+    const { pincode } = req.query;
+
+    if (!pincode) {
+      return res.status(400).send({
+        success: false,
+        message: "Pincode parameter is required",
+      });
+    }
+
+    const pincodeRecord = await Pincode.findOne({ code: pincode });
+
+    if (!pincodeRecord) {
+      return res.status(404).send({
+        success: false,
+        message: "Pincode not found",
+      });
+    }
+
+    res.status(200).send({
+      success: true,
+      message: "Pincode found",
+      pincode: pincodeRecord,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      error,
+      message: "Error while checking pincode",
+    });
+  }
+};
