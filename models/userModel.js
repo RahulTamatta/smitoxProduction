@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema(
       unique: true,
     },
     mobile_no: {
-      type: Number,
+      type: Schema.Types.Mixed,
    //   required: true,
       unique: true,
     },
