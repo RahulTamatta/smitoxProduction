@@ -520,9 +520,9 @@ const AdminOrders = () => {
           </td>
           <td style={{ fontSize: '0.7rem', padding: '2px' }}>
             <table style={{ width: '100%' }}>
-              <tr>
-                <td style={{ fontSize: '0.7rem', padding: '2px' }}>{o.buyer.user_fullname}</td>
-              </tr>
+            <td style={{ fontSize: '0.7rem', padding: '2px' }}>
+  {o.buyer?.user_fullname || 'N/A'}
+</td>
               <tr>
       <td style={{ fontSize: '0.7rem', padding: '2px' }}>
   <div
@@ -552,9 +552,9 @@ const AdminOrders = () => {
 </td>
 
               </tr>
-              <tr>
-                <td style={{ fontSize: '0.7rem', padding: '2px' }}>{o.buyer.mobile_no}</td>
-              </tr>
+              <td style={{ fontSize: '0.7rem', padding: '2px' }}>
+  {o.buyer?.mobile_no || 'N/A'}
+</td>
             </table>
             {o.tracking ? (
               `${o.tracking.company}: ${o.tracking.id}`
