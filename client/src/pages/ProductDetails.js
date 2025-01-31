@@ -16,7 +16,7 @@ const ProductDetails = () => {
   const [selectedQuantity, setSelectedQuantity] = useState(0);
   const [selectedBulk, setSelectedBulk] = useState(null);
   const [totalPrice, setTotalPrice] = useState(0);
-  const [isPincodeAvailable, setIsPincodeAvailable] = useState(false);
+  // const [isPincodeAvailable, setIsPincodeAvailable] = useState(false);
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [cart, setCart] = useCart();
   const [unitSet, setUnitSet] = useState(1);
@@ -241,16 +241,16 @@ useEffect(() => {
       if (data.success) {
         const availablePincodes = data.pincodes.map((pin) => pin.code);
         if (availablePincodes.includes(pincode.toString())) {
-          setIsPincodeAvailable(true);
+          // setIsPincodeAvailable(true);
           toast.success("Delivery available for your pincode");
         } else {
-          setIsPincodeAvailable(false);
+          // setIsPincodeAvailable(false);
           //toast.error("Delivery not available for your pincode");
         }
       }
     } catch (error) {
       console.log(error);
-      setIsPincodeAvailable(false);
+      // setIsPincodeAvailable(false);
       //toast.error("Error checking pincode");
     }
   };
@@ -563,7 +563,7 @@ useEffect(() => {
             >
               {isInWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
             </button> */}
-            {!isPincodeAvailable && (
+            {/* {!isPincodeAvailable && (
               <div style={{ textAlign: "center", marginTop: "10px" }}>
                 <p
                   style={{
@@ -597,7 +597,7 @@ useEffect(() => {
                   </span>
                 </a>
               </div>
-            )}
+            )} */}
 
             <h3
               style={{ ...headingStyle, fontSize: "18px", marginTop: "20px" }}
