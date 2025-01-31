@@ -89,8 +89,8 @@ const getProductsForYou = async () => {
       setProductsForYou(data.products || []);
     }
   } catch (error) {
-    console.error("Error fetching products for you:", error);
-    toast.error("Failed to fetch products for you");
+    // console.error("Error fetching products for you:", error);
+    // toast.error("Failed to fetch products for you");
   }
 };
 
@@ -276,7 +276,7 @@ useEffect(() => {
       );
 
       if (response.status === 200) {
-        toast.success("Quantity updated successfully");
+        //toast.success("Quantity updated successfully");
       }
     } catch (error) {
       console.error("Quantity update error:", error);
@@ -551,7 +551,7 @@ useEffect(() => {
             </p>
 
             {/* Wishlist Button */}
-            <button
+            {/* <button
               onClick={toggleWishlist}
               style={{
                 ...buttonStyle,
@@ -562,7 +562,7 @@ useEffect(() => {
               }}
             >
               {isInWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
-            </button>
+            </button> */}
             {!isPincodeAvailable && (
               <div style={{ textAlign: "center", marginTop: "10px" }}>
                 <p

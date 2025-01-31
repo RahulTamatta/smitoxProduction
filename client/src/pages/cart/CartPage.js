@@ -189,7 +189,7 @@ const CartPage = () => {
       );
       setCart(updatedCart);
       
-      toast.success("Quantity updated successfully");
+      //toast.success("Quantity updated successfully");
     } catch (error) {
       console.error("Quantity update error:", error);
       //toast.error("Failed to update quantity");

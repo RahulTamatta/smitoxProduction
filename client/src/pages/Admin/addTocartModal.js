@@ -57,7 +57,7 @@ const CartSearchModal = ({ show, handleClose, userId }) => {
           );
 
           if (response.status === 200) {
-              toast.success("Quantity updated successfully");
+              //toast.success("Quantity updated successfully");
               return response.data;
           }
       } catch (error) {
