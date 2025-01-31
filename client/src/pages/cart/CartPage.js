@@ -218,6 +218,18 @@ const CartPage = () => {
   };
   
 
+  // Calculate if order can be placed
+  const canPlaceOrder = () => {
+    const total = totalPrice();
+    return (
+      !loading &&
+      !orderPlacementInProgress &&
+      isPincodeAvailable &&
+      total >= minimumOrder &&
+      cart.length > 0 &&
+      (paymentMethod !== "Braintree" || instance)
+    );
+  };
   const checkPincode = async (pincode) => {
     try {
       const { data } = await axios.get("/api/v1/pincodes/get-pincodes");
@@ -544,31 +556,38 @@ const CartPage = () => {
             <li>10% advance payment is required to confirm the order.</li>
           </ul>
         </p>}
-            <div className="mb-3">
-              <label className="form-label">Payment Method</label>
-              <select
-                className="form-select"
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-              >
-                <option value="COD">COD</option>
-                <option value="Razorpay">Razorpay</option>
-                {/* <option value="Advance">Advance</option> */}
-              </select>
-            </div>
-            <button
-              className="btn btn-primary w-100"
-              onClick={handlePayment}
-              disabled={
-                loading ||
-                orderPlacementInProgress ||
-                !isPincodeAvailable ||
-                (paymentMethod === "Braintree" && !instance)
-              }
+        <div className="mb-3">
+            <label className="form-label">Payment Method</label>
+            <select
+              className="form-select"
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value)}
             >
-              {orderPlacementInProgress ? "Processing..." : "Place Order"}
-            </button>
+              <option value="COD">COD</option>
+              <option value="Razorpay">Razorpay</option>
+            </select>
           </div>
+
+          <button
+            className="btn btn-primary w-100"
+            onClick={handlePayment}
+            disabled={!canPlaceOrder()}
+          >
+            {orderPlacementInProgress ? "Processing..." : "Place Order"}
+          </button>
+
+          {!isPincodeAvailable && (
+            <p className="text-danger mt-2">
+              Delivery is not available in your area.
+            </p>
+          )}
+          
+          {totalPrice() < minimumOrder && (
+            <p className="text-danger mt-2">
+              Please add more items to meet the minimum order amount of {minimumOrder} {minimumOrderCurrency}.
+            </p>
+          )}
+        </div>
         </div>
       </div>
     </Layout>
