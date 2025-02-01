@@ -71,10 +71,9 @@ const Layout = ({ children, title, description, keywords, author }) => {
 };
 
 Layout.defaultProps = {
-  title: "Smitox app - shop now",
-  description: "mern stack project",
-  keywords: "mern,react,node,mongodb",
-  author: "rahultamatta",
+  title: "Smitox - B2B Wholesale Marketplace",
+  description: "Premier B2B marketplace for wholesale buyers and sellers. Connect with verified manufacturers, distributors, and bulk suppliers.",
+  keywords: "b2b marketplace, wholesale, bulk orders, business suppliers, manufacturers, distributors, procurement, smitox",
+  author: "rahultamatta"
 };
-
 export default Layout;

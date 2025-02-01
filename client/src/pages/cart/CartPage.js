@@ -24,7 +24,7 @@ const CartPage = () => {
   const [orderErrorMessage, setOrderErrorMessage] = useState("");
 
 
-  const [isPincodeAvailable, setIsPincodeAvailable] = useState(false);
+  // const [isPincodeAvailable, setIsPincodeAvailable] = useState(false);
   
 
   const navigate = useNavigate();
@@ -224,7 +224,7 @@ const CartPage = () => {
     return (
       !loading &&
       !orderPlacementInProgress &&
-      isPincodeAvailable &&
+      // isPincodeAvailable &&
       total >= minimumOrder &&
       cart.length > 0 &&
       (paymentMethod !== "Braintree" || instance)
@@ -236,26 +236,26 @@ const CartPage = () => {
       if (data.success) {
         const availablePincodes = data.pincodes.map((pin) => pin.code);
         if (availablePincodes.includes(pincode.toString())) {
-          setIsPincodeAvailable(true);
+          // setIsPincodeAvailable(true);
           toast.success("Delivery available for your pincode");
         } else {
-          setIsPincodeAvailable(false);
+          // setIsPincodeAvailable(false);
           //toast.error("Delivery not available for your pincode");
         }
       }
     } catch (error) {
       console.log(error);
-      setIsPincodeAvailable(false);
+      // setIsPincodeAvailable(false);
       //toast.error("Error checking pincode");
     }
   };
   const handlePayment = async () => {
     const total = totalPrice();
   
-    if (!isPincodeAvailable) {
-      //toast.error("Service is not available in your area or pincode.");
-      return;
-    }
+    // if (!isPincodeAvailable) {
+    //   //toast.error("Service is not available in your area or pincode.");
+    //   return;
+    // }
   
     // if (total < minimumOrder) {
     //   toast.error(`Minimum order amount is ${minimumOrderCurrency} ${minimumOrder}`);
@@ -576,11 +576,11 @@ const CartPage = () => {
             {orderPlacementInProgress ? "Processing..." : "Place Order"}
           </button>
 
-          {!isPincodeAvailable && (
+          {/* {!isPincodeAvailable && (
             <p className="text-danger mt-2">
               Delivery is not available in your area.
             </p>
-          )}
+          )} */}
           
           {totalPrice() < minimumOrder && (
             <p className="text-danger mt-2">
