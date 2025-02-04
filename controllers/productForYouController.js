@@ -7,7 +7,6 @@ export const getProductsForYouController = async (req, res) => {
   try {
     const { categoryId, subcategoryId } = req.params;
 
-    // Validate the IDs (they should be strings representing ObjectIds)
     if (
       !mongoose.Types.ObjectId.isValid(categoryId) ||
       !mongoose.Types.ObjectId.isValid(subcategoryId)
@@ -19,18 +18,15 @@ export const getProductsForYouController = async (req, res) => {
 
     const products = await productForYouModel
       .find({})
-      .populate("categoryId", "name") // Populate category with name only
-      .populate("subcategoryId", "name") // Populate subcategory with name only
-      .populate("productId", "name photos price slug perPiecePrice") // Include necessary fields
+      .populate("categoryId", "name")
+      .populate("subcategoryId", "name")
+      .populate("productId", "name photos price slug perPiecePrice")
       .select("categoryId subcategoryId productId")
-      .limit(12)
       .sort({ createdAt: -1 });
 
-    // Process products to handle photos conversion
     const productsWithBase64Photos = products.map((productForYou) => {
       const productObj = productForYou.toObject();
 
-      // If the product has a photos, convert it to base64
       if (
         productObj.productId &&
         productObj.productId.photos &&
@@ -39,7 +35,7 @@ export const getProductsForYouController = async (req, res) => {
         productObj.productId.photoUrl = `data:${productObj.productId.photos.contentType};base64,${productObj.productId.photos.data.toString(
           "base64"
         )}`;
-        delete productObj.productId.photos; // Remove the raw photos buffer
+        delete productObj.productId.photos;
       }
 
       return productObj;
@@ -62,19 +58,16 @@ export const getProductsForYouController = async (req, res) => {
 
 export const getAllProductsForYouController = async (req, res) => {
   try {
-    // Fetch all products from the productForYouModel
     const products = await productForYouModel.find()
-      .populate("categoryId", "name") // Populate category with name only
-      .populate("subcategoryId", "name") // Populate subcategory with name only
-      .populate("productId", "name photos price slug perPiecePrice custom_order") // Include custom_order
+      .populate("categoryId", "name")
+      .populate("subcategoryId", "name")
+      .populate("productId", "name photos price slug perPiecePrice custom_order")
       .select("categoryId subcategoryId productId")
-      .sort({ "productId.custom_order": 1, createdAt: -1 }); // Sort by custom_order (ascending), then by createdAt (descending)
+      .sort({ "productId.custom_order": 1, createdAt: -1 });
 
-    // Process products to handle photos conversion
     const productsWithBase64Photos = products.map((productForYou) => {
       const productObj = productForYou.toObject();
 
-      // If the product has photos, convert them to base64
       if (
         productObj.productId &&
         productObj.productId.photos &&
@@ -83,7 +76,7 @@ export const getAllProductsForYouController = async (req, res) => {
         productObj.productId.photoUrl = `data:${
           productObj.productId.photos.contentType
         };base64,${productObj.productId.photos.data.toString("base64")}`;
-        delete productObj.productId.photos; // Remove the raw photos buffer
+        delete productObj.productId.photos;
       }
 
       return productObj;
@@ -103,34 +96,33 @@ export const getAllProductsForYouController = async (req, res) => {
     });
   }
 };
-    export const singleProductController = async (req, res) => {
-      try {
-        const banner = await bannerModel
-          .findOne({ _id: req.params.id })
-          .select("-photos")
-          .populate("category")
-          .populate("subcategory");
-        res.status(200).send({
-          success: true,
-          message: "Single Banner Fetched",
-          banner,
-        });
-      } catch (error) {
-        console.log(error);
-        res.status(500).send({
-          success: false,
-          message: "Error while getting single banner",
-          error,
-        });
-      }
-    };
 
-    
+export const singleProductController = async (req, res) => {
+  try {
+    const banner = await bannerModel
+      .findOne({ _id: req.params.id })
+      .select("-photos")
+      .populate("category")
+      .populate("subcategory");
+    res.status(200).send({
+      success: true,
+      message: "Single Banner Fetched",
+      banner,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      message: "Error while getting single banner",
+      error,
+    });
+  }
+};
+
 export const createProductForYouController = async (req, res) => {
   try {
     const { categoryId, subcategoryId, productId } = req.fields;
 
-    // Validation
     if (!categoryId) return res.status(400).send({ error: "Category is required" });
     if (!subcategoryId) return res.status(400).send({ error: "Subcategory is required" });
     if (!productId) return res.status(400).send({ error: "Product is required" });
@@ -163,7 +155,6 @@ export const updateBannerController = async (req, res) => {
     const { categoryId, subcategoryId, productId } = req.fields;
     const { id } = req.params;
 
-    // Validation
     if (!categoryId) return res.status(400).send({ error: "Category is required" });
     if (!subcategoryId) return res.status(400).send({ error: "Subcategory is required" });
     if (!productId) return res.status(400).send({ error: "Product is required" });
@@ -195,9 +186,8 @@ export const getBannersController = async (req, res) => {
       .find({})
       .populate("categoryId", "name")
       .populate("subcategoryId", "name")
-      .populate("productId", "name photos perPiecePrice price slug") // Include price and slug
+      .populate("productId", "name photos perPiecePrice price slug")
       .select("categoryId subcategoryId productId")
-      .limit(12)
       .sort({ createdAt: -1 });
 
     res.status(200).send({
@@ -215,6 +205,7 @@ export const getBannersController = async (req, res) => {
     });
   }
 };
+
 export const deleteProductController = async (req, res) => {
   try {
     await productForYouModel.findByIdAndDelete(req.params.id);
