@@ -66,7 +66,7 @@ const AddToCartPages = () => {
       setCart(data.cart || []);
     } catch (error) {
       console.error("Error fetching cart:", error);
-      //toast.error("Error fetching cart");
+      ////toast.error("Error fetching cart");
       setCart([]);
     }
   };
@@ -80,7 +80,7 @@ const AddToCartPages = () => {
       }
     } catch (error) {
       console.error("Error fetching minimum order:", error);
-      //toast.error("Error fetching minimum order amount");
+      ////toast.error("Error fetching minimum order amount");
     }
   };
 
@@ -91,7 +91,7 @@ const AddToCartPages = () => {
       toast.success("Item removed from cart");
     } catch (error) {
       console.error("Error removing item:", error);
-      //toast.error("Error removing item from cart");
+      ////toast.error("Error removing item from cart");
     }
   };
 
@@ -112,7 +112,7 @@ const AddToCartPages = () => {
       //toast.success("Quantity updated successfully");
     } catch (error) {
       console.error("Quantity update error:", error);
-      //toast.error("Failed to update quantity");
+      ////toast.error("Failed to update quantity");
     }
   };
 

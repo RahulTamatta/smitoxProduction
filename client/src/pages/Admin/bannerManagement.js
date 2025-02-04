@@ -52,7 +52,7 @@ const BannerManagement = () => {
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
-      //toast.error("Something went wrong in getting categories");
+      ////toast.error("Something went wrong in getting categories");
       setCategories([]);
     }
   };
@@ -67,7 +67,7 @@ const BannerManagement = () => {
       }
     } catch (error) {
       console.log(error);
-      //toast.error("Something went wrong in getting subcategories");
+      ////toast.error("Something went wrong in getting subcategories");
       setSubcategories([]);
     }
   };
@@ -144,7 +144,7 @@ const BannerManagement = () => {
       handleCloseModal();
     } catch (error) {
       console.error('Error submitting banner:', error);
-      toast.error('Failed to submit banner');
+      //toast.error('Failed to submit banner');
     }
   };
   const handleDelete = async (id) => {
@@ -154,7 +154,7 @@ const BannerManagement = () => {
       toast.success('Banner deleted successfully');
     } catch (error) {
       console.error('Error deleting banner:', error);
-      toast.error('Failed to delete banner');
+      //toast.error('Failed to delete banner');
     }
   };
 

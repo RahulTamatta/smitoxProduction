@@ -16,7 +16,7 @@ const WishlistPage = () => {
 
   useEffect(() => {
     if (!auth?.token) {
-      //toast.error("Please login to view wishlist");
+      ////toast.error("Please login to view wishlist");
       navigate("/login");
       return;
     }
@@ -39,11 +39,11 @@ const WishlistPage = () => {
         const validWishlistItems = data.wishlist.filter(item => item?.product != null);
         setWishlist(validWishlistItems);
       } else {
-        //toast.error("Failed to fetch wishlist");
+        ////toast.error("Failed to fetch wishlist");
       }
     } catch (error) {
       console.error("Error fetching wishlist", error);
-      //toast.error("Error fetching wishlist");
+      ////toast.error("Error fetching wishlist");
     } finally {
       setLoading(false);
     }
@@ -60,17 +60,17 @@ const WishlistPage = () => {
         toast.success("Product removed from wishlist");
         setWishlist(wishlist.filter((item) => item?.product?._id !== productId));
       } else {
-        //toast.error("Failed to remove product from wishlist");
+        ////toast.error("Failed to remove product from wishlist");
       }
     } catch (error) {
       console.error("Error removing product from wishlist", error);
-      //toast.error("Error removing product from wishlist");
+      ////toast.error("Error removing product from wishlist");
     }
   };
 
   const handleAddToCart = (product) => {
     if (!product) {
-      //toast.error("Invalid product");
+      ////toast.error("Invalid product");
       return;
     }
     addToCart(product);

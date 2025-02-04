@@ -32,11 +32,11 @@ const AdminLogin = () => {
         localStorage.setItem("auth", JSON.stringify(res.data));
         navigate( `/dashboard/admin`);
       } else {
-        toast.error(res.data.message);
+        //toast.error(res.data.message);
       }
     } catch (error) {
       console.log(error);
-      //toast.error("Login failed");
+      ////toast.error("Login failed");
     }
   };
 

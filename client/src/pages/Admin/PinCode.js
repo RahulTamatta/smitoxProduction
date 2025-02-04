@@ -29,7 +29,7 @@ const PincodeList = () => {
       }
     } catch (error) {
       console.log(error);
-      toast.error('Something went wrong in getting pincodes');
+      //toast.error('Something went wrong in getting pincodes');
     }
   };
 
@@ -42,7 +42,7 @@ const PincodeList = () => {
       }
     } catch (error) {
       console.log(error);
-      toast.error('Error in searching pincodes');
+      //toast.error('Error in searching pincodes');
     }
   };
 
@@ -56,11 +56,11 @@ const PincodeList = () => {
         setShowAddModal(false);
         setNewPincode('');
       } else {
-        toast.error(data.message);
+        //toast.error(data.message);
       }
     } catch (error) {
       console.log(error);
-      toast.error('Something went wrong');
+      //toast.error('Something went wrong');
     }
   };
 
@@ -73,11 +73,11 @@ const PincodeList = () => {
         fetchPincodes();
         setShowEditModal(false);
       } else {
-        toast.error(data.message);
+        //toast.error(data.message);
       }
     } catch (error) {
       console.log(error);
-      toast.error('Something went wrong');
+      //toast.error('Something went wrong');
     }
   };
 
@@ -88,18 +88,18 @@ const PincodeList = () => {
         toast.success(`${data.message}`);
         fetchPincodes();
       } else {
-        toast.error(data.message);
+        //toast.error(data.message);
       }
     } catch (error) {
       console.log(error);
-      toast.error('Something went wrong');
+      //toast.error('Something went wrong');
     }
   };
 
   const handleBulkUpload = async (e) => {
     e.preventDefault();
     if (!bulkUploadFile) {
-      toast.error('Please select a file');
+      //toast.error('Please select a file');
       return;
     }
 
@@ -117,11 +117,11 @@ const PincodeList = () => {
         setShowBulkUploadModal(false);
         setBulkUploadFile(null);
       } else {
-        toast.error(data.message);
+        //toast.error(data.message);
       }
     } catch (error) {
       console.log(error);
-      toast.error('Something went wrong during bulk upload');
+      //toast.error('Something went wrong during bulk upload');
     }
   };
 

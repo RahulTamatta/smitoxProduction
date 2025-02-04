@@ -66,11 +66,11 @@ const Login = () => {
           navigate(location.state || "/");
         }
       } else {
-        toast.error(res.data.message);
+        //toast.error(res.data.message);
       }
     } catch (error) {
       console.log(error);
-      //toast.error("Something went wrong");
+      ////toast.error("Something went wrong");
     }
   }
   const sendOTP = async () => {
@@ -81,11 +81,11 @@ const Login = () => {
         setShowOtpInput(true);
         toast.success("OTP sent successfully");
       } else {
-        toast.error(response.data.message);
+        //toast.error(response.data.message);
       }
     } catch (error) {
       console.log(error);
-      //toast.error("Error sending OTP");
+      ////toast.error("Error sending OTP");
     }
   };
 

@@ -67,11 +67,11 @@ const handleSubmit = async (e) => {
         toast.success(res.data.message);
         navigate("/"); // Redirect to home
       } else {
-        toast.error(res.data.message);
+        //toast.error(res.data.message);
       }
     } catch (error) {
       console.log(error);
-      //toast.error("Something went wrong");
+      ////toast.error("Something went wrong");
     }
   };
 

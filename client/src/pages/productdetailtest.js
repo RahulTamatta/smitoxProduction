@@ -66,7 +66,7 @@ const ProductDetails = () => {
       }
     } catch (error) {
       console.error("Error fetching product details:", error);
-      //toast.error("Error fetching product details");
+      ////toast.error("Error fetching product details");
     }
   };
 
@@ -117,7 +117,7 @@ const ProductDetails = () => {
       calculateTotalPrice(bulk, initialQuantity);
     } catch (error) {
       console.error("Error fetching cart data:", error);
-      //toast.error("Failed to initialize cart quantity");
+      ////toast.error("Failed to initialize cart quantity");
     }
   };
     const getProductsForYou = async () => {
@@ -128,7 +128,7 @@ const ProductDetails = () => {
         }
       } catch (error) {
         console.error(error);
-        //toast.error("Failed to fetch products for you");
+        ////toast.error("Failed to fetch products for you");
       }
     };
     const checkPincode = async (pincode) => {
@@ -141,16 +141,16 @@ const ProductDetails = () => {
             toast.success("Delivery available for your pincode");
           } else {
             setIsPincodeAvailable(false);
-            //toast.error("Delivery not available for your pincode");
+            ////toast.error("Delivery not available for your pincode");
           }
         } else {
           setIsPincodeAvailable(false);
-          //toast.error("Error fetching pincodes");
+          ////toast.error("Error fetching pincodes");
         }
       } catch (error) {
         console.log(error);
         setIsPincodeAvailable(false);
-        //toast.error("Error checking pincode");
+        ////toast.error("Error checking pincode");
       }
     };
   
@@ -184,7 +184,7 @@ const ProductDetails = () => {
     const handleQuantityChange = async (increment) => {
       // Guard clause for unauthenticated users
       if (!auth?.user?._id) {
-        //toast.error("Please log in to modify quantity");
+        ////toast.error("Please log in to modify quantity");
         return;
       }
   
@@ -208,18 +208,18 @@ const ProductDetails = () => {
         }
       } catch (error) {
         console.error("Error updating quantity in cart:", error);
-        //toast.error("Error updating quantity");
+        ////toast.error("Error updating quantity");
       }
     };
   
     const addToCart = async () => {
       if (!auth.user) {
-        //toast.error("Please log in to add items to your cart");
+        ////toast.error("Please log in to add items to your cart");
         return;
       }
   
       if (selectedQuantity < (product.minimumQuantity || 0) * unitSet) {
-        toast.error(`Minimum quantity required: ${(product.minimumQuantity || 0) * unitSet}`);
+        //toast.error(`Minimum quantity required: ${(product.minimumQuantity || 0) * unitSet}`);
         return;
       }
   
@@ -238,7 +238,7 @@ const ProductDetails = () => {
         }
       } catch (error) {
         console.error("Error adding item to cart:", error);
-        //toast.error("Error adding item to cart");
+        ////toast.error("Error adding item to cart");
       }
     };
   
@@ -248,7 +248,7 @@ const ProductDetails = () => {
   
   const toggleWishlist = async () => {
     if (!auth.user) {
-      //toast.error("Please log in to manage your wishlist");
+      ////toast.error("Please log in to manage your wishlist");
       return;
     }
 
@@ -266,7 +266,7 @@ const ProductDetails = () => {
       }
     } catch (error) {
       console.error("Error toggling wishlist:", error);
-      //toast.error("Error updating wishlist");
+      ////toast.error("Error updating wishlist");
     }
   };
 

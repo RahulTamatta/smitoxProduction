@@ -61,7 +61,7 @@ const SubcategoryList = () => {
       }
     } catch (error) {
       console.error(error);
-      //toast.error("Failed to fetch categories.");
+      ////toast.error("Failed to fetch categories.");
     }
   };
 
@@ -76,7 +76,7 @@ const SubcategoryList = () => {
       }
     } catch (error) {
       console.error(error);
-      //toast.error("Failed to fetch subcategories.");
+      ////toast.error("Failed to fetch subcategories.");
     } finally {
       setLoading(false);
     }
@@ -109,12 +109,12 @@ const SubcategoryList = () => {
         getAllSubcategories();
       } else {
         toast.dismiss();
-        toast.error(data.message);
+        //toast.error(data.message);
       }
     } catch (error) {
       console.error(error);
       toast.dismiss();
-      //toast.error("Failed to create subcategory.");
+      ////toast.error("Failed to create subcategory.");
     }
   };
 
@@ -146,12 +146,12 @@ const SubcategoryList = () => {
         getAllSubcategories();
       } else {
         toast.dismiss();
-        toast.error(data.message);
+        //toast.error(data.message);
       }
     } catch (error) {
       console.error(error);
       toast.dismiss();
-      //toast.error("Failed to update subcategory.");
+      ////toast.error("Failed to update subcategory.");
     }
   };
 
@@ -163,11 +163,11 @@ const SubcategoryList = () => {
         toast.success("Subcategory deleted successfully.");
         getAllSubcategories();
       } else {
-        toast.error(data.message);
+        //toast.error(data.message);
       }
     } catch (error) {
       console.error(error);
-      //toast.error("Failed to delete subcategory.");
+      ////toast.error("Failed to delete subcategory.");
     }
   };
 
@@ -179,11 +179,11 @@ const SubcategoryList = () => {
         toast.success("Subcategory status updated.");
         getAllSubcategories();
       } else {
-        toast.error(data.message);
+        //toast.error(data.message);
       }
     } catch (error) {
       console.error(error);
-      //toast.error("Failed to update status.");
+      ////toast.error("Failed to update status.");
     }
   };
 

@@ -72,7 +72,7 @@ const Products = () => {
         window.history.replaceState({}, '', `?${params}`);
       }
     } catch (error) {
-      toast.error('Failed to load products');
+      //toast.error('Failed to load products');
     } finally {
       setLoading(false);
     }
@@ -113,7 +113,7 @@ const Products = () => {
       setSelectedProducts([]);
       toast.success(`Bulk ${action} successful`);
     } catch (error) {
-      toast.error(`Bulk ${action} failed`);
+      //toast.error(`Bulk ${action} failed`);
     }
   };
 

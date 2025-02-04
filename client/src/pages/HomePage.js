@@ -135,7 +135,7 @@ const HomePage = () => {
       }
     } catch (error) {
       console.log(error);
-      //toast.error("Failed to fetch products for you");
+      ////toast.error("Failed to fetch products for you");
     }
   };
 
@@ -216,7 +216,7 @@ const HomePage = () => {
       }
     } catch (error) {
       console.log(error);
-      //toast.error("Failed to fetch banners");
+      ////toast.error("Failed to fetch banners");
     }
   };
 
@@ -231,7 +231,7 @@ const HomePage = () => {
         }
       });
     } else {
-      //toast.error("Banner is not linked to a category");
+      ////toast.error("Banner is not linked to a category");
     }
   };
 

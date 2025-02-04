@@ -81,7 +81,7 @@ const CategoryProduct = () => {
       await getSubcategories(data?.category._id);
     } catch (error) {
       console.log(error);
-      toast.error("Error fetching category information");
+      //toast.error("Error fetching category information");
     }
   };
 
@@ -100,7 +100,7 @@ const CategoryProduct = () => {
       }
     } catch (error) {
       console.error("Error fetching subcategories:", error);
-      toast.error("Error fetching subcategories");
+      //toast.error("Error fetching subcategories");
       setSubcategories([]);
     }
   };
@@ -117,7 +117,7 @@ const CategoryProduct = () => {
       await checkWishlistStatus(data?.products || []);
     } catch (error) {
       console.log(error);
-      toast.error("Error fetching products");
+      //toast.error("Error fetching products");
       setProducts([]);
     } finally {
       setLoading(false);
@@ -134,7 +134,7 @@ const CategoryProduct = () => {
     e.stopPropagation();
 
     if (!auth?.user) {
-      toast.error("Please log in to manage your wishlist");
+      //toast.error("Please log in to manage your wishlist");
       return;
     }
 
@@ -154,7 +154,7 @@ const CategoryProduct = () => {
       }
     } catch (error) {
       console.error("Error toggling wishlist:", error);
-      toast.error("Error updating wishlist");
+      //toast.error("Error updating wishlist");
     }
   };
 
@@ -168,7 +168,7 @@ const CategoryProduct = () => {
       await checkWishlistStatus(data?.products || []);
     } catch (error) {
       console.log(error);
-      toast.error("Error fetching products");
+      //toast.error("Error fetching products");
       setProducts([]);
     } finally {
       setLoading(false);

@@ -22,7 +22,7 @@ const CreateBrand = () => {
       }
     } catch (error) {
       console.log(error);
-      //toast.error("Something went wrong in getting brands");
+      ////toast.error("Something went wrong in getting brands");
     }
   };
 
@@ -40,11 +40,11 @@ const CreateBrand = () => {
         getAllBrands();
         setName("");
       } else {
-        toast.error(data.message);
+        //toast.error(data.message);
       }
     } catch (error) {
       console.log(error);
-      //toast.error("Something went wrong in input form");
+      ////toast.error("Something went wrong in input form");
     }
   };
 
@@ -60,11 +60,11 @@ const CreateBrand = () => {
         setVisible(false);
         getAllBrands();
       } else {
-        toast.error(data.message);
+        //toast.error(data.message);
       }
     } catch (error) {
       console.log(error);
-      //toast.error("Something went wrong while updating");
+      ////toast.error("Something went wrong while updating");
     }
   };
 
@@ -76,10 +76,10 @@ const CreateBrand = () => {
         toast.success(`Brand is deleted`);
         getAllBrands();
       } else {
-        toast.error(data.message);
+        //toast.error(data.message);
       }
     } catch (error) {
-      //toast.error("Something went wrong");
+      ////toast.error("Something went wrong");
     }
   };
 

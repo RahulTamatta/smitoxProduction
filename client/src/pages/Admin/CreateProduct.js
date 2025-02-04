@@ -64,7 +64,7 @@ const CreateProduct = () => {
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
-      //toast.error("Something went wrong in getting categories");
+      ////toast.error("Something went wrong in getting categories");
     }
   };
 
@@ -78,7 +78,7 @@ const CreateProduct = () => {
       }
     } catch (error) {
       console.log(error);
-      //toast.error("Something went wrong in getting subcategories");
+      ////toast.error("Something went wrong in getting subcategories");
       setSubcategories([]);
     }
   };
@@ -91,7 +91,7 @@ const CreateProduct = () => {
       }
     } catch (error) {
       console.error("Error fetching brands:", error);
-      //toast.error("Something went wrong in getting brands");
+      ////toast.error("Something went wrong in getting brands");
     }
   };
 
@@ -265,11 +265,11 @@ const CreateProduct = () => {
         navigate("/dashboard/admin/products");
       } else {
         toast.dismiss();
-        toast.error(data?.message || "Error creating product");
+        //toast.error(data?.message || "Error creating product");
       }
     } catch (error) {
       toast.dismiss();
-      toast.error(error.message || "Error creating product");
+      //toast.error(error.message || "Error creating product");
       console.error('Create error:', error);
     }
   };

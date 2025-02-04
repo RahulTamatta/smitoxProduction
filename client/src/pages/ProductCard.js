@@ -39,7 +39,7 @@ const ProductCard = ({ product, onClick }) => {
     e.stopPropagation();
 
     if (!auth.user) {
-      //toast.error("Please log in to manage your wishlist");
+      ////toast.error("Please log in to manage your wishlist");
       return;
     }
 
@@ -59,7 +59,7 @@ const ProductCard = ({ product, onClick }) => {
       }
     } catch (error) {
       console.error("Error toggling wishlist:", error);
-      //toast.error("Error updating wishlist");
+      ////toast.error("Error updating wishlist");
     }
   };
 

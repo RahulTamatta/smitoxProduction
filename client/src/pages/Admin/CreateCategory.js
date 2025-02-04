@@ -75,12 +75,12 @@ const CreateCategory = () => {
         setPhotos(null);
       } else {
         toast.dismiss();
-        toast.error(data.message);
+        //toast.error(data.message);
       }
     } catch (error) {
       console.log(error);
       toast.dismiss();
-      //toast.error("Something went wrong in input form");
+      ////toast.error("Something went wrong in input form");
     }
   };
 
@@ -93,7 +93,7 @@ const CreateCategory = () => {
       }
     } catch (error) {
       console.log(error);
-      //toast.error("Something went wrong in getting category");
+      ////toast.error("Something went wrong in getting category");
     }
   };
 
@@ -130,12 +130,12 @@ const CreateCategory = () => {
         getAllCategory();
       } else {
         toast.dismiss();
-        toast.error(data.message);
+        //toast.error(data.message);
       }
     } catch (error) {
       console.log(error);
       toast.dismiss();
-      //toast.error("Something went wrong while updating");
+      ////toast.error("Something went wrong while updating");
     }
   };
 
@@ -149,10 +149,10 @@ const CreateCategory = () => {
         toast.success(`Category is deleted`);
         getAllCategory();
       } else {
-        toast.error(data.message);
+        //toast.error(data.message);
       }
     } catch (error) {
-      //toast.error("Something went wrong");
+      ////toast.error("Something went wrong");
     }
   };
 

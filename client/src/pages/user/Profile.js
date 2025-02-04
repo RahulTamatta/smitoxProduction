@@ -63,7 +63,7 @@ const Profile = () => {
       });
       
       if (data?.error) {
-        toast.error(data.error);
+        //toast.error(data.error);
       } else {
         setAuth({ ...auth, user: data?.updatedUser });
         let ls = localStorage.getItem("auth");
@@ -74,7 +74,7 @@ const Profile = () => {
       }
     } catch (error) {
       console.log(error);
-      toast.error("Something went wrong");
+      //toast.error("Something went wrong");
     }
   };
 

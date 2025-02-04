@@ -76,7 +76,7 @@ const getProduct = async () => {
     }
   } catch (error) {
     console.error(error);
-    toast.error("Error fetching product details");
+    //toast.error("Error fetching product details");
   }
 };
 
@@ -90,13 +90,13 @@ const getProductsForYou = async () => {
     }
   } catch (error) {
     // console.error("Error fetching products for you:", error);
-    // toast.error("Failed to fetch products for you");
+    // //toast.error("Failed to fetch products for you");
   }
 };
 
 const addToCart = async () => {
   if (!auth.user) {
-    toast.error("Please log in to add items to cart");
+    // //toast.error("Please log in to add items to cart");
     return;
   }
 
@@ -124,7 +124,7 @@ const addToCart = async () => {
     }
   } catch (error) {
     console.error(error);
-    toast.error("Error adding item to cart");
+    //toast.error("Error adding item to cart");
   } finally {
     isAddingToCartRef.current = false; // Unlock the function
   }
@@ -151,7 +151,7 @@ const handleQuantityChange = async (increment) => {
     calculateTotalPrice(applicableBulk, updatedQuantity);
   } catch (error) {
     console.error("Error updating quantity:", error);
-    toast.error("Failed to update quantity");
+    //toast.error("Failed to update quantity");
   }
 };
 
@@ -245,13 +245,13 @@ useEffect(() => {
           toast.success("Delivery available for your pincode");
         } else {
           // setIsPincodeAvailable(false);
-          //toast.error("Delivery not available for your pincode");
+          ////toast.error("Delivery not available for your pincode");
         }
       }
     } catch (error) {
       console.log(error);
       // setIsPincodeAvailable(false);
-      //toast.error("Error checking pincode");
+      ////toast.error("Error checking pincode");
     }
   };
 
@@ -259,7 +259,7 @@ useEffect(() => {
 
   const updateQuantity = async (quantity) => {
     if (!auth?.user?._id) {
-      //toast.error("Please log in to update quantity");
+      ////toast.error("Please log in to update quantity");
       return;
     }
 
@@ -280,7 +280,7 @@ useEffect(() => {
       }
     } catch (error) {
       console.error("Quantity update error:", error);
-      //toast.error("Failed to update quantity");
+      ////toast.error("Failed to update quantity");
     }
   };
 
@@ -303,11 +303,11 @@ useEffect(() => {
       } else {
         const responseBody = await response.text();
         console.error("Error removing item:", responseBody);
-        //toast.error("Failed to remove item from cart");
+        ////toast.error("Failed to remove item from cart");
       }
     } catch (error) {
       console.error("Remove from cart failed:", error.message);
-      //toast.error("Failed to remove item from cart");
+      ////toast.error("Failed to remove item from cart");
     }
   };
 
@@ -342,7 +342,7 @@ useEffect(() => {
   // Copy the styles and return statement from your original code
   const toggleWishlist = async () => {
     if (!auth.user) {
-      //toast.error("Please log in to manage your wishlist");
+      ////toast.error("Please log in to manage your wishlist");
       return;
     }
 
@@ -362,7 +362,7 @@ useEffect(() => {
       }
     } catch (error) {
       console.error("Error toggling wishlist:", error);
-      //toast.error("Error updating wishlist");
+      ////toast.error("Error updating wishlist");
     }
   };
 
