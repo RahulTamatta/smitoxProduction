@@ -397,7 +397,7 @@ export const getOrdersController = async (req, res) => {
     // Fetch orders based on the user_id passed in the route
     const orders = await orderModel
       .find({ buyer: user_id })
-      .populate("buyer", "user_fullname address mobile_no pincode") // Use the user_id directly
+      .populate("buyer", "user_fullname address mobile_no pincode ,city,state,landmark") // Use the user_id directly
       .populate({
         path: "products.product",
         select: "name photos price  sku"
@@ -502,7 +502,7 @@ export const getAllOrdersController = async (req, res) => {
       .find(query)
       .populate({
         path: "buyer",
-        select: "user_fullname email_id mobile_no address pincode gst amount",
+        select: "user_fullname email_id mobile_no address city state landmark pincode gst amount",
       })
       .populate({
         path: "products.product",

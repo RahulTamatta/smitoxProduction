@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import SearchInput from "../Form/SearchInput";
 import { Badge } from "antd";
 import { HeartOutlined, UserOutlined,ShoppingCartOutlined, HomeOutlined, LoginOutlined } from '@ant-design/icons';
-
+import logo from "../../../src/assets/images/logo.png";
 
 const Header = () => {
   const [auth, setAuth] = useAuth();
@@ -114,8 +114,8 @@ const Header = () => {
         <div className="d-flex align-items-center me-4">
           <Link to="/" className="navbar-brand">
             <img
-              src="https://smitox.com/img/logo.png"
-              alt="Smitox Logo"
+              src={logo}  // Using imported logo
+              alt="Company Logo"
               style={{
                 height: "80px",
                 maxWidth: "100%",
