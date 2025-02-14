@@ -1,4 +1,4 @@
-import React, { useState, useEffect,useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Layout from "./../components/Layout/Layout";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
@@ -26,148 +26,148 @@ const ProductDetails = () => {
   const [productIds, setProductId] = useState();
   const [categoryId, setCategoryId] = useState();
   const [subcategoryId, setSubcategoryId] = useState();
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
+  // In ProductDetails component
 
+  const [isAddingToCart, setIsAddingToCart] = useState(false); // Track if addToCart is in progress
 
-// In ProductDetails component
+  // Debounce addToCart function
+  const isAddingToCartRef = useRef(false);
 
+  useEffect(() => {
+    const scrollPosition = sessionStorage.getItem("productDetailsScrollPosition");
+    if (scrollPosition) {
+      window.scrollTo(0, parseInt(scrollPosition, 10));
+      sessionStorage.removeItem("productDetailsScrollPosition");
+    }
 
-const [isAddingToCart, setIsAddingToCart] = useState(false); // Track if addToCart is in progress
+    return () => {
+      sessionStorage.setItem("productDetailsScrollPosition", window.scrollY);
+    };
+  }, [params?.slug]);
 
-// Debounce addToCart function
-const isAddingToCartRef = useRef(false);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    if (params?.slug) {
+      if (auth?.user?.pincode) {
+        checkPincode(auth.user.pincode);
+      }
+      getProduct();
+      getProductsForYou();
+    }
+  }, [params?.slug, auth?.user?.pincode]);
 
-useEffect(() => {
-  const scrollPosition = sessionStorage.getItem("productDetailsScrollPosition");
-  if (scrollPosition) {
-    window.scrollTo(0, parseInt(scrollPosition, 10));
-    sessionStorage.removeItem("productDetailsScrollPosition");
-  }
+  useEffect(() => {
+    if (product._id && auth?.user?._id) {
+      checkWishlistStatus(product._id);
+      fetchInitialQuantity(product._id);
+    }
+  }, [product._id, auth?.user?._id]);
 
-  return () => {
-    sessionStorage.setItem("productDetailsScrollPosition", window.scrollY);
+  const getProduct = async () => {
+    try {
+      const { data } = await axios.get(`/api/v1/product/get-product/${params.slug}`);
+      if (data.success === true) {
+        setProduct(data.product);
+        setUnitSet(data?.product?.unitSet || 1);
+      }
+    } catch (error) {
+      console.error(error);
+      //toast.error("Error fetching product details");
+    }
   };
-}, [params?.slug]);
 
-useEffect(() => {
-  window.scrollTo(0, 0);
-  if (params?.slug) {
-    if (auth?.user?.pincode) {
-      checkPincode(auth.user.pincode);
+  const getProductsForYou = async () => {
+    try {
+      const { data } = await axios.get(
+        `/api/v1/productForYou/products/${product.category?._id}/${product.subcategory?._id}`
+      );
+      if (data?.success) {
+        setProductsForYou(data.products || []);
+      }
+    } catch (error) {
+      // console.error("Error fetching products for you:", error);
+      // //toast.error("Failed to fetch products for you");
     }
-    getProduct();
-    getProductsForYou();
-  }
-}, [params?.slug, auth?.user?.pincode]);
+  };
 
-useEffect(() => {
-  if (product._id && auth?.user?._id) {
-    checkWishlistStatus(product._id);
-    fetchInitialQuantity(product._id);
-  }
-}, [product._id, auth?.user?._id]);
-
-const getProduct = async () => {
-  try {
-    const { data } = await axios.get(`/api/v1/product/get-product/${params.slug}`);
-    if (data.success === true) {
-      setProduct(data.product);
-      setUnitSet(data?.product?.unitSet || 1);
+  const addToCart = async () => {
+    if (!auth.user) {
+      setShowLoginPrompt(true);
+      toast.error("Please log in to add items to cart");
+      navigate('/login');
+      return;
     }
-  } catch (error) {
-    console.error(error);
-    //toast.error("Error fetching product details");
-  }
-};
 
-const getProductsForYou = async () => {
-  try {
-    const { data } = await axios.get(
-      `/api/v1/productForYou/products/${product.category?._id}/${product.subcategory?._id}`
-    );
-    if (data?.success) {
-      setProductsForYou(data.products || []);
+    if (isAddingToCartRef.current) return; // Prevent multiple clicks
+    isAddingToCartRef.current = true; // Lock the function
+
+    try {
+      const initialQuantity = unitSet * 1; // Add 1 unit at a time
+      const applicableBulk = getApplicableBulkProduct(initialQuantity);
+
+      const response = await axios.post(`/api/v1/carts/users/${auth.user._id}/cart`, {
+        productId: product._id,
+        quantity: initialQuantity,
+        price: applicableBulk ? parseFloat(applicableBulk.selling_price_set) : parseFloat(product.price),
+        bulkProductDetails: applicableBulk,
+      });
+
+      if (response.data.status === "success") {
+        setCart(response.data.cart);
+        setDisplayQuantity(initialQuantity);
+        setSelectedBulk(applicableBulk);
+        calculateTotalPrice(applicableBulk, initialQuantity);
+        setShowQuantitySelector(true);
+        toast.success("Item added to cart");
+      }
+    } catch (error) {
+      console.error(error);
+      //toast.error("Error adding item to cart");
+    } finally {
+      isAddingToCartRef.current = false; // Unlock the function
     }
-  } catch (error) {
-    // console.error("Error fetching products for you:", error);
-    // //toast.error("Failed to fetch products for you");
-  }
-};
+  };
 
-const addToCart = async () => {
-  if (!auth.user) {
-    // //toast.error("Please log in to add items to cart");
-    return;
-  }
+  const handleQuantityChange = async (increment) => {
+    const newQuantity = displayQuantity + (increment ? 1 : -1) * unitSet;
+    const updatedQuantity = Math.max(0, newQuantity);
 
-  if (isAddingToCartRef.current) return; // Prevent multiple clicks
-  isAddingToCartRef.current = true; // Lock the function
+    if (updatedQuantity === 0) {
+      await removeFromCart(product._id);
+      setShowQuantitySelector(false);
+      setDisplayQuantity(0);
+      setSelectedBulk(null);
+      setTotalPrice(0);
+      return;
+    }
 
-  try {
-    const initialQuantity = unitSet * 1; // Add 1 unit at a time
-    const applicableBulk = getApplicableBulkProduct(initialQuantity);
-
-    const response = await axios.post(`/api/v1/carts/users/${auth.user._id}/cart`, {
-      productId: product._id,
-      quantity: initialQuantity,
-      price: applicableBulk ? parseFloat(applicableBulk.selling_price_set) : parseFloat(product.price),
-      bulkProductDetails: applicableBulk,
-    });
-
-    if (response.data.status === "success") {
-      setCart(response.data.cart);
-      setDisplayQuantity(initialQuantity);
+    try {
+      await updateQuantity(updatedQuantity);
+      setDisplayQuantity(updatedQuantity);
+      const applicableBulk = getApplicableBulkProduct(updatedQuantity);
       setSelectedBulk(applicableBulk);
-      calculateTotalPrice(applicableBulk, initialQuantity);
-      setShowQuantitySelector(true);
-      toast.success("Item added to cart");
+      calculateTotalPrice(applicableBulk, updatedQuantity);
+    } catch (error) {
+      console.error("Error updating quantity:", error);
+      //toast.error("Failed to update quantity");
     }
-  } catch (error) {
-    console.error(error);
-    //toast.error("Error adding item to cart");
-  } finally {
-    isAddingToCartRef.current = false; // Unlock the function
-  }
-};
-
-const handleQuantityChange = async (increment) => {
-  const newQuantity = displayQuantity + (increment ? 1 : -1) * unitSet;
-  const updatedQuantity = Math.max(0, newQuantity);
-
-  if (updatedQuantity === 0) {
-    await removeFromCart(product._id);
-    setShowQuantitySelector(false);
-    setDisplayQuantity(0);
-    setSelectedBulk(null);
-    setTotalPrice(0);
-    return;
-  }
-
-  try {
-    await updateQuantity(updatedQuantity);
-    setDisplayQuantity(updatedQuantity);
-    const applicableBulk = getApplicableBulkProduct(updatedQuantity);
-    setSelectedBulk(applicableBulk);
-    calculateTotalPrice(applicableBulk, updatedQuantity);
-  } catch (error) {
-    console.error("Error updating quantity:", error);
-    //toast.error("Failed to update quantity");
-  }
-};
-
-useEffect(() => {
-  const scrollPosition = sessionStorage.getItem('productDetailsScrollPosition');
-  if (scrollPosition) {
-    window.scrollTo(0, parseInt(scrollPosition, 10));
-    sessionStorage.removeItem('productDetailsScrollPosition');
-  }
-
-  // Save scroll position when leaving the page
-  return () => {
-    sessionStorage.setItem('productDetailsScrollPosition', window.scrollY);
   };
-}, [params?.slug]);
-  
+
+  useEffect(() => {
+    const scrollPosition = sessionStorage.getItem('productDetailsScrollPosition');
+    if (scrollPosition) {
+      window.scrollTo(0, parseInt(scrollPosition, 10));
+      sessionStorage.removeItem('productDetailsScrollPosition');
+    }
+
+    // Save scroll position when leaving the page
+    return () => {
+      sessionStorage.setItem('productDetailsScrollPosition', window.scrollY);
+    };
+  }, [params?.slug]);
+
   useEffect(() => {
     window.scrollTo(0, 0);
     if (params?.slug) {
@@ -197,32 +197,32 @@ useEffect(() => {
 
   const getApplicableBulkProduct = (quantity) => {
     if (!product.bulkProducts || product.bulkProducts.length === 0) return null;
-  
+
     const sortedBulkProducts = [...product.bulkProducts]
       .filter((bulk) => bulk && bulk.minimum)
       .sort((a, b) => b.minimum - a.minimum);
-  
+
     // If quantity is greater than or equal to the minimum of the highest tier
     // Return the highest tier pricing regardless of maximum
     if (
-      sortedBulkProducts.length > 0 && 
+      sortedBulkProducts.length > 0 &&
       quantity >= sortedBulkProducts[0].minimum * unitSet
     ) {
       return sortedBulkProducts[0];
     }
-  
+
     // For quantities less than the highest tier minimum,
     // find the applicable bulk price tier
     for (let i = 0; i < sortedBulkProducts.length; i++) {
       const bulk = sortedBulkProducts[i];
       if (
-        quantity >= bulk.minimum * unitSet && 
+        quantity >= bulk.minimum * unitSet &&
         (!bulk.maximum || quantity <= bulk.maximum * unitSet)
       ) {
         return bulk;
       }
     }
-  
+
     return null;
   };
   const calculateTotalPrice = (bulk, quantity) => {
@@ -701,58 +701,96 @@ useEffect(() => {
               Description
             </h3>
 
-            <p style={{  fontSize: "1wpx", marginTop: "0px" }}>
+            <p style={{ fontSize: "1wpx", marginTop: "0px" }}>
               {product.description}
             </p>
           </div>
         </div>
+        {showLoginPrompt && (
+          <div style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            backgroundColor: 'white',
+            padding: '20px',
+            borderRadius: '8px',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+            zIndex: 1000,
+            maxWidth: '90%',
+            width: '300px',
+            textAlign: 'center'
+          }}>
+            <h3>Please Login</h3>
+            <p>You need to login to add items to cart</p>
+            <button 
+              onClick={() => navigate('/login')}
+              style={{
+                ...buttonStyle,
+                backgroundColor: '#007bff',
+                margin: '10px'
+              }}
+            >
+              Go to Login
+            </button>
+            <button 
+              onClick={() => setShowLoginPrompt(false)}
+              style={{
+                ...buttonStyle,
+                backgroundColor: '#6c757d'
+              }}
+            >
+              Close
+            </button>
+          </div>
+        )}
       </div>
       <div className="container mt-5">
-  <h2 className="text-center mb-4">Products For You</h2>
-  <div className="row">
-    {productsForYou.map((item) => (
-      <div
-        key={item.productId?._id}
-        className="col-lg-4 col-md-4 col-sm-6 col-6 mb-3"
-      >
-        <div className="card product-card h-100" style={{ position: "relative" }}>
-          <div
-            style={{ cursor: "pointer" }}
-            onClick={() =>
-              (window.location.href = `/product/${item.productId.slug}`)
-            } // Full reload
-          >
-            <img
-              src={item.productId.photos}
-              className="card-img-top product-image img-fluid"
-              alt={item.productId.name}
-              style={{
-                height: "200px",
-                objectFit: "contain",
-                padding: "10px",
-              }}
-            />
-            <div className="p-3 d-flex flex-column h-100">
-              {/* Product Name */}
-              <div className="text-sm font-semibold text-gray-900 dark:text-white mb-2 text-nowrap overflow-hidden text-ellipsis">
-                {item.productId.name.slice(0, 15)}
-                {item.productId.name.length > 15 && "..."}
-              </div>
-              {/* Price Section */}
-              <div className="d-flex flex-column h-100">
-                <h5 className="text-base  text-red dark:text-red">
-                  {item.productId.perPiecePrice}
-                </h5>
-              
+        <h2 className="text-center mb-4">Products For You</h2>
+        <div className="row">
+          {productsForYou.map((item) => (
+            <div
+              key={item.productId?._id}
+              className="col-lg-4 col-md-4 col-sm-6 col-6 mb-3"
+            >
+              <div className="card product-card h-100" style={{ position: "relative" }}>
+                <div
+                  style={{ cursor: "pointer" }}
+                  onClick={() =>
+                    (window.location.href = `/product/${item.productId.slug}`)
+                  } // Full reload
+                >
+                  <img
+                    src={item.productId.photos}
+                    className="card-img-top product-image img-fluid"
+                    alt={item.productId.name}
+                    style={{
+                      height: "200px",
+                      objectFit: "contain",
+                      padding: "10px",
+                    }}
+                  />
+                  <div className="p-3 d-flex flex-column h-100">
+                    {/* Product Name */}
+                    <div className="text-sm font-semibold text-gray-900 dark:text-white mb-2 text-nowrap overflow-hidden text-ellipsis">
+                      {item.productId.name.slice(0, 15)}
+                      {item.productId.name.length > 15 && "..."}
+                    </div>
+                    {/* Price Section */}
+                    <div className="d-flex flex-column h-100">
+                      <h5 className="text-base  text-red dark:text-red">
+                        {item.productId.perPiecePrice}
+                      </h5>
+
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          ))}
         </div>
-      </div>
-    ))}
-  </div>
 
-</div>
+      </div>
 
     </Layout>
   );

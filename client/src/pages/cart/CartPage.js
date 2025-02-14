@@ -237,7 +237,7 @@ const CartPage = () => {
         const availablePincodes = data.pincodes.map((pin) => pin.code);
         if (availablePincodes.includes(pincode.toString())) {
           // setIsPincodeAvailable(true);
-          toast.success("Delivery available for your pincode");
+          // toast.success("Delivery available for your pincode");
         } else {
           // setIsPincodeAvailable(false);
           ////toast.error("Delivery not available for your pincode");

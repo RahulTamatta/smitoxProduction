@@ -150,7 +150,7 @@ const CategoryProduct = () => {
           productId: productId,
         });
         setWishlistStatus((prev) => ({ ...prev, [productId]: true }));
-        toast.success("Added to wishlist");
+        // toast.success("Added to wishlist");
       }
     } catch (error) {
       console.error("Error toggling wishlist:", error);
