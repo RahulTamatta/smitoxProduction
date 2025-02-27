@@ -8,26 +8,22 @@ import { SearchProvider } from "./context/search";
 import { CartProvider } from "./context/cart";
 import "antd/dist/reset.css";
 import { Toaster } from "react-hot-toast";
-import { Provider } from 'react-redux'; // Import Provider
-import store from './redux/store'; // Import your Redux store
 
-// Enable browser's automatic scroll restoration using window.history
+// Enable browser's automatic scroll restoration - using window.history instead of direct history reference
 if ('scrollRestoration' in window.history) {
   window.history.scrollRestoration = 'auto';
 }
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
-  <Provider store={store}> {/* Wrap your app with Provider */}
-    <AuthProvider>
-      <SearchProvider>
-        <CartProvider>
-          <BrowserRouter>
-            <Toaster />
-            <App />
-          </BrowserRouter>
-        </CartProvider>
-      </SearchProvider>
-    </AuthProvider>
-  </Provider>
+  <AuthProvider>
+    <SearchProvider>
+      <CartProvider>
+        <BrowserRouter>
+          <Toaster />
+          <App />
+        </BrowserRouter>
+      </CartProvider>
+    </SearchProvider>
+  </AuthProvider>
 );

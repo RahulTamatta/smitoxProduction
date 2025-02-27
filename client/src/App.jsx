@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom"; // Remove ScrollRestoration
 import HomePage from "./pages/HomePage";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
@@ -14,7 +14,7 @@ import AdminDashboard from "./pages/Admin/AdminDashboard";
 import CreateCategory from "./pages/Admin/CreateCategory";
 import SubcategoryList from "./pages/Admin/subCategory";
 import BrandList from "./pages/Admin/brandList";
-import MinimumOrder from "./pages/Admin/minimumOrder.js";
+import MinimumOrder from "./pages/Admin/minimumOrder.jsx";
 import CreateProduct from "./pages/Admin/CreateProduct";
 import Users from "./pages/Admin/Users";
 import UsersLists from "./pages/Admin/userCartLists";
@@ -26,28 +26,30 @@ import Search from "./pages/Search";
 import ProductDetails from "./pages/ProductDetails";
 import Categories from "./pages/Categories";
 import CategoryProduct from "./pages/CategoryProduct";
-import CartPage from "./pages/cart/CartPage.js";
-import AdminOrders from "./pages/Admin/Admin order/AdminOrders.js";
-import PincodeList from "./pages/Admin/PinCode.js";
+import CartPage from "./pages/cart/CartPage.jsx";
+import AdminOrders from "./pages/Admin/Admin order/AdminOrders.jsx";
+import PincodeList from "./pages/Admin/PinCode.jsx";
 import Terms from "./pages/TermsofUse";
-import ReturnPolicy from "./pages/returnPolicy.js";
+import ReturnPolicy from "./pages/returnPolicy.jsx";
 import BannerManagement from "./pages/Admin/bannerManagement";
-import ProductForYou from "./pages/Admin/ProductForYou.js";
-import WishlistPage from "./pages/wishlists.js";
-import AddToCartPage from "../../client/src/pages/Admin/userCart.js";
+import ProductForYou from "./pages/Admin/ProductForYou.jsx";
+import WishlistPage from "./pages/wishlists.jsx";
+import AddToCartPage from "./pages/Admin/userCart.jsx";
 
-import AdminLogin from "./pages/Auth/AdminLog.js";
-import ScrollSaver from '../src/pages/scroll.js';
-import ScrollRestorer from '../src/pages/scrollreestore.js';
+import AdminLogin from "./pages/Auth/AdminLog.jsx";
+// Import Redux provider and store
 import { Provider } from 'react-redux';
-import store from './pages/store.js';
+import store from './redux/store';
+import ScrollToTop from './components/ScrollToTop'; // Ensure correct import
+
 function App() {
+
   return (
-    <>
-   <Provider store={store}>
+    <Provider store={store}>
+      <ScrollToTop /> {/* Using ScrollToTop component */}
       <Routes>
         <Route path="/" element={<HomePage />} />
-       <Route path="/product/:slug" element={<ProductDetails />} />
+        <Route path="/product/:slug" element={<ProductDetails />} />
         <Route path="/categories" element={<Categories />} />
         <Route path="/cart" element={<CartPage />} />
       
@@ -92,8 +94,7 @@ function App() {
 
         <Route path="*" element={<Pagenotfound />} />
       </Routes>
-      </Provider>,
-    </>
+    </Provider>
   );
 }
 

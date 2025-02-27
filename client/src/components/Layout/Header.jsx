@@ -107,12 +107,18 @@ const Header = () => {
     setWishlistCount(0);
   };
 
+  // Save scroll position when navigating to home
+  const handleHomeClick = () => {
+    // For other pages to home navigation, clear any saved position
+    sessionStorage.removeItem('homepageScrollPosition');
+  };
+
   return (
     <nav className="navbar navbar-expand bg-body-tertiary fixed-top">
       <div className="container-fluid d-flex align-items-center">
         {/* Logo */}
         <div className="d-flex align-items-center me-4">
-          <Link to="/" className="navbar-brand">
+          <Link to="/" className="navbar-brand" onClick={handleHomeClick}>
             <img
               src={logo}  // Using imported logo
               alt="Company Logo"
@@ -137,7 +143,7 @@ const Header = () => {
             style={{ fontSize: isMobile ? "0.875rem" : "1rem" }}
           >
             <li className="nav-item">
-              <NavLink to="/" className="nav-link d-flex align-items-center">
+              <NavLink to="/" className="nav-link d-flex align-items-center" onClick={handleHomeClick}>
                 <HomeOutlined style={{ marginRight: "5px", color: "white" }} />
                 Home
               </NavLink>
@@ -207,7 +213,7 @@ const Header = () => {
 <div className={`d-flex ${isMobile ? 'd-block' : 'd-none'} ms-auto`}>
   <ul className="navbar-nav mb-2 mb-lg-0">
     <li className="nav-item">
-      <NavLink to="/" className="nav-link">
+      <NavLink to="/" className="nav-link" onClick={handleHomeClick}>
         <HomeOutlined style={{ marginRight: "5px", color: "white" }} />
         Home
       </NavLink>

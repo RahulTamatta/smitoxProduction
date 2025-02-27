@@ -3,9 +3,9 @@ import axios from 'axios';
 import { MessageCircle, Edit } from 'lucide-react';
 import Layout from "../../components/Layout/Layout";
 import AdminMenu from "../../components/Layout/AdminMenu";
-import CartSearchModal from "./addTocartModal.js";
+import CartSearchModal from "./addTocartModal.jsx";
 import { useNavigate, useLocation } from 'react-router-dom';
-import AddToCartPage from "./userCart.js";
+import AddToCartPage from "./userCart.jsx";
 
 
 

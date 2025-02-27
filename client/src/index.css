@@ -1,29 +1,30 @@
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Poppins:wght@300;400&display=swap");
-
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+/* font-family */
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Poppins:wght@300;400&display=swap");
+
 /* font-family: 'Poppins', sans-serif; */
 /* font-family: 'Playfair Display', serif; */
 
-/* //navbar css */
+/* navbar css */
 .navbar {
   font-family: "Poppins", sans-serif;
-  font-size: 10px;
+  font-size: 17px;
   line-height: 26px;
   text-transform: uppercase;
   box-shadow: 0 8px 6px -6px gray;
-  -webkit-box-shadow: 0 8px 6px -6px gray;
+  --webkit-box-shadow: 0 8px 6px -6px gray;
   border-bottom: solid gray !important;
   background-color: #d32f2f !important; /* Red background */
 }
 
 .navbar-brand {
   font-weight: 700;
-  font-family: "Playfair Display", serif; /* Consistent with the theme */
+  font-family: "roboto", sans-serif;
   letter-spacing: 3px;
   color: white !important;
 }
@@ -38,7 +39,7 @@
 }
 
 .active {
-  border-bottom: 2px solid #ffefba; /* Light gold for active link */
+  border-bottom: 2px solid black;
 }
 
 .search-form {
@@ -63,13 +64,9 @@
 .footer {
   color: white;
   padding: 25px;
-  background: red; /* fallback for old browsers */
-  background: -webkit-linear-gradient(
-    to right,
-    #434343,
-    #000000
-  ); /* Chrome 10-25, Safari 5.1-6 */
-  background: linear-gradient(to right, #434343, red);
+  background: #000000;
+  background: -webkit-linear-gradient(to right, #434343, #000000);
+  background: linear-gradient(to right, #434343, #000000);
 }
 
 .footer a {
@@ -102,7 +99,7 @@
 }
 
 .pnf-btn {
-  color: red;
+  color: black;
   border: 1px solid black;
   text-decoration: none;
   padding: 10px;
@@ -127,7 +124,7 @@
 /* ==================== */
 .product-link {
   text-decoration: none !important;
-  color: red !important;
+  color: black !important;
 }
 
 .cat-btn {
@@ -152,4 +149,44 @@
   background-color: #434343 !important;
   color: white;
   padding: 20px 0px;
+}
+
+/* register page */
+.register {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 70vh;
+  flex-direction: column;
+}
+
+/* cart page */
+.cart-page {
+  margin-top: 64px;
+}
+
+.cart-page h1 {
+  padding: 15px !important;
+  font-family: "roboto", sans-serif;
+  font-weight: normal;
+  background-color: rgba(0, 0, 255, 0.072) !important;
+}
+.cart-page h1 > p {
+  font-size: 20px;
+  margin-top: 10px;
+}
+
+.cart-page .card {
+  padding: 5px !important;
+  height: 150px !important;
+  margin-bottom: 5px !important;
+}
+.cart-page .cart-remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cart-page .cart-summary {
+  text-align: center;
+  /* margin-top: -140px !important; */
 }
