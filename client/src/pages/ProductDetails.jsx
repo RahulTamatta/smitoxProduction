@@ -763,32 +763,14 @@ const ProductDetails = () => {
                     (window.location.href = `/product/${item.productId.slug}`)
                   } // Full reload
                 >
-                  {/* Image container with fixed aspect ratio */}
-                  <div style={{ 
-                    position: "relative",
-                    paddingTop: "75%", // 4:3 aspect ratio
-                    width: "100%",
-                    overflow: "hidden"
-                  }}>
-                    <OptimizedImage
-                      src={item.productId.photos || '/placeholder-image.jpg'}
-                      alt={item.productId.name}
-                      className="card-img-top product-image"
-                      width={200}
-                      height={200}
-                      objectFit="contain"
-                      quality={75}
-                      loading="lazy"
-                      style={{
-                        position: "absolute",
-                        top: "0",
-                        left: "0",
-                        width: "100%",
-                        height: "100%",
-                        padding: "8px"
-                      }}
-                    />
-                  </div>
+                  <OptimizedImage
+                    src={item.productId.photos}
+                    alt={item.productId.name}
+                    className="card-img-top product-image img-fluid"
+                    width={200}
+                    height={200}
+                    objectFit="contain"
+                  />
                   <div className="p-3 d-flex flex-column h-100">
                     {/* Product Name */}
                     <div className="text-sm font-semibold text-gray-900 dark:text-white mb-2 text-nowrap overflow-hidden text-ellipsis">
