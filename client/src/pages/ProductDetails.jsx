@@ -6,6 +6,7 @@ import { useCart } from "../context/cart";
 import { useAuth } from "../context/auth";
 import toast from "react-hot-toast";
 import ProductCard from "./ProductCard";
+import OptimizedImage from "../components/OptimizedImage";
 
 const ProductDetails = () => {
   const params = useParams();
@@ -505,13 +506,15 @@ const ProductDetails = () => {
         <div style={productDetailStyle}>
           {/* Product Image */}
           <div style={imageStyle}>
-            <img
+            <OptimizedImage
               src={product.photos}
               alt={product.name}
-              style={{ width: "100%", height: "auto", borderRadius: "8px", objectFit: "cover" }}
-              onError={(e) => {
-                e.target.src = "/placeholder-image.jpg";
-              }}
+              style={{ borderRadius: "8px" }}
+              width={500}
+              height={500}
+              objectFit="cover"
+              quality={85}
+              loading="eager" // Main product image should load eagerly
             />
           </div>
 
@@ -760,16 +763,32 @@ const ProductDetails = () => {
                     (window.location.href = `/product/${item.productId.slug}`)
                   } // Full reload
                 >
-                  <img
-                    src={item.productId.photos}
-                    className="card-img-top product-image img-fluid"
-                    alt={item.productId.name}
-                    style={{
-                      height: "200px",
-                      objectFit: "contain",
-                      padding: "10px",
-                    }}
-                  />
+                  {/* Image container with fixed aspect ratio */}
+                  <div style={{ 
+                    position: "relative",
+                    paddingTop: "75%", // 4:3 aspect ratio
+                    width: "100%",
+                    overflow: "hidden"
+                  }}>
+                    <OptimizedImage
+                      src={item.productId.photos || '/placeholder-image.jpg'}
+                      alt={item.productId.name}
+                      className="card-img-top product-image"
+                      width={200}
+                      height={200}
+                      objectFit="contain"
+                      quality={75}
+                      loading="lazy"
+                      style={{
+                        position: "absolute",
+                        top: "0",
+                        left: "0",
+                        width: "100%",
+                        height: "100%",
+                        padding: "8px"
+                      }}
+                    />
+                  </div>
                   <div className="p-3 d-flex flex-column h-100">
                     {/* Product Name */}
                     <div className="text-sm font-semibold text-gray-900 dark:text-white mb-2 text-nowrap overflow-hidden text-ellipsis">
@@ -779,7 +798,7 @@ const ProductDetails = () => {
                     {/* Price Section */}
                     <div className="d-flex flex-column h-100">
                       <h5 className="text-base  text-red dark:text-red">
-                        {item.productId.perPiecePrice}
+                      ₹ {item.productId.perPiecePrice}
                       </h5>
 
                     </div>

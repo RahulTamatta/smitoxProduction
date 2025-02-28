@@ -8,7 +8,7 @@ import crypto from 'crypto';
 import fs from "fs";
 import slugify from "slugify";
 import dotenv from "dotenv";
-// import { v4 as uuidv4 } from 'uuid';
+import { uploadToImageKit } from "../utils/imageService.js";
 dotenv.config();
 
 class CustomOrderService {
@@ -120,6 +120,21 @@ export const createProductController = async (req, res) => {
       }
     }
 
+    // Handle ImageKit uploads if available in request
+    let imageKitPhoto = null;
+    let imageKitImages = [];
+    
+    // If images were uploaded through ImageKit middleware
+    if (req.imagekit) {
+      if (req.imagekit.photo) {
+        imageKitPhoto = req.imagekit.photo.url;
+      }
+      
+      if (req.imagekit.images && req.imagekit.images.length > 0) {
+        imageKitImages = req.imagekit.images.map(img => img.url);
+      }
+    }
+    
     // Parse bulkProducts
     let formattedBulkProducts = null;
     if (bulkProducts) {
@@ -149,7 +164,7 @@ export const createProductController = async (req, res) => {
     // Get unique custom order
     const finalCustomOrder = await CustomOrderService.assignCustomOrder(custom_order);
 
-    // Create product instance
+    // Create product instance with ImageKit URLs if available
     const newProduct = new productModel({
       name,
       slug: slugify(name),
@@ -181,26 +196,51 @@ export const createProductController = async (req, res) => {
       variants: JSON.parse(variants || '[]'),
       sets: JSON.parse(sets || '[]'),
       tag: Array.isArray(tag) ? tag : tag ? [tag] : [],
-      photos: photos || null,
-      multipleimages: Array.isArray(multipleimages) ? multipleimages : multipleimages ? [multipleimages] : [],
-      custom_order: finalCustomOrder, // Add the finalized custom order
+      photos: imageKitPhoto || photos || null,
+      multipleimages: imageKitImages.length > 0 ? imageKitImages : 
+        (Array.isArray(multipleimages) ? multipleimages : multipleimages ? [multipleimages] : []),
+      custom_order: finalCustomOrder,
     });
 
-    // Handle Buffer-based photo
-    if (photo) {
-      newProduct.photo = {
-        data: fs.readFileSync(photo.path),
-        contentType: photo.type
-      };
+    // Handle Buffer-based photo if ImageKit wasn't used
+    if (!imageKitPhoto && photo) {
+      try {
+        // Upload to ImageKit
+        const fileBuffer = fs.readFileSync(photo.path);
+        const result = await uploadToImageKit(fileBuffer, `product_${Date.now()}_photo`);
+        newProduct.photos = result.url;
+      } catch (error) {
+        console.error("Error uploading to ImageKit:", error);
+        // Fallback to traditional storage
+        newProduct.photo = {
+          data: fs.readFileSync(photo.path),
+          contentType: photo.type
+        };
+      }
     }
 
-    // Handle Buffer-based multiple images
-    if (images) {
+    // Handle Buffer-based multiple images if ImageKit wasn't used
+    if (imageKitImages.length === 0 && images) {
       const imageArray = Array.isArray(images) ? images : [images];
-      newProduct.images = imageArray.map(img => ({
-        data: fs.readFileSync(img.path),
-        contentType: img.type
-      }));
+      
+      try {
+        // Upload all images to ImageKit
+        const uploadPromises = imageArray.map(async (img, index) => {
+          const fileBuffer = fs.readFileSync(img.path);
+          const result = await uploadToImageKit(fileBuffer, `product_${Date.now()}_${index}`);
+          return result.url;
+        });
+        
+        const uploadedUrls = await Promise.all(uploadPromises);
+        newProduct.multipleimages = uploadedUrls;
+      } catch (error) {
+        console.error("Error uploading multiple images to ImageKit:", error);
+        // Fallback to traditional storage
+        newProduct.images = imageArray.map(img => ({
+          data: fs.readFileSync(img.path),
+          contentType: img.type
+        }));
+      }
     }
 
     // Save product

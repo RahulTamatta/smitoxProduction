@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../context/auth';
 import { Heart } from 'lucide-react';
 import toast from 'react-hot-toast';
+import OptimizedImage from '../components/OptimizedImage';
 
 const ProductCard = ({ product, onClick }) => {  
   const navigate = useNavigate();
@@ -39,7 +40,6 @@ const ProductCard = ({ product, onClick }) => {
     e.stopPropagation();
 
     if (!auth.user) {
-      ////toast.error("Please log in to manage your wishlist");
       return;
     }
 
@@ -59,7 +59,6 @@ const ProductCard = ({ product, onClick }) => {
       }
     } catch (error) {
       console.error("Error toggling wishlist:", error);
-      ////toast.error("Error updating wishlist");
     }
   };
 
@@ -116,52 +115,73 @@ const ProductCard = ({ product, onClick }) => {
     <div className="col-md-10 col-sm-10 col-12 mb-3">
       <div
         className="card product-card h-100"
-        style={{ cursor: "pointer", position: "relative" }}
+        style={{ 
+          cursor: "pointer", 
+          position: "relative",
+          borderRadius: "8px",
+          overflow: "hidden",
+          boxShadow: "0 2px 5px rgba(0,0,0,0.1)"
+        }}
         onClick={handleProductClick}
       >
-        {!imageLoaded && (
-          <div
+        {/* Image container with fixed aspect ratio */}
+        <div style={{ 
+          position: "relative",
+          paddingTop: "75%", // 4:3 aspect ratio
+          width: "100%",
+          overflow: "hidden"
+        }}>
+          <OptimizedImage
+            src={product.photos || '/placeholder-image.jpg'}
+            alt={product.name}
+            className="card-img-top product-image"
+            width={screenWidth <= 576 ? 150 : 300}
+            height={screenWidth <= 576 ? 150 : 300}
+            objectFit="contain" // Changed from "cover" to "contain"
+            quality={75}
+            loading="lazy"
             style={{
+              position: "absolute",
+              top: "0",
+              left: "0",
               width: "100%",
-              height: "200px",
-              background: "#f0f0f0",
+              height: "100%",
+              padding: "8px", // Add some padding inside the container
             }}
           />
-        )}
+        </div>
         
-        <img
-          src={product.photos || '/placeholder-image.jpg'}
-          className="card-img-top product-image img-fluid"
-          alt={product.name}
-          style={{
-            width: "100%",
-            height: "200px",
-            objectFit: "cover",
-            display: imageLoaded ? "block" : "none"
-          }}
-          onLoad={() => setImageLoaded(true)}
-        />
-        
-        <div className="p-4 flex flex-col h-full">
+        <div className="p-3 d-flex flex-column" style={{ height: "auto" }}>
           <h5
             style={{
               fontSize: fontSizes.name,
               fontWeight: "600",
               color: "#333",
               marginBottom: "10px",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              lineHeight: "1.4",
+              height: "2.8em" // Fixed height for title (2 lines)
             }}
           >
-            {product.name.length > 20
-              ? `${product.name.slice(0, 18)}.....`
-              : product.name}
+            {product.name}
             <button
-              onClick={toggleWishlist}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleWishlist(e);
+              }}
               style={{
                 position: "absolute",
                 right: "10px",
+                top: "10px",
                 zIndex: 2,
-                background: "none",
+                background: "rgba(255, 255, 255, 0.8)",
                 border: "none",
+                borderRadius: "50%",
+                padding: "5px",
                 cursor: "pointer",
               }}
             >
@@ -174,13 +194,13 @@ const ProductCard = ({ product, onClick }) => {
           </h5>
         </div>
         
-        <div className="mt-auto">
+        <div className="mt-auto p-3 pt-0">
           <h5
             style={{
               fontSize: fontSizes.price,
               fontWeight: "700",
               color: "#333",
-              padding: "0 1px 5px 20px"
+              margin: 0
             }}
           >
             {product.perPiecePrice?.toLocaleString("en-US", {
@@ -194,7 +214,7 @@ const ProductCard = ({ product, onClick }) => {
                 fontSize: fontSizes.mrp,
                 textDecoration: "line-through",
                 color: "red",
-                padding: "0 1px 5px 20px"
+                margin: "4px 0 0 0"
               }}
             >
               {product.mrp.toLocaleString("en-US", {

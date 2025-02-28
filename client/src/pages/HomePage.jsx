@@ -13,6 +13,7 @@ import SearchInput from "../components/Form/SearchInput";
 import ProductCard from "./ProductCard";
 import WhatsAppButton from './whatsapp';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
+import OptimizedImage from '../components/OptimizedImage';
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -333,7 +334,7 @@ const HomePage = () => {
         </div>
       )}
   
-      {/* Banner Section */}
+      {/* Banner Section with Optimized Images */}
       <div
         className="banner-container"
         style={{
@@ -365,18 +366,22 @@ const HomePage = () => {
                 paddingTop: isMobile ? '56.25%' : '35%',
                 width: '100%',
               }}>
-                <img
+                <OptimizedImage
                   src={banner.photos}
                   alt={banner.bannerName}
+                  width={isMobile ? window.innerWidth - 20 : 1200}
+                  height={isMobile ? Math.round((window.innerWidth - 20) * 0.5625) : 420}
                   style={{
                     position: 'absolute',
                     top: 0,
                     left: 0,
                     width: '100%',
                     height: '100%',
-                    objectFit: 'fill',
                     borderRadius: '15px',
                   }}
+                  objectFit="fill"
+                  quality={80}
+                  loading="eager" // Load banner images eagerly as they're above the fold
                 />
               </div>
             </div>
@@ -384,7 +389,7 @@ const HomePage = () => {
         </Slider>
       </div>
   
-      {/* Categories Section */}
+      {/* Categories Section with Optimized Images */}
       <div style={{ padding: '20px 0', marginTop: '20px' }}>
         <h2 style={{ 
           textAlign: 'center', 
@@ -424,15 +429,13 @@ const HomePage = () => {
                   overflow: 'hidden',
                   border: '2px solid #f0f0f0'
                 }}>
-                  <LazyLoadImage
+                  <OptimizedImage
                     src={c.photos}
                     alt={c.name}
-                    effect="blur"
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover'
-                    }}
+                    width={isMobile ? 70 : 80}
+                    height={isMobile ? 70 : 80}
+                    objectFit="cover"
+                    quality={75}
                   />
                 </div>
                 <h6 style={{

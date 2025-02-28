@@ -19,6 +19,7 @@ import usersListsRoutes from "./routes/cartRoutes.js";
 import pincodeRoutes from "./routes/pincodeRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import minimumOrderRoutes from "./routes/miniMumRoutes.js";
+import imageRoutes from "./routes/imageRoutes.js"; // Add image routes
 // use routes
 
 // Configure environment variables
@@ -50,13 +51,10 @@ app.use("/api/v1/category", categoryRoutes);
 app.use("/api/v1/product", productRoutes);
 app.use("/api/v1/subcategory", subCategoryRoutes);
 app.use("/api/v1/bannerManagement", bannerRoutes);
-
+app.use("/api/v1/image", imageRoutes); // Add image routes
 app.use('/api/v1/minimumOrder', minimumOrderRoutes);
 app.use("/api/v1/banner-products", bannerRoutes);
 app.use("/api/v1/productForYou", productForYou);
-
-
-
 app.use("/api/v1/adsbanner", adsbannerRoutes);
 app.use("/api/v1/brand", brandRoutes); // Use brand routes
 app.use("/api/v1/usersLists", usersListsRoutes);
