@@ -33,6 +33,7 @@ const ProductDetails = () => {
 
   // Debounce addToCart function
   const isAddingToCartRef = useRef(false);
+  const prevSlugRef = useRef(params?.slug);
 
   // Handle responsive layout detection
   useEffect(() => {
@@ -57,8 +58,28 @@ const ProductDetails = () => {
     };
   }, [params?.slug]);
 
+  // Reset product-specific state when slug changes
   useEffect(() => {
-    window.scrollTo(0, 0);
+    // Check if the slug has actually changed to avoid unnecessary resets
+    if (prevSlugRef.current !== params?.slug) {
+      // Reset all product-specific state variables
+      setDisplayQuantity(0);
+      setShowQuantitySelector(false);
+      setSelectedBulk(null);
+      setTotalPrice(0);
+      setIsInWishlist(false);
+      setUnitSet(1);
+      setQuantity(1);
+      setProductsForYou([]);
+      setProduct({}); // Clear previous product data
+      
+      // Update the ref to current slug
+      prevSlugRef.current = params?.slug;
+      
+      // Scroll to top when navigating to a new product
+      window.scrollTo(0, 0);
+    }
+    
     if (params?.slug) {
       if (auth?.user?.pincode) {
         checkPincode(auth.user.pincode);
@@ -257,7 +278,7 @@ const ProductDetails = () => {
   };
 
   const fetchInitialQuantity = async (productId) => {
-    if (!auth?.user?._id) return;
+    if (!auth?.user?._id || !productId) return;
 
     try {
       const { data } = await axios.get(
@@ -277,9 +298,20 @@ const ProductDetails = () => {
         const applicableBulk = getApplicableBulkProduct(quantity);
         setSelectedBulk(applicableBulk);
         calculateTotalPrice(applicableBulk, quantity);
+      } else {
+        // If no quantity data returned, explicitly reset values
+        setDisplayQuantity(0);
+        setShowQuantitySelector(false);
+        setSelectedBulk(null);
+        setTotalPrice(0);
       }
     } catch (error) {
       console.error("Error fetching quantity:", error);
+      // On error, also reset values to ensure clean state
+      setDisplayQuantity(0);
+      setShowQuantitySelector(false);
+      setSelectedBulk(null);
+      setTotalPrice(0);
     }
   };
 
