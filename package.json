@@ -12,7 +12,8 @@
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "prestart": "node setup.cjs",
     "sync-deps": "npm install && npm dedupe",
-    "prepare": "husky || true"
+    "prepare": "node scripts/prepare.js",
+    "build": "node scripts/build.js"
   },
   "keywords": [],
   "author": "Rahul Tamatta",
