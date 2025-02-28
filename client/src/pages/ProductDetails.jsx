@@ -17,7 +17,6 @@ const ProductDetails = () => {
   const [selectedQuantity, setSelectedQuantity] = useState(0);
   const [selectedBulk, setSelectedBulk] = useState(null);
   const [totalPrice, setTotalPrice] = useState(0);
-  // const [isPincodeAvailable, setIsPincodeAvailable] = useState(false);
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [cart, setCart] = useCart();
   const [unitSet, setUnitSet] = useState(1);
@@ -28,13 +27,23 @@ const ProductDetails = () => {
   const [categoryId, setCategoryId] = useState();
   const [subcategoryId, setSubcategoryId] = useState();
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-
-  // In ProductDetails component
-
-  const [isAddingToCart, setIsAddingToCart] = useState(false); // Track if addToCart is in progress
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [isTablet, setIsTablet] = useState(window.innerWidth > 768 && window.innerWidth <= 1024);
 
   // Debounce addToCart function
   const isAddingToCartRef = useRef(false);
+
+  // Handle responsive layout detection
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+      setIsTablet(window.innerWidth > 768 && window.innerWidth <= 1024);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const scrollPosition = sessionStorage.getItem("productDetailsScrollPosition");
@@ -55,7 +64,6 @@ const ProductDetails = () => {
         checkPincode(auth.user.pincode);
       }
       getProduct();
-      getProductsForYou();
     }
   }, [params?.slug, auth?.user?.pincode]);
 
@@ -64,7 +72,12 @@ const ProductDetails = () => {
       checkWishlistStatus(product._id);
       fetchInitialQuantity(product._id);
     }
-  }, [product._id, auth?.user?._id]);
+    
+    // Add this to ensure productsForYou gets loaded when product data is available
+    if (product.category?._id && product.subcategory?._id) {
+      getProductsForYou();
+    }
+  }, [product._id, product.category, product.subcategory, auth?.user?._id]);
 
   const getProduct = async () => {
     try {
@@ -75,7 +88,6 @@ const ProductDetails = () => {
       }
     } catch (error) {
       console.error(error);
-      ////toast.success(error("Error fetching product details");
     }
   };
 
@@ -88,24 +100,22 @@ const ProductDetails = () => {
         setProductsForYou(data.products || []);
       }
     } catch (error) {
-      // console.error("Error fetching products for you:", error);
-      // ////toast.success(error("Failed to fetch products for you");
+      // Error handling is already commented out
     }
   };
 
   const addToCart = async () => {
     if (!auth.user) {
       setShowLoginPrompt(true);
-      //toast.success(error("Please log in to add items to cart");
       navigate('/login');
       return;
     }
 
-    if (isAddingToCartRef.current) return; // Prevent multiple clicks
-    isAddingToCartRef.current = true; // Lock the function
+    if (isAddingToCartRef.current) return;
+    isAddingToCartRef.current = true;
 
     try {
-      const initialQuantity = unitSet * 1; // Add 1 unit at a time
+      const initialQuantity = unitSet * 1;
       const applicableBulk = getApplicableBulkProduct(initialQuantity);
 
       const response = await axios.post(`/api/v1/carts/users/${auth.user._id}/cart`, {
@@ -121,13 +131,11 @@ const ProductDetails = () => {
         setSelectedBulk(applicableBulk);
         calculateTotalPrice(applicableBulk, initialQuantity);
         setShowQuantitySelector(true);
-        //toast.success(success("Item added to cart");
       }
     } catch (error) {
       console.error(error);
-      ////toast.success(error("Error adding item to cart");
     } finally {
-      isAddingToCartRef.current = false; // Unlock the function
+      isAddingToCartRef.current = false;
     }
   };
 
@@ -152,49 +160,11 @@ const ProductDetails = () => {
       calculateTotalPrice(applicableBulk, updatedQuantity);
     } catch (error) {
       console.error("Error updating quantity:", error);
-      ////toast.success(error("Failed to update quantity");
     }
   };
 
-  useEffect(() => {
-    const scrollPosition = sessionStorage.getItem('productDetailsScrollPosition');
-    if (scrollPosition) {
-      window.scrollTo(0, parseInt(scrollPosition, 10));
-      sessionStorage.removeItem('productDetailsScrollPosition');
-    }
-
-    // Save scroll position when leaving the page
-    return () => {
-      sessionStorage.setItem('productDetailsScrollPosition', window.scrollY);
-    };
-  }, [params?.slug]);
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    if (params?.slug) {
-      if (auth?.user?.pincode) {
-        checkPincode(auth.user.pincode);
-      }
-      getProduct();
-      getProductsForYou();
-    }
-  }, [params?.slug, auth?.user?.pincode]);
-
-  useEffect(() => {
-    if (product._id && auth?.user?._id) {
-      checkWishlistStatus(product._id);
-      fetchInitialQuantity(product._id);
-    }
-    getProductsForYou();
-  }, [product._id, auth?.user?._id]);
-
-  // New useEffect to handle Products For You fetching
-  // useEffect(() => {
-  //   if (categoryId && subcategoryId) {
-  //     getProductsForYou();
-  //   }
-  // }, [categoryId, subcategoryId,productsForYou]);
-
+  // Keep other functions (getApplicableBulkProduct, calculateTotalPrice, etc.)
+  // ...
 
   const getApplicableBulkProduct = (quantity) => {
     if (!product.bulkProducts || product.bulkProducts.length === 0) return null;
@@ -203,8 +173,6 @@ const ProductDetails = () => {
       .filter((bulk) => bulk && bulk.minimum)
       .sort((a, b) => b.minimum - a.minimum);
 
-    // If quantity is greater than or equal to the minimum of the highest tier
-    // Return the highest tier pricing regardless of maximum
     if (
       sortedBulkProducts.length > 0 &&
       quantity >= sortedBulkProducts[0].minimum * unitSet
@@ -212,8 +180,6 @@ const ProductDetails = () => {
       return sortedBulkProducts[0];
     }
 
-    // For quantities less than the highest tier minimum,
-    // find the applicable bulk price tier
     for (let i = 0; i < sortedBulkProducts.length; i++) {
       const bulk = sortedBulkProducts[i];
       if (
@@ -226,6 +192,7 @@ const ProductDetails = () => {
 
     return null;
   };
+  
   const calculateTotalPrice = (bulk, quantity) => {
     if (bulk) {
       setTotalPrice(quantity * parseFloat(bulk.selling_price_set));
@@ -234,8 +201,6 @@ const ProductDetails = () => {
     }
   };
 
-
-
   const checkPincode = async (pincode) => {
     try {
       const { data } = await axios.get("/api/v1/pincodes/get-pincodes");
@@ -243,24 +208,17 @@ const ProductDetails = () => {
         const availablePincodes = data.pincodes.map((pin) => pin.code);
         if (availablePincodes.includes(pincode.toString())) {
           // setIsPincodeAvailable(true);
-          //toast.success(success("Delivery available for your pincode");
         } else {
           // setIsPincodeAvailable(false);
-          //////toast.success(error("Delivery not available for your pincode");
         }
       }
     } catch (error) {
       console.log(error);
-      // setIsPincodeAvailable(false);
-      //////toast.success(error("Error checking pincode");
     }
   };
 
-
-
   const updateQuantity = async (quantity) => {
     if (!auth?.user?._id) {
-      //////toast.success(error("Please log in to update quantity");
       return;
     }
 
@@ -275,13 +233,8 @@ const ProductDetails = () => {
           },
         }
       );
-
-      if (response.status === 200) {
-        ////toast.success(success("Quantity updated successfully");
-      }
     } catch (error) {
       console.error("Quantity update error:", error);
-      //////toast.success(error("Failed to update quantity");
     }
   };
 
@@ -298,17 +251,8 @@ const ProductDetails = () => {
           },
         }
       );
-
-      if (response.status === 200) {
-        //toast.success(success("Item removed from cart");
-      } else {
-        const responseBody = await response.text();
-        console.error("Error removing item:", responseBody);
-        //////toast.success(error("Failed to remove item from cart");
-      }
     } catch (error) {
       console.error("Remove from cart failed:", error.message);
-      //////toast.success(error("Failed to remove item from cart");
     }
   };
 
@@ -339,11 +283,8 @@ const ProductDetails = () => {
     }
   };
 
-  // Rest of your code including toggleWishlist, checkWishlistStatus, and return statement...
-  // Copy the styles and return statement from your original code
   const toggleWishlist = async () => {
     if (!auth.user) {
-      //////toast.success(error("Please log in to manage your wishlist");
       return;
     }
 
@@ -353,17 +294,14 @@ const ProductDetails = () => {
           `/api/v1/carts/users/${auth.user._id}/wishlist/${product._id}`
         );
         setIsInWishlist(false);
-        //toast.success(success("Removed from wishlist");
       } else {
         await axios.post(`/api/v1/carts/users/${auth.user._id}/wishlist`, {
           productId: product._id,
         });
         setIsInWishlist(true);
-        //toast.success(success("Added to wishlist");
       }
     } catch (error) {
       console.error("Error toggling wishlist:", error);
-      //////toast.success(error("Error updating wishlist");
     }
   };
 
@@ -381,11 +319,13 @@ const ProductDetails = () => {
     }
   };
 
-  // Styles
+  // Responsive Styles
   const containerStyle = {
     maxWidth: "1200px",
     margin: "0 auto",
-    paddingTop: "1rem",
+    paddingTop: isMobile ? "0.5rem" : "1rem",
+    paddingLeft: isMobile ? "10px" : "15px",
+    paddingRight: isMobile ? "10px" : "15px",
     fontFamily: "Arial, sans-serif",
     backgroundColor: "#f5f5f5",
     borderRadius: "8px",
@@ -394,50 +334,56 @@ const ProductDetails = () => {
 
   const productDetailStyle = {
     display: "flex",
+    flexDirection: isMobile ? "column" : "row",
     flexWrap: "wrap",
-    gap: "20px",
+    gap: isMobile ? "15px" : "20px",
     backgroundColor: "#ffffff",
     borderRadius: "8px",
-    padding: "20px",
+    padding: isMobile ? "15px" : "20px",
     marginBottom: "20px",
   };
 
   const imageStyle = {
-    flex: "1 1 300px",
-    maxWidth: "500px",
+    flex: isMobile ? "1 1 100%" : "1 1 300px",
+    maxWidth: isMobile ? "100%" : "500px",
+    margin: isMobile ? "0 auto" : "0",
   };
 
   const infoStyle = {
-    flex: "1 1 300px",
-    minWidth: "300px",
+    flex: isMobile ? "1 1 100%" : "1 1 300px",
+    minWidth: isMobile ? "100%" : "300px",
   };
 
   const headingStyle = {
-    fontSize: "20px",
+    fontSize: isMobile ? "18px" : isTablet ? "19px" : "20px",
     fontWeight: "bold",
     color: "#333",
-    marginBottom: "15px",
+    marginBottom: isMobile ? "10px" : "15px",
   };
 
   const priceStyle = {
-    fontSize: "24px",
+    fontSize: isMobile ? "20px" : "24px",
     fontWeight: "bold",
     color: "#e47911",
-    marginBottom: "20px",
+    marginBottom: isMobile ? "15px" : "20px",
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "center",
   };
 
   const strikeThroughStyle = {
     textDecoration: "line-through",
     color: "#888",
     marginRight: "10px",
+    fontSize: isMobile ? "16px" : "20px",
   };
 
   const descriptionStyle = {
-    fontSize: "16px",
+    fontSize: isMobile ? "14px" : "16px",
     lineHeight: "1.6",
     color: "#555",
     marginBottom: "20px",
-    padding: "15px",
+    padding: isMobile ? "10px" : "15px",
     border: "1px solid #ddd",
     borderRadius: "8px",
     backgroundColor: "#f9f9f9",
@@ -446,12 +392,12 @@ const ProductDetails = () => {
   const quantitySelectorStyle = {
     display: "flex",
     alignItems: "center",
-    marginBottom: "20px",
+    marginBottom: isMobile ? "15px" : "20px",
   };
 
   const buttonStyle = {
-    padding: "10px 20px",
-    fontSize: "16px",
+    padding: isMobile ? "8px 16px" : "10px 20px",
+    fontSize: isMobile ? "14px" : "16px",
     cursor: "pointer",
     backgroundColor: "red", // Complementary blue for wishlist
     color: isInWishlist ? "#ffffff" : "#111111",
@@ -470,25 +416,47 @@ const ProductDetails = () => {
   };
 
   const inputStyle = {
-    width: "50px",
+    width: isMobile ? "40px" : "50px",
+    height: isMobile ? "36px" : "40px",
     textAlign: "center",
     margin: "0 10px",
     padding: "5px",
     border: "1px solid #ddd",
     borderRadius: "4px",
+    fontSize: isMobile ? "16px" : "14px", // Larger on mobile for better touch
   };
 
   const tableStyle = {
     width: "100%",
     borderCollapse: "collapse",
     marginTop: "20px",
+    fontSize: isMobile ? "13px" : "14px",
   };
 
   const thTdStyle = {
     border: "1px solid #ddd",
-    padding: "4px",
+    padding: isMobile ? "3px" : "4px",
     textAlign: "left",
-    fontSize: "14px",
+    fontSize: isMobile ? "12px" : "14px",
+  };
+  
+  // Mobile-specific card display for Products For You
+  const responsiveCardStyle = {
+    position: "relative",
+    borderRadius: "8px",
+    overflow: "hidden",
+    boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+    height: "100%",
+    transition: "transform 0.2s ease-in-out",
+  };
+  
+  const totalPriceAreaStyle = {
+    display: "flex",
+    flexDirection: isMobile ? "column" : "row",
+    alignItems: isMobile ? "flex-start" : "center",
+    justifyContent: isMobile ? "flex-start" : "space-between",
+    gap: isMobile ? "10px" : "0",
+    marginBottom: "15px",
   };
 
   if (!product || Object.keys(product).length === 0) {
@@ -509,13 +477,18 @@ const ProductDetails = () => {
             <OptimizedImage
               src={product.photos}
               alt={product.name}
-              style={{ borderRadius: "8px" }}
-              width={500}
-              height={500}
-              objectFit="contain" // Changed from "cover" to "contain"
-              backgroundColor="#ffffff" // Explicitly set white background
-              quality={85}
-              loading="eager" // Main product image should load eagerly
+              style={{ 
+                borderRadius: "8px",
+                width: "100%",
+                height: "auto",
+                maxHeight: isMobile ? "300px" : "500px"
+              }}
+              width={isMobile ? 300 : 500}
+              height={isMobile ? 300 : 500}
+              objectFit="contain"
+              backgroundColor="#ffffff"
+              quality={isMobile ? 75 : 85}
+              loading="eager"
             />
           </div>
 
@@ -524,19 +497,37 @@ const ProductDetails = () => {
             <h1 style={headingStyle}>{product.name}</h1>
             <div style={priceStyle}>
               <span style={strikeThroughStyle}>₹{product.mrp}</span>
-              <span style={{ color: "red" }}>₹{product.perPiecePrice}</span>
+              <span style={{ color: "red", fontSize: isMobile ? "18px" : "22px" }}>₹{product.perPiecePrice}</span>
             </div>
-            <p style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span>Total Price: ₹{totalPrice.toFixed(2)}</span>
+            <div style={totalPriceAreaStyle}>
+              <span style={{ 
+                fontSize: isMobile ? "16px" : "18px",
+                fontWeight: "500" 
+              }}>Total Price: ₹{totalPrice.toFixed(2)}</span>
               <div style={quantitySelectorStyle}>
-                <button onClick={() => handleQuantityChange(false)} style={buttonStyle}>
-                  -
+                <button 
+                  onClick={() => handleQuantityChange(false)} 
+                  style={{
+                    ...buttonStyle,
+                    minWidth: isMobile ? "36px" : "40px",
+                    height: isMobile ? "36px" : "40px",
+                    padding: "0",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}
+                >
+                  <span style={{ fontSize: isMobile ? "18px" : "20px" }}>-</span>
                 </button>
                 <input
                   type="number"
                   value={displayQuantity}
                   readOnly
-                  style={{ ...inputStyle, width: `${Math.max(displayQuantity.toString().length, 4) * 20}px` }}
+                  style={{ 
+                    ...inputStyle, 
+                    width: `${Math.max(displayQuantity.toString().length, 2) * (isMobile ? 16 : 14)}px`,
+                    minWidth: isMobile ? "40px" : "50px" 
+                  }}
                 />
                 <button
                   onClick={() => {
@@ -546,170 +537,111 @@ const ProductDetails = () => {
                       handleQuantityChange(true);
                     }
                   }}
-                  style={buttonStyle}
-                  disabled={isAddingToCartRef.current} // Disable button while adding to cart
-                >
-                  +
-                </button>
-              </div>
-            </p>
-
-            {/* Wishlist Button */}
-            {/* <button
-              onClick={toggleWishlist}
-              style={{
-                ...buttonStyle,
-                backgroundColor: isInWishlist ? "#1157e4" : "red",
-                color: "#ffffff",
-                marginTop: "10px",
-                width: "100%",
-              }}
-            >
-              {isInWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
-            </button> */}
-            {/* {!isPincodeAvailable && (
-              <div style={{ textAlign: "center", marginTop: "10px" }}>
-                <p
                   style={{
-                    color: "red",
-                    fontSize: "16px",
-                    marginBottom: "10px",
-                  }}
-                >
-                  Service is not available in your area or pincode.
-                </p>
-                <a
-                  href="https://wa.me/918850832942"
-                  target="_blank"
-                  style={{
+                    ...buttonStyle,
+                    minWidth: isMobile ? "36px" : "40px",
+                    height: isMobile ? "36px" : "40px",
+                    padding: "0",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    textDecoration: "none",
+                    justifyContent: "center"
                   }}
+                  disabled={isAddingToCartRef.current}
                 >
-                  <i
-                    className="fab fa-whatsapp"
-                    style={{
-                      fontSize: "30px",
-                      marginRight: "8px",
-                      color: "#25D366",
-                    }}
-                  ></i>
-                  <span style={{ color: "#007bff", fontSize: "16px" }}>
-                    Contact Support via WhatsApp
-                  </span>
-                </a>
+                  <span style={{ fontSize: isMobile ? "18px" : "20px" }}>+</span>
+                </button>
               </div>
-            )} */}
+            </div>
 
-            <h3
-              style={{ ...headingStyle, fontSize: "18px", marginTop: "20px" }}
-            >
+            <h3 style={{ ...headingStyle, fontSize: isMobile ? "16px" : "18px", marginTop: "20px" }}>
               Bulk Pricing
             </h3>
+            
+            {/* Responsive Table for Bulk Pricing */}
             {product.bulkProducts && product.bulkProducts.length > 0 ? (
-              <table style={tableStyle}>
-                <thead>
-                  <tr>
-                    <th style={thTdStyle}>Min Qty</th>
-                    <th style={thTdStyle}>Max Qty</th>
-                    <th style={thTdStyle}>Price/set</th>
-                    <th style={thTdStyle}>Total Price</th>
-                    <th style={thTdStyle}>Select</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {product.bulkProducts.map((bulk, index) => {
-                    if (!bulk || !bulk.minimum || !bulk.selling_price_set) {
-                      return null;
-                    }
+              <div style={{ overflowX: isMobile ? "auto" : "visible" }}>
+                <table style={tableStyle}>
+                  <thead>
+                    <tr>
+                      <th style={thTdStyle}>Min Qty</th>
+                      <th style={thTdStyle}>Max Qty</th>
+                      <th style={thTdStyle}>Price/set</th>
+                      <th style={thTdStyle}>Total Price</th>
+                      <th style={thTdStyle}>Select</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {product.bulkProducts.map((bulk, index) => {
+                      if (!bulk || !bulk.minimum || !bulk.selling_price_set) {
+                        return null;
+                      }
 
-                    const minQty = bulk.minimum * unitSet;
-                    const maxQty = bulk.maximum
-                      ? bulk.maximum * unitSet
-                      : "No limit";
+                      const minQty = bulk.minimum * unitSet;
+                      const maxQty = bulk.maximum
+                        ? bulk.maximum * unitSet
+                        : "No limit";
 
-                    // Automatic selection logic
-                    const autoSelectCondition =
-                      selectedBulk && selectedBulk._id === bulk._id;
+                      const autoSelectCondition =
+                        selectedBulk && selectedBulk._id === bulk._id;
 
-                    return (
-                      <tr
-                        key={index}
-                        style={{
-                          backgroundColor: autoSelectCondition
-                            ? "#e6f7ff"
-                            : "transparent",
-                        }}
-                      >
-                        <td style={thTdStyle}>{minQty}</td>
-                        <td style={thTdStyle}>{maxQty}</td>
-                        <td style={thTdStyle}>
-                          ₹{parseFloat(bulk.selling_price_set).toFixed(2)}
-                        </td>
-                        <td style={thTdStyle}>
-                          {autoSelectCondition
-                            ? `₹${totalPrice.toFixed(2)}`
-                            : "-"}
-                        </td>
-                        <td style={thTdStyle}>
-                          <input
-                            type="checkbox"
-                            checked={autoSelectCondition}
-                            readOnly
-                            disabled
-                            style={{
-                              width: "20px",
-                              height: "20px",
-                              backgroundColor: autoSelectCondition
-                                ? "#000000"
-                                : "#333333", // Black background when selected
-                              border: "2px solid #000000", // Dark black border
-                              cursor: "not-allowed", // Indicating it's disabled
-                              accentColor: "#ffffff", // White checkmark when selected
-                            }}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                      return (
+                        <tr
+                          key={index}
+                          style={{
+                            backgroundColor: autoSelectCondition
+                              ? "#e6f7ff"
+                              : "transparent",
+                          }}
+                        >
+                          <td style={thTdStyle}>{minQty}</td>
+                          <td style={thTdStyle}>{maxQty}</td>
+                          <td style={thTdStyle}>
+                            ₹{parseFloat(bulk.selling_price_set).toFixed(2)}
+                          </td>
+                          <td style={thTdStyle}>
+                            {autoSelectCondition
+                              ? `₹${totalPrice.toFixed(2)}`
+                              : "-"}
+                          </td>
+                          <td style={{...thTdStyle, textAlign: "center"}}>
+                            <input
+                              type="checkbox"
+                              checked={autoSelectCondition}
+                              readOnly
+                              disabled
+                              style={{
+                                width: isMobile ? "16px" : "20px",
+                                height: isMobile ? "16px" : "20px",
+                                backgroundColor: autoSelectCondition
+                                  ? "#000000"
+                                  : "#333333",
+                                border: "2px solid #000000",
+                                cursor: "not-allowed",
+                                accentColor: "#ffffff",
+                              }}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             ) : (
-              <p>No bulk pricing available for this product.</p>
+              <p style={{ fontSize: isMobile ? "14px" : "16px" }}>No bulk pricing available for this product.</p>
             )}
-            {
-              //  showQuantitySelector ?
-              //  (
-              //   <button
-              //     onClick={addToCart}
-              //     disabled={!isPincodeAvailable}
-              //     style={{
-              //       ...addToCartButtonStyle,
-              //       backgroundColor: isPincodeAvailable ? '#ffa41c' : '#ccc',
-              //       cursor: isPincodeAvailable ? 'pointer' : 'not-allowed',
-              //     }}
-              //   >
-              //     ADD TO CART
-              //   </button>
-              // )
-              // :
-              // (
-              // )
-            }
 
-            <h3
-              style={{ ...headingStyle, fontSize: "15px", marginTop: "20px" }}
-            >
+            <h3 style={{ ...headingStyle, fontSize: isMobile ? "16px" : "18px", marginTop: "20px" }}>
               Description
             </h3>
 
-            <p style={{ fontSize: "1wpx", marginTop: "0px" }}>
+            <p style={{ fontSize: isMobile ? "14px" : "16px", marginTop: "0px" }}>
               {product.description}
             </p>
           </div>
         </div>
+        
+        {/* Login Prompt Modal - Made Responsive */}
         {showLoginPrompt && (
           <div style={{
             position: 'fixed',
@@ -717,59 +649,71 @@ const ProductDetails = () => {
             left: '50%',
             transform: 'translate(-50%, -50%)',
             backgroundColor: 'white',
-            padding: '20px',
+            padding: isMobile ? '15px' : '20px',
             borderRadius: '8px',
             boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
             zIndex: 1000,
             maxWidth: '90%',
-            width: '300px',
+            width: isMobile ? '90%' : '300px',
             textAlign: 'center'
           }}>
-            <h3>Please Login</h3>
-            <p>You need to login to add items to cart</p>
-            <button 
-              onClick={() => navigate('/login')}
-              style={{
-                ...buttonStyle,
-                backgroundColor: '#007bff',
-                margin: '10px'
-              }}
-            >
-              Go to Login
-            </button>
-            <button 
-              onClick={() => setShowLoginPrompt(false)}
-              style={{
-                ...buttonStyle,
-                backgroundColor: '#6c757d'
-              }}
-            >
-              Close
-            </button>
+            <h3 style={{ fontSize: isMobile ? '18px' : '20px' }}>Please Login</h3>
+            <p style={{ fontSize: isMobile ? '14px' : '16px' }}>You need to login to add items to cart</p>
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: '10px',
+              justifyContent: 'center'
+            }}>
+              <button 
+                onClick={() => navigate('/login')}
+                style={{
+                  ...buttonStyle,
+                  backgroundColor: '#007bff',
+                  padding: isMobile ? '10px' : '10px 20px',
+                  margin: isMobile ? '5px 0' : '10px',
+                  width: isMobile ? '100%' : 'auto'
+                }}
+              >
+                Go to Login
+              </button>
+              <button 
+                onClick={() => setShowLoginPrompt(false)}
+                style={{
+                  ...buttonStyle,
+                  backgroundColor: '#6c757d',
+                  padding: isMobile ? '10px' : '10px 20px',
+                  width: isMobile ? '100%' : 'auto'
+                }}
+              >
+                Close
+              </button>
+            </div>
           </div>
         )}
       </div>
-      <div className="container mt-5">
-        <h2 className="text-center mb-4">Products For You</h2>
-        <div className="row">
+      
+      {/* Products For You Section - Made Responsive */}
+      <div className="container mt-5" style={{ 
+        padding: isMobile ? '0 10px' : '0 15px'
+      }}>
+        <h2 className="text-center mb-4" style={{ 
+          fontSize: isMobile ? '1.5rem' : '2rem' 
+        }}>
+          Products For You
+        </h2>
+        <div className="row g-2">
           {productsForYou.map((item) => (
             <div
               key={item.productId?._id}
-              className="col-lg-4 col-md-4 col-sm-6 col-6 mb-3"
+              className={isMobile ? "col-6 mb-2" : "col-lg-4 col-md-4 col-sm-6 mb-3"}
             >
-              <div className="card product-card h-100" style={{ 
-                position: "relative",
-                borderRadius: "8px",
-                overflow: "hidden",
-                boxShadow: "0 2px 5px rgba(0,0,0,0.1)"
-              }}>
+              <div className="card product-card h-100" style={responsiveCardStyle}>
                 <div
                   style={{ cursor: "pointer" }}
-                  onClick={() =>
-                    (window.location.href = `/product/${item.productId.slug}`)
-                  }
+                  onClick={() => navigate(`/product/${item.productId.slug}`)}
                 >
-                  {/* Image container with fixed aspect ratio - same as ProductCard */}
+                  {/* Image container with fixed aspect ratio */}
                   <div style={{ 
                     position: "relative",
                     paddingTop: "75%", // 4:3 aspect ratio
@@ -780,11 +724,11 @@ const ProductDetails = () => {
                       src={item.productId.photos || '/placeholder-image.jpg'}
                       alt={item.productId.name}
                       className="card-img-top product-image"
-                      width={200}
-                      height={200}
+                      width={isMobile ? 150 : 200}
+                      height={isMobile ? 150 : 200}
                       objectFit="contain"
-                      backgroundColor="#ffffff" // Explicitly set white background
-                      quality={75}
+                      backgroundColor="#ffffff"
+                      quality={isMobile ? 70 : 75}
                       loading="lazy"
                       style={{
                         position: "absolute",
@@ -792,25 +736,25 @@ const ProductDetails = () => {
                         left: "0",
                         width: "100%",
                         height: "100%",
-                        padding: "8px",
+                        padding: isMobile ? "5px" : "8px",
                       }}
                     />
                   </div>
                   
-                  <div className="p-3 d-flex flex-column h-100">
-                    {/* Product Name with ellipsis for overflow */}
+                  <div className="p-2 d-flex flex-column h-100">
+                    {/* Product Name with ellipsis */}
                     <div style={{
-                      fontSize: "0.9rem",
+                      fontSize: isMobile ? "0.8rem" : "0.9rem",
                       fontWeight: "600",
                       color: "#333",
-                      marginBottom: "10px",
+                      marginBottom: isMobile ? "6px" : "10px",
                       display: "-webkit-box",
                       WebkitLineClamp: 2,
                       WebkitBoxOrient: "vertical",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       lineHeight: "1.4",
-                      height: "2.8em" // Fixed height for title (2 lines)
+                      height: isMobile ? "2.4em" : "2.8em"
                     }}>
                       {item.productId.name}
                     </div>
@@ -818,7 +762,7 @@ const ProductDetails = () => {
                     {/* Price Section */}
                     <div className="d-flex flex-column h-100">
                       <h5 style={{
-                        fontSize: "1rem",
+                        fontSize: isMobile ? "0.9rem" : "1rem",
                         fontWeight: "700",
                         color: "#333",
                         margin: 0
@@ -827,10 +771,10 @@ const ProductDetails = () => {
                       </h5>
                       {item.productId.mrp && (
                         <h6 style={{
-                          fontSize: "0.8rem",
+                          fontSize: isMobile ? "0.7rem" : "0.8rem",
                           textDecoration: "line-through",
                           color: "red",
-                          margin: "4px 0 0 0"
+                          margin: "2px 0 0 0"
                         }}>
                           ₹{item.productId.mrp}
                         </h6>

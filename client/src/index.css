@@ -64,9 +64,9 @@
 .footer {
   color: white;
   padding: 25px;
-  background: #000000;
-  background: -webkit-linear-gradient(to right, #434343, #000000);
-  background: linear-gradient(to right, #434343, #000000);
+  background: #d32f2f;
+  background: -webkit-linear-gradient(to right, #d32f2f, #d32f2f);
+  background: linear-gradient(to right, #d32f2f, #d32f2f);
 }
 
 .footer a {

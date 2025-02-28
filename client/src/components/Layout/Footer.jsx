@@ -1,21 +1,24 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { FaFacebook, FaInstagram, FaLinkedin, FaYoutube } from "react-icons/fa";
-
-
 import { NavLink } from "react-router-dom"; // Changed from Link to NavLink
-
-
 
 const Footer = () => {
   // Style for active links
   const activeStyle = {
-    color: "#ff4444",
+    color: "#ffffff", // Changed to white for better contrast with red background
     fontWeight: "bold"
+  };
+  
+  // Footer container style with red background
+  const footerStyle = {
+    backgroundColor: "#FF0000", // Red background
+    padding: "20px 0",
+    color: "white"
   };
 
   return (
-    <div className="footer">
+    <div className="footer" style={footerStyle}>
       <h1 className="text-center">All Right Reserved &copy; Smitox</h1>
       <p className="text-center mt-3">
         <NavLink 
