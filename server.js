@@ -19,8 +19,23 @@ import usersListsRoutes from "./routes/cartRoutes.js";
 import pincodeRoutes from "./routes/pincodeRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import minimumOrderRoutes from "./routes/miniMumRoutes.js";
-import imageRoutes from "./routes/imageRoutes.js"; // Add image routes
-// use routes
+
+// Import image routes with error handling
+let imageRoutes;
+try {
+  imageRoutes = await import("./routes/imageRoutes.js");
+} catch (error) {
+  console.warn("Image routes module not available, skipping...");
+  // Create a dummy router for imageRoutes to avoid errors
+  const router = express.Router();
+  router.use((req, res) => {
+    res.status(501).json({ 
+      success: false, 
+      message: "Image optimization service not available" 
+    });
+  });
+  imageRoutes = { default: router };
+}
 
 // Configure environment variables
 dotenv.config();
@@ -51,7 +66,7 @@ app.use("/api/v1/category", categoryRoutes);
 app.use("/api/v1/product", productRoutes);
 app.use("/api/v1/subcategory", subCategoryRoutes);
 app.use("/api/v1/bannerManagement", bannerRoutes);
-app.use("/api/v1/image", imageRoutes); // Add image routes
+app.use("/api/v1/image", imageRoutes.default); // Use the image routes with fallback
 app.use('/api/v1/minimumOrder', minimumOrderRoutes);
 app.use("/api/v1/banner-products", bannerRoutes);
 app.use("/api/v1/productForYou", productForYou);

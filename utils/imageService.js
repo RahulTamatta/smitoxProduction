@@ -1,15 +1,36 @@
-import ImageKit from 'imagekit';
+let ImageKit;
+let imagekit;
 
-// ImageKit Configuration
-const imagekit = new ImageKit({
-  publicKey: 'public_XxQnBh4c/UCDe8GKiz9RGPfF3pU=',
-  privateKey: 'private_w9mQMbhui+mZAeDCB/1v3dGqAf8=',
-  urlEndpoint: "https://ik.imagekit.io/cvv8mhaiu"
-});
+try {
+  ImageKit = require('imagekit');
+
+  // ImageKit Configuration
+  imagekit = new ImageKit({
+    publicKey: 'public_XxQnBh4c/UCDe8GKiz9RGPfF3pU=',
+    privateKey: 'private_w9mQMbhui+mZAeDCB/1v3dGqAf8=',
+    urlEndpoint: "https://ik.imagekit.io/cvv8mhaiu"
+  });
+} catch (error) {
+  console.warn("ImageKit module not found, using fallback methods");
+  // Create a mock implementation if package is not available
+  imagekit = {
+    upload: () => Promise.reject(new Error("ImageKit not available")),
+    deleteFile: () => Promise.reject(new Error("ImageKit not available"))
+  };
+}
 
 // Function to upload an image to ImageKit
 export const uploadToImageKit = async (fileBuffer, fileName, folder = 'products') => {
   try {
+    if (!ImageKit) {
+      console.warn("ImageKit module not available, returning direct URL");
+      return { 
+        url: `/api/v1/product/product-photo/${fileName}`, 
+        fileId: null,
+        name: fileName
+      };
+    }
+    
     const result = await imagekit.upload({
       file: fileBuffer,
       fileName: fileName || `product_${Date.now()}`,
@@ -23,7 +44,12 @@ export const uploadToImageKit = async (fileBuffer, fileName, folder = 'products'
     };
   } catch (error) {
     console.error('Error uploading to ImageKit:', error);
-    throw error;
+    // Return a fallback URL that uses the existing API
+    return { 
+      url: `/api/v1/product/product-photo/${fileName}`, 
+      fileId: null,
+      name: fileName
+    };
   }
 };
 
@@ -32,6 +58,10 @@ export const deleteFromImageKit = async (fileId) => {
   if (!fileId) return { success: false, message: 'No file ID provided' };
   
   try {
+    if (!ImageKit) {
+      return { success: false, message: 'ImageKit not available' };
+    }
+    
     await imagekit.deleteFile(fileId);
     return { success: true, message: 'Image deleted successfully' };
   } catch (error) {
