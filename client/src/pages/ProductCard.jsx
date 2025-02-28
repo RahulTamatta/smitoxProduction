@@ -140,6 +140,7 @@ const ProductCard = ({ product, onClick }) => {
             objectFit="contain" // Changed from "cover" to "contain"
             quality={75}
             loading="lazy"
+            backgroundColor="#ffffff" // Explicitly set white background
             style={{
               position: "absolute",
               top: "0",

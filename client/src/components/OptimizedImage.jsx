@@ -43,6 +43,7 @@ const OptimizedImage = ({
   onLoad = () => {},
   onError = () => {},
   placeholder = '/placeholder-image.jpg',
+  backgroundColor = '#ffffff', // Add a new prop with default white background
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [imgSrc, setImgSrc] = useState(null);
@@ -116,7 +117,7 @@ const OptimizedImage = ({
         position: 'relative',
         width: width ? `${width}px` : '100%',
         height: height ? `${height}px` : 'auto',
-        backgroundColor: '#f0f0f0',
+        backgroundColor: backgroundColor, // Use the backgroundColor prop instead of hardcoded #f0f0f0
         overflow: 'hidden',
         ...style // Allow style prop to override default styles
       }}

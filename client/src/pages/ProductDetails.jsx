@@ -75,7 +75,7 @@ const ProductDetails = () => {
       }
     } catch (error) {
       console.error(error);
-      //toast.error("Error fetching product details");
+      ////toast.success(error("Error fetching product details");
     }
   };
 
@@ -89,14 +89,14 @@ const ProductDetails = () => {
       }
     } catch (error) {
       // console.error("Error fetching products for you:", error);
-      // //toast.error("Failed to fetch products for you");
+      // ////toast.success(error("Failed to fetch products for you");
     }
   };
 
   const addToCart = async () => {
     if (!auth.user) {
       setShowLoginPrompt(true);
-      toast.error("Please log in to add items to cart");
+      //toast.success(error("Please log in to add items to cart");
       navigate('/login');
       return;
     }
@@ -121,11 +121,11 @@ const ProductDetails = () => {
         setSelectedBulk(applicableBulk);
         calculateTotalPrice(applicableBulk, initialQuantity);
         setShowQuantitySelector(true);
-        toast.success("Item added to cart");
+        //toast.success(success("Item added to cart");
       }
     } catch (error) {
       console.error(error);
-      //toast.error("Error adding item to cart");
+      ////toast.success(error("Error adding item to cart");
     } finally {
       isAddingToCartRef.current = false; // Unlock the function
     }
@@ -152,7 +152,7 @@ const ProductDetails = () => {
       calculateTotalPrice(applicableBulk, updatedQuantity);
     } catch (error) {
       console.error("Error updating quantity:", error);
-      //toast.error("Failed to update quantity");
+      ////toast.success(error("Failed to update quantity");
     }
   };
 
@@ -243,16 +243,16 @@ const ProductDetails = () => {
         const availablePincodes = data.pincodes.map((pin) => pin.code);
         if (availablePincodes.includes(pincode.toString())) {
           // setIsPincodeAvailable(true);
-          toast.success("Delivery available for your pincode");
+          //toast.success(success("Delivery available for your pincode");
         } else {
           // setIsPincodeAvailable(false);
-          ////toast.error("Delivery not available for your pincode");
+          //////toast.success(error("Delivery not available for your pincode");
         }
       }
     } catch (error) {
       console.log(error);
       // setIsPincodeAvailable(false);
-      ////toast.error("Error checking pincode");
+      //////toast.success(error("Error checking pincode");
     }
   };
 
@@ -260,7 +260,7 @@ const ProductDetails = () => {
 
   const updateQuantity = async (quantity) => {
     if (!auth?.user?._id) {
-      ////toast.error("Please log in to update quantity");
+      //////toast.success(error("Please log in to update quantity");
       return;
     }
 
@@ -277,11 +277,11 @@ const ProductDetails = () => {
       );
 
       if (response.status === 200) {
-        //toast.success("Quantity updated successfully");
+        ////toast.success(success("Quantity updated successfully");
       }
     } catch (error) {
       console.error("Quantity update error:", error);
-      ////toast.error("Failed to update quantity");
+      //////toast.success(error("Failed to update quantity");
     }
   };
 
@@ -300,15 +300,15 @@ const ProductDetails = () => {
       );
 
       if (response.status === 200) {
-        toast.success("Item removed from cart");
+        //toast.success(success("Item removed from cart");
       } else {
         const responseBody = await response.text();
         console.error("Error removing item:", responseBody);
-        ////toast.error("Failed to remove item from cart");
+        //////toast.success(error("Failed to remove item from cart");
       }
     } catch (error) {
       console.error("Remove from cart failed:", error.message);
-      ////toast.error("Failed to remove item from cart");
+      //////toast.success(error("Failed to remove item from cart");
     }
   };
 
@@ -343,7 +343,7 @@ const ProductDetails = () => {
   // Copy the styles and return statement from your original code
   const toggleWishlist = async () => {
     if (!auth.user) {
-      ////toast.error("Please log in to manage your wishlist");
+      //////toast.success(error("Please log in to manage your wishlist");
       return;
     }
 
@@ -353,17 +353,17 @@ const ProductDetails = () => {
           `/api/v1/carts/users/${auth.user._id}/wishlist/${product._id}`
         );
         setIsInWishlist(false);
-        toast.success("Removed from wishlist");
+        //toast.success(success("Removed from wishlist");
       } else {
         await axios.post(`/api/v1/carts/users/${auth.user._id}/wishlist`, {
           productId: product._id,
         });
         setIsInWishlist(true);
-        toast.success("Added to wishlist");
+        //toast.success(success("Added to wishlist");
       }
     } catch (error) {
       console.error("Error toggling wishlist:", error);
-      ////toast.error("Error updating wishlist");
+      //////toast.success(error("Error updating wishlist");
     }
   };
 
@@ -512,7 +512,8 @@ const ProductDetails = () => {
               style={{ borderRadius: "8px" }}
               width={500}
               height={500}
-              objectFit="cover"
+              objectFit="contain" // Changed from "cover" to "contain"
+              backgroundColor="#ffffff" // Explicitly set white background
               quality={85}
               loading="eager" // Main product image should load eagerly
             />
@@ -756,33 +757,84 @@ const ProductDetails = () => {
               key={item.productId?._id}
               className="col-lg-4 col-md-4 col-sm-6 col-6 mb-3"
             >
-              <div className="card product-card h-100" style={{ position: "relative" }}>
+              <div className="card product-card h-100" style={{ 
+                position: "relative",
+                borderRadius: "8px",
+                overflow: "hidden",
+                boxShadow: "0 2px 5px rgba(0,0,0,0.1)"
+              }}>
                 <div
                   style={{ cursor: "pointer" }}
                   onClick={() =>
                     (window.location.href = `/product/${item.productId.slug}`)
-                  } // Full reload
+                  }
                 >
-                  <OptimizedImage
-                    src={item.productId.photos}
-                    alt={item.productId.name}
-                    className="card-img-top product-image img-fluid"
-                    width={200}
-                    height={200}
-                    objectFit="contain"
-                  />
+                  {/* Image container with fixed aspect ratio - same as ProductCard */}
+                  <div style={{ 
+                    position: "relative",
+                    paddingTop: "75%", // 4:3 aspect ratio
+                    width: "100%",
+                    overflow: "hidden"
+                  }}>
+                    <OptimizedImage
+                      src={item.productId.photos || '/placeholder-image.jpg'}
+                      alt={item.productId.name}
+                      className="card-img-top product-image"
+                      width={200}
+                      height={200}
+                      objectFit="contain"
+                      backgroundColor="#ffffff" // Explicitly set white background
+                      quality={75}
+                      loading="lazy"
+                      style={{
+                        position: "absolute",
+                        top: "0",
+                        left: "0",
+                        width: "100%",
+                        height: "100%",
+                        padding: "8px",
+                      }}
+                    />
+                  </div>
+                  
                   <div className="p-3 d-flex flex-column h-100">
-                    {/* Product Name */}
-                    <div className="text-sm font-semibold text-gray-900 dark:text-white mb-2 text-nowrap overflow-hidden text-ellipsis">
-                      {item.productId.name.slice(0, 15)}
-                      {item.productId.name.length > 15 && "..."}
+                    {/* Product Name with ellipsis for overflow */}
+                    <div style={{
+                      fontSize: "0.9rem",
+                      fontWeight: "600",
+                      color: "#333",
+                      marginBottom: "10px",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      lineHeight: "1.4",
+                      height: "2.8em" // Fixed height for title (2 lines)
+                    }}>
+                      {item.productId.name}
                     </div>
+                    
                     {/* Price Section */}
                     <div className="d-flex flex-column h-100">
-                      <h5 className="text-base  text-red dark:text-red">
-                      ₹ {item.productId.perPiecePrice}
+                      <h5 style={{
+                        fontSize: "1rem",
+                        fontWeight: "700",
+                        color: "#333",
+                        margin: 0
+                      }}>
+                        ₹{item.productId.perPiecePrice}
                       </h5>
-
+                      {item.productId.mrp && (
+                        <h6 style={{
+                          fontSize: "0.8rem",
+                          textDecoration: "line-through",
+                          color: "red",
+                          margin: "4px 0 0 0"
+                        }}>
+                          ₹{item.productId.mrp}
+                        </h6>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -790,9 +842,7 @@ const ProductDetails = () => {
             </div>
           ))}
         </div>
-
       </div>
-
     </Layout>
   );
 };
