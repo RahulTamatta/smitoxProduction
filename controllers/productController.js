@@ -304,6 +304,7 @@ export const createProductController = async (req, res) => {
   }
 };
 
+
 export const updateProductController = async (req, res) => {
   try {
     const {
@@ -338,31 +339,29 @@ export const updateProductController = async (req, res) => {
       fk_tags,
       youtubeUrl,
       tag,
-      photos,
+      photos, // fallback if no image uploaded via middleware
       multipleimages,
       custom_order,
     } = req.fields;
 
     // Handle files from request
-    const { photo, images } = req.files;
+    const { photo, images } = req.files || {};
 
-    // Get original product data first
+    // Find the original product
     const product = await productModel.findById(req.params.pid);
     if (!product) {
       return res.status(404).send({ error: "Product not found" });
     }
 
-    // Get original custom_order before updating
+    // Preserve original custom order and assign a new one if needed
     const originalOrder = product.custom_order;
-
-    // Pass product ID to service for exclusion
     const finalCustomOrder = await CustomOrderService.assignCustomOrder(
       custom_order,
       originalOrder,
-      req.params.pid // Pass product ID explicitly
+      req.params.pid
     );
 
-    // Convert numeric fields and prepare updated fields
+    // Prepare updated fields (converting numeric/JSON values as needed)
     const updatedFields = {
       name,
       description,
@@ -395,15 +394,20 @@ export const updateProductController = async (req, res) => {
       sku,
       youtubeUrl: youtubeUrl || "",
       tag: Array.isArray(tag) ? tag : tag ? [tag] : [],
-      photos: photos || null,
+      // Use existing photo if none provided
+      photos: photos || product.photos,
       custom_order: finalCustomOrder,
-      multipleimages: Array.isArray(multipleimages) ? multipleimages : multipleimages ? [multipleimages] : [],
+      multipleimages: Array.isArray(multipleimages)
+        ? multipleimages
+        : multipleimages
+        ? [multipleimages]
+        : [],
     };
 
-    // Handle FK Tags
+    // Handle FK tags
     if (fk_tags) {
       let parsedFkTags = [];
-      if (typeof fk_tags === 'string') {
+      if (typeof fk_tags === "string") {
         try {
           parsedFkTags = JSON.parse(fk_tags);
         } catch (error) {
@@ -413,18 +417,13 @@ export const updateProductController = async (req, res) => {
       } else if (Array.isArray(fk_tags)) {
         parsedFkTags = fk_tags;
       }
-
-      if (!Array.isArray(parsedFkTags)) {
-        return res.status(400).send({ error: "fk_tags must be an array" });
-      }
-
       updatedFields.fk_tags = parsedFkTags;
     }
 
-    // Handle bulkProducts
+    // Handle bulkProducts parsing
     if (bulkProducts) {
       let formattedBulkProducts = null;
-      if (typeof bulkProducts === 'string') {
+      if (typeof bulkProducts === "string") {
         try {
           formattedBulkProducts = JSON.parse(bulkProducts);
         } catch (error) {
@@ -432,11 +431,6 @@ export const updateProductController = async (req, res) => {
           return res.status(400).send({ error: "Invalid bulkProducts data" });
         }
       }
-
-      if (formattedBulkProducts && !Array.isArray(formattedBulkProducts)) {
-        return res.status(400).send({ error: "bulkProducts must be an array" });
-      }
-
       if (Array.isArray(formattedBulkProducts)) {
         formattedBulkProducts = formattedBulkProducts.map((item) => ({
           minimum: parseInt(item.minimum),
@@ -445,27 +439,87 @@ export const updateProductController = async (req, res) => {
           selling_price_set: parseFloat(item.selling_price_set),
         }));
       }
-
       updatedFields.bulkProducts = formattedBulkProducts;
     }
 
-    // Update the product with new fields
-    Object.assign(product, updatedFields);
-
-    // Handle Buffer-based photo if provided
-    if (photo) {
-      product.photo = {
-        data: fs.readFileSync(photo.path),
-        contentType: photo.type
-      };
+    // === Cloud Upload Logic for Primary Photo ===
+    let productPhoto = req.imageUrl || photos || product.photos;
+    if (photo && !req.imageUrl) {
+      try {
+        const photoFile = {
+          name: photo.name || "product-photo.jpg",
+          type: photo.type,
+          size: photo.size,
+          path: photo.path,
+        };
+        const uploadResult = await uploadToImageKit(photoFile, "products");
+        if (uploadResult && uploadResult.url) {
+          productPhoto = uploadResult.url;
+        }
+      } catch (uploadError) {
+        console.error("Error uploading to ImageKit:", uploadError);
+      }
     }
+    updatedFields.photos = productPhoto;
 
-    // Handle Buffer-based multiple images if provided
+    // === Cloud Upload Logic for Multiple Images ===
+    let imageUrls = [];
     if (images) {
       const imageArray = Array.isArray(images) ? images : [images];
-      product.images = imageArray.map(img => ({
+      try {
+        const uploadPromises = imageArray.map(async (img) => {
+          const imgFile = {
+            name: img.name || `product-image-${Date.now()}.jpg`,
+            type: img.type,
+            size: img.size,
+            path: img.path,
+          };
+          const uploadResult = await uploadToImageKit(imgFile, "products/gallery");
+          return uploadResult && uploadResult.url ? uploadResult.url : null;
+        });
+        const results = await Promise.all(uploadPromises);
+        imageUrls = results.filter((url) => url !== null);
+      } catch (uploadError) {
+        console.error("Error uploading multiple images to ImageKit:", uploadError);
+      }
+    }
+    // Parse multipleimages from req.fields if provided
+    let parsedMultipleImages = [];
+    if (multipleimages) {
+      try {
+        parsedMultipleImages =
+          typeof multipleimages === "string"
+            ? JSON.parse(multipleimages)
+            : Array.isArray(multipleimages)
+            ? multipleimages
+            : [multipleimages];
+      } catch (error) {
+        console.warn("Error parsing multiple images:", error);
+        parsedMultipleImages = Array.isArray(multipleimages)
+          ? multipleimages
+          : multipleimages
+          ? [multipleimages]
+          : [];
+      }
+    }
+    const finalMultipleImages = [...parsedMultipleImages, ...imageUrls];
+    updatedFields.multipleimages = finalMultipleImages;
+
+    // Update the product document with the new fields
+    Object.assign(product, updatedFields);
+
+    // Fallback: if cloud upload did not occur, you can use Buffer-based handling
+    if (photo && !productPhoto) {
+      product.photo = {
+        data: fs.readFileSync(photo.path),
+        contentType: photo.type,
+      };
+    }
+    if (images && finalMultipleImages.length === parsedMultipleImages.length) {
+      const imageArray = Array.isArray(images) ? images : [images];
+      product.images = imageArray.map((img) => ({
         data: fs.readFileSync(img.path),
-        contentType: img.type
+        contentType: img.type,
       }));
     }
 
@@ -571,29 +625,27 @@ export const productListController = async (req, res) => {
       ...(stocks === "1" && { stock: { $gt: 0 } }),
     };
 
-    // Modified sorting logic to match getProductController
+    // Sorting logic: primary by custom_order, secondary by createdAt
     const sortQuery = { 
-      custom_order: 1,    // Primary sort by custom order
-      createdAt: -1       // Secondary sort by creation date
+      custom_order: 1,    // Ascending order
+      createdAt: -1       // Descending order
     };
 
-    // Fetch products with database-level sorting
+    // Get total count of products matching the filter
+    const total = await productModel.countDocuments(filterQuery);
+
+    // Fetch products with pagination and sorting
     const products = await productModel
       .find(filterQuery, "name photo photos _id perPiecePrice mrp stock slug custom_order")
       .skip((page - 1) * perPage)
       .limit(perPage)
-      .sort(sortQuery); // Use the defined sort query
-
-    // Remove manual sorting logic and customOrder parameter handling
-    // since sorting is now handled at the database level
+      .sort(sortQuery);
 
     // Process products to attach photo URLs
     const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject();
       if (productObj.photo && productObj.photo.data) {
-        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString(
-          "base64"
-        )}`;
+        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString("base64")}`;
         delete productObj.photo;
       }
       return productObj;
@@ -601,6 +653,7 @@ export const productListController = async (req, res) => {
 
     res.status(200).send({
       success: true,
+      total,
       products: productsWithPhotos,
     });
   } catch (error) {
@@ -612,7 +665,6 @@ export const productListController = async (req, res) => {
     });
   }
 };
-
 // searchProductController
 export const searchProductController = async (req, res) => {
   try {
@@ -734,14 +786,29 @@ export const productCategoryController = async (req, res) => {
       });
     }
 
+    // Pagination: default page 1 and limit 10
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Count total matching products
+    const totalCount = await productModel.countDocuments({
+      category: category._id,
+      stock: { $gt: 0 },
+    });
+
+    // Fetch products with pagination
     const products = await productModel
       .find({
         category: category._id,
-        stock: { $gt: 0 }, // Only products with stock > 0
+        stock: { $gt: 0 },
       })
       .populate("category")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
+    // Process products to include photo URLs if necessary
     const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject();
       if (productObj.photo && productObj.photo.data) {
@@ -757,7 +824,9 @@ export const productCategoryController = async (req, res) => {
       success: true,
       category,
       products: productsWithPhotos,
-      count: products.length,
+      count: totalCount,
+      page,
+      pages: Math.ceil(totalCount / limit),
     });
   } catch (error) {
     console.log(error);
@@ -769,12 +838,13 @@ export const productCategoryController = async (req, res) => {
   }
 };
 
+
 // productSubcategoryController
 export const productSubcategoryController = async (req, res) => {
   try {
     const { subcategoryId } = req.params;
-    const isActiveFilter = req.query.isActive || "1"; // Default to "1" (active)
-    const stocks = req.query.stock || "1"; // Default to "1" (products with stock > 0)
+    const isActiveFilter = req.query.isActive || "1"; // Default: active products
+    const stocks = req.query.stock || "1"; // Default: products with stock > 0
 
     // Validate subcategory ID
     if (!mongoose.Types.ObjectId.isValid(subcategoryId)) {
@@ -796,14 +866,24 @@ export const productSubcategoryController = async (req, res) => {
     // Build the filter query
     const filterQuery = {
       subcategory: subcategoryId,
-      ...(isActiveFilter === "1" && { isActive: "1" }), // Only active products
-      ...(stocks === "1" && { stock: { $gt: 0 } }),    // Only products with stock > 0
+      ...(isActiveFilter === "1" && { isActive: "1" }),
+      ...(stocks === "1" && { stock: { $gt: 0 } }),
     };
 
-    // Fetch products with the filter applied
+    // Pagination: default page 1 and limit 10
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Count total matching products
+    const totalCount = await productModel.countDocuments(filterQuery);
+
+    // Fetch products with the filter applied and pagination
     const products = await productModel
       .find(filterQuery)
-      .sort({ custom_order: 1, createdAt: -1 }) // Sort by custom order and fallback to createdAt
+      .sort({ custom_order: 1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
       .select("name photo photos _id perPiecePrice mrp stock slug custom_order");
 
     // Process products to include photo URLs if necessary
@@ -818,12 +898,14 @@ export const productSubcategoryController = async (req, res) => {
       return productObj;
     });
 
-    // Send response
     res.status(200).send({
       success: true,
       message: "Products fetched successfully",
       subcategory,
       products: productsWithPhotos,
+      count: totalCount,
+      page,
+      pages: Math.ceil(totalCount / limit),
     });
   } catch (error) {
     console.error(error);

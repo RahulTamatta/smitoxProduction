@@ -22,31 +22,31 @@ const CreateCategory = () => {
   const [updatedPhoto, setUpdatedPhoto] = useState(null);
 
   // Upload to Cloudinary function
-  const uploadToCloudinary = async (file) => {
-    console.log('Starting Cloudinary upload for file:', file.name);
+  const uploadToCloudinary = async (file) =>  {
+    console.log('Uploading file to ImageKit:', file.name);
     try {
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', 'smitoxphoto');
-      formData.append('cloud_name', 'djtiblazd');
-
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/djtiblazd/image/upload`,
+      formData.append('image', file); // Use 'image' field name to match middleware
+      
+      const response = await axios.post(
+        "/api/v1/images/upload-single",
+        formData,
         {
-          method: 'POST',
-          body: formData,
+          headers: { 'Content-Type': 'multipart/form-data' }
         }
       );
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`);
+  
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || 'Upload failed');
       }
-
-      const data = await response.json();
-      console.log('Upload successful, URL:', data.secure_url);
-      return data.secure_url;
+      
+      console.log('ImageKit upload successful:', response.data);
+      return {
+        url: response.data.data.url,
+        fileId: response.data.data?.fileId || ""
+      };
     } catch (error) {
-      console.error('Cloudinary upload error:', error);
+      console.error('Error in ImageKit upload:', error);
       throw error;
     }
   };

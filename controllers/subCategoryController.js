@@ -1,7 +1,6 @@
 import subcategoryModel from "../models/subcategoryModel.js";
 import slugify from "slugify";
 
-// Create Subcategory
 // Create Subcategory Controller
 export const createSubcategoryController = async (req, res) => {
   try {
@@ -23,19 +22,24 @@ export const createSubcategoryController = async (req, res) => {
       });
     }
 
-    if (photos && photos.length > 5 * 1024 * 1024) { // 5MB size limit
+    // Validate file size if photos is an object and has a size property
+    if (photos && typeof photos === "object" && photos.size && photos.size > 5 * 1024 * 1024) {
       return res.status(400).send({
         success: false,
         message: "Image size too large. Maximum 5MB allowed.",
       });
     }
+    // If photos is a string, you may also choose to validate its length if needed.
+    // if (photos && typeof photos === "string" && photos.length > SOME_LIMIT) { ... }
 
+    // Build the subcategory data object.
     const subcategoryData = {
       name,
       slug: slugify(name),
       isActive: isActive !== undefined ? isActive : true,
       category: parentCategoryId,
-      photos, // Store the URLs from Cloudinary
+      // If photos is an object with a url property, store the URL; otherwise, use photos as provided.
+      photos: photos && typeof photos === "object" && photos.url ? photos.url : photos,
     };
 
     const subcategory = await new subcategoryModel(subcategoryData).save();
@@ -55,7 +59,6 @@ export const createSubcategoryController = async (req, res) => {
   }
 };
 
-
 // Update Subcategory Controller
 export const updateSubcategoryController = async (req, res) => {
   try {
@@ -74,13 +77,15 @@ export const updateSubcategoryController = async (req, res) => {
     };
 
     if (photos) {
-      if (photos.length > 5 * 1024 * 1024) { // Validate photos size
+      // Validate file size if photos is an object and has a size property
+      if (typeof photos === "object" && photos.size && photos.size > 5 * 1024 * 1024) {
         return res.status(400).send({
           success: false,
           message: "Image size too large. Maximum 5MB allowed.",
         });
       }
-      updateData.photos = photos; // Update photos if provided
+      // Store the URL if photos is an object with a "url" property; otherwise, use as is.
+      updateData.photos = typeof photos === "object" && photos.url ? photos.url : photos;
     }
 
     const subcategory = await subcategoryModel.findByIdAndUpdate(id, updateData, { new: true });
@@ -106,7 +111,6 @@ export const updateSubcategoryController = async (req, res) => {
     });
   }
 };
-
 
 // Get Single Subcategory Controller
 export const getSingleSubcategoryController = async (req, res) => {
@@ -136,8 +140,6 @@ export const getSingleSubcategoryController = async (req, res) => {
   }
 };
 
-
-
 // Delete Subcategory Controller
 export const deleteSubcategoryController = async (req, res) => {
   try {
@@ -157,7 +159,6 @@ export const deleteSubcategoryController = async (req, res) => {
   }
 };
 
-
 // Get All Subcategories Controller with Active Status Filter
 export const getAllSubcategoriesController = async (req, res) => {
   try {
@@ -165,10 +166,11 @@ export const getAllSubcategoriesController = async (req, res) => {
     let query = {};
 
     if (active !== undefined) {
-      query.isActive = active === 'true';
+      query.isActive = active === "true";
     }
 
-    const subcategories = await subcategoryModel.find(query);
+    // Limit the result to 10 subcategories
+    const subcategories = await subcategoryModel.find(query).limit(10);
     res.status(200).send({
       success: true,
       message: "All subcategories retrieved",
@@ -184,65 +186,7 @@ export const getAllSubcategoriesController = async (req, res) => {
   }
 };
 
-
-// export const createSubcategoryController = async (req, res) => {
-//   try {
-//     const { name, parentCategoryId, photo } = req.body;
-//     console.log("request body", req.body);
-
-//     if (!name) {
-//       return res.status(401).send({ message: "Name is required" });
-//     }
-//     if (!parentCategoryId) {
-//       return res.status(401).send({ message: "Category is required" });
-//     }
-
-//     const existingSubcategory = await subcategoryModel.findOne({ name, parentCategoryId });
-//     if (existingSubcategory) {
-//       return res.status(200).send({
-//         success: false,
-//         message: "Subcategory Already Exists",
-//       });
-//     }
-
-//     // Create a new subcategory object with name, slug, and category
-//     const subcategoryData = {
-//       name,
-//       slug: slugify(name),
-//       parentCategoryId
-//     };
-
-//     // Only add photo if it's a non-empty string
-//     if (photo && typeof photo === 'string' && photo.trim() !== '') {
-//       subcategoryData.photo = photo;
-//     }
-
-//     const subcategory = await new subcategoryModel(subcategoryData).save();
-
-//     res.status(201).send({
-//       success: true,
-//       message: "New Subcategory Created",
-//       subcategory,
-//     });
-//   } catch (error) {
-//     console.log(error);
-//     res.status(500).send({
-//       success: false,
-//       error: error.message,
-//       message: "Error in Subcategory Creation",
-//     });
-//   }
-// };
-// Get Single Subcategory
-
-
-// Other controllers remain unchanged...
-
-
-
-
-
-// Add a new controller to toggle active status
+// Toggle Subcategory Status Controller
 export const toggleSubcategoryStatusController = async (req, res) => {
   try {
     const { id } = req.params;
@@ -260,7 +204,7 @@ export const toggleSubcategoryStatusController = async (req, res) => {
 
     res.status(200).send({
       success: true,
-      message: `Subcategory ${subcategory.isActive ? 'activated' : 'deactivated'} successfully`,
+      message: `Subcategory ${subcategory.isActive ? "activated" : "deactivated"} successfully`,
       subcategory,
     });
   } catch (error) {

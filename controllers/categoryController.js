@@ -33,7 +33,7 @@ export const createCategoryController = async (req, res) => {
     const categoryData = {
       name,
       slug: slugify(name),
-      photos: photos  // Store the URL from Cloudinary
+      photos: photos.url  // Extract the URL string from the object
     };
     
     const category = await new categoryModel(categoryData).save();
@@ -60,8 +60,10 @@ export const updateCategoryController = async (req, res) => {
 
     // Build the update data object with photos
     const updateData = { name, slug: slugify(name) };
+
     if (photos) {
-      updateData.photos = photos; // Update photos if provided
+      // If photos is an object with a "url" property, extract that URL
+      updateData.photos = typeof photos === 'object' && photos.url ? photos.url : photos;
     }
 
     const category = await categoryModel.findByIdAndUpdate(
@@ -92,7 +94,6 @@ export const updateCategoryController = async (req, res) => {
   }
 };
 
-// No changes needed for categoryController (get all)
 export const categoryControlller = async (req, res) => {
   try {
     const category = await categoryModel.find({});
@@ -111,7 +112,6 @@ export const categoryControlller = async (req, res) => {
   }
 };
 
-// No changes needed for singleCategoryController
 export const singleCategoryController = async (req, res) => {
   try {
     const category = await categoryModel.findOne({ slug: req.params.slug });
@@ -130,7 +130,6 @@ export const singleCategoryController = async (req, res) => {
   }
 };
 
-// No changes needed for deleteCategoryController
 export const deleteCategoryCOntroller = async (req, res) => {
   try {
     const { id } = req.params;

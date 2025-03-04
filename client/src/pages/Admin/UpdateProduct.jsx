@@ -61,78 +61,117 @@ const [multipleimages, setMultipleImages] = useState([]); // For multiple image 
   // Upload multiple images
 // Upload to Cloudinary function
 // Upload to Cloudinary function
-const uploadToCloudinary = async (file) => {
-  console.log('Starting Cloudinary upload for file:', file.name);
+const uploadToCloudinary = async (file) =>  {
+  console.log('Uploading file to ImageKit:', file.name);
   try {
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', 'smitoxphoto');
-    formData.append('cloud_name', 'djtiblazd');
-
-    const response = await fetch(
-      `https://api.cloudinary.com/v1_1/djtiblazd/image/upload`,
+    formData.append('image', file); // Use 'image' field name to match middleware
+    
+    const response = await axios.post(
+      "/api/v1/images/upload-single",
+      formData,
       {
-        method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'multipart/form-data' }
       }
     );
 
-    if (!response.ok) {
-      throw new Error(`Upload failed: ${response.status}`);
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || 'Upload failed');
     }
-
-    const data = await response.json();
-    console.log('Upload successful, URL:', data.secure_url);
-    return data.secure_url;
+    
+    console.log('ImageKit upload successful:', response.data);
+    return {
+      url: response.data.data.url,
+      fileId: response.data.data?.fileId || ""
+    };
   } catch (error) {
-    console.error('Cloudinary upload error:', error);
+    console.error('Error in ImageKit upload:', error);
     throw error;
   }
 };
-
 const handleUpdate = async (e) => {
   e.preventDefault();
   try {
     toast.loading("Updating product...");
     const productData = new FormData();
 
-    // Upload photos in parallel if they exist
-    const uploadPromises = [];
-    
+    // Handle single photo upload
+    let photoUrl = "";
     if (photo) {
-      uploadPromises.push(
-        uploadToCloudinary(photo).then(url => {
-          productData.append("photos", url);
-        })
-      );
+      // Upload the new file and set the returned URL
+      const uploadResult = await uploadToCloudinary(photo);
+      // Append only the URL to the form data
+      if (uploadResult && uploadResult.url) {
+        photoUrl = uploadResult.url;
+        productData.append("photos", photoUrl);
+      }
     } else if (photos) {
+      // If no new file provided, use the fallback URL already stored in state
       productData.append("photos", photos);
     }
 
-    // Handle multiple images in parallel
-    let allImageUrls = [...(multipleimages || [])];
-    
-    if (images?.length) {
-      const newImagePromises = images.map(uploadToCloudinary);
-      const newUrls = await Promise.all(newImagePromises);
-      allImageUrls.push(...newUrls);
+    // Handle multiple images upload
+    let allImageUrls = [];
+    // If there are pre-existing multiple images (passed as a field), try to parse them
+    if (multipleimages) {
+      try {
+        allImageUrls =
+          typeof multipleimages === "string"
+            ? JSON.parse(multipleimages)
+            : multipleimages;
+      } catch (err) {
+        allImageUrls = [];
+      }
     }
-    
+    // Upload new images if provided
+    if (images && images.length) {
+      const newUploadResults = await Promise.all(
+        images.map(uploadToCloudinary)
+      );
+      // Extract only the URL from each upload result
+      const newUrls = newUploadResults.map((result) => result.url);
+      allImageUrls = [...allImageUrls, ...newUrls];
+    }
     productData.append("multipleimages", JSON.stringify(allImageUrls));
 
-    // Batch append all other form data
+    // Batch append all other form fields
     const formFields = {
-      name, description, price, quantity, category, subcategory, brand,
-      shipping: shipping ? "1" : "0", hsn, unit, unitSet, purchaseRate,
-      mrp, perPiecePrice, totalsetPrice, weight, stock, gst,
-      additionalUnit, sku, fk_tags: fk_tags ? JSON.stringify(fk_tags.split(',').map(tag => tag.trim()).filter(Boolean)) : "",
-      bulkProducts: JSON.stringify(bulkProducts.map(p => ({
-        minimum: parseFloat(p.minimum) || 0,
-        maximum: parseFloat(p.maximum) || 0,
-        discount_mrp: parseFloat(p.discount_mrp) || 0,
-        selling_price_set: parseFloat(p.selling_price_set) || 0
-      }))),
-      custom_order: customOrder || "" 
+      name,
+      description,
+      price,
+      quantity,
+      category,
+      subcategory,
+      brand,
+      shipping: shipping ? "1" : "0",
+      hsn,
+      unit,
+      unitSet,
+      purchaseRate,
+      mrp,
+      perPiecePrice,
+      totalsetPrice,
+      weight,
+      stock,
+      gst,
+      additionalUnit,
+      sku,
+      // Process fk_tags: split by comma, trim, filter out empty values, then JSON stringify
+      fk_tags: fk_tags
+        ? JSON.stringify(
+            fk_tags.split(",").map((tag) => tag.trim()).filter(Boolean)
+          )
+        : "",
+      // Process bulkProducts: map each item and convert numeric values, then JSON stringify
+      bulkProducts: JSON.stringify(
+        bulkProducts.map((p) => ({
+          minimum: parseFloat(p.minimum) || 0,
+          maximum: parseFloat(p.maximum) || 0,
+          discount_mrp: parseFloat(p.discount_mrp) || 0,
+          selling_price_set: parseFloat(p.selling_price_set) || 0,
+        }))
+      ),
+      custom_order: customOrder || "",
     };
 
     Object.entries(formFields).forEach(([key, value]) => {
@@ -141,24 +180,30 @@ const handleUpdate = async (e) => {
       }
     });
 
-    // Wait for all uploads to complete
-    await Promise.all(uploadPromises);
+    // Wait for all uploads to complete (if any were pending)
+    // (Not needed here since we're already awaiting Promise.all)
 
-    const { data } = await axios.put(`/api/v1/product/update-product/${id}`, productData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+    const { data } = await axios.put(
+      `/api/v1/product/update-product/${id}`,
+      productData,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      }
+    );
 
     if (data?.success) {
       toast.dismiss();
-      //toast.success("Product Updated Successfully");
+      // Optionally, show success message and navigate
+      // toast.success("Product Updated Successfully");
       // navigate('/dashboard/admin/products');
     }
   } catch (error) {
     toast.dismiss();
-    //toast.error(error.message || "Error updating product");
-    console.error('Update error:', error);
+    console.error("Update error:", error);
+    // Optionally: toast.error(error.message || "Error updating product");
   }
 };
+
   // Get single product
  const getSingleProduct = async () => {
   try {

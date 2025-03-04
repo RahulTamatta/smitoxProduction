@@ -7,7 +7,7 @@ const categorySchema = new mongoose.Schema({
     unique: true,
   },
   photo: {
-    type: String,  // This will store the base64 string
+    type: mongoose.Schema.Types.Mixed,   // This will store the base64 string
   },
   photos: {
     type: String, // Cloudinary URL for single photo
