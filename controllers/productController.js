@@ -8,7 +8,7 @@ import crypto from 'crypto';
 import fs from "fs";
 import slugify from "slugify";
 import dotenv from "dotenv";
-import { uploadToImageKit } from "../utils/imageService.js";
+import { uploadToImageKit } from "../utils/imageKitService.js"; // Changed from imageService.js to imageKitService.js
 dotenv.config();
 
 class CustomOrderService {
@@ -52,9 +52,6 @@ class CustomOrderService {
     return proposedOrder;
   }
 }
-
-// export default CustomOrderService;
-
 export const createProductController = async (req, res) => {
   try {
     const {
@@ -86,25 +83,14 @@ export const createProductController = async (req, res) => {
       youtubeUrl,
       sku,
       tag,
-      photos,
+      fk_tags,
+      photos, // fallback if no image uploaded via middleware
       multipleimages,
-      custom_order, // Add custom order to destructured fields
+      custom_order,
     } = req.fields;
 
     // Handle files from request
-    const { photo, images } = req.files;
-
-    // Generate SKU if not provided
-    const generateSKU = () => {
-      const timestamp = Date.now();
-      const timeComponent = timestamp.toString(36).slice(-4).toUpperCase();
-      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-      const randomLetters = Array.from(
-        { length: 2 },
-        () => letters.charAt(Math.floor(Math.random() * letters.length))
-      ).join('');
-      return `SM-${timeComponent}${randomLetters}`;
-    };
+    const { photo, images } = req.files || {};
 
     // Photo validation for Buffer-based images
     if (photo && photo.size > 1000000) {
@@ -120,22 +106,74 @@ export const createProductController = async (req, res) => {
       }
     }
 
-    // Handle ImageKit uploads if available in request
-    let imageKitPhoto = null;
-    let imageKitImages = [];
-    
-    // If images were uploaded through ImageKit middleware
-    if (req.imagekit) {
-      if (req.imagekit.photo) {
-        imageKitPhoto = req.imagekit.photo.url;
-      }
-      
-      if (req.imagekit.images && req.imagekit.images.length > 0) {
-        imageKitImages = req.imagekit.images.map(img => img.url);
+    // Upload primary photo to ImageKit if available
+    let productPhoto = req.imageUrl || photos || null;
+    if (photo && !req.imageUrl) {
+      try {
+        // Create a File object from the uploaded photo
+        const photoFile = {
+          name: photo.name || 'product-photo.jpg',
+          type: photo.type,
+          size: photo.size,
+          path: photo.path
+        };
+        
+        // Upload to ImageKit
+        const uploadResult = await uploadToImageKit(photoFile, 'products');
+        if (uploadResult && uploadResult.url) {
+          productPhoto = uploadResult.url;
+        }
+      } catch (uploadError) {
+        console.error("Error uploading to ImageKit:", uploadError);
+        // Fallback to traditional file handling if ImageKit upload fails
       }
     }
-    
-    // Parse bulkProducts
+
+    // Upload multiple images to ImageKit if available
+    let imageUrls = [];
+    if (images) {
+      const imageArray = Array.isArray(images) ? images : [images];
+      try {
+        // Process each image
+        const uploadPromises = imageArray.map(async (img) => {
+          const imgFile = {
+            name: img.name || `product-image-${Date.now()}.jpg`,
+            type: img.type,
+            size: img.size,
+            path: img.path
+          };
+          
+          // Upload to ImageKit
+          const uploadResult = await uploadToImageKit(imgFile, 'products/gallery');
+          return uploadResult && uploadResult.url ? uploadResult.url : null;
+        });
+        
+        // Wait for all uploads to complete
+        const results = await Promise.all(uploadPromises);
+        imageUrls = results.filter(url => url !== null);
+      } catch (uploadError) {
+        console.error("Error uploading multiple images to ImageKit:", uploadError);
+        // Continue with existing logic if ImageKit upload fails
+      }
+    }
+
+    // Parse multipleimages if provided as string
+    let parsedMultipleImages = [];
+    if (multipleimages) {
+      try {
+        parsedMultipleImages = typeof multipleimages === 'string' 
+          ? JSON.parse(multipleimages) 
+          : (Array.isArray(multipleimages) ? multipleimages : [multipleimages]);
+      } catch (error) {
+        console.warn("Error parsing multiple images:", error);
+        parsedMultipleImages = Array.isArray(multipleimages) ? multipleimages : (multipleimages ? [multipleimages] : []);
+      }
+    }
+
+    // Combine existing image URLs with newly uploaded ones
+    const finalMultipleImages = [...parsedMultipleImages, ...imageUrls];
+
+    // Parse bulkProducts if provided
     let formattedBulkProducts = null;
     if (bulkProducts) {
       if (typeof bulkProducts === 'string') {
@@ -146,11 +184,9 @@ export const createProductController = async (req, res) => {
           return res.status(400).send({ error: "Invalid bulkProducts data" });
         }
       }
-
       if (formattedBulkProducts && !Array.isArray(formattedBulkProducts)) {
         return res.status(400).send({ error: "bulkProducts must be an array" });
       }
-
       if (Array.isArray(formattedBulkProducts)) {
         formattedBulkProducts = formattedBulkProducts.map((item) => ({
           minimum: isNaN(parseInt(item.minimum)) ? 0 : parseInt(item.minimum),
@@ -161,10 +197,41 @@ export const createProductController = async (req, res) => {
       }
     }
 
-    // Get unique custom order
-    const finalCustomOrder = await CustomOrderService.assignCustomOrder(custom_order);
+    // Parse fk_tags if provided
+    let parsedFkTags = [];
+    if (fk_tags) {
+      try {
+        parsedFkTags = typeof fk_tags === 'string' ? JSON.parse(fk_tags) : fk_tags;
+      } catch (error) {
+        console.warn("Error parsing FK tags:", error);
+        parsedFkTags = Array.isArray(fk_tags) ? fk_tags : (fk_tags ? [fk_tags] : []);
+      }
+    }
 
-    // Create product instance with ImageKit URLs if available
+    // Function to generate SKU if not provided
+    const generateSKU = () => {
+      const timestamp = Date.now();
+      const timeComponent = timestamp.toString(36).slice(-4).toUpperCase();
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const randomLetters = Array.from(
+        { length: 2 },
+        () => letters.charAt(Math.floor(Math.random() * letters.length))
+      ).join('');
+      return `SM-${timeComponent}${randomLetters}`;
+    };
+
+    // Determine custom order if needed
+    let productCustomOrder = custom_order;
+    if (!productCustomOrder) {
+      const lastProduct = await productModel
+        .findOne()
+        .sort({ custom_order: -1 })
+        .select('custom_order');
+      
+      productCustomOrder = lastProduct?.custom_order ? lastProduct.custom_order + 1 : 1;
+    }
+
+    // Create the new product
     const newProduct = new productModel({
       name,
       slug: slugify(name),
@@ -193,57 +260,33 @@ export const createProductController = async (req, res) => {
       returnProduct: returnProduct === "1",
       userId,
       isActive: '1',
-      variants: JSON.parse(variants || '[]'),
-      sets: JSON.parse(sets || '[]'),
+      variants: variants ? JSON.parse(variants) : [],
+      sets: sets ? JSON.parse(sets) : [],
       tag: Array.isArray(tag) ? tag : tag ? [tag] : [],
-      photos: imageKitPhoto || photos || null,
-      multipleimages: imageKitImages.length > 0 ? imageKitImages : 
-        (Array.isArray(multipleimages) ? multipleimages : multipleimages ? [multipleimages] : []),
-      custom_order: finalCustomOrder,
+      fk_tags: parsedFkTags,
+      photos: productPhoto, // Use uploaded image URL or fallback
+      multipleimages: finalMultipleImages,
+      custom_order: productCustomOrder,
     });
 
-    // Handle Buffer-based photo if ImageKit wasn't used
-    if (!imageKitPhoto && photo) {
-      try {
-        // Upload to ImageKit
-        const fileBuffer = fs.readFileSync(photo.path);
-        const result = await uploadToImageKit(fileBuffer, `product_${Date.now()}_photo`);
-        newProduct.photos = result.url;
-      } catch (error) {
-        console.error("Error uploading to ImageKit:", error);
-        // Fallback to traditional storage
-        newProduct.photo = {
-          data: fs.readFileSync(photo.path),
-          contentType: photo.type
-        };
-      }
+    // Handle Buffer-based photo if ImageKit upload failed
+    if (photo && !productPhoto) {
+      newProduct.photo = {
+        data: fs.readFileSync(photo.path),
+        contentType: photo.type
+      };
     }
 
-    // Handle Buffer-based multiple images if ImageKit wasn't used
-    if (imageKitImages.length === 0 && images) {
+    // Handle Buffer-based multiple images if ImageKit upload failed
+    if (images && finalMultipleImages.length === parsedMultipleImages.length) {
       const imageArray = Array.isArray(images) ? images : [images];
-      
-      try {
-        // Upload all images to ImageKit
-        const uploadPromises = imageArray.map(async (img, index) => {
-          const fileBuffer = fs.readFileSync(img.path);
-          const result = await uploadToImageKit(fileBuffer, `product_${Date.now()}_${index}`);
-          return result.url;
-        });
-        
-        const uploadedUrls = await Promise.all(uploadPromises);
-        newProduct.multipleimages = uploadedUrls;
-      } catch (error) {
-        console.error("Error uploading multiple images to ImageKit:", error);
-        // Fallback to traditional storage
-        newProduct.images = imageArray.map(img => ({
-          data: fs.readFileSync(img.path),
-          contentType: img.type
-        }));
-      }
+      newProduct.images = imageArray.map(img => ({
+        data: fs.readFileSync(img.path),
+        contentType: img.type
+      }));
     }
 
-    // Save product
+    // Save the product in MongoDB
     await newProduct.save();
 
     res.status(201).send({

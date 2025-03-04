@@ -1,55 +1,112 @@
 let ImageKit;
 let imagekit;
 
-try {
-  ImageKit = require('imagekit');
-
-  // ImageKit Configuration
-  imagekit = new ImageKit({
-    publicKey: 'public_XxQnBh4c/UCDe8GKiz9RGPfF3pU=',
-    privateKey: 'private_w9mQMbhui+mZAeDCB/1v3dGqAf8=',
-    urlEndpoint: "https://ik.imagekit.io/cvv8mhaiu"
-  });
-} catch (error) {
-  console.warn("ImageKit module not found, using fallback methods");
-  // Create a mock implementation if package is not available
-  imagekit = {
-    upload: () => Promise.reject(new Error("ImageKit not available")),
-    deleteFile: () => Promise.reject(new Error("ImageKit not available"))
-  };
-}
-
-// Function to upload an image to ImageKit
-export const uploadToImageKit = async (fileBuffer, fileName, folder = 'products') => {
+// Add this function to handle ImageKit uploads
+const uploadToImageKit = async (file) => {
+  console.log('Starting ImageKit upload for file:', file.name);
   try {
-    if (!ImageKit) {
-      console.warn("ImageKit module not available, returning direct URL");
-      return { 
-        url: `/api/v1/product/product-photo/${fileName}`, 
-        fileId: null,
-        name: fileName
-      };
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('publicKey', 'public_XxQnBh4c/UCDe8GKiz9RGPfF3pU=');
+    formData.append('folder', '/migrated_from_cloudinary/');
+    formData.append('fileName', `${Date.now()}_${file.name.replace(/\s+/g, '_')}`);
+    formData.append('useUniqueFileName', 'true');
+    formData.append('transformation', JSON.stringify([{ quality: 80, format: 'webp' }]));
+    
+    const response = await fetch(
+      'https://upload.imagekit.io/api/v1/files/upload',
+      {
+        method: 'POST',
+        body: formData,
+      }
+    );
+    
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.status}`);
     }
     
-    const result = await imagekit.upload({
-      file: fileBuffer,
-      fileName: fileName || `product_${Date.now()}`,
-      folder: `/${folder}/`
-    });
-    
-    return {
-      url: result.url,
-      fileId: result.fileId,
-      name: result.name
-    };
+    const data = await response.json();
+    console.log('Upload successful, URL:', data.url);
+    return data.url;
   } catch (error) {
-    console.error('Error uploading to ImageKit:', error);
-    // Return a fallback URL that uses the existing API
-    return { 
-      url: `/api/v1/product/product-photo/${fileName}`, 
-      fileId: null,
-      name: fileName
+    console.error('ImageKit upload error:', error);
+    throw error;
+  }
+};
+
+// Modify the handleCreate function to use ImageKit
+const handleCreate = async (e) => {
+  e.preventDefault();
+  try {
+    toast.loading("Creating product...");
+    const productData = new FormData();
+
+    // Upload photos in parallel if they exist
+    const uploadPromises = [];
+    
+    if (photo) {
+      uploadPromises.push(
+        uploadToImageKit(photo).then(url => {
+          productData.append("photos", url);
+        })
+      );
+    }
+
+    // Handle multiple images in parallel
+    let allImageUrls = [...(multipleimages || [])];
+    
+    if (images?.length) {
+      const newImagePromises = images.map(uploadToImageKit);
+      const newUrls = await Promise.all(newImagePromises);
+      allImageUrls.push(...newUrls);
+    }
+    
+    productData.append("multipleimages", JSON.stringify(allImageUrls));
+
+    // Add all other form fields
+    const formFields = {
+      name, description, price, quantity, category, subcategory, brand,
+      shipping: shipping ? "1" : "0", hsn, unit, unitSet, purchaseRate,
+      mrp, perPiecePrice, totalsetPrice, weight, stock, gst,
+      additionalUnit, sku, fk_tags: fk_tags ? JSON.stringify(fk_tags.split(',').map(tag => tag.trim()).filter(Boolean)) : "",
+      youtubeUrl,
+      bulkProducts: JSON.stringify(bulkProducts.map(p => ({
+        minimum: parseFloat(p.minimum) || 0,
+        maximum: parseFloat(p.maximum) || 0,
+        discount_mrp: parseFloat(p.discount_mrp) || 0,
+        selling_price_set: parseFloat(p.selling_price_set) || 0
+      })))
     };
+
+    Object.entries(formFields).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        productData.append(key, value);
+      }
+    });
+
+    // Wait for all uploads to complete
+    await Promise.all(uploadPromises);
+
+    const { data } = await axios.post(
+      "/api/v1/product/create-product",
+      productData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      }
+    );
+
+    if (data?.success) {
+      toast.dismiss();
+      toast.success("Product Created Successfully");
+      navigate("/dashboard/admin/products");
+    } else {
+      toast.dismiss();
+      toast.error(data?.message || "Error creating product");
+    }
+  } catch (error) {
+    toast.dismiss();
+    toast.error(error.message || "Error creating product");
+    console.error('Create error:', error);
   }
 };
 

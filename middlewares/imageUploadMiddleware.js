@@ -1,7 +1,7 @@
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
-import { uploadToImageKit } from '../utils/imageService.js';
+import { uploadToImageKit } from '../utils/imageKitService.js';
 
 // Setup temporary storage for multer
 const storage = multer.diskStorage({
@@ -34,7 +34,7 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
-// ImageKit upload middleware
+// ImageKit upload middleware - enhanced for low bandwidth
 export const uploadToImageKitMiddleware = async (req, res, next) => {
   try {
     // If no files were uploaded, continue
@@ -42,37 +42,62 @@ export const uploadToImageKitMiddleware = async (req, res, next) => {
       return next();
     }
 
+    // Detect connection quality to adjust optimization level
+    const connectionQuality = detectConnectionQuality(req);
+    const quality = connectionQuality === 'low' ? 50 : 
+                   connectionQuality === 'medium' ? 70 : 80;
+
     // Handle photo field (single image)
     if (req.files.photo) {
-      const file = req.files.photo;
-      const fileBuffer = fs.readFileSync(file.path);
+      const file = req.files.photo[0]; // Access the file correctly from multer
+      
+      // Apply optimization with adaptive quality
+      const optimizedBuffer = await optimizeImage(file.path, quality, connectionQuality);
+      
       const fileName = `product_${Date.now()}_${path.basename(file.path)}`;
       
-      const result = await uploadToImageKit(fileBuffer, fileName);
+      const result = await uploadToImageKit(optimizedBuffer, fileName, 'products', quality);
       
       // Clean up temp file
       fs.unlinkSync(file.path);
       
-      // Add ImageKit URL and fileId to request
+      // Add ImageKit URL and fileId to request - make sure URL is stored correctly
       req.imagekit = req.imagekit || {};
       req.imagekit.photo = result;
+
+      // Ensure we have a valid URL
+      if (!result.url.startsWith('http')) {
+        console.warn('Invalid ImageKit URL returned:', result.url);
+        // Fix URL if needed
+        result.url = `https://ik.imagekit.io/cvv8mhaiu/${result.url.replace(/^\//, '')}`;
+        req.imagekit.photo.url = result.url;
+      }
     }
     
     // Handle images field (multiple images)
     if (req.files.images) {
-      const imageFiles = Array.isArray(req.files.images) 
-        ? req.files.images 
-        : [req.files.images];
+      const imageFiles = req.files.images;
       
       req.imagekit = req.imagekit || {};
       req.imagekit.images = [];
       
-      // Process each image
+      // Process each image with adaptive quality
       for (const file of imageFiles) {
-        const fileBuffer = fs.readFileSync(file.path);
+        // Optimize each image based on connection quality
+        const optimizedBuffer = await optimizeImage(file.path, quality, connectionQuality);
+        
         const fileName = `product_${Date.now()}_${path.basename(file.path)}`;
         
-        const result = await uploadToImageKit(fileBuffer, fileName);
+        const result = await uploadToImageKit(optimizedBuffer, fileName, 'products', quality);
+        
+        // Ensure we have a valid URL
+        if (!result.url.startsWith('http')) {
+          console.warn('Invalid ImageKit URL returned:', result.url);
+          // Fix URL if needed
+          result.url = `https://ik.imagekit.io/cvv8mhaiu/${result.url.replace(/^\//, '')}`;
+          result.url = result.url;
+        }
+        
         req.imagekit.images.push(result);
         
         // Clean up temp file

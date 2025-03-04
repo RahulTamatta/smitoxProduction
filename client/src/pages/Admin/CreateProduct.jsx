@@ -5,6 +5,8 @@ import toast from "react-hot-toast";
 import axios from "axios";
 import { Select } from "antd";
 import { useNavigate } from "react-router-dom";
+import ImageKitImage from '../../components/ImageKitImage';
+import { showConnectionErrorPopup } from '../../components/ConnectionErrorPopup';
 
 const { Option } = Select;
 
@@ -48,6 +50,7 @@ const CreateProduct = () => {
   const [customOrder, setCustomOrder] = useState("");
   const [photos, setPhotos] = useState(""); 
   const [multipleimages, setMultipleImages] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   
   useEffect(() => {
@@ -164,116 +167,212 @@ const CreateProduct = () => {
   const handleFkTagsChange = (e) => {
     setFkTags(e.target.value);
   };
-
-
-  // Add this function for Cloudinary upload
-  const uploadToCloudinary = async (file) => {
-    console.log('Starting Cloudinary upload for file:', file.name);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', 'smitoxphoto');
-      formData.append('cloud_name', 'djtiblazd');
-  
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/djtiblazd/image/upload`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
-  
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`);
+// Fix the handleImageUpload function to properly work with ImageKit
+const handleImageUpload = async (file) => {
+  console.log('Uploading file to ImageKit:', file.name);
+  try {
+    const formData = new FormData();
+    formData.append('image', file); // Use 'image' field name to match middleware
+    
+    const response = await axios.post(
+      "/api/v1/images/upload-single",
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' }
       }
-  
-      const data = await response.json();
-      console.log('Upload successful, URL:', data.secure_url);
-      return data.secure_url;
-    } catch (error) {
-      console.error('Cloudinary upload error:', error);
-      throw error;
+    );
+
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || 'Upload failed');
     }
-  };
+    
+    console.log('ImageKit upload successful:', response.data);
+    return {
+      url: response.data.data.url,
+      fileId: response.data.data?.fileId || ""
+    };
+  } catch (error) {
+    console.error('Error in ImageKit upload:', error);
+    throw error;
+  }
+};
+
+// Fix the handleCreate function to use FormData like the Cloudinary version
+const handleCreate = async (e) => {
+  e.preventDefault();
   
-  // Modify the handleCreate function to handle image uploads
-  const handleCreate = async (e) => {
-    e.preventDefault();
-    try {
-      toast.loading("Creating product...");
-      const productData = new FormData();
+  // Validate required fields
+  if (!name || !description || !price || !category) {
+    return toast.error("Required fields are missing");
+  }
   
-      // Upload photos in parallel if they exist
-      const uploadPromises = [];
-      
-      if (photo) {
-        uploadPromises.push(
-          uploadToCloudinary(photo).then(url => {
-            productData.append("photos", url);
-          })
-        );
-      }
+  // Start loading state
+  toast.loading("Creating product...");
+  setIsUploading(true);
   
-      // Handle multiple images in parallel
-      let allImageUrls = [...(multipleimages || [])];
-      
-      if (images?.length) {
-        const newImagePromises = images.map(uploadToCloudinary);
-        const newUrls = await Promise.all(newImagePromises);
-        allImageUrls.push(...newUrls);
-      }
-      
-      productData.append("multipleimages", JSON.stringify(allImageUrls));
-  
-      // Add all other form fields
-      const formFields = {
-        name, description, price, quantity, category, subcategory, brand,
-        shipping: shipping ? "1" : "0", hsn, unit, unitSet, purchaseRate,
-        mrp, perPiecePrice, totalsetPrice, weight, stock, gst,
-        additionalUnit, sku, fk_tags: fk_tags ? JSON.stringify(fk_tags.split(',').map(tag => tag.trim()).filter(Boolean)) : "",
-        youtubeUrl,
-        bulkProducts: JSON.stringify(bulkProducts.map(p => ({
-          minimum: parseFloat(p.minimum) || 0,
-          maximum: parseFloat(p.maximum) || 0,
-          discount_mrp: parseFloat(p.discount_mrp) || 0,
-          selling_price_set: parseFloat(p.selling_price_set) || 0
-          
-        }))),
-        custom_order: customOrder || "" 
-      };
-  
-      Object.entries(formFields).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          productData.append(key, value);
-        }
-      });
-  
-      // Wait for all uploads to complete
-      await Promise.all(uploadPromises);
-  
-      const { data } = await axios.post(
-        "/api/v1/product/create-product",
-        productData,
-        {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        }
+  try {
+    // Create FormData object like in the Cloudinary version
+    const productData = new FormData();
+    
+    // Upload photos in parallel if they exist
+    const uploadPromises = [];
+    
+    // Handle main photo upload
+    if (photo) {
+      uploadPromises.push(
+        handleImageUpload(photo).then(result => {
+          productData.append("photos", result.url);
+          if (result.fileId) {
+            productData.append("photoFileId", result.fileId);
+          }
+        })
       );
-  
-      if (data?.success) {
-        toast.dismiss();
-        toast.success("Product Created Successfully");
-        navigate("/dashboard/admin/products");
-      } else {
-        toast.dismiss();
-        //toast.error(data?.message || "Error creating product");
+    }
+    
+    // Handle multiple images upload
+    let allImageUrls = [...(multipleimages || [])];
+    
+    if (images?.length) {
+      const imageUploadPromises = images.map(handleImageUpload);
+      const results = await Promise.all(imageUploadPromises);
+      const newUrls = results.map(result => result.url);
+      allImageUrls.push(...newUrls);
+    }
+    
+    productData.append("multipleimages", JSON.stringify(allImageUrls));
+    
+    // Add all other form fields - same as Cloudinary version
+    const formFields = {
+      name, description, price, quantity, category, subcategory, brand,
+      shipping: shipping ? "1" : "0", hsn, unit, unitSet, purchaseRate,
+      mrp, perPiecePrice, totalsetPrice, weight, stock, gst,
+      additionalUnit, sku, 
+      fk_tags: fk_tags ? JSON.stringify(fk_tags.split(',').map(tag => tag.trim()).filter(Boolean)) : "",
+      youtubeUrl,
+      bulkProducts: JSON.stringify(bulkProducts.map(p => ({
+        minimum: parseFloat(p.minimum) || 0,
+        maximum: parseFloat(p.maximum) || 0,
+        discount_mrp: parseFloat(p.discount_mrp) || 0,
+        selling_price_set: parseFloat(p.selling_price_set) || 0
+      })))
+    };
+    
+    // Add custom order if provided
+    if (customOrder) {
+      formFields.custom_order = customOrder;
+    }
+    
+    // Append all fields to FormData
+    Object.entries(formFields).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        productData.append(key, value);
       }
-    } catch (error) {
+    });
+    
+    // Wait for all uploads to complete
+    await Promise.all(uploadPromises);
+    
+    // Send the product data to the backend
+    const { data } = await axios.post(
+      "/api/v1/product/create-product",
+      productData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      }
+    );
+    
+    // Handle response
+    if (data?.success) {
       toast.dismiss();
-      //toast.error(error.message || "Error creating product");
-      console.error('Create error:', error);
+      toast.success("Product Created Successfully");
+      navigate("/dashboard/admin/products");
+    } else {
+      toast.dismiss();
+      toast.error(data?.message || "Error creating product");
     }
+  } catch (error) {
+    toast.dismiss();
+    toast.error("Error creating product: " + (error.message || "Unknown error"));
+    console.error('Create error:', error);
+  } finally {
+    // Always reset loading state
+    setIsUploading(false);
+  }
+};
+
+  // Handle multiple images upload
+const handleMultipleImageChange = (e) => {
+  const files = Array.from(e.target.files);
+  if (files.length > 5) {
+    toast.error("You can only upload up to 5 additional images");
+    return;
+  }
+  setImages(files);
+};
+  // Preview for multiple images
+  const renderMultipleImagePreviews = () => {
+    if (images.length > 0) {
+      return (
+        <div className="d-flex flex-wrap mt-2">
+          {images.map((file, index) => (
+            <div key={index} className="position-relative me-2 mb-2">
+              <img
+                src={URL.createObjectURL(file)}
+                alt={`preview ${index}`}
+                style={{ width: "100px", height: "100px", objectFit: "cover" }}
+                className="rounded"
+              />
+              <button
+                type="button"
+                className="btn btn-sm btn-danger position-absolute"
+                style={{ top: "5px", right: "5px" }}
+                onClick={() => {
+                  const newImages = [...images];
+                  newImages.splice(index, 1);
+                  setImages(newImages);
+                }}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    
+    // Show existing images if available
+    if (multipleimages && multipleimages.length > 0) {
+      return (
+        <div className="d-flex flex-wrap mt-2">
+          {multipleimages.map((img, index) => (
+            <div key={index} className="position-relative me-2 mb-2">
+              <img
+                src={typeof img === 'string' ? img : img.url}
+                alt={`existing ${index}`}
+                style={{ width: "100px", height: "100px", objectFit: "cover" }}
+                className="rounded"
+              />
+              <button
+                type="button"
+                className="btn btn-sm btn-danger position-absolute"
+                style={{ top: "5px", right: "5px" }}
+                onClick={() => {
+                  const newImages = [...multipleimages];
+                  newImages.splice(index, 1);
+                  setMultipleImages(newImages);
+                }}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    
+    return null;
   };
-  
+
   // Add this function after your state declarations
   const generateUniqueSkU = () => {
     // Get current timestamp
@@ -307,6 +406,45 @@ const CreateProduct = () => {
     ).toFixed(2);
     setPrice(newSetPrice);
   };
+
+  const renderPhotoPreview = () => (
+    <div className="mb-3">
+      <label className="btn btn-outline-secondary col-md-12">
+        {isUploading ? "Uploading..." : photo ? photo.name : "Upload Photo"}
+        <input
+          type="file"
+          name="photo"
+          accept="image/*"
+          onChange={(e) => setPhoto(e.target.files[0])}
+          disabled={isUploading}
+          hidden
+        />
+      </label>
+      <div className="mb-3">
+        {photo ? (
+          <div className="text-center">
+            <img
+              src={URL.createObjectURL(photo)}
+              alt="product_photo"
+              height="200"
+              className="img img-responsive"
+            />
+          </div>
+        ) : photos ? (
+          <div className="text-center">
+            <ImageKitImage
+              src={photos}
+              alt="product_photo"
+              height={200}
+              width={200}
+              className="img img-responsive"
+              quality={80}
+            />
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
 
   return (
     <Layout title={"Dashboard - Create Product"}>
@@ -403,39 +541,7 @@ const CreateProduct = () => {
                 </small>
               </div>
 
-              <div className="mb-3">
-  <label className="btn btn-outline-secondary col-md-12">
-    {photo ? photo.name : "Upload Photo"}
-    <input
-      type="file"
-      name="photo"
-      accept="image/*"
-      onChange={(e) => setPhoto(e.target.files[0])}
-      hidden
-    />
-  </label>
-  <div className="mb-3">
-    {photo ? (
-      <div className="text-center">
-        <img
-          src={URL.createObjectURL(photo)}
-          alt="product_photo"
-          height="200"
-          className="img img-responsive"
-        />
-      </div>
-    ) : photos ? (
-      <div className="text-center">
-        <img
-          src={photos}
-          alt="product_photo"
-          height="200"
-          className="img img-responsive"
-        />
-      </div>
-    ) : null}
-  </div>
-</div>
+              {renderPhotoPreview()}
 {/* Custom Order */}
 <div className="mb-3">
   <label htmlFor="customOrder" className="form-label">
