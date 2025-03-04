@@ -88,7 +88,7 @@ const AddToCartPages = () => {
     try {
       await axios.delete(`/api/v1/carts/users/${userId}/cart/${productId}`);
       getCart(userId);
-      toast.success("Item removed from cart");
+      //toast.success("Item removed from cart");
     } catch (error) {
       console.error("Error removing item:", error);
       ////toast.error("Error removing item from cart");

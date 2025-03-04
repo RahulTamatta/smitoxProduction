@@ -138,7 +138,7 @@ const ProductDetails = () => {
           const availablePincodes = data.pincodes.map((pin) => pin.code);
           if (availablePincodes.includes(pincode.toString())) {
             setIsPincodeAvailable(true);
-            // toast.success("Delivery available for your pincode");
+            // //toast.success("Delivery available for your pincode");
           } else {
             setIsPincodeAvailable(false);
             ////toast.error("Delivery not available for your pincode");
@@ -204,7 +204,7 @@ const ProductDetails = () => {
           setSelectedBulk(bulk);
           calculateTotalPrice(bulk, updatedQuantity);
   
-          // toast.success("Cart updated successfully");
+          // //toast.success("Cart updated successfully");
         }
       } catch (error) {
         console.error("Error updating quantity in cart:", error);
@@ -234,7 +234,7 @@ const ProductDetails = () => {
   
         if (response.data.status === "success") {
           setCart(response.data.cart);
-          // toast.success("Item added to cart");
+          // //toast.success("Item added to cart");
         }
       } catch (error) {
         console.error("Error adding item to cart:", error);
@@ -256,13 +256,13 @@ const ProductDetails = () => {
       if (isInWishlist) {
         await axios.delete(`/api/v1/carts/users/${auth.user._id}/wishlist/${product._id}`);
         setIsInWishlist(false);
-        // toast.success("Removed from wishlist");
+        // //toast.success("Removed from wishlist");
       } else {
         await axios.post(`/api/v1/carts/users/${auth.user._id}/wishlist`, {
           productId: product._id
         });
         setIsInWishlist(true);
-        // toast.success("Added to wishlist");
+        // //toast.success("Added to wishlist");
       }
     } catch (error) {
       console.error("Error toggling wishlist:", error);

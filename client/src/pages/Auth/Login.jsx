@@ -44,7 +44,7 @@ const Login = () => {
           // Store full auth data in localStorage
           localStorage.setItem("auth", JSON.stringify(authData));
 
-          toast.success(res.data.message);
+          //toast.success(res.data.message);
           navigate(location.state || "/");
           // Redirect to registration page if user is new
           navigate("/register", { state: { phoneNumber } });
@@ -62,7 +62,7 @@ const Login = () => {
           // Store full auth data in localStorage
           localStorage.setItem("auth", JSON.stringify(authData));
 
-          toast.success(res.data.message);
+          //toast.success(res.data.message);
           navigate(location.state || "/");
         }
       } else {
@@ -79,7 +79,7 @@ const Login = () => {
       if (response.data.success) {
         setSessionId(response.data.sessionId);
         setShowOtpInput(true);
-        toast.success("OTP sent successfully");
+        //toast.success("OTP sent successfully");
       } else {
         //toast.error(response.data.message);
       }

@@ -119,7 +119,7 @@ const CartSearchModal = ({ show, handleClose, userId }) => {
                   return updated;
               });
               
-              toast.success('Product removed from cart');
+              //toast.success('Product removed from cart');
           } catch (error) {
               console.error('Error removing product:', error);
               //toast.error('Failed to remove product');
@@ -189,7 +189,7 @@ const CartSearchModal = ({ show, handleClose, userId }) => {
                   ...prev,
                   [product._id]: initialTotalPrice
               }));
-              toast.success("Item added to cart");
+              //toast.success("Item added to cart");
           }
       } catch (error) {
           console.error(error);

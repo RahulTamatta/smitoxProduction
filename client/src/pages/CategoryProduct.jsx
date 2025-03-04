@@ -144,13 +144,13 @@ const CategoryProduct = () => {
           `/api/v1/carts/users/${auth.user._id}/wishlist/${productId}`
         );
         setWishlistStatus((prev) => ({ ...prev, [productId]: false }));
-        toast.success("Removed from wishlist");
+        //toast.success("Removed from wishlist");
       } else {
         await axios.post(`/api/v1/carts/users/${auth.user._id}/wishlist`, {
           productId: productId,
         });
         setWishlistStatus((prev) => ({ ...prev, [productId]: true }));
-        // toast.success("Added to wishlist");
+        // //toast.success("Added to wishlist");
       }
     } catch (error) {
       console.error("Error toggling wishlist:", error);

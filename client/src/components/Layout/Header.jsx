@@ -102,7 +102,7 @@ const Header = () => {
       token: "",
     });
     localStorage.removeItem("auth");
-    toast.success("Logout Successfully");
+    //toast.success("Logout Successfully");
     setCartCount(0);
     setWishlistCount(0);
   };

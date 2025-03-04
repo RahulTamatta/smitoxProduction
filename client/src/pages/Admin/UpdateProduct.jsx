@@ -150,7 +150,7 @@ const handleUpdate = async (e) => {
 
     if (data?.success) {
       toast.dismiss();
-      toast.success("Product Updated Successfully");
+      //toast.success("Product Updated Successfully");
       // navigate('/dashboard/admin/products');
     }
   } catch (error) {
@@ -378,7 +378,7 @@ const handleUpdate = async (e) => {
       let answer = window.prompt("Are you sure you want to delete this product?");
       if (!answer) return;
       await axios.delete(`/api/v1/product/delete-product/${id}`);
-      toast.success("Product Deleted Successfully");
+      //toast.success("Product Deleted Successfully");
       navigate("/dashboard/admin/products");
     } catch (error) {
       console.log(error);

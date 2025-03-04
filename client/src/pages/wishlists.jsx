@@ -57,7 +57,7 @@ const WishlistPage = () => {
 
       const { data } = await axios.delete(`/api/v1/carts/users/${auth.user._id}/wishlist/${productId}`);
       if (data.status === "success") {
-        toast.success("Product removed from wishlist");
+        //toast.success("Product removed from wishlist");
         setWishlist(wishlist.filter((item) => item?.product?._id !== productId));
       } else {
         ////toast.error("Failed to remove product from wishlist");
@@ -74,7 +74,7 @@ const WishlistPage = () => {
       return;
     }
     addToCart(product);
-    toast.success(`${product.name} added to cart!`);
+    //toast.success(`${product.name} added to cart!`);
   };
 
   if (loading) {

@@ -51,7 +51,7 @@ const PincodeList = () => {
     try {
       const { data } = await axios.post('/api/v1/pincodes/create-pincode', { code: newPincode });
       if (data?.success) {
-        toast.success(`${data.message}`);
+        //toast.success(`${data.message}`);
         fetchPincodes();
         setShowAddModal(false);
         setNewPincode('');
@@ -69,7 +69,7 @@ const PincodeList = () => {
     try {
       const { data } = await axios.put(`/api/v1/pincodes/update-pincode/${selectedPincode._id}`, editedPincode);
       if (data?.success) {
-        toast.success(`${data.message}`);
+        //toast.success(`${data.message}`);
         fetchPincodes();
         setShowEditModal(false);
       } else {
@@ -85,7 +85,7 @@ const PincodeList = () => {
     try {
       const { data } = await axios.delete(`/api/v1/pincodes/delete-pincode/${id}`);
       if (data.success) {
-        toast.success(`${data.message}`);
+        //toast.success(`${data.message}`);
         fetchPincodes();
       } else {
         //toast.error(data.message);
@@ -112,7 +112,7 @@ const PincodeList = () => {
       });
 
       if (data.success) {
-        toast.success('Bulk upload completed');
+        //toast.success('Bulk upload completed');
         fetchPincodes();
         setShowBulkUploadModal(false);
         setBulkUploadFile(null);

@@ -135,10 +135,10 @@ const BannerManagement = () => {
 
       if (currentBanner) {
         await axios.put(`/api/v1/bannerManagement/update-banner/${currentBanner._id}`, submitData);
-        toast.success('Banner updated successfully');
+        //toast.success('Banner updated successfully');
       } else {
         await axios.post('/api/v1/bannerManagement/create-banner', submitData);
-        toast.success('Banner created successfully');
+        //toast.success('Banner created successfully');
       }
       fetchBanners();
       handleCloseModal();
@@ -151,7 +151,7 @@ const BannerManagement = () => {
     try {
       await axios.delete(`/api/v1/bannerManagement/delete-banner/${id}`);
       fetchBanners();
-      toast.success('Banner deleted successfully');
+      //toast.success('Banner deleted successfully');
     } catch (error) {
       console.error('Error deleting banner:', error);
       //toast.error('Failed to delete banner');

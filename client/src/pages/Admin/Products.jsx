@@ -111,7 +111,7 @@ const Products = () => {
       await Promise.all(endpoints);
       await getAllProducts();
       setSelectedProducts([]);
-      toast.success(`Bulk ${action} successful`);
+      //toast.success(`Bulk ${action} successful`);
     } catch (error) {
       //toast.error(`Bulk ${action} failed`);
     }

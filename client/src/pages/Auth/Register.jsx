@@ -64,7 +64,7 @@ const handleSubmit = async (e) => {
         // Store full auth data in localStorage
         localStorage.setItem("auth", JSON.stringify(authData));
 
-        toast.success(res.data.message);
+        //toast.success(res.data.message);
         navigate("/"); // Redirect to home
       } else {
         //toast.error(res.data.message);

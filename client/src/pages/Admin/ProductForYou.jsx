@@ -127,7 +127,7 @@ const ProductForYou = () => {
 
     try {
       const response = await axios.post("/api/v1/productForYou/createProductForYou", data);
-      toast.success("Product added successfully");
+      //toast.success("Product added successfully");
       
       // Add the new banner to the existing banners
       setBanners(prevBanners => [...prevBanners, response.data.banner]);
@@ -146,7 +146,7 @@ const ProductForYou = () => {
       // Remove the deleted banner from the state
       setBanners(prevBanners => prevBanners.filter(banner => banner._id !== id));
       
-      toast.success("Banner deleted successfully");
+      //toast.success("Banner deleted successfully");
     } catch (error) {
       console.error("Error deleting banner:", error);
       ////toast.error("Failed to delete banner");

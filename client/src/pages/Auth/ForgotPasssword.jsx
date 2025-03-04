@@ -22,7 +22,7 @@ const ForgotPasssword = () => {
         answer,
       });
       if (res && res.data.success) {
-        toast.success(res.data && res.data.message);
+        //toast.success(res.data && res.data.message);
 
         navigate("/login");
       } else {

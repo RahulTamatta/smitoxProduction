@@ -284,7 +284,7 @@ const handleCreate = async (e) => {
     // Handle response
     if (data?.success) {
       toast.dismiss();
-      toast.success("Product Created Successfully");
+      //toast.success("Product Created Successfully");
       navigate("/dashboard/admin/products");
     } else {
       toast.dismiss();

@@ -23,7 +23,7 @@ const AdminLogin = () => {
       });
 
       if (res.data.success) {
-        toast.success(res.data.message);
+        //toast.success(res.data.message);
         setAuth({
           ...auth,
           user: res.data.user,

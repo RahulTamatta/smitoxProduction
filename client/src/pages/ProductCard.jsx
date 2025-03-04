@@ -49,13 +49,13 @@ const ProductCard = ({ product, onClick }) => {
           `/api/v1/carts/users/${auth.user._id}/wishlist/${product._id}`
         );
         setIsInWishlist(false);
-        toast.success("Removed from wishlist");
+        //toast.success("Removed from wishlist");
       } else {
         await axios.post(`/api/v1/carts/users/${auth.user._id}/wishlist`, {
           productId: product._id,
         });
         setIsInWishlist(true);
-        toast.success("Added to wishlist");
+        //toast.success("Added to wishlist");
       }
     } catch (error) {
       console.error("Error toggling wishlist:", error);

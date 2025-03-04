@@ -69,7 +69,7 @@ const CreateCategory = () => {
 
       if (data?.success) {
         toast.dismiss();
-        toast.success(`${name} is created`);
+        //toast.success(`${name} is created`);
         getAllCategory();
         setName("");
         setPhotos(null);
@@ -122,7 +122,7 @@ const CreateCategory = () => {
 
       if (data?.success) {
         toast.dismiss();
-        toast.success(`${updatedName} is updated`);
+        //toast.success(`${updatedName} is updated`);
         setSelected(null);
         setUpdatedName("");
         setUpdatedPhoto(null);
@@ -146,7 +146,7 @@ const CreateCategory = () => {
         `/api/v1/category/delete-category/${pId}`
       );
       if (data.success) {
-        toast.success(`Category is deleted`);
+        //toast.success(`Category is deleted`);
         getAllCategory();
       } else {
         //toast.error(data.message);

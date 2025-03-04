@@ -36,7 +36,7 @@ const CreateBrand = () => {
     try {
       const { data } = await axios.post("/api/v1/brand/create-brand", { name });
       if (data?.success) {
-        toast.success(`${name} is created`);
+        //toast.success(`${name} is created`);
         getAllBrands();
         setName("");
       } else {
@@ -54,7 +54,7 @@ const CreateBrand = () => {
     try {
       const { data } = await axios.put(`/api/v1/brand/update-brand/${selected._id}`, { name: updatedName });
       if (data?.success) {
-        toast.success(`${updatedName} is updated`);
+        //toast.success(`${updatedName} is updated`);
         setSelected(null);
         setUpdatedName("");
         setVisible(false);
@@ -73,7 +73,7 @@ const CreateBrand = () => {
     try {
       const { data } = await axios.delete(`/api/v1/brand/delete-brand/${bId}`);
       if (data.success) {
-        toast.success(`Brand is deleted`);
+        //toast.success(`Brand is deleted`);
         getAllBrands();
       } else {
         //toast.error(data.message);

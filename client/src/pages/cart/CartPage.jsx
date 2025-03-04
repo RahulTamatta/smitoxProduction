@@ -116,7 +116,7 @@ const CartPage = () => {
       // Modified to include productId in the URL path instead of request body
       await axios.delete(`/api/v1/carts/users/${auth.user._id}/cart/${pid}`);
       getCart(); // Refresh cart after removal
-      toast.success("Item removed from cart");
+      //toast.success("Item removed from cart");
     } catch (error) {
       console.log(error);
       ////toast.error("Error removing item from cart");
@@ -131,7 +131,7 @@ const CartPage = () => {
 
       if (response.data.status === 'success') {
         setCart([]);
-        toast.success("Cart cleared successfully");
+        //toast.success("Cart cleared successfully");
       } else {
         ////toast.error("Failed to clear cart");
       }
@@ -237,7 +237,7 @@ const CartPage = () => {
         const availablePincodes = data.pincodes.map((pin) => pin.code);
         if (availablePincodes.includes(pincode.toString())) {
           // setIsPincodeAvailable(true);
-          // toast.success("Delivery available for your pincode");
+          // //toast.success("Delivery available for your pincode");
         } else {
           // setIsPincodeAvailable(false);
           ////toast.error("Delivery not available for your pincode");
@@ -311,7 +311,7 @@ const CartPage = () => {
         const { data } = await axios.post("/api/v1/product/process-payment", payload);
         if (data.success) {
           await clearCart();
-          toast.success("Order Placed Successfully!");
+          //toast.success("Order Placed Successfully!");
           navigate("/dashboard/user/orders");
         } else {
           throw new Error(data.message || "Failed to place order");
@@ -348,7 +348,7 @@ const CartPage = () => {
   
               if (verifyResponse.data.success) {
                 await clearCart();
-                toast.success("Payment successful! Order placed successfully");
+                //toast.success("Payment successful! Order placed successfully");
                 navigate("/dashboard/user/orders");
               } else {
                 throw new Error(verifyResponse.data.message || "Payment verification failed");

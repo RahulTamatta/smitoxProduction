@@ -70,7 +70,7 @@ const Profile = () => {
         ls = JSON.parse(ls);
         ls.user = data.updatedUser;
         localStorage.setItem("auth", JSON.stringify(ls));
-        toast.success("Profile Updated Successfully");
+        //toast.success("Profile Updated Successfully");
       }
     } catch (error) {
       console.log(error);

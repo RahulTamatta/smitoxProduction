@@ -101,7 +101,7 @@ const SubcategoryList = () => {
 
       if (data?.success) {
         toast.dismiss();
-        toast.success(`${name} created successfully.`);
+        //toast.success(`${name} created successfully.`);
         setName("");
         setParentCategoryId("");
         setPhotos(null);
@@ -141,7 +141,7 @@ const SubcategoryList = () => {
       
       if (data?.success) {
         toast.dismiss();
-        toast.success(`${editName} updated successfully.`);
+        //toast.success(`${editName} updated successfully.`);
         setShowEditModal(false);
         getAllSubcategories();
       } else {
@@ -160,7 +160,7 @@ const SubcategoryList = () => {
     try {
       const { data } = await axios.delete(`/api/v1/subcategory/delete-subcategory/${id}`);
       if (data?.success) {
-        toast.success("Subcategory deleted successfully.");
+        //toast.success("Subcategory deleted successfully.");
         getAllSubcategories();
       } else {
         //toast.error(data.message);
@@ -176,7 +176,7 @@ const SubcategoryList = () => {
     try {
       const { data } = await axios.put(`/api/v1/subcategory/toggle-active/${subcategory._id}`);
       if (data?.success) {
-        toast.success("Subcategory status updated.");
+        //toast.success("Subcategory status updated.");
         getAllSubcategories();
       } else {
         //toast.error(data.message);
