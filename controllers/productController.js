@@ -1126,7 +1126,6 @@ export const getProductPhoto = async (req, res) => {
   }
 };
 
-
 // productCategoryController
 export const productCategoryController = async (req, res) => {
   try {

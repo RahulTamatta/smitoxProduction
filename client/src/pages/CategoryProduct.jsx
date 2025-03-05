@@ -6,15 +6,6 @@ import Layout from "../components/Layout/Layout";
 import { Heart } from "lucide-react";
 import { useAuth } from "../context/auth";
 
-
-
-
-
-
-
-
-
-
 const CategoryProduct = () => {
   const params = useParams();
   const navigate = useNavigate();
@@ -33,34 +24,30 @@ const CategoryProduct = () => {
   );
   const [wishlistStatus, setWishlistStatus] = useState({});
 
-  // Pagination states
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [pages, setPages] = useState(1);
-  const limit = 10; // Number of products per page
-
   useEffect(() => {
     if (params?.slug) {
       getCategoryAndSubcategories();
     }
   }, [params?.slug]);
 
-  // When "fromBanner" or selected subcategory changes, load page 1
   useEffect(() => {
-    fetchProductsByCategoryOrSubcategory(selectedSubcategory, 1);
+    if (fromBanner && selectedSubcategory) {
+      fetchProductsBySubcategory(selectedSubcategory);
+    } else {
+      fetchProductsByCategoryOrSubcategory(selectedSubcategory);
+    }
   }, [fromBanner, selectedSubcategory]);
-
   useEffect(() => {
     if (auth?.user?._id && products.length > 0) {
       checkWishlistStatus(products);
     }
   }, [auth?.user?._id, products]);
-
   const checkWishlistStatus = async (products) => {
     if (!auth?.user?._id) {
       console.error("User ID not found.");
       return;
     }
+  
     try {
       const statuses = {};
       const requests = products.map(async (product) => {
@@ -68,25 +55,23 @@ const CategoryProduct = () => {
           const { data } = await axios.get(
             `/api/v1/carts/users/${auth.user._id}/wishlist/check/${product._id}`
           );
-          statuses[product._id] = data.exists;
+          statuses[product._id] = data.exists; // Ensure `data.exists` matches API response structure
         } catch (error) {
           console.error(
             `Error checking wishlist status for product ${product._id}:`,
             error.response?.data || error.message
           );
-          statuses[product._id] = false;
+          statuses[product._id] = false; // Default to `false` if the API call fails
         }
       });
+  
       await Promise.all(requests);
       setWishlistStatus(statuses);
     } catch (error) {
-      console.error(
-        "Error checking wishlist statuses:",
-        error.response?.data || error.message
-      );
+      console.error("Error checking wishlist statuses:", error.response?.data || error.message);
     }
   };
-
+  
   const getCategoryAndSubcategories = async () => {
     try {
       const { data } = await axios.get(
@@ -103,6 +88,7 @@ const CategoryProduct = () => {
   const getSubcategories = async (categoryId) => {
     try {
       const { data } = await axios.get("/api/v1/subcategory/get-subcategories");
+
       if (data?.success) {
         const filteredSubcategories = data.subcategories.filter((subcat) => {
           subcat.photos = subcat.photos || "https://via.placeholder.com/64";
@@ -114,68 +100,79 @@ const CategoryProduct = () => {
       }
     } catch (error) {
       console.error("Error fetching subcategories:", error);
+      //toast.error("Error fetching subcategories");
       setSubcategories([]);
     }
   };
 
-  // Modified fetch function to accept a page number
-  const fetchProductsByCategoryOrSubcategory = async (subcategoryId, pageNumber = 1) => {
+  const fetchProductsByCategoryOrSubcategory = async (subcategoryId) => {
     try {
       setLoading(true);
-      let url = `/api/v1/product/product-category/${params.slug}?page=${pageNumber}`;
+      let url = `/api/v1/product/product-category/${params.slug}`;
       if (subcategoryId) {
-        url = `/api/v1/product/product-subcategory/${subcategoryId}?page=${pageNumber}`;
+        url = `/api/v1/product/product-subcategory/${subcategoryId}`;
       }
       const { data } = await axios.get(url);
-      if (pageNumber === 1) {
-        setProducts(data?.products || []);
-      } else {
-        setProducts((prev) => [...prev, ...(data?.products || [])]);
-      }
-      setTotal(data.total || 0);
-      setPage(pageNumber);
-      setPages(Math.ceil((data.total || 0) / limit));
+      setProducts(data?.products || []);
       await checkWishlistStatus(data?.products || []);
     } catch (error) {
       console.log(error);
-      if (pageNumber === 1) setProducts([]);
+      //toast.error("Error fetching products");
+      setProducts([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadMore = async () => {
-    const nextPage = page + 1;
-    await fetchProductsByCategoryOrSubcategory(selectedSubcategory, nextPage);
-  };
-
   const filterBySubcategory = (subcategoryId) => {
     setSelectedSubcategory(subcategoryId);
-    fetchProductsByCategoryOrSubcategory(subcategoryId, 1);
+    setProducts([]);
+    fetchProductsByCategoryOrSubcategory(subcategoryId);
   };
 
   const toggleWishlist = async (e, productId) => {
     e.stopPropagation();
-    if (!auth?.user) return;
+
+    if (!auth?.user) {
+      //toast.error("Please log in to manage your wishlist");
+      return;
+    }
+
     try {
       if (wishlistStatus[productId]) {
         await axios.delete(
           `/api/v1/carts/users/${auth.user._id}/wishlist/${productId}`
         );
         setWishlistStatus((prev) => ({ ...prev, [productId]: false }));
+        //toast.success("Removed from wishlist");
       } else {
         await axios.post(`/api/v1/carts/users/${auth.user._id}/wishlist`, {
           productId: productId,
         });
         setWishlistStatus((prev) => ({ ...prev, [productId]: true }));
+        // //toast.success("Added to wishlist");
       }
     } catch (error) {
       console.error("Error toggling wishlist:", error);
+      //toast.error("Error updating wishlist");
     }
   };
 
   const fetchProductsBySubcategory = async (subcategoryId) => {
-    await fetchProductsByCategoryOrSubcategory(subcategoryId, 1);
+    try {
+      setLoading(true);
+      const { data } = await axios.get(
+        `/api/v1/product/product-subcategory/${subcategoryId}`
+      );
+      setProducts(data?.products || []);
+      await checkWishlistStatus(data?.products || []);
+    } catch (error) {
+      console.log(error);
+      //toast.error("Error fetching products");
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -208,7 +205,7 @@ const CategoryProduct = () => {
                   className={`flex-shrink-0 ${!selectedSubcategory ? "active-subcategory" : ""}`}
                   onClick={() => {
                     setSelectedSubcategory(null);
-                    fetchProductsByCategoryOrSubcategory(null, 1);
+                    fetchProductsByCategoryOrSubcategory(null);
                   }}
                   style={{ cursor: "pointer", minWidth: "80px" }}
                 >
@@ -262,13 +259,13 @@ const CategoryProduct = () => {
             </div>
           )}
   
-          <div 
-            className={`col ${!fromBanner && subcategories.length > 0 ? "col-md-10" : "col-12"} px-3`}
-            style={{ 
-              height: "calc(100vh - 120px)", 
-              overflowY: "auto" 
-            }}
-          >
+  <div 
+          className={`col ${!fromBanner && subcategories.length > 0 ? "col-md-10" : "col-12"} px-3`}
+          style={{ 
+            height: "calc(100vh - 120px)", 
+            overflowY: "auto" 
+          }}
+        >
             <div style={{ minHeight: "calc(100vh - 200px)" }}>
               {loading ? (
                 <div className="text-center my-5">
@@ -363,30 +360,6 @@ const CategoryProduct = () => {
                 </div>
               )}
             </div>
-  
-            {/* Show More Products Button */}
-            {page < pages && (
-              <div className="text-center my-4">
-                <button
-                  className="btn btn-primary"
-                  onClick={loadMore}
-                  disabled={loading}
-                  style={{
-                    backgroundColor: "#e53935",
-                    border: "none",
-                    padding: "12px 24px",
-                    borderRadius: "25px",
-                  }}
-                >
-                  {loading ? "Loading..." : "Show More Products"}
-                </button>
-              </div>
-            )}
-            {page >= pages && products.length > 0 && (
-              <div className="text-center my-4">
-                <p>All products have been loaded.</p>
-              </div>
-            )}
           </div>
         </div>
       </div>
