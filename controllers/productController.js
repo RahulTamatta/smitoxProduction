@@ -775,172 +775,11 @@ export const realtedProductController = async (req, res) => {
   }
 };
 
-// productCategoryController
-export const productCategoryController = async (req, res) => {
-  try {
-    const category = await categoryModel.findOne({ slug: req.params.slug });
-    if (!category) {
-      return res.status(404).send({
-        success: false,
-        message: "Category not found",
-      });
-    }
-
-    // Pagination: default page 1 and limit 10
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-
-    // Count total matching products
-    const totalCount = await productModel.countDocuments({
-      category: category._id,
-      stock: { $gt: 0 },
-    });
-
-    // Fetch products with pagination
-    const products = await productModel
-      .find({
-        category: category._id,
-        stock: { $gt: 0 },
-      })
-      .populate("category")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    // Process products to include photo URLs if necessary
-    const productsWithPhotos = products.map((product) => {
-      const productObj = product.toObject();
-      if (productObj.photo && productObj.photo.data) {
-        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString(
-          "base64"
-        )}`;
-        delete productObj.photo;
-      }
-      return productObj;
-    });
-
-    res.status(200).send({
-      success: true,
-      category,
-      products: productsWithPhotos,
-      count: totalCount,
-      page,
-      pages: Math.ceil(totalCount / limit),
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).send({
-      success: false,
-      error: error.message,
-      message: "Error while getting products",
-    });
-  }
-};
 
 
-// productSubcategoryController
-export const productSubcategoryController = async (req, res) => {
-  try {
-    const { subcategoryId } = req.params;
-    const isActiveFilter = req.query.isActive || "1"; // Default: active products
-    const stocks = req.query.stock || "1"; // Default: products with stock > 0
 
-    // Validate subcategory ID
-    if (!mongoose.Types.ObjectId.isValid(subcategoryId)) {
-      return res.status(400).send({
-        success: false,
-        message: "Invalid subcategory ID",
-      });
-    }
 
-    // Fetch the subcategory
-    const subcategory = await subcategoryModel.findById(subcategoryId);
-    if (!subcategory) {
-      return res.status(404).send({
-        success: false,
-        message: "Subcategory not found",
-      });
-    }
 
-    // Build the filter query
-    const filterQuery = {
-      subcategory: subcategoryId,
-      ...(isActiveFilter === "1" && { isActive: "1" }),
-      ...(stocks === "1" && { stock: { $gt: 0 } }),
-    };
-
-    // Pagination: default page 1 and limit 10
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-
-    // Count total matching products
-    const totalCount = await productModel.countDocuments(filterQuery);
-
-    // Fetch products with the filter applied and pagination
-    const products = await productModel
-      .find(filterQuery)
-      .sort({ custom_order: 1, createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .select("name photo photos _id perPiecePrice mrp stock slug custom_order");
-
-    // Process products to include photo URLs if necessary
-    const productsWithPhotos = products.map((product) => {
-      const productObj = product.toObject();
-      if (productObj.photo && productObj.photo.data) {
-        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString(
-          "base64"
-        )}`;
-        delete productObj.photo;
-      }
-      return productObj;
-    });
-
-    res.status(200).send({
-      success: true,
-      message: "Products fetched successfully",
-      subcategory,
-      products: productsWithPhotos,
-      count: totalCount,
-      page,
-      pages: Math.ceil(totalCount / limit),
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).send({
-      success: false,
-      error: error.message,
-      message: "Error while getting products",
-    });
-  }
-};
-
-// productFiltersController
-export const productFiltersController = async (req, res) => {
-  try {
-    const { checked, radio } = req.body;
-    let args = {
-      ...(checked.length > 0 && { category: checked }),
-      ...(radio.length && { price: { $gte: radio[0], $lte: radio[1] } }),
-      stock: { $gt: 0 }, // Only products with stock > 0
-    };
-
-    const products = await productModel.find(args);
-    res.status(200).send({
-      success: true,
-      products,
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(400).send({
-      success: false,
-      message: "Error while filtering products",
-      error,
-    });
-  }
-};
 
 // productCountController
 export const productCountController = async (req, res) => {
@@ -1286,6 +1125,145 @@ export const getProductPhoto = async (req, res) => {
     });
   }
 };
+
+
+// productCategoryController
+export const productCategoryController = async (req, res) => {
+  try {
+    const category = await categoryModel.findOne({ slug: req.params.slug });
+    if (!category) {
+      return res.status(404).send({
+        success: false,
+        message: "Category not found",
+      });
+    }
+
+    const products = await productModel
+      .find({
+        category: category._id,
+        stock: { $gt: 0 }, // Only products with stock > 0
+      })
+      .populate("category")
+      .sort({ createdAt: -1 });
+
+    const productsWithPhotos = products.map((product) => {
+      const productObj = product.toObject();
+      if (productObj.photo && productObj.photo.data) {
+        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString(
+          "base64"
+        )}`;
+        delete productObj.photo;
+      }
+      return productObj;
+    });
+
+    res.status(200).send({
+      success: true,
+      category,
+      products: productsWithPhotos,
+      count: products.length,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      error: error.message,
+      message: "Error while getting products",
+    });
+  }
+};
+
+// productSubcategoryController
+export const productSubcategoryController = async (req, res) => {
+  try {
+    const { subcategoryId } = req.params;
+    const isActiveFilter = req.query.isActive || "1"; // Default to "1" (active)
+    const stocks = req.query.stock || "1"; // Default to "1" (products with stock > 0)
+
+    // Validate subcategory ID
+    if (!mongoose.Types.ObjectId.isValid(subcategoryId)) {
+      return res.status(400).send({
+        success: false,
+        message: "Invalid subcategory ID",
+      });
+    }
+
+    // Fetch the subcategory
+    const subcategory = await subcategoryModel.findById(subcategoryId);
+    if (!subcategory) {
+      return res.status(404).send({
+        success: false,
+        message: "Subcategory not found",
+      });
+    }
+
+    // Build the filter query
+    const filterQuery = {
+      subcategory: subcategoryId,
+      ...(isActiveFilter === "1" && { isActive: "1" }), // Only active products
+      ...(stocks === "1" && { stock: { $gt: 0 } }),    // Only products with stock > 0
+    };
+
+    // Fetch products with the filter applied
+    const products = await productModel
+      .find(filterQuery)
+      .sort({ custom_order: 1, createdAt: -1 }) // Sort by custom order and fallback to createdAt
+      .select("name photo photos _id perPiecePrice mrp stock slug custom_order");
+
+    // Process products to include photo URLs if necessary
+    const productsWithPhotos = products.map((product) => {
+      const productObj = product.toObject();
+      if (productObj.photo && productObj.photo.data) {
+        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString(
+          "base64"
+        )}`;
+        delete productObj.photo;
+      }
+      return productObj;
+    });
+
+    // Send response
+    res.status(200).send({
+      success: true,
+      message: "Products fetched successfully",
+      subcategory,
+      products: productsWithPhotos,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({
+      success: false,
+      error: error.message,
+      message: "Error while getting products",
+    });
+  }
+};
+
+// productFiltersController
+export const productFiltersController = async (req, res) => {
+  try {
+    const { checked, radio } = req.body;
+    let args = {
+      ...(checked.length > 0 && { category: checked }),
+      ...(radio.length && { price: { $gte: radio[0], $lte: radio[1] } }),
+      stock: { $gt: 0 }, // Only products with stock > 0
+    };
+
+    const products = await productModel.find(args);
+    res.status(200).send({
+      success: true,
+      products,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(400).send({
+      success: false,
+      message: "Error while filtering products",
+      error,
+    });
+  }
+};
+
 
 
 

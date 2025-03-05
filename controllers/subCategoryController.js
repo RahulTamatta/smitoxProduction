@@ -166,11 +166,10 @@ export const getAllSubcategoriesController = async (req, res) => {
     let query = {};
 
     if (active !== undefined) {
-      query.isActive = active === "true";
+      query.isActive = active === 'true';
     }
 
-    // Limit the result to 10 subcategories
-    const subcategories = await subcategoryModel.find(query).limit(10);
+    const subcategories = await subcategoryModel.find(query);
     res.status(200).send({
       success: true,
       message: "All subcategories retrieved",
