@@ -1,44 +1,62 @@
 import axios from 'axios';
-import { v2 as cloudinary } from 'cloudinary';
 import ImageKit from 'imagekit';
 
-// Cloudinary Configuration
-const CLOUDINARY_CLOUD_NAME = 'djtiblazd';            // From your query
-const CLOUDINARY_API_KEY = '719814162117114';        // From your query
-const CLOUDINARY_API_SECRET = 'VB_c0DClKeLugYJf9tMMIxXjXRE';     // Replace with your actual API secret
-
-cloudinary.config({
-  cloud_name: CLOUDINARY_CLOUD_NAME,
-  api_key: CLOUDINARY_API_KEY,
-  api_secret: CLOUDINARY_API_SECRET
+// Source ImageKit Configuration
+const sourceImagekit = new ImageKit({
+  publicKey: 'public_XxQnBh4c/UCDe8GKiz9RGPfF3pU=',  // Source ImageKit public key
+  privateKey: 'private_w9mQMbhui+mZAeDCB/1v3dGqAf8=', // Source ImageKit private key
+  urlEndpoint: 'https://ik.imagekit.io/cvv8mhaiu'     // Source ImageKit URL endpoint
 });
 
-// ImageKit Configuration
-const imagekit = new ImageKit({
-  publicKey: 'public_XxQnBh4c/UCDe8GKiz9RGPfF3pU=',                      // Replace with your ImageKit public key
-  privateKey: 'private_w9mQMbhui+mZAeDCB/1v3dGqAf8=',                    // Replace with your ImageKit private key
-  urlEndpoint:  "https://ik.imagekit.io/cvv8mhaiu"// Replace with your ImageKit URL endpoint
+// Destination ImageKit Configuration
+const destImagekit = new ImageKit({
+  publicKey:'public_t9kPQ05xdL3avZ7DaJ8eNsbZVC0=',  // Destination ImageKit public key
+  privateKey:'private_ahYaBjbDGyoqnUmLZQrIgYuimtA=', // Destination ImageKit private key
+  urlEndpoint: 'https://ik.imagekit.io/smitoxImage' 
 });
 
-// Function to list all images from Cloudinary
+// Function to list all images from source ImageKit account
 const listImages = async () => {
   let allImages = [];
-  let nextCursor = null;
+  let skip = 0;
+  const limit = 100;
+  
   try {
-    do {
-      const result = await cloudinary.api.resources({
-        type: 'upload',
-        prefix: '', // Optional: specify a folder, e.g., 'your_folder/'
-        max_results: 500,
-        next_cursor: nextCursor
+    console.log("Attempting to list files from source ImageKit...");
+    let hasMore = true;
+    
+    while (hasMore) {
+      console.log(`Fetching batch: skip=${skip}, limit=${limit}`);
+      const result = await sourceImagekit.listFiles({
+        skip: skip,
+        limit: limit
       });
-      allImages = allImages.concat(result.resources);
-      nextCursor = result.next_cursor;
-    } while (nextCursor);
+      
+      console.log(`Batch returned ${result.length} files`);
+      
+      if (result && Array.isArray(result)) {
+        allImages = allImages.concat(result);
+        
+        if (result.length < limit) {
+          hasMore = false;
+        } else {
+          skip += limit;
+        }
+      } else {
+        console.log("Unexpected response format:", result);
+        hasMore = false;
+      }
+    }
+    
+    console.log(`Total files found: ${allImages.length}`);
     return allImages;
   } catch (error) {
-    console.error('Error listing images from Cloudinary:', error);
-    throw error;
+    console.error('Error listing images from source ImageKit:', error.message);
+    if (error.response) {
+      console.error('API response:', error.response.data);
+    }
+    // Return empty array instead of throwing to prevent the "Cannot read properties of undefined" error
+    return [];
   }
 };
 
@@ -46,24 +64,26 @@ const listImages = async () => {
 const downloadImage = async (url) => {
   try {
     const response = await axios.get(url, { responseType: 'arraybuffer' });
-    return response.data;
+    return Buffer.from(response.data);
   } catch (error) {
     console.error('Error downloading image:', error);
     throw error;
   }
 };
 
-// Function to upload an image to ImageKit
-const uploadToImageKit = async (fileBuffer, fileName) => {
+// Function to upload an image to destination ImageKit
+const uploadToDestImageKit = async (fileBuffer, fileName, tags = [], folder = '/migrated_images/') => {
   try {
-    const result = await imagekit.upload({
+    const result = await destImagekit.upload({
       file: fileBuffer,
       fileName: fileName,
-      folder: '/migrated_from_cloudinary/' // Optional: organize in a folder
+      folder: folder,
+      tags: tags,
+      useUniqueFileName: false // Keep original filenames
     });
     return result.url;
   } catch (error) {
-    console.error('Error uploading to ImageKit:', error);
+    console.error('Error uploading to destination ImageKit:', error);
     throw error;
   }
 };
@@ -71,22 +91,51 @@ const uploadToImageKit = async (fileBuffer, fileName) => {
 // Main migration function
 const migrateImages = async () => {
   try {
-    // Step 1: Get all images from Cloudinary
+    // Step 1: Get all images from source ImageKit
     const images = await listImages();
+    
+    if (!images || !Array.isArray(images)) {
+      console.error('Failed to get a valid list of images');
+      return;
+    }
+    
     console.log(`Found ${images.length} images to migrate.`);
 
     // Step 2: Process each image
+    let successCount = 0;
+    let failCount = 0;
+    
     for (const image of images) {
       try {
-        const imageUrl = image.secure_url;
+        // Get original file URL from source ImageKit
+        const imageUrl = image.url;
+        
+        // Extract useful metadata to transfer
+        const tags = image.tags || [];
+        const fileName = image.name;
+        
+        // Determine folder structure (maintain if possible)
+        const folder = image.filePath ? image.filePath : '/migrated_images/';
+        
+        console.log(`Migrating: ${fileName}`);
+        
+        // Download the image
         const imageBuffer = await downloadImage(imageUrl);
-        const uploadedUrl = await uploadToImageKit(imageBuffer, image.public_id);
-        console.log(`Successfully migrated ${image.public_id} to ImageKit: ${uploadedUrl}`);
+        
+        // Upload to destination ImageKit
+        const uploadedUrl = await uploadToDestImageKit(imageBuffer, fileName, tags, folder);
+        
+        console.log(`Successfully migrated ${fileName} to destination ImageKit: ${uploadedUrl}`);
+        successCount++;
       } catch (error) {
-        console.error(`Failed to migrate ${image.public_id}:`, error);
+        console.error(`Failed to migrate ${image.name || 'unknown'}:`, error);
+        failCount++;
       }
     }
+    
     console.log('Migration completed.');
+    console.log(`Successfully migrated: ${successCount} images`);
+    console.log(`Failed to migrate: ${failCount} images`);
   } catch (error) {
     console.error('Migration process failed:', error);
   }

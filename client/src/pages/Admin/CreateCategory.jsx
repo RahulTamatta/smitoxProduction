@@ -22,31 +22,31 @@ const CreateCategory = () => {
   const [updatedPhoto, setUpdatedPhoto] = useState(null);
 
   // Upload to Cloudinary function
-  const uploadToCloudinary = async (file) =>  {
-    console.log('Uploading file to ImageKit:', file.name);
+  const uploadToCloudinary = async (file) => {
+    console.log('Starting Cloudinary upload for file:', file.name);
     try {
       const formData = new FormData();
-      formData.append('image', file); // Use 'image' field name to match middleware
-      
-      const response = await axios.post(
-        "/api/v1/images/upload-single",
-        formData,
+      formData.append('file', file);
+      formData.append('upload_preset', 'smitoxphoto');
+      formData.append('cloud_name', 'djtiblazd');
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/djtiblazd/image/upload`,
         {
-          headers: { 'Content-Type': 'multipart/form-data' }
+          method: 'POST',
+          body: formData,
         }
       );
-  
-      if (!response.data?.success) {
-        throw new Error(response.data?.message || 'Upload failed');
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
       }
-      
-      console.log('ImageKit upload successful:', response.data);
-      return {
-        url: response.data.data.url,
-        fileId: response.data.data?.fileId || ""
-      };
+
+      const data = await response.json();
+      console.log('Upload successful, URL:', data.secure_url);
+      return data.secure_url;
     } catch (error) {
-      console.error('Error in ImageKit upload:', error);
+      console.error('Cloudinary upload error:', error);
       throw error;
     }
   };
@@ -69,7 +69,7 @@ const CreateCategory = () => {
 
       if (data?.success) {
         toast.dismiss();
-        //toast.success(`${name} is created`);
+        toast.success(`${name} is created`);
         getAllCategory();
         setName("");
         setPhotos(null);
@@ -122,7 +122,7 @@ const CreateCategory = () => {
 
       if (data?.success) {
         toast.dismiss();
-        //toast.success(`${updatedName} is updated`);
+        toast.success(`${updatedName} is updated`);
         setSelected(null);
         setUpdatedName("");
         setUpdatedPhoto(null);
@@ -146,7 +146,7 @@ const CreateCategory = () => {
         `/api/v1/category/delete-category/${pId}`
       );
       if (data.success) {
-        //toast.success(`Category is deleted`);
+        toast.success(`Category is deleted`);
         getAllCategory();
       } else {
         //toast.error(data.message);

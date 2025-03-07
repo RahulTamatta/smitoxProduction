@@ -2,13 +2,8 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Layout from "../../components/Layout/Layout";
 import AdminMenu from "../../components/Layout/AdminMenu";
-
+import { Button, Form, Card, Row, Col, ToggleButton, Modal } from "react-bootstrap";
 import toast from "react-hot-toast";
-
-
-import { Form, Button, Row, Col, Card, Modal, ToggleButton } from "react-bootstrap";
-
-
 
 const SubcategoryList = () => {
   const [subcategories, setSubcategories] = useState([]);
@@ -28,34 +23,35 @@ const SubcategoryList = () => {
   const [editIsActive, setEditIsActive] = useState(true);
 
   // Upload to Cloudinary function
-  const uploadToCloudinary = async (file) =>{
-    console.log('Uploading file to ImageKit:', file.name);
+  const uploadToCloudinary = async (file) => {
+    console.log('Starting Cloudinary upload for file:', file.name);
     try {
       const formData = new FormData();
-      formData.append('image', file); // Use 'image' field name to match middleware
-      
-      const response = await axios.post(
-        "/api/v1/images/upload-single",
-        formData,
+      formData.append('file', file);
+      formData.append('upload_preset', 'smitoxphoto');
+      formData.append('cloud_name', 'djtiblazd');
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/djtiblazd/image/upload`,
         {
-          headers: { 'Content-Type': 'multipart/form-data' }
+          method: 'POST',
+          body: formData,
         }
       );
-  
-      if (!response.data?.success) {
-        throw new Error(response.data?.message || 'Upload failed');
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
       }
-      
-      console.log('ImageKit upload successful:', response.data);
-      return {
-        url: response.data.data.url,
-        fileId: response.data.data?.fileId || ""
-      };
+
+      const data = await response.json();
+      console.log('Upload successful, URL:', data.secure_url);
+      return data.secure_url;
     } catch (error) {
-      console.error('Error in ImageKit upload:', error);
+      console.error('Cloudinary upload error:', error);
       throw error;
     }
   };
+
   // Fetch categories
   const getAllCategories = async () => {
     try {
@@ -65,7 +61,7 @@ const SubcategoryList = () => {
       }
     } catch (error) {
       console.error(error);
-      // toast.error("Failed to fetch categories.");
+      ////toast.error("Failed to fetch categories.");
     }
   };
 
@@ -80,7 +76,7 @@ const SubcategoryList = () => {
       }
     } catch (error) {
       console.error(error);
-      // toast.error("Failed to fetch subcategories.");
+      ////toast.error("Failed to fetch subcategories.");
     } finally {
       setLoading(false);
     }
@@ -99,13 +95,13 @@ const SubcategoryList = () => {
 
       const { data } = await axios.post("/api/v1/subcategory/create-subcategory", {
         name,
-        parentCategoryId,
-        photos: photoUrl,
+  parentCategoryId,
+        photos: photoUrl
       });
 
       if (data?.success) {
         toast.dismiss();
-        // toast.success(`${name} created successfully.`);
+        toast.success(`${name} created successfully.`);
         setName("");
         setParentCategoryId("");
         setPhotos(null);
@@ -113,12 +109,12 @@ const SubcategoryList = () => {
         getAllSubcategories();
       } else {
         toast.dismiss();
-        // toast.error(data.message);
+        //toast.error(data.message);
       }
     } catch (error) {
       console.error(error);
       toast.dismiss();
-      // toast.error("Failed to create subcategory.");
+      ////toast.error("Failed to create subcategory.");
     }
   };
 
@@ -129,7 +125,6 @@ const SubcategoryList = () => {
       toast.loading("Updating subcategory...");
 
       let photoUrl = "";
-      // Only upload a new file if one is selected
       if (editPhotos && editPhotos instanceof File) {
         photoUrl = await uploadToCloudinary(editPhotos);
       }
@@ -138,25 +133,25 @@ const SubcategoryList = () => {
         `/api/v1/subcategory/update-subcategory/${editingSubcategory._id}`,
         {
           name: editName,
-          category: editParentCategoryId, // Backend expects "category" for update
+          category: editParentCategoryId,
           photos: photoUrl || editingSubcategory.photos,
           isActive: editIsActive,
         }
       );
-
+      
       if (data?.success) {
         toast.dismiss();
-        // toast.success(`${editName} updated successfully.`);
+        toast.success(`${editName} updated successfully.`);
         setShowEditModal(false);
         getAllSubcategories();
       } else {
         toast.dismiss();
-        // toast.error(data.message);
+        //toast.error(data.message);
       }
     } catch (error) {
       console.error(error);
       toast.dismiss();
-      // toast.error("Failed to update subcategory.");
+      ////toast.error("Failed to update subcategory.");
     }
   };
 
@@ -165,14 +160,14 @@ const SubcategoryList = () => {
     try {
       const { data } = await axios.delete(`/api/v1/subcategory/delete-subcategory/${id}`);
       if (data?.success) {
-        // toast.success("Subcategory deleted successfully.");
+        toast.success("Subcategory deleted successfully.");
         getAllSubcategories();
       } else {
-        // toast.error(data.message);
+        //toast.error(data.message);
       }
     } catch (error) {
       console.error(error);
-      // toast.error("Failed to delete subcategory.");
+      ////toast.error("Failed to delete subcategory.");
     }
   };
 
@@ -181,14 +176,14 @@ const SubcategoryList = () => {
     try {
       const { data } = await axios.put(`/api/v1/subcategory/toggle-active/${subcategory._id}`);
       if (data?.success) {
-        // toast.success("Subcategory status updated.");
+        toast.success("Subcategory status updated.");
         getAllSubcategories();
       } else {
-        // toast.error(data.message);
+        //toast.error(data.message);
       }
     } catch (error) {
       console.error(error);
-      // toast.error("Failed to update status.");
+      ////toast.error("Failed to update status.");
     }
   };
 
@@ -288,9 +283,7 @@ const SubcategoryList = () => {
                         <Card.Body>
                           <Card.Title>{subcategory.name}</Card.Title>
                           <Card.Text>
-                            Parent:{" "}
-                            {categories.find((c) => c._id === subcategory.category)?.name ||
-                              "N/A"}
+                            Parent: {categories.find((c) => c._id === subcategory.category)?.name || "N/A"}
                           </Card.Text>
                           <div className="d-flex justify-content-between align-items-center">
                             <Button
@@ -318,9 +311,7 @@ const SubcategoryList = () => {
                           <ToggleButton
                             className="mt-2"
                             type="checkbox"
-                            variant={
-                              subcategory.isActive ? "outline-success" : "outline-danger"
-                            }
+                            variant={subcategory.isActive ? "outline-success" : "outline-danger"}
                             checked={subcategory.isActive}
                             onChange={() => handleToggleActive(subcategory)}
                           >
@@ -417,5 +408,4 @@ const SubcategoryList = () => {
     </Layout>
   );
 };
-
 export default SubcategoryList;
