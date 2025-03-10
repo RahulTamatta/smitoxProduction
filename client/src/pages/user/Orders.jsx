@@ -37,7 +37,7 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
     try {
       const updatedOrder = { ...order, status: 'Cancelled' };
       await axios.put(
-        `https://www.udaankart.com/api/v1/auth/order-status/${order._id}`,
+        `https://www.smitox.com/api/v1/auth/order-status/${order._id}`,
         { status: 'Cancelled' }
       );
       setOrder(updatedOrder);
@@ -83,7 +83,7 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
     try {
       const updatedOrder = { ...order, status: newStatus };
       await axios.put(
-        `https://www.udaankart.com/api/v1/auth/order-status/${order._id}`,
+        `https://www.smitox.com/api/v1/auth/order-status/${order._id}`,
         { status: newStatus }
       );
       setOrder(updatedOrder);

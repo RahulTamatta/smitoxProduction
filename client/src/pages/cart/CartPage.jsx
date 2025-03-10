@@ -31,6 +31,8 @@ const CartPage = () => {
 
   // New function to get price based on product and quantity
   const getPriceForProduct = (product, quantity) => {
+    if (!product) return 0;
+    
     const unitSet = product.unitSet || 1;
   
     if (product.bulkProducts && product.bulkProducts.length > 0) {
@@ -79,7 +81,9 @@ const CartPage = () => {
   const getCart = async () => {
     try {
       const { data } = await axios.get(`/api/v1/carts/users/${auth.user._id}/cart`);
-      setCart(data.cart || []);
+      // Filter out items with null products to prevent errors
+      const validCartItems = (data.cart || []).filter(item => item.product !== null);
+      setCart(validCartItems);
     } catch (error) {
       console.log(error);
       ////toast.error("Error fetching cart");
@@ -183,7 +187,7 @@ const CartPage = () => {
       );
 
       const updatedCart = cart.map(item => 
-        item.product._id === productId 
+        item.product && item.product._id === productId 
           ? { ...item, quantity: newQuantity }
           : item
       );
@@ -203,6 +207,8 @@ const CartPage = () => {
       let total = 0;
   
       cart.forEach((item) => {
+        if (!item || !item.product) return;
+        
         const { product, quantity } = item;
         if (product && quantity > 0) {
           const itemPrice = getPriceForProduct(product, quantity);
@@ -226,7 +232,7 @@ const CartPage = () => {
       !orderPlacementInProgress &&
       // isPincodeAvailable &&
       total >= minimumOrder &&
-      cart.length > 0 &&
+      Array.isArray(cart) && cart.length > 0 &&
       (paymentMethod !== "Braintree" || instance)
     );
   };
@@ -399,6 +405,10 @@ const CartPage = () => {
     navigate(`/product/${slug}`);
   };
   
+  // Ensure cart is an array before filtering
+  const validCartItems = Array.isArray(cart) 
+    ? cart.filter(item => item && item.product) 
+    : [];
 
   return (
     <Layout>
@@ -408,8 +418,8 @@ const CartPage = () => {
             <h1 className="text-center bg-light p-2 mb-1">
               {!auth?.user ? "Hello Guest" : `Hello ${auth?.user?.user_fullname}`}
               <p className="text-center">
-                {cart?.length
-                  ? `You Have ${cart.length} items in your cart ${
+                {validCartItems.length
+                  ? `You Have ${validCartItems.length} items in your cart ${
                       auth?.token ? "" : "please login to checkout!"
                     }`
                   : "Your Cart Is Empty"}
@@ -421,7 +431,7 @@ const CartPage = () => {
         {/* Table Layout for Cart Items */}
         <div className="row">
           <div className="col-md-8">
-            {cart?.length > 0 ? (
+            {validCartItems.length > 0 ? (
               <div className="table-responsive">
                 <table className="table table-bordered">
                   <thead>
@@ -435,12 +445,12 @@ const CartPage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {cart.map((item) => (
+                    {validCartItems.map((item) => (
                       <tr key={item._id}>
                         <td>
                           <img
-                            src={item.product.photos}
-                            alt={item.product.name}
+                            src={item.product?.photos || '/placeholder-image.png'}
+                            alt={item.product?.name || 'Product'}
                             style={{
                               width: "80px",
                               height: "80px",
@@ -448,18 +458,22 @@ const CartPage = () => {
                             }}
                           />
                         </td>
-                        <td>{item.product.name}</td>
+                        <td>{item.product?.name || 'Product no longer available'}</td>
                         <td>
                           <div className="d-flex align-items-center">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleQuantityChange(
-                                  item.product._id,
-                                  item.quantity - item.product.unitSet
-                                );
+                                if (item.product) {
+                                  const unitSet = item.product.unitSet || 1;
+                                  handleQuantityChange(
+                                    item.product._id,
+                                    item.quantity - unitSet
+                                  );
+                                }
                               }}
                               className="btn btn-sm btn-light"
+                              disabled={!item.product}
                             >
                               -
                             </button>
@@ -476,12 +490,16 @@ const CartPage = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleQuantityChange(
-                                  item.product._id,
-                                  item.quantity + item.product.unitSet
-                                );
+                                if (item.product) {
+                                  const unitSet = item.product.unitSet || 1;
+                                  handleQuantityChange(
+                                    item.product._id,
+                                    item.quantity + unitSet
+                                  );
+                                }
                               }}
                               className="btn btn-sm btn-light"
+                              disabled={!item.product}
                             >
                               +
                             </button>
@@ -489,19 +507,23 @@ const CartPage = () => {
                         </td>
                       
                         <td>
-                    
-                          {getPriceForProduct(item.product, item.quantity).toFixed(2)}
+                          {item.product ? 
+                            getPriceForProduct(item.product, item.quantity).toFixed(2) : 
+                            'N/A'}
                         </td>
                         <td>
-                          
-                          {item.quantity *getPriceForProduct(item.product, item.quantity).toFixed(2)}
+                          {item.product ? 
+                            (item.quantity * getPriceForProduct(item.product, item.quantity)).toFixed(2) : 
+                            'N/A'}
                         </td>
                         <td>
                           <button
                             className="btn btn-danger btn-sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              removeCartItem(item.product._id);
+                              if (item.product) {
+                                removeCartItem(item.product._id);
+                              }
                             }}
                           >
                             Remove

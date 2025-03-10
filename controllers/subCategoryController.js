@@ -243,6 +243,7 @@ export const getAllSubcategoriesController = async (req, res) => {
 
 
 // Add a new controller to toggle active status
+
 export const toggleSubcategoryStatusController = async (req, res) => {
   try {
     const { id } = req.params;
