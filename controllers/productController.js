@@ -3,16 +3,32 @@ import productModel from "../models/productModel.js";
 import subcategoryModel from "../models/subcategoryModel.js";
 import categoryModel from "../models/categoryModel.js";
 import orderModel from "../models/orderModel.js";
-import Razorpay from 'razorpay';
-import crypto from 'crypto';
+import Razorpay from "razorpay";
+import crypto from "crypto";
 import fs from "fs";
 import slugify from "slugify";
 import dotenv from "dotenv";
 import { uploadToImageKit } from "../utils/imageKitService.js"; // Changed from imageService.js to imageKitService.js
+import cloudinary from "cloudinary"; // Import Cloudinary
 dotenv.config();
 
+// Configure Cloudinary
+try {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+} catch (error) {
+  console.error('Error configuring Cloudinary:', error);
+}
+
 class CustomOrderService {
-  static async assignCustomOrder(proposedOrder, originalOrder = null, productId = null) {
+  static async assignCustomOrder(
+    proposedOrder,
+    originalOrder = null,
+    productId = null
+  ) {
     // If updating, first decrement orders above original position
     if (originalOrder !== null) {
       await productModel.updateMany(
@@ -26,8 +42,8 @@ class CustomOrderService {
       const lastProduct = await productModel
         .findOne()
         .sort({ custom_order: -1 })
-        .select('custom_order');
-      
+        .select("custom_order");
+
       return lastProduct?.custom_order + 1 || 1;
     }
 
@@ -48,7 +64,7 @@ class CustomOrderService {
         { $inc: { custom_order: 1 } }
       );
     }
-    
+
     return proposedOrder;
   }
 }
@@ -94,66 +110,77 @@ export const createProductController = async (req, res) => {
 
     // Photo validation for Buffer-based images
     if (photo && photo.size > 1000000) {
-      return res.status(400).send({ error: "Photo size should be less than 1MB." });
+      return res
+        .status(400)
+        .send({ error: "Photo size should be less than 1MB." });
     }
 
     if (images) {
       const imageArray = Array.isArray(images) ? images : [images];
       for (let img of imageArray) {
         if (img.size > 1000000) {
-          return res.status(400).send({ error: "Each image size should be less than 1MB." });
+          return res
+            .status(400)
+            .send({ error: "Each image size should be less than 1MB." });
         }
       }
     }
 
-    // Upload primary photo to ImageKit if available
+    // Function to upload image to Cloudinary
+    const uploadToCloudinary = async (file, folder) => {
+      try {
+        const result = await cloudinary.uploader.upload(file.path, {
+          folder: folder,
+          use_filename: true,
+          unique_filename: false,
+        });
+        return result.secure_url;
+      } catch (error) {
+        console.error("Cloudinary upload error:", error);
+        throw error;
+      }
+    };
+
+    // Upload primary photo to Cloudinary
     let productPhoto = req.imageUrl || photos || null;
     if (photo && !req.imageUrl) {
       try {
-        // Create a File object from the uploaded photo
         const photoFile = {
-          name: photo.name || 'product-photo.jpg',
+          name: photo.name || "product-photo.jpg",
           type: photo.type,
           size: photo.size,
-          path: photo.path
+          path: photo.path,
         };
-        
-        // Upload to ImageKit
-        const uploadResult = await uploadToImageKit(photoFile, 'products');
-        if (uploadResult && uploadResult.url) {
-          productPhoto = uploadResult.url;
-        }
+        productPhoto = await uploadToCloudinary(photoFile, "products");
       } catch (uploadError) {
-        console.error("Error uploading to ImageKit:", uploadError);
-        // Fallback to traditional file handling if ImageKit upload fails
+        console.error("Error uploading to Cloudinary:", uploadError);
+        // Fallback to ImageKit or local storage if Cloudinary fails
       }
     }
 
-    // Upload multiple images to ImageKit if available
+    // Upload multiple images to Cloudinary
     let imageUrls = [];
     if (images) {
       const imageArray = Array.isArray(images) ? images : [images];
       try {
-        // Process each image
         const uploadPromises = imageArray.map(async (img) => {
           const imgFile = {
             name: img.name || `product-image-${Date.now()}.jpg`,
             type: img.type,
             size: img.size,
-            path: img.path
+            path: img.path,
           };
-          
-          // Upload to ImageKit
-          const uploadResult = await uploadToImageKit(imgFile, 'products/gallery');
-          return uploadResult && uploadResult.url ? uploadResult.url : null;
+          return await uploadToCloudinary(imgFile, "products/gallery");
         });
-        
-        // Wait for all uploads to complete
-        const results = await Promise.all(uploadPromises);
-        imageUrls = results.filter(url => url !== null);
+        imageUrls = (await Promise.all(uploadPromises)).filter(
+          (url) => url !== null
+        );
       } catch (uploadError) {
-        console.error("Error uploading multiple images to ImageKit:", uploadError);
-        // Continue with existing logic if ImageKit upload fails
+        console.error(
+          "Error uploading multiple images to Cloudinary:",
+          uploadError
+        );
+        // Fallback logic
       }
     }
 
@@ -161,12 +188,19 @@ export const createProductController = async (req, res) => {
     let parsedMultipleImages = [];
     if (multipleimages) {
       try {
-        parsedMultipleImages = typeof multipleimages === 'string' 
-          ? JSON.parse(multipleimages) 
-          : (Array.isArray(multipleimages) ? multipleimages : [multipleimages]);
+        parsedMultipleImages =
+          typeof multipleimages === "string"
+            ? JSON.parse(multipleimages)
+            : Array.isArray(multipleimages)
+            ? multipleimages
+            : [multipleimages];
       } catch (error) {
         console.warn("Error parsing multiple images:", error);
-        parsedMultipleImages = Array.isArray(multipleimages) ? multipleimages : (multipleimages ? [multipleimages] : []);
+        parsedMultipleImages = Array.isArray(multipleimages)
+          ? multipleimages
+          : multipleimages
+          ? [multipleimages]
+          : [];
       }
     }
 
@@ -176,7 +210,7 @@ export const createProductController = async (req, res) => {
     // Parse bulkProducts if provided
     let formattedBulkProducts = null;
     if (bulkProducts) {
-      if (typeof bulkProducts === 'string') {
+      if (typeof bulkProducts === "string") {
         try {
           formattedBulkProducts = JSON.parse(bulkProducts);
         } catch (error) {
@@ -191,8 +225,12 @@ export const createProductController = async (req, res) => {
         formattedBulkProducts = formattedBulkProducts.map((item) => ({
           minimum: isNaN(parseInt(item.minimum)) ? 0 : parseInt(item.minimum),
           maximum: isNaN(parseInt(item.maximum)) ? 0 : parseInt(item.maximum),
-          discount_mrp: isNaN(parseFloat(item.discount_mrp)) ? 0 : parseFloat(item.discount_mrp),
-          selling_price_set: isNaN(parseFloat(item.selling_price_set)) ? 0 : parseFloat(item.selling_price_set),
+          discount_mrp: isNaN(parseFloat(item.discount_mrp))
+            ? 0
+            : parseFloat(item.discount_mrp),
+          selling_price_set: isNaN(parseFloat(item.selling_price_set))
+            ? 0
+            : parseFloat(item.selling_price_set),
         }));
       }
     }
@@ -201,10 +239,15 @@ export const createProductController = async (req, res) => {
     let parsedFkTags = [];
     if (fk_tags) {
       try {
-        parsedFkTags = typeof fk_tags === 'string' ? JSON.parse(fk_tags) : fk_tags;
+        parsedFkTags =
+          typeof fk_tags === "string" ? JSON.parse(fk_tags) : fk_tags;
       } catch (error) {
         console.warn("Error parsing FK tags:", error);
-        parsedFkTags = Array.isArray(fk_tags) ? fk_tags : (fk_tags ? [fk_tags] : []);
+        parsedFkTags = Array.isArray(fk_tags)
+          ? fk_tags
+          : fk_tags
+          ? [fk_tags]
+          : [];
       }
     }
 
@@ -212,11 +255,10 @@ export const createProductController = async (req, res) => {
     const generateSKU = () => {
       const timestamp = Date.now();
       const timeComponent = timestamp.toString(36).slice(-4).toUpperCase();
-      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-      const randomLetters = Array.from(
-        { length: 2 },
-        () => letters.charAt(Math.floor(Math.random() * letters.length))
-      ).join('');
+      const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      const randomLetters = Array.from({ length: 2 }, () =>
+        letters.charAt(Math.floor(Math.random() * letters.length))
+      ).join("");
       return `SM-${timeComponent}${randomLetters}`;
     };
 
@@ -226,9 +268,11 @@ export const createProductController = async (req, res) => {
       const lastProduct = await productModel
         .findOne()
         .sort({ custom_order: -1 })
-        .select('custom_order');
-      
-      productCustomOrder = lastProduct?.custom_order ? lastProduct.custom_order + 1 : 1;
+        .select("custom_order");
+
+      productCustomOrder = lastProduct?.custom_order
+        ? lastProduct.custom_order + 1
+        : 1;
     }
 
     // Create the new product
@@ -259,12 +303,12 @@ export const createProductController = async (req, res) => {
       allowCOD: allowCOD === "1",
       returnProduct: returnProduct === "1",
       userId,
-      isActive: '1',
+      isActive: "1",
       variants: variants ? JSON.parse(variants) : [],
       sets: sets ? JSON.parse(sets) : [],
       tag: Array.isArray(tag) ? tag : tag ? [tag] : [],
       fk_tags: parsedFkTags,
-      photos: productPhoto, // Use uploaded image URL or fallback
+      photos: productPhoto, // Use Cloudinary URL
       multipleimages: finalMultipleImages,
       custom_order: productCustomOrder,
     });
@@ -273,16 +317,16 @@ export const createProductController = async (req, res) => {
     if (photo && !productPhoto) {
       newProduct.photo = {
         data: fs.readFileSync(photo.path),
-        contentType: photo.type
+        contentType: photo.type,
       };
     }
 
     // Handle Buffer-based multiple images if ImageKit upload failed
     if (images && finalMultipleImages.length === parsedMultipleImages.length) {
       const imageArray = Array.isArray(images) ? images : [images];
-      newProduct.images = imageArray.map(img => ({
+      newProduct.images = imageArray.map((img) => ({
         data: fs.readFileSync(img.path),
-        contentType: img.type
+        contentType: img.type,
       }));
     }
 
@@ -299,11 +343,10 @@ export const createProductController = async (req, res) => {
     res.status(500).send({
       success: false,
       message: "Error in creating product",
-      error: error.message
+      error: error.message,
     });
   }
 };
-
 
 export const updateProductController = async (req, res) => {
   try {
@@ -452,12 +495,10 @@ export const updateProductController = async (req, res) => {
           size: photo.size,
           path: photo.path,
         };
-        const uploadResult = await uploadToImageKit(photoFile, "products");
-        if (uploadResult && uploadResult.url) {
-          productPhoto = uploadResult.url;
-        }
+        productPhoto = await uploadToCloudinary(photoFile, "products");
       } catch (uploadError) {
-        console.error("Error uploading to ImageKit:", uploadError);
+        console.error("Error uploading to Cloudinary:", uploadError);
+        // Fallback logic
       }
     }
     updatedFields.photos = productPhoto;
@@ -474,13 +515,17 @@ export const updateProductController = async (req, res) => {
             size: img.size,
             path: img.path,
           };
-          const uploadResult = await uploadToImageKit(imgFile, "products/gallery");
-          return uploadResult && uploadResult.url ? uploadResult.url : null;
+          return await uploadToCloudinary(imgFile, "products/gallery");
         });
-        const results = await Promise.all(uploadPromises);
-        imageUrls = results.filter((url) => url !== null);
+        imageUrls = (await Promise.all(uploadPromises)).filter(
+          (url) => url !== null
+        );
       } catch (uploadError) {
-        console.error("Error uploading multiple images to ImageKit:", uploadError);
+        console.error(
+          "Error uploading multiple images to Cloudinary:",
+          uploadError
+        );
+        // Fallback logic
       }
     }
     // Parse multipleimages from req.fields if provided
@@ -541,7 +586,6 @@ export const updateProductController = async (req, res) => {
   }
 };
 
-
 // getProductController
 export const getProductController = async (req, res) => {
   try {
@@ -556,15 +600,15 @@ export const getProductController = async (req, res) => {
     };
 
     // Apply filters if provided
-    if (req.query.filter && req.query.filter !== 'all') {
+    if (req.query.filter && req.query.filter !== "all") {
       switch (req.query.filter) {
-        case 'active':
+        case "active":
           searchQuery.isActive = "1";
           break;
-        case 'inactive':
+        case "inactive":
           searchQuery.isActive = "0";
           break;
-        case 'outOfStock':
+        case "outOfStock":
           searchQuery.stock = 0;
           break;
         default:
@@ -574,9 +618,9 @@ export const getProductController = async (req, res) => {
     }
 
     // Define the sorting logic
-    const sortQuery = { 
-      custom_order: 1,  // Primary sort by custom_order (ascending)
-      createdAt: -1     // Secondary sort by createdAt (descending)
+    const sortQuery = {
+      custom_order: 1, // Primary sort by custom_order (ascending)
+      createdAt: -1, // Secondary sort by createdAt (descending)
     };
 
     // Fetch products with pagination, sorting, and population
@@ -584,7 +628,9 @@ export const getProductController = async (req, res) => {
       .find(searchQuery)
       .populate("category", "name")
       .populate("subcategory", "name")
-      .select("name category subcategory isActive perPiecePrice slug stock photos custom_order")
+      .select(
+        "name category subcategory isActive perPiecePrice slug stock photos custom_order"
+      )
       .sort(sortQuery) // Apply sorting here
       .skip(skip)
       .limit(limit);
@@ -610,8 +656,25 @@ export const getProductController = async (req, res) => {
     });
   }
 };
-// productListController
-// productListController
+
+// Helper function: wrap Cloudinary API resource call into a promise to get file size (bytes)
+const getResourceBytes = (publicId) => {
+  return new Promise((resolve) => {
+    if (!process.env.CLOUDINARY_CLOUD_NAME) {
+      console.warn('Cloudinary configuration missing - skipping bandwidth calculation');
+      return resolve(0);
+    }
+
+    cloudinary.api.resource(publicId, (error, result) => {
+      if (error) {
+        console.error(`Error fetching resource for ${publicId}:`, error);
+        return resolve(0); // resolve with 0 if there's an error
+      }
+      resolve(result.bytes || 0);
+    });
+  });
+};
+
 export const productListController = async (req, res) => {
   try {
     const perPage = 10;
@@ -627,8 +690,8 @@ export const productListController = async (req, res) => {
 
     // Sorting logic: primary by custom_order, secondary by createdAt
     const sortQuery = { 
-      custom_order: 1,    // Ascending order
-      createdAt: -1       // Descending order
+      custom_order: 1,
+      createdAt: -1
     };
 
     // Get total count of products matching the filter
@@ -641,30 +704,55 @@ export const productListController = async (req, res) => {
       .limit(perPage)
       .sort(sortQuery);
 
-    // Process products to attach photo URLs
+    // Process products to attach optimized Cloudinary photo URLs
+    // and collect promises for file size retrieval
+    const bandwidthPromises = [];
     const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject();
-      if (productObj.photo && productObj.photo.data) {
-        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString("base64")}`;
-        delete productObj.photo;
+      if (productObj.photos) {
+        // Generate an optimized URL using auto quality and format
+        productObj.photoUrl = cloudinary.url(productObj.photos, {
+          transformation: [{
+            width: 200,
+            height: 200,
+            crop: "fill",
+            quality: "auto",
+            fetch_format: "auto"
+          }]
+        });
+        // Add a promise to retrieve the file size for this photo
+        bandwidthPromises.push(getResourceBytes(productObj.photos));
+      } else {
+        // If no photo exists, add a zero-size placeholder
+        bandwidthPromises.push(Promise.resolve(0));
       }
       return productObj;
     });
+
+    // Wait for all Cloudinary API calls to get file sizes
+    const bytesArray = await Promise.all(bandwidthPromises);
+    const totalBytes = bytesArray.reduce((sum, current) => sum + current, 0);
+    
+    // Log the estimated total bandwidth (in bytes) used for the images on this page
+    console.log(`Estimated total image bandwidth for page ${page}: ${totalBytes} bytes`);
 
     res.status(200).send({
       success: true,
       total,
       products: productsWithPhotos,
+      // Optionally include the estimated bandwidth in the response:
+      bandwidthUsedBytes: totalBytes
     });
   } catch (error) {
     console.error(error);
     res.status(400).send({
       success: false,
       message: "Error fetching product data",
-      error,
+      error: error.message,
     });
   }
 };
+
 // searchProductController
 export const searchProductController = async (req, res) => {
   try {
@@ -674,16 +762,22 @@ export const searchProductController = async (req, res) => {
     const isNumber = !isNaN(keywordNumber);
 
     // Fetch category IDs based on name match
-    const categories = await categoryModel.find({
-      name: { $regex: keyword, $options: 'i' }
-    }).select('_id').lean();
-    const categoryIds = categories.map(c => c._id);
+    const categories = await categoryModel
+      .find({
+        name: { $regex: keyword, $options: "i" },
+      })
+      .select("_id")
+      .lean();
+    const categoryIds = categories.map((c) => c._id);
 
     // Fetch subcategory IDs based on name match
-    const subcategories = await subcategoryModel.find({
-      name: { $regex: keyword, $options: 'i' }
-    }).select('_id').lean();
-    const subcategoryIds = subcategories.map(s => s._id);
+    const subcategories = await subcategoryModel
+      .find({
+        name: { $regex: keyword, $options: "i" },
+      })
+      .select("_id")
+      .lean();
+    const subcategoryIds = subcategories.map((s) => s._id);
 
     const results = await productModel
       .find({
@@ -708,7 +802,7 @@ export const searchProductController = async (req, res) => {
             ],
           },
           { stock: { $gt: 0 } }, // Exclude out-of-stock
-          { isActive: "1" },     // Exclude inactive products
+          { isActive: "1" }, // Exclude inactive products
         ],
       })
       .populate("category", "name")
@@ -717,11 +811,10 @@ export const searchProductController = async (req, res) => {
 
     const resultsWithPhotos = results.map((product) => {
       const productObj = product.toObject();
-      if (productObj.photo && productObj.photo.data) {
-        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString(
-          "base64"
-        )}`;
-        delete productObj.photo;
+      if (productObj.photos) {
+        productObj.photoUrl = cloudinary.url(productObj.photos, {
+          transformation: [{ width: 200, height: 200, crop: "fill" }],
+        });
       }
       return productObj;
     });
@@ -752,11 +845,10 @@ export const realtedProductController = async (req, res) => {
 
     const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject();
-      if (productObj.photo && productObj.photo.data) {
-        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString(
-          "base64"
-        )}`;
-        delete productObj.photo;
+      if (productObj.photos) {
+        productObj.photoUrl = cloudinary.url(productObj.photos, {
+          transformation: [{ width: 200, height: 200, crop: "fill" }],
+        });
       }
       return productObj;
     });
@@ -774,12 +866,6 @@ export const realtedProductController = async (req, res) => {
     });
   }
 };
-
-
-
-
-
-
 
 // productCountController
 export const productCountController = async (req, res) => {
@@ -799,10 +885,6 @@ export const productCountController = async (req, res) => {
   }
 };
 
-
-
-
-
 // Modified single product controller with direct photo data
 export const getSingleProductController = async (req, res) => {
   try {
@@ -821,9 +903,10 @@ export const getSingleProductController = async (req, res) => {
 
     // Convert photo to base64
     const productObj = product.toObject();
-    if (productObj.photo && productObj.photo.data) {
-      productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString('base64')}`;
-      delete productObj.photo;
+    if (productObj.photos) {
+      productObj.photoUrl = cloudinary.url(productObj.photos, {
+        transformation: [{ width: 400, height: 400, crop: "fill" }],
+      });
     }
 
     res.status(200).send({
@@ -841,11 +924,12 @@ export const getSingleProductController = async (req, res) => {
   }
 };
 
-
 // get photo
 export const productPhotoController = async (req, res) => {
   try {
-    const product = await productModel.findById(req.params._id).select("photos");
+    const product = await productModel
+      .findById(req.params._id)
+      .select("photos");
     if (product == null) {
       return res.status(404).send({
         success: false,
@@ -886,13 +970,10 @@ export const deleteProductController = async (req, res) => {
 
 //upate producta
 
-
-
-
 // Initialize Razorpay
 const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
 // Controller
@@ -909,7 +990,12 @@ export const processPaymentController = async (req, res) => {
     const { products, paymentMethod, amount, amountPending } = req.body;
 
     // Validation
-    if (!products || !Array.isArray(products) || products.length === 0 || !paymentMethod) {
+    if (
+      !products ||
+      !Array.isArray(products) ||
+      products.length === 0 ||
+      !paymentMethod
+    ) {
       return res.status(400).json({
         success: false,
         message: "Invalid request body. Missing products or paymentMethod.",
@@ -990,7 +1076,8 @@ export const processPaymentController = async (req, res) => {
 // Verify payment and create order only after successful payment
 export const verifyPaymentController = async (req, res) => {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
+      req.body;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return res.status(400).json({
@@ -1063,47 +1150,44 @@ export const verifyPaymentController = async (req, res) => {
   }
 };
 
-
 // Get payment status
 export const getPaymentStatusController = async (req, res) => {
-    try {
-        const { orderId } = req.params;
-        const order = await orderModel.findById(orderId);
-        
-        if (!order) {
-            return res.status(404).json({
-                success: false,
-                message: "Order not found"
-            });
-        }
+  try {
+    const { orderId } = req.params;
+    const order = await orderModel.findById(orderId);
 
-        if (order.payment.paymentMethod === "COD") {
-            return res.json({
-                success: true,
-                status: "COD",
-                order
-            });
-        }
-
-        const payment = await razorpay.payments.fetch(order.payment.transactionId);
-
-        res.json({
-            success: true,
-            status: payment.status,
-            order,
-            payment
-        });
-
-    } catch (error) {
-        console.error("Error in getPaymentStatusController:", error);
-        res.status(500).json({
-            success: false,
-            message: "Error fetching payment status",
-            error: error.message
-        });
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
     }
-};
 
+    if (order.payment.paymentMethod === "COD") {
+      return res.json({
+        success: true,
+        status: "COD",
+        order,
+      });
+    }
+
+    const payment = await razorpay.payments.fetch(order.payment.transactionId);
+
+    res.json({
+      success: true,
+      status: payment.status,
+      order,
+      payment,
+    });
+  } catch (error) {
+    console.error("Error in getPaymentStatusController:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching payment status",
+      error: error.message,
+    });
+  }
+};
 
 export const getProductPhoto = async (req, res) => {
   try {
@@ -1147,11 +1231,10 @@ export const productCategoryController = async (req, res) => {
 
     const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject();
-      if (productObj.photo && productObj.photo.data) {
-        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString(
-          "base64"
-        )}`;
-        delete productObj.photo;
+      if (productObj.photos) {
+        productObj.photoUrl = cloudinary.url(productObj.photos, {
+          transformation: [{ width: 200, height: 200, crop: "fill" }],
+        });
       }
       return productObj;
     });
@@ -1200,23 +1283,24 @@ export const productSubcategoryController = async (req, res) => {
     const filterQuery = {
       subcategory: subcategoryId,
       ...(isActiveFilter === "1" && { isActive: "1" }), // Only active products
-      ...(stocks === "1" && { stock: { $gt: 0 } }),    // Only products with stock > 0
+      ...(stocks === "1" && { stock: { $gt: 0 } }), // Only products with stock > 0
     };
 
     // Fetch products with the filter applied
     const products = await productModel
       .find(filterQuery)
       .sort({ custom_order: 1, createdAt: -1 }) // Sort by custom order and fallback to createdAt
-      .select("name photo photos _id perPiecePrice mrp stock slug custom_order");
+      .select(
+        "name photo photos _id perPiecePrice mrp stock slug custom_order"
+      );
 
     // Process products to include photo URLs if necessary
     const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject();
-      if (productObj.photo && productObj.photo.data) {
-        productObj.photoUrl = `data:${productObj.photo.contentType};base64,${productObj.photo.data.toString(
-          "base64"
-        )}`;
-        delete productObj.photo;
+      if (productObj.photos) {
+        productObj.photoUrl = cloudinary.url(productObj.photos, {
+          transformation: [{ width: 200, height: 200, crop: "fill" }],
+        });
       }
       return productObj;
     });
@@ -1262,9 +1346,3 @@ export const productFiltersController = async (req, res) => {
     });
   }
 };
-
-
-
-
-
-

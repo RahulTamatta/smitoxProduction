@@ -456,6 +456,7 @@ const CartPage = () => {
                               height: "80px",
                               objectFit: "cover",
                             }}
+                            loading="lazy" // Add lazy loading attribute
                           />
                         </td>
                         <td>{item.product?.name || 'Product no longer available'}</td>
