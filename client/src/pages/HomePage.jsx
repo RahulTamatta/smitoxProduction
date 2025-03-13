@@ -14,6 +14,7 @@ import ProductCard from "./ProductCard"; // Import the new ProductCard component
 import WhatsAppButton from './whatsapp'; // Adjust the import path as needed
 import { useLocation } from 'react-router-dom';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
+import 'react-lazy-load-image-component/src/effects/blur.css';
 
 
 
@@ -139,44 +140,30 @@ const HomePage = () => {
     }
   };
 
-
-  useEffect(() => {
-    if (page === 1) return;
-    loadMore();
-  }, [page]);
-
   const loadMore = async () => {
     try {
+      if (loading) return; // Prevent multiple simultaneous calls
+      
       setLoading(true);
       const nextPage = page + 1;
-      const { data } = await axios.get(`/api/v1/product/product-list/${nextPage}`);
       
-      if(data.products.length === 0) {
+      const { data } = await axios.get(`/api/v1/product/product-list/${nextPage}`, {
+        params: { limit: 12 } // Ensure consistent page size
+      });
+      
+      if (data.products.length === 0) {
         setHasMore(false);
       } else {
         setProducts([...products, ...data.products]);
-        setPage(nextPage);
+        setPage(nextPage); // Update page after successful data fetch
       }
+      
       setLoading(false);
     } catch (error) {
       console.log(error);
       setLoading(false);
     }
   };
-  
-  // Update your "Show More" button
-  {hasMore && products.length < total && (
-    <div className="text-center mt-4 mb-5">
-      <button
-        className="btn btn-primary"
-        onClick={loadMore} // Directly call loadMore
-        disabled={loading}
-        style={{/* your styles */}}
-      >
-        {/* button content */}
-      </button>
-    </div>
-  )}
 
   const handleFilter = (value, id) => {
     let all = [...checked];
@@ -542,17 +529,27 @@ useEffect(() => {
             >
             <ProductCard 
   product={p}
-  handleProductClick={handleProductClick}
+  photoUrl={p.photoUrl}
 />
             </div>
           ))}
         </div>
         
-        {products.length < total && (
-          <div className="text-center mt-4 mb-5">
+        {/* Pagination and Load More */}
+        <div className="text-center mt-4 mb-5">
+          {/* Pagination indicator */}
+          {products.length > 0 && (
+            <div className="mb-3">
+              <span className="text-muted">
+                Page {page} of {Math.ceil(total/12)} • Showing {products.length} of {total} products
+              </span>
+            </div>
+          )}
+          
+          {hasMore && products.length < total && (
             <button
               className="btn btn-primary"
-              onClick={loadMore}
+              onClick={loadMore} // Directly call loadMore
               disabled={loading}
               style={{
                 backgroundColor: '#e53935',
@@ -573,8 +570,12 @@ useEffect(() => {
                 'Show More Products'
               )}
             </button>
-          </div>
-        )}
+          )}
+          
+          {!hasMore && products.length > 0 && (
+            <p className="text-muted">No more products to show</p>
+          )}
+        </div>
       </div>
   
       {/* Products For You Section */}
@@ -592,6 +593,7 @@ useEffect(() => {
               >
                 <ProductCard 
                   product={item.productId}
+                  photoUrl={item.productId?.photoUrl}
                   style={{
                     height: '100%',
                     borderRadius: '12px'

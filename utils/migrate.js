@@ -1,10 +1,20 @@
-// migrate.js (ES module version)
+// migrate_images.js (ES module version)
 import mongoose from 'mongoose';
+import { v2 as cloudinary } from 'cloudinary';
+
+// Set up new Cloudinary account configuration
+cloudinary.config({
+  cloud_name: process.env.NEW_CLOUDINARY_CLOUD_NAME || 'de9injdhu', // New account cloud name
+  api_key: process.env.NEW_CLOUDINARY_API_KEY || '398875936491573',    // New account API key
+  api_secret: process.env.NEW_CLOUDINARY_API_SECRET || 'm6s2VIo4PQLe6rVCNk941vMQesY' // New account API secret
+});
 
 // Update with your actual MongoDB connection string
-const MONGO_URI = 'mongodb+srv://smitox:JSbWYZGtLBJGWxjO@smitox.rlcilry.mongodb.net/?retryWrites=true&w=majority&appName=smitox';
+const MONGO_URI =
+  'mongodb+srv://smitox:JSbWYZGtLBJGWxjO@smitox.rlcilry.mongodb.net/?retryWrites=true&w=majority&appName=smitox';
 
-// List of collections that may have photo-related fields
+// List of collections that may have photo-related fields.
+// Each collection stores the Cloudinary URL in the "photos" field.
 const collections = [
   'adsbanners',
   'banners',
@@ -21,23 +31,22 @@ const collections = [
   'wishlists'
 ];
 
-// Function to convert URL to new Cloudinary format
-function convertCloudinaryUrl(originalUrl) {
-  if (!originalUrl || typeof originalUrl !== 'string' || !originalUrl.includes('migrated_from_cloudinary')) {
-    return originalUrl;
+/**
+ * Transfer an image from the old Cloudinary account to the new one.
+ * @param {string} oldUrl - The URL from the old Cloudinary account.
+ * @returns {Promise<string>} - The new URL after uploading to the new Cloudinary account.
+ */
+async function transferImage(oldUrl) {
+  try {
+    // Upload the image by providing the old URL as the source
+    const result = await cloudinary.uploader.upload(oldUrl, {
+      folder: 'All_images' // Optional: specify a folder for your migrated images
+    });
+    return result.secure_url; // Return the new URL from Cloudinary
+  } catch (error) {
+    console.error("Error transferring image:", oldUrl, error);
+    return oldUrl; // Fallback: return the old URL if upload fails
   }
-
-  // Remove any query parameters (e.g., ?updatedAt=...)
-  const [urlWithoutQuery] = originalUrl.split('?');
-
-  // Extract the file name (everything after the last '/')
-  const fileName = urlWithoutQuery.substring(urlWithoutQuery.lastIndexOf('/') + 1);
-
-  // Extract the public ID by splitting on '_' and taking the first part
-  const [publicId] = fileName.split('_');
-
-  // Construct the new Cloudinary URL
-  return `https://res.cloudinary.com/djtiblazd/image/upload/v1737552540/${publicId}.jpg`;
 }
 
 async function runMigration() {
@@ -50,103 +59,30 @@ async function runMigration() {
 
     let totalUpdated = 0;
 
+    // Adjust the regex to match your old Cloudinary URLs.
+    // Here we match URLs containing 'res.cloudinary.com' followed by either "djtiblazd" or djtiblazd without quotes.
+    const oldUrlPattern = /res\.cloudinary\.com\/["]?djtiblazd["]?/;
+
     for (const collName of collections) {
       const collection = mongoose.connection.collection(collName);
       let updateCount = 0;
-      
-      // 1. Check for "photos" field (string field in schema, not array)
-      const photosCursor = collection.find({
-        photos: { $regex: /migrated_from_cloudinary/ }
+
+      // Find documents where the "photos" field contains an old Cloudinary URL.
+      const cursor = collection.find({
+        photos: { $regex: oldUrlPattern }
       });
 
-      while (await photosCursor.hasNext()) {
-        const doc = await photosCursor.next();
-        const storedUrl = doc.photos;
-        console.log(`Processing document ${doc._id} with photos (string): ${storedUrl}`);
-
-        const newCloudinaryUrl = convertCloudinaryUrl(storedUrl);
-        
-        // Update the document with the new URL
-        await collection.updateOne(
-          { _id: doc._id },
-          { $set: { photos: newCloudinaryUrl } }
-        );
+      while (await cursor.hasNext()) {
+        const doc = await cursor.next();
+        const oldUrl = doc.photos;
+        console.log(`Transferring image for document ${doc._id} in ${collName}: ${oldUrl}`);
+        const newUrl = await transferImage(oldUrl);
+        await collection.updateOne({ _id: doc._id }, { $set: { photos: newUrl } });
+        console.log(`Updated document ${doc._id} in ${collName}: ${oldUrl} -> ${newUrl}`);
         updateCount++;
-        console.log(`Updated document ${doc._id} photos to: ${newCloudinaryUrl}`);
       }
 
-      // 2. Check for "multipleimages" array
-      const multipleImagesCursor = collection.find({
-        multipleimages: { $elemMatch: { $regex: /migrated_from_cloudinary/ } }
-      });
-
-      while (await multipleImagesCursor.hasNext()) {
-        const doc = await multipleImagesCursor.next();
-        console.log(`Processing document ${doc._id} with multipleimages array`);
-        
-        if (Array.isArray(doc.multipleimages)) {
-          const updatedImages = doc.multipleimages.map(url => {
-            if (typeof url === 'string' && url.includes('migrated_from_cloudinary')) {
-              const newUrl = convertCloudinaryUrl(url);
-              console.log(`  Updated multipleimages URL: ${url} -> ${newUrl}`);
-              return newUrl;
-            }
-            return url;
-          });
-          
-          // Update the document with the new array
-          await collection.updateOne(
-            { _id: doc._id },
-            { $set: { multipleimages: updatedImages } }
-          );
-          updateCount++;
-          console.log(`Updated document ${doc._id} multipleimages array`);
-        }
-      }
-
-      // 3. Try a more direct approach for line 34 in the screenshot (photos array)
-      const directCheckCursor = collection.find({});
-      
-      while (await directCheckCursor.hasNext()) {
-        const doc = await directCheckCursor.next();
-        let updated = false;
-        
-        // Check if photos is a string that contains our target URL
-        if (doc.photos && typeof doc.photos === 'string' && doc.photos.includes('migrated_from_cloudinary')) {
-          const newUrl = convertCloudinaryUrl(doc.photos);
-          await collection.updateOne(
-            { _id: doc._id },
-            { $set: { photos: newUrl } }
-          );
-          console.log(`Updated document ${doc._id} photos string: ${doc.photos} -> ${newUrl}`);
-          updated = true;
-        }
-        
-        // Check if multipleimages exists and has at least one URL to update
-        if (Array.isArray(doc.multipleimages) && doc.multipleimages.some(url => 
-          typeof url === 'string' && url.includes('migrated_from_cloudinary'))) {
-          
-          const updatedImages = doc.multipleimages.map(url => {
-            if (typeof url === 'string' && url.includes('migrated_from_cloudinary')) {
-              return convertCloudinaryUrl(url);
-            }
-            return url;
-          });
-          
-          await collection.updateOne(
-            { _id: doc._id },
-            { $set: { multipleimages: updatedImages } }
-          );
-          console.log(`Updated document ${doc._id} multipleimages array`);
-          updated = true;
-        }
-        
-        if (updated) {
-          updateCount++;
-        }
-      }
-
-      console.log(`Collection "${collName}" updated ${updateCount} documents.`);
+      console.log(`Collection "${collName}" updated ${updateCount} document(s).`);
       totalUpdated += updateCount;
     }
 

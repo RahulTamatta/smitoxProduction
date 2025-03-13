@@ -131,14 +131,15 @@ const ProductCard = ({ product, onClick }) => {
           width: "100%",
           overflow: "hidden"
         }}>
+          
           <OptimizedImage
             src={product.photos || '/placeholder-image.jpg'}
             alt={product.name}
             className="card-img-top product-image"
             width={screenWidth <= 576 ? 150 : 300}
             height={screenWidth <= 576 ? 150 : 300}
-            objectFit="contain" // Changed from "cover" to "contain"
-            quality={75}
+            objectFit="cover" // Changed from "cover" to "contain"
+            quality={30}
             loading="lazy"
             backgroundColor="#ffffff" // Explicitly set white background
             style={{

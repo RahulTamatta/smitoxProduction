@@ -677,10 +677,11 @@ const getResourceBytes = (publicId) => {
 
 export const productListController = async (req, res) => {
   try {
-    const perPage = 10;
-    const page = req.params.page ? parseInt(req.params.page, 10) : 1;
+    const perPage = parseInt(req.query.limit) || 10;
+    const page = parseInt(req.params.page) || 1;
     const isActiveFilter = req.query.isActive || "1";
     const stocks = req.query.stock || "1";
+    const skip = (page - 1) * perPage;
 
     // Build the filter query
     const filterQuery = {
@@ -700,7 +701,7 @@ export const productListController = async (req, res) => {
     // Fetch products with pagination and sorting
     const products = await productModel
       .find(filterQuery, "name photo photos _id perPiecePrice mrp stock slug custom_order")
-      .skip((page - 1) * perPage)
+      .skip(skip)
       .limit(perPage)
       .sort(sortQuery);
 
@@ -710,14 +711,14 @@ export const productListController = async (req, res) => {
     const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject();
       if (productObj.photos) {
-        // Generate an optimized URL using auto quality and format
+        // Generate an optimized URL using low quality and auto format for better bandwidth savings
         productObj.photoUrl = cloudinary.url(productObj.photos, {
           transformation: [{
-            width: 200,
-            height: 200,
-            crop: "fill",
-            quality: "auto",
-            fetch_format: "auto"
+            // width: 200,
+            // height: 200,
+            // crop: "contain",
+            quality: "30", // Lower quality (30%) to reduce bandwidth
+            // fetch_format: "auto"
           }]
         });
         // Add a promise to retrieve the file size for this photo
@@ -733,14 +734,18 @@ export const productListController = async (req, res) => {
     const bytesArray = await Promise.all(bandwidthPromises);
     const totalBytes = bytesArray.reduce((sum, current) => sum + current, 0);
     
-    // Log the estimated total bandwidth (in bytes) used for the images on this page
-    console.log(`Estimated total image bandwidth for page ${page}: ${totalBytes} bytes`);
-
+    // Enhanced response with pagination metadata
     res.status(200).send({
       success: true,
       total,
       products: productsWithPhotos,
-      // Optionally include the estimated bandwidth in the response:
+      pagination: {
+        currentPage: page,
+        perPage,
+        totalPages: Math.ceil(total / perPage),
+        hasNextPage: skip + products.length < total,
+        hasPrevPage: page > 1
+      },
       bandwidthUsedBytes: totalBytes
     });
   } catch (error) {
@@ -813,7 +818,13 @@ export const searchProductController = async (req, res) => {
       const productObj = product.toObject();
       if (productObj.photos) {
         productObj.photoUrl = cloudinary.url(productObj.photos, {
-          transformation: [{ width: 200, height: 200, crop: "fill" }],
+          transformation: [{ 
+            width: 200, 
+            height: 200, 
+            crop: "fill",
+            quality: "30", // Lower quality for search results
+            fetch_format: "auto"
+          }],
         });
       }
       return productObj;
@@ -847,7 +858,13 @@ export const realtedProductController = async (req, res) => {
       const productObj = product.toObject();
       if (productObj.photos) {
         productObj.photoUrl = cloudinary.url(productObj.photos, {
-          transformation: [{ width: 200, height: 200, crop: "fill" }],
+          transformation: [{ 
+            width: 200, 
+            height: 200, 
+            crop: "fill",
+            quality: "30", // Lower quality
+            fetch_format: "auto"
+          }],
         });
       }
       return productObj;
@@ -905,7 +922,12 @@ export const getSingleProductController = async (req, res) => {
     const productObj = product.toObject();
     if (productObj.photos) {
       productObj.photoUrl = cloudinary.url(productObj.photos, {
-        transformation: [{ width: 400, height: 400, crop: "fill" }],
+        transformation: [{ 
+          width: 400, 
+          height: 400, 
+          crop: "fill",
+          quality: "50" // Slightly higher quality for product detail page
+        }],
       });
     }
 
