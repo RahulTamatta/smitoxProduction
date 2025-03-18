@@ -13,7 +13,8 @@
     "prestart": "node setup.cjs",
     "sync-deps": "npm install && npm dedupe",
     "prepare": "node scripts/prepare.js",
-    "build": "node scripts/build.js"
+    "build": "node scripts/build.js && npm run sentry:sourcemaps",
+    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org smitox --project node  && sentry-cli sourcemaps upload --org smitox --project node "
   },
   "keywords": [],
   "author": "Rahul Tamatta",
@@ -21,6 +22,8 @@
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@sendgrid/mail": "^7.7.0",
+    "@sentry/cli": "^2.42.3",
+    "@sentry/node": "^9.6.0",
     "axios": "^1.7.9",
     "bcrypt": "^5.1.1",
     "cloudinary": "^2.5.1",

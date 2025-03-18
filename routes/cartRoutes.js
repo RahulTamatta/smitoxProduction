@@ -38,7 +38,7 @@ router.get("/users/:userId/wishlist/check/:productId", checkWishlistStatus);
 router.get('/users/:userId/cart', getCart); // Fetch user's cart
 router.patch('/users/:userId/cart/:productId', updateCartQuantity); // Update quantity in cart
 // New route to fetch real-time product quantity
-router.get('/users/:userId/products/:productId/quantity', getProductQuantity);
+router.get('/users/:userId/products/:productId/quantity', getProducjtQuantity);
 router.post('/users/:userId/cart', addToCart);
 router.get('/users/:userId/cart/products/:productId/quantity', fetchProductQuantity); 
 router.post('/users/:userId/cartq/:productId', updateCart); // Update product in cart

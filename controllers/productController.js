@@ -70,6 +70,8 @@ class CustomOrderService {
 }
 export const createProductController = async (req, res) => {
   try {
+    console.log("req.files:", req.files);
+    console.log("req.imageUrl:", req.imageUrl);
     const {
       name,
       description,
@@ -107,6 +109,9 @@ export const createProductController = async (req, res) => {
 
     // Handle files from request
     const { photo, images } = req.files || {};
+    console.log("photo:", photo);
+    console.log("images:", images);
+    console.log("photos:", photos);
 
     // Photo validation for Buffer-based images
     if (photo && photo.size > 1000000) {
@@ -1001,7 +1006,10 @@ const razorpay = new Razorpay({
 // Controller
 export const processPaymentController = async (req, res) => {
   try {
+    console.log("Received payment request:", req.body);
+
     if (!req.user || !req.user._id) {
+      console.error("Authentication failed: User not found");
       return res.status(401).json({
         success: false,
         message: "Authentication required",
@@ -1012,12 +1020,8 @@ export const processPaymentController = async (req, res) => {
     const { products, paymentMethod, amount, amountPending } = req.body;
 
     // Validation
-    if (
-      !products ||
-      !Array.isArray(products) ||
-      products.length === 0 ||
-      !paymentMethod
-    ) {
+    if (!products || !Array.isArray(products) || products.length === 0 || !paymentMethod) {
+      console.error("Validation failed: Invalid request body", req.body);
       return res.status(400).json({
         success: false,
         message: "Invalid request body. Missing products or paymentMethod.",
@@ -1025,8 +1029,11 @@ export const processPaymentController = async (req, res) => {
       });
     }
 
+    console.log("Processing payment for user:", req.user._id);
+
     // Handle COD and Advance orders immediately
     if (paymentMethod === "COD" || paymentMethod === "Advance") {
+      console.log("Processing COD/Advance order");
       const order = new orderModel({
         products: products.map((item) => ({
           product: item.product,
@@ -1044,10 +1051,12 @@ export const processPaymentController = async (req, res) => {
       });
 
       await order.save();
+      console.log("Order saved successfully:", order);
 
       // Update stock for each product
       await Promise.all(
         products.map(async (item) => {
+          console.log("Updating stock for product:", item.product);
           await productModel.findByIdAndUpdate(
             item.product,
             { $inc: { stock: -item.quantity } }, // Decrease stock
@@ -1063,7 +1072,7 @@ export const processPaymentController = async (req, res) => {
       });
     }
 
-    // For Razorpay payments
+    console.log("Initiating Razorpay payment");
     const razorpayOrderData = {
       amount: Math.round(amount * 100),
       currency: "INR",
@@ -1078,6 +1087,7 @@ export const processPaymentController = async (req, res) => {
     };
 
     const razorpayOrder = await razorpay.orders.create(razorpayOrderData);
+    console.log("Razorpay order created successfully:", razorpayOrder);
 
     res.json({
       success: true,
@@ -1095,20 +1105,20 @@ export const processPaymentController = async (req, res) => {
   }
 };
 
-// Verify payment and create order only after successful payment
 export const verifyPaymentController = async (req, res) => {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
-      req.body;
+    console.log("Received payment verification request:", req.body);
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      console.error("Missing required payment verification parameters");
       return res.status(400).json({
         success: false,
         message: "Missing required payment verification parameters",
       });
     }
 
-    // Verify signature
+    console.log("Verifying payment signature");
     const body = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
@@ -1116,17 +1126,20 @@ export const verifyPaymentController = async (req, res) => {
       .digest("hex");
 
     if (expectedSignature !== razorpay_signature) {
+      console.error("Invalid payment signature");
       return res.status(400).json({
         success: false,
         message: "Invalid payment signature",
       });
     }
 
-    // Fetch the Razorpay order to get the stored data
+    console.log("Fetching Razorpay order data");
     const razorpayOrder = await razorpay.orders.fetch(razorpay_order_id);
+    console.log("Fetched Razorpay order:", razorpayOrder);
+
     const products = JSON.parse(razorpayOrder.notes.products);
 
-    // Create order in database only after successful payment verification
+    console.log("Creating order after successful payment");
     const order = new orderModel({
       products: products.map((item) => ({
         product: item.product,
@@ -1145,13 +1158,15 @@ export const verifyPaymentController = async (req, res) => {
     });
 
     await order.save();
+    console.log("Order saved successfully:", order);
 
     // Update stock for each product
     await Promise.all(
       products.map(async (item) => {
+        console.log("Updating stock for product:", item.product);
         await productModel.findByIdAndUpdate(
           item.product,
-          { $inc: { stock: -item.quantity } }, // Decrease stock
+          { $inc: { stock: -item.quantity } },
           { new: true }
         );
       })
