@@ -1,7 +1,26 @@
 {
-  "name": "client",
-  "proxy": "http://localhost:8080",
-  "version": "0.1.0",
+  "name": "Ecommerce-app-2023",
+  "proxy": "http://127.0.0.1:5000",
+  "version": "1.0.0",
+  "description": "ecommerce rest api",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "server": "nodemon server.js",
+    "client": "npm start --prefix ./client",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "prestart": "node setup.cjs",
+    "sync-deps": "npm install && npm dedupe",
+    "prepare": "node scripts/prepare.js",
+    "build": "node scripts/build.js && npm run sentry:sourcemaps",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org smitox --project node client/build/static/js && sentry-cli sourcemaps upload --org smitox --project node client/build/static/js"
+  },
+  "keywords": [],
+  "author": "Rahul Tamatta",
+  "license": "MIT",
   "private": true,
   "dependencies": {
     "@ant-design/icons": "^5.5.2",
@@ -40,13 +59,6 @@
     "uuid": "^10.0.0",
     "web-vitals": "^2.1.4",
     "zustand": "^5.0.3"
-  },
-  "scripts": {
-    "start": "react-scripts --max_old_space_size=4096 start",
-    "build": "react-scripts --max_old_space_size=4096 build && npm run sentry:sourcemaps",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org smitox --project node  && sentry-cli sourcemaps upload --org smitox --project node "
   },
   "eslintConfig": {
     "extends": [

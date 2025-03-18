@@ -14,7 +14,7 @@
     "sync-deps": "npm install && npm dedupe",
     "prepare": "node scripts/prepare.js",
     "build": "node scripts/build.js && npm run sentry:sourcemaps",
-    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org smitox --project node  && sentry-cli sourcemaps upload --org smitox --project node "
+    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org smitox --project node client/build/static/js && sentry-cli sourcemaps upload --org smitox --project node client/build/static/js"
   },
   "keywords": [],
   "author": "Rahul Tamatta",
