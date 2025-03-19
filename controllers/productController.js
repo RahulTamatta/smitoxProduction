@@ -1246,10 +1246,9 @@ export const getProductPhoto = async (req, res) => {
     });
   }
 };
-
-// productCategoryController
 export const productCategoryController = async (req, res) => {
   try {
+    // Find category by slug
     const category = await categoryModel.findOne({ slug: req.params.slug });
     if (!category) {
       return res.status(404).send({
@@ -1258,14 +1257,23 @@ export const productCategoryController = async (req, res) => {
       });
     }
 
+    // Determine active filter from query parameter; default to "1" (active)
+    const isActiveFilter = req.query.isActive !== undefined ? req.query.isActive : "1";
+
+    // Build filter query including category, stock, and active status
+    const filterQuery = {
+      category: category._id,
+      stock: { $gt: 0 }, // Only products with stock > 0
+      isActive: isActiveFilter,
+    };
+
+    // Fetch products with filtering and sorting
     const products = await productModel
-      .find({
-        category: category._id,
-        stock: { $gt: 0 }, // Only products with stock > 0
-      })
+      .find(filterQuery)
       .populate("category")
       .sort({ createdAt: -1 });
 
+    // Map products to include optimized Cloudinary photo URLs if available
     const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject();
       if (productObj.photos) {
@@ -1292,11 +1300,11 @@ export const productCategoryController = async (req, res) => {
   }
 };
 
-// productSubcategoryController
 export const productSubcategoryController = async (req, res) => {
   try {
     const { subcategoryId } = req.params;
-    const isActiveFilter = req.query.isActive || "1"; // Default to "1" (active)
+    // Use provided isActive query parameter if available; default to "1" (active)
+    const isActiveFilter = req.query.isActive !== undefined ? req.query.isActive : "1";
     const stocks = req.query.stock || "1"; // Default to "1" (products with stock > 0)
 
     // Validate subcategory ID
@@ -1316,22 +1324,20 @@ export const productSubcategoryController = async (req, res) => {
       });
     }
 
-    // Build the filter query
+    // Build the filter query, including active status and stock filters
     const filterQuery = {
       subcategory: subcategoryId,
-      ...(isActiveFilter === "1" && { isActive: "1" }), // Only active products
-      ...(stocks === "1" && { stock: { $gt: 0 } }), // Only products with stock > 0
+      isActive: isActiveFilter, // Filter by active/inactive status based on query parameter
+      ...(stocks === "1" && { stock: { $gt: 0 } }), // Only products with stock > 0 if stocks === "1"
     };
 
-    // Fetch products with the filter applied
+    // Fetch products with the filter applied, sorting by custom order then createdAt
     const products = await productModel
       .find(filterQuery)
-      .sort({ custom_order: 1, createdAt: -1 }) // Sort by custom order and fallback to createdAt
-      .select(
-        "name photo photos _id perPiecePrice mrp stock slug custom_order"
-      );
+      .sort({ custom_order: 1, createdAt: -1 })
+      .select("name photo photos _id perPiecePrice mrp stock slug custom_order");
 
-    // Process products to include photo URLs if necessary
+    // Process products to include optimized Cloudinary photo URLs if photos exist
     const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject();
       if (productObj.photos) {
@@ -1358,6 +1364,7 @@ export const productSubcategoryController = async (req, res) => {
     });
   }
 };
+
 
 // productFiltersController
 export const productFiltersController = async (req, res) => {
