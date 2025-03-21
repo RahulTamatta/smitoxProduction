@@ -1037,16 +1037,29 @@ export const processPaymentController = async (req, res) => {
       });
     }
 
-    if (isNaN(amount) || amount <= 0) {
-      console.error(`[Payment] Validation failed | Invalid amount: ${amount}`);
-      return res.status(400).json({
-        success: false,
-        message: "Invalid amount. Amount must be a positive number.",
-        reason: "Invalid amount",
-      });
+    // For COD orders, allow zero amount with non-zero amountPending
+    if (paymentMethod === "COD") {
+      if ((isNaN(amount) || amount < 0) || (isNaN(amountPending) || amountPending <= 0)) {
+        console.error(`[Payment] Validation failed | Invalid amount combination: amount=${amount}, amountPending=${amountPending}`);
+        return res.status(400).json({
+          success: false,
+          message: "For COD orders, amount must be 0 or greater and amountPending must be positive.",
+          reason: "Invalid amount values for COD",
+        });
+      }
+    } else {
+      // For non-COD payments, require positive amount
+      if (isNaN(amount) || amount <= 0) {
+        console.error(`[Payment] Validation failed | Invalid amount: ${amount}`);
+        return res.status(400).json({
+          success: false,
+          message: "Invalid amount. Amount must be a positive number.",
+          reason: "Invalid amount",
+        });
+      }
     }
 
-    console.log(`[Payment] Processing payment for user: ${req.user._id} | Method: ${paymentMethod} | Amount: ${amount}`);
+    console.log(`[Payment] Processing payment for user: ${req.user._id} | Method: ${paymentMethod} | Amount: ${amount} | Pending: ${amountPending || 0}`);
 
     // Handle COD and Advance orders immediately
     if (paymentMethod === "COD" || paymentMethod === "Advance") {
@@ -1073,6 +1086,18 @@ export const processPaymentController = async (req, res) => {
               reason: "Insufficient stock",
             });
           }
+        }
+
+        const totalOrderAmount = amountPending || amount;
+        
+        // Ensure we have a valid total order amount
+        if (isNaN(totalOrderAmount) || totalOrderAmount <= 0) {
+          console.error(`[Payment] Invalid total order amount: ${totalOrderAmount}`);
+          return res.status(400).json({
+            success: false,
+            message: "Invalid total order amount. Either amount or amountPending must be positive.",
+            reason: "Invalid total amount",
+          });
         }
 
         const order = new orderModel({
