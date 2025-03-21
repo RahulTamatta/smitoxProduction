@@ -994,9 +994,6 @@ export const deleteProductController = async (req, res) => {
     });
   }
 };
-
-//upate producta
-
 // Initialize Razorpay
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -1006,10 +1003,12 @@ const razorpay = new Razorpay({
 // Controller
 export const processPaymentController = async (req, res) => {
   try {
-    console.log("Received payment request:", req.body);
+    console.log(`[Payment] Request initiated | IP: ${req.ip} | Method: ${req.method}`);
+    console.log(`[Payment] Request body: ${JSON.stringify(req.body, null, 2)}`);
 
+    // Authentication check
     if (!req.user || !req.user._id) {
-      console.error("Authentication failed: User not found");
+      console.error(`[Payment] Authentication failed | No user in request`);
       return res.status(401).json({
         success: false,
         message: "Authentication required",
@@ -1020,83 +1019,196 @@ export const processPaymentController = async (req, res) => {
     const { products, paymentMethod, amount, amountPending } = req.body;
 
     // Validation
-    if (!products || !Array.isArray(products) || products.length === 0 || !paymentMethod) {
-      console.error("Validation failed: Invalid request body", req.body);
+    if (!products || !Array.isArray(products) || products.length === 0) {
+      console.error(`[Payment] Validation failed | Invalid products array: ${JSON.stringify(products)}`);
       return res.status(400).json({
         success: false,
-        message: "Invalid request body. Missing products or paymentMethod.",
-        reason: "Missing or invalid fields in request body",
+        message: "Invalid request body. Products array is required and must not be empty.",
+        reason: "Invalid products data",
       });
     }
 
-    console.log("Processing payment for user:", req.user._id);
+    if (!paymentMethod) {
+      console.error(`[Payment] Validation failed | Missing payment method`);
+      return res.status(400).json({
+        success: false,
+        message: "Payment method is required",
+        reason: "Missing payment method",
+      });
+    }
+
+    if (isNaN(amount) || amount <= 0) {
+      console.error(`[Payment] Validation failed | Invalid amount: ${amount}`);
+      return res.status(400).json({
+        success: false,
+        message: "Invalid amount. Amount must be a positive number.",
+        reason: "Invalid amount",
+      });
+    }
+
+    console.log(`[Payment] Processing payment for user: ${req.user._id} | Method: ${paymentMethod} | Amount: ${amount}`);
 
     // Handle COD and Advance orders immediately
     if (paymentMethod === "COD" || paymentMethod === "Advance") {
-      console.log("Processing COD/Advance order");
-      const order = new orderModel({
-        products: products.map((item) => ({
-          product: item.product,
-          quantity: item.quantity,
-          price: item.price,
-        })),
-        payment: {
-          paymentMethod,
-          transactionId: `${paymentMethod}-${Date.now()}`,
-        },
-        buyer: req.user._id,
-        amount: amount,
-        amountPending: amountPending,
-        status: "Pending",
-      });
+      console.log(`[Payment] Processing ${paymentMethod} order`);
+      
+      try {
+        // Stock validation before creating order
+        for (const item of products) {
+          const product = await productModel.findById(item.product);
+          if (!product) {
+            console.error(`[Payment] Product not found | ID: ${item.product}`);
+            return res.status(404).json({
+              success: false,
+              message: `Product with ID ${item.product} not found`,
+              reason: "Product not found",
+            });
+          }
+          
+          if (product.stock < item.quantity) {
+            console.error(`[Payment] Insufficient stock | Product: ${product.name} | Available: ${product.stock} | Requested: ${item.quantity}`);
+            return res.status(400).json({
+              success: false,
+              message: `Insufficient stock for product "${product.name}". Available: ${product.stock}, Requested: ${item.quantity}`,
+              reason: "Insufficient stock",
+            });
+          }
+        }
 
-      await order.save();
-      console.log("Order saved successfully:", order);
+        const order = new orderModel({
+          products: products.map((item) => ({
+            product: item.product,
+            quantity: item.quantity,
+            price: item.price,
+          })),
+          payment: {
+            paymentMethod,
+            transactionId: `${paymentMethod}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            status: paymentMethod === "COD" ? false : true,
+          },
+          buyer: req.user._id,
+          amount: amount,
+          amountPending: amountPending || 0,
+          status: "Pending",
+        });
 
-      // Update stock for each product
-      await Promise.all(
-        products.map(async (item) => {
-          console.log("Updating stock for product:", item.product);
-          await productModel.findByIdAndUpdate(
-            item.product,
-            { $inc: { stock: -item.quantity } }, // Decrease stock
-            { new: true }
+        await order.save();
+        console.log(`[Payment] ${paymentMethod} order saved successfully | Order ID: ${order._id}`);
+
+        // Update stock for each product
+        try {
+          await Promise.all(
+            products.map(async (item) => {
+              console.log(`[Payment] Updating stock for product: ${item.product} | Quantity: -${item.quantity}`);
+              const updatedProduct = await productModel.findByIdAndUpdate(
+                item.product,
+                { $inc: { stock: -item.quantity } }, // Decrease stock
+                { new: true }
+              );
+              
+              if (!updatedProduct) {
+                throw new Error(`Failed to update stock for product: ${item.product}`);
+              }
+              
+              console.log(`[Payment] Stock updated | Product: ${item.product} | New stock: ${updatedProduct.stock}`);
+            })
           );
-        })
-      );
+        } catch (stockError) {
+          console.error(`[Payment] Stock update failed | Error: ${stockError.message}`);
+          // Attempt to roll back the order if stock update fails
+          try {
+            await orderModel.findByIdAndDelete(order._id);
+            console.log(`[Payment] Order rolled back | Order ID: ${order._id}`);
+          } catch (rollbackError) {
+            console.error(`[Payment] Failed to roll back order | Error: ${rollbackError.message}`);
+          }
+          
+          throw new Error(`Failed to update product stock: ${stockError.message}`);
+        }
 
-      return res.json({
-        success: true,
-        message: `${paymentMethod} order placed successfully`,
-        order,
-      });
+        return res.json({
+          success: true,
+          message: `${paymentMethod} order placed successfully`,
+          order,
+        });
+      } catch (codError) {
+        console.error(`[Payment] ${paymentMethod} order processing failed | Error: ${codError.message}`);
+        return res.status(500).json({
+          success: false,
+          message: `Error processing ${paymentMethod} order`,
+          error: codError.message,
+        });
+      }
     }
 
-    console.log("Initiating Razorpay payment");
-    const razorpayOrderData = {
-      amount: Math.round(amount * 100),
-      currency: "INR",
-      receipt: `order_${Date.now()}`,
-      notes: {
-        paymentMethod,
-        baseAmount: amount,
-        amountPending: amountPending,
-        userId: req.user._id.toString(),
-        products: JSON.stringify(products),
-      },
-    };
+    // Online payment via Razorpay
+    console.log(`[Payment] Initiating Razorpay payment | Amount: ${amount}`);
+    
+    // Validate product stock before creating Razorpay order
+    try {
+      for (const item of products) {
+        const product = await productModel.findById(item.product);
+        if (!product) {
+          console.error(`[Payment] Product not found | ID: ${item.product}`);
+          return res.status(404).json({
+            success: false,
+            message: `Product with ID ${item.product} not found`,
+            reason: "Product not found",
+          });
+        }
+        
+        if (product.stock < item.quantity) {
+          console.error(`[Payment] Insufficient stock | Product: ${product.name} | Available: ${product.stock} | Requested: ${item.quantity}`);
+          return res.status(400).json({
+            success: false,
+            message: `Insufficient stock for product "${product.name}". Available: ${product.stock}, Requested: ${item.quantity}`,
+            reason: "Insufficient stock",
+          });
+        }
+      }
+    } catch (stockCheckError) {
+      console.error(`[Payment] Stock validation failed | Error: ${stockCheckError.message}`);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to validate product stock",
+        error: stockCheckError.message,
+      });
+    }
+    
+    try {
+      const razorpayOrderData = {
+        amount: Math.round(amount * 100),
+        currency: "INR",
+        receipt: `order_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+        notes: {
+          paymentMethod,
+          baseAmount: amount,
+          amountPending: amountPending || 0,
+          userId: req.user._id.toString(),
+          products: JSON.stringify(products),
+        },
+      };
 
-    const razorpayOrder = await razorpay.orders.create(razorpayOrderData);
-    console.log("Razorpay order created successfully:", razorpayOrder);
+      const razorpayOrder = await razorpay.orders.create(razorpayOrderData);
+      console.log(`[Payment] Razorpay order created | Order ID: ${razorpayOrder.id} | Amount: ${razorpayOrder.amount/100}`);
 
-    res.json({
-      success: true,
-      message: "Razorpay order initiated",
-      razorpayOrder,
-      key: process.env.RAZORPAY_KEY_ID,
-    });
+      res.json({
+        success: true,
+        message: "Razorpay order initiated",
+        razorpayOrder,
+        key: process.env.RAZORPAY_KEY_ID,
+      });
+    } catch (razorpayError) {
+      console.error(`[Payment] Razorpay order creation failed | Error: ${razorpayError.message}`);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to create Razorpay order",
+        error: razorpayError.message,
+      });
+    }
   } catch (error) {
-    console.error("Error in processPaymentController:", error);
+    console.error(`[Payment] Unhandled exception in processPaymentController | Error: ${error.message}`);
+    console.error(error.stack);
     res.status(500).json({
       success: false,
       message: "Error in payment processing",
@@ -1107,78 +1219,212 @@ export const processPaymentController = async (req, res) => {
 
 export const verifyPaymentController = async (req, res) => {
   try {
-    console.log("Received payment verification request:", req.body);
+    console.log(`[Verification] Payment verification initiated | IP: ${req.ip}`);
+    console.log(`[Verification] Request body: ${JSON.stringify(req.body, null, 2)}`);
+    
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      console.error("Missing required payment verification parameters");
+    // Validation
+    if (!razorpay_order_id) {
+      console.error(`[Verification] Missing order ID`);
       return res.status(400).json({
         success: false,
-        message: "Missing required payment verification parameters",
+        message: "Missing Razorpay order ID",
+      });
+    }
+    
+    if (!razorpay_payment_id) {
+      console.error(`[Verification] Missing payment ID`);
+      return res.status(400).json({
+        success: false,
+        message: "Missing Razorpay payment ID",
+      });
+    }
+    
+    if (!razorpay_signature) {
+      console.error(`[Verification] Missing payment signature`);
+      return res.status(400).json({
+        success: false,
+        message: "Missing Razorpay signature",
       });
     }
 
-    console.log("Verifying payment signature");
-    const body = razorpay_order_id + "|" + razorpay_payment_id;
-    const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-      .update(body)
-      .digest("hex");
+    console.log(`[Verification] Verifying payment signature | Order ID: ${razorpay_order_id} | Payment ID: ${razorpay_payment_id}`);
+    
+    // Verify signature
+    try {
+      const body = razorpay_order_id + "|" + razorpay_payment_id;
+      const expectedSignature = crypto
+        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+        .update(body)
+        .digest("hex");
 
-    if (expectedSignature !== razorpay_signature) {
-      console.error("Invalid payment signature");
-      return res.status(400).json({
+      if (expectedSignature !== razorpay_signature) {
+        console.error(`[Verification] Invalid payment signature | Expected: ${expectedSignature} | Received: ${razorpay_signature}`);
+        return res.status(400).json({
+          success: false,
+          message: "Invalid payment signature. This could be a fraudulent request.",
+        });
+      }
+      
+      console.log(`[Verification] Payment signature verified successfully`);
+    } catch (signatureError) {
+      console.error(`[Verification] Signature verification failed | Error: ${signatureError.message}`);
+      return res.status(500).json({
         success: false,
-        message: "Invalid payment signature",
+        message: "Failed to verify payment signature",
+        error: signatureError.message,
       });
     }
 
-    console.log("Fetching Razorpay order data");
-    const razorpayOrder = await razorpay.orders.fetch(razorpay_order_id);
-    console.log("Fetched Razorpay order:", razorpayOrder);
+    // Fetch Razorpay order
+    let razorpayOrder;
+    try {
+      console.log(`[Verification] Fetching Razorpay order | Order ID: ${razorpay_order_id}`);
+      razorpayOrder = await razorpay.orders.fetch(razorpay_order_id);
+      console.log(`[Verification] Razorpay order fetched | Status: ${razorpayOrder.status} | Amount: ${razorpayOrder.amount/100}`);
+      
+      // Verify payment status
+      if (razorpayOrder.status !== 'paid') {
+        console.error(`[Verification] Order not paid | Status: ${razorpayOrder.status}`);
+        return res.status(400).json({
+          success: false,
+          message: `Payment not completed. Order status: ${razorpayOrder.status}`,
+        });
+      }
+    } catch (fetchError) {
+      console.error(`[Verification] Failed to fetch Razorpay order | Error: ${fetchError.message}`);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch Razorpay order details",
+        error: fetchError.message,
+      });
+    }
 
-    const products = JSON.parse(razorpayOrder.notes.products);
+    // Fetch payment details to verify amount
+    let paymentDetails;
+    try {
+      console.log(`[Verification] Fetching payment details | Payment ID: ${razorpay_payment_id}`);
+      paymentDetails = await razorpay.payments.fetch(razorpay_payment_id);
+      console.log(`[Verification] Payment details fetched | Status: ${paymentDetails.status} | Amount: ${paymentDetails.amount/100}`);
+      
+      // Verify payment status
+      if (paymentDetails.status !== 'captured') {
+        console.error(`[Verification] Payment not captured | Status: ${paymentDetails.status}`);
+        return res.status(400).json({
+          success: false,
+          message: `Payment not captured. Payment status: ${paymentDetails.status}`,
+        });
+      }
+      
+      // Verify payment amount matches order amount
+      if (paymentDetails.amount !== razorpayOrder.amount) {
+        console.error(`[Verification] Amount mismatch | Order amount: ${razorpayOrder.amount} | Paid amount: ${paymentDetails.amount}`);
+        return res.status(400).json({
+          success: false,
+          message: "Payment amount does not match order amount",
+        });
+      }
+    } catch (paymentFetchError) {
+      console.error(`[Verification] Failed to fetch payment details | Error: ${paymentFetchError.message}`);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to verify payment details",
+        error: paymentFetchError.message,
+      });
+    }
 
-    console.log("Creating order after successful payment");
-    const order = new orderModel({
-      products: products.map((item) => ({
-        product: item.product,
-        quantity: item.quantity,
-        price: item.price,
-      })),
-      payment: {
-        paymentMethod: "Razorpay",
-        transactionId: razorpay_order_id,
-        razorpayPaymentId: razorpay_payment_id,
-        status: true,
-      },
-      buyer: razorpayOrder.notes.userId,
-      amount: razorpayOrder.notes.baseAmount,
-      status: "Pending",
-    });
+    // Parse products data
+    let products;
+    try {
+      products = JSON.parse(razorpayOrder.notes.products);
+      console.log(`[Verification] Parsed products data | Count: ${products.length}`);
+    } catch (parseError) {
+      console.error(`[Verification] Failed to parse products data | Error: ${parseError.message}`);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to parse order product data",
+        error: parseError.message,
+      });
+    }
 
-    await order.save();
-    console.log("Order saved successfully:", order);
+    // Transaction management - use a session to ensure atomicity
+    let session;
+    try {
+      session = await mongoose.startSession();
+      session.startTransaction();
+      console.log(`[Verification] Transaction started`);
 
-    // Update stock for each product
-    await Promise.all(
-      products.map(async (item) => {
-        console.log("Updating stock for product:", item.product);
-        await productModel.findByIdAndUpdate(
+      // Create order
+      const order = new orderModel({
+        products: products.map((item) => ({
+          product: item.product,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        payment: {
+          paymentMethod: "Razorpay",
+          transactionId: razorpay_order_id,
+          razorpayPaymentId: razorpay_payment_id,
+          status: true,
+        },
+        buyer: razorpayOrder.notes.userId,
+        amount: parseFloat(razorpayOrder.notes.baseAmount),
+        status: "Pending",
+      });
+
+      await order.save({ session });
+      console.log(`[Verification] Order created | Order ID: ${order._id}`);
+
+      // Update stock for each product
+      for (const item of products) {
+        console.log(`[Verification] Updating stock | Product: ${item.product} | Quantity: -${item.quantity}`);
+        const updatedProduct = await productModel.findByIdAndUpdate(
           item.product,
           { $inc: { stock: -item.quantity } },
-          { new: true }
+          { new: true, session }
         );
-      })
-    );
+        
+        if (!updatedProduct) {
+          throw new Error(`Product with ID ${item.product} not found`);
+        }
+        
+        console.log(`[Verification] Stock updated | Product: ${updatedProduct.name} | New stock: ${updatedProduct.stock}`);
+      }
 
-    res.json({
-      success: true,
-      message: "Payment verified and order created successfully",
-      order,
-    });
+      // Commit transaction
+      await session.commitTransaction();
+      console.log(`[Verification] Transaction committed successfully`);
+      session.endSession();
+
+      res.json({
+        success: true,
+        message: "Payment verified and order created successfully",
+        order,
+      });
+    } catch (transactionError) {
+      console.error(`[Verification] Transaction failed | Error: ${transactionError.message}`);
+      
+      // Abort transaction if it exists and is active
+      if (session) {
+        try {
+          await session.abortTransaction();
+          console.log(`[Verification] Transaction aborted`);
+          session.endSession();
+        } catch (abortError) {
+          console.error(`[Verification] Failed to abort transaction | Error: ${abortError.message}`);
+        }
+      }
+      
+      res.status(500).json({
+        success: false,
+        message: "Failed to process verified payment",
+        error: transactionError.message,
+      });
+    }
   } catch (error) {
-    console.error("Error in verifyPaymentController:", error);
+    console.error(`[Verification] Unhandled exception in verifyPaymentController | Error: ${error.message}`);
+    console.error(error.stack);
     res.status(500).json({
       success: false,
       message: "Error in payment verification",
@@ -1191,16 +1437,39 @@ export const verifyPaymentController = async (req, res) => {
 export const getPaymentStatusController = async (req, res) => {
   try {
     const { orderId } = req.params;
+    console.log(`[Status] Fetching payment status | Order ID: ${orderId}`);
+    
+    if (!orderId) {
+      console.error(`[Status] Missing order ID`);
+      return res.status(400).json({
+        success: false,
+        message: "Order ID is required",
+      });
+    }
+
+    // Validate orderId format (assuming MongoDB ObjectId)
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      console.error(`[Status] Invalid order ID format | ID: ${orderId}`);
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order ID format",
+      });
+    }
+
     const order = await orderModel.findById(orderId);
 
     if (!order) {
+      console.error(`[Status] Order not found | ID: ${orderId}`);
       return res.status(404).json({
         success: false,
         message: "Order not found",
       });
     }
 
+    console.log(`[Status] Order found | Payment method: ${order.payment.paymentMethod}`);
+
     if (order.payment.paymentMethod === "COD") {
+      console.log(`[Status] COD order status returned | Order ID: ${orderId}`);
       return res.json({
         success: true,
         status: "COD",
@@ -1208,16 +1477,42 @@ export const getPaymentStatusController = async (req, res) => {
       });
     }
 
-    const payment = await razorpay.payments.fetch(order.payment.transactionId);
+    if (order.payment.paymentMethod === "Advance") {
+      console.log(`[Status] Advance payment order status returned | Order ID: ${orderId}`);
+      return res.json({
+        success: true,
+        status: "Advance Payment",
+        order,
+      });
+    }
 
-    res.json({
-      success: true,
-      status: payment.status,
-      order,
-      payment,
-    });
+    // For Razorpay payments, fetch status from Razorpay
+    try {
+      console.log(`[Status] Fetching Razorpay payment | Payment ID: ${order.payment.razorpayPaymentId}`);
+      const payment = await razorpay.payments.fetch(order.payment.razorpayPaymentId);
+      console.log(`[Status] Razorpay payment status: ${payment.status} | Order ID: ${orderId}`);
+      
+      res.json({
+        success: true,
+        status: payment.status,
+        order,
+        payment,
+      });
+    } catch (razorpayError) {
+      console.error(`[Status] Failed to fetch Razorpay payment | Error: ${razorpayError.message}`);
+      
+      // Still return order info even if Razorpay fetch fails
+      res.json({
+        success: true,
+        status: "unknown",
+        message: "Could not fetch payment status from Razorpay",
+        order,
+        error: razorpayError.message,
+      });
+    }
   } catch (error) {
-    console.error("Error in getPaymentStatusController:", error);
+    console.error(`[Status] Error in getPaymentStatusController | Error: ${error.message}`);
+    console.error(error.stack);
     res.status(500).json({
       success: false,
       message: "Error fetching payment status",
