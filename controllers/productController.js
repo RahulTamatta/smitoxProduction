@@ -1577,38 +1577,79 @@ export const productCategoryController = async (req, res) => {
       });
     }
 
-    // Determine active filter from query parameter; default to "1" (active)
-    const isActiveFilter = req.query.isActive !== undefined ? req.query.isActive : "1";
+    // Pagination parameters
+    const perPage = parseInt(req.query.limit) || 10;
+    const page = parseInt(req.params.page) || 1;
+    const skip = (page - 1) * perPage;
 
-    // Build filter query including category, stock, and active status
+    // Determine filters from query parameters (with defaults)
+    const isActiveFilter = req.query.isActive || "1";
+    const stocks = req.query.stock || "1";
+
+    // Build filter query including category and other filters
     const filterQuery = {
       category: category._id,
-      stock: { $gt: 0 }, // Only products with stock > 0
-      isActive: isActiveFilter,
+      ...(isActiveFilter === "1" && { isActive: "1" }),
+      ...(stocks === "1" && { stock: { $gt: 0 } }),
     };
 
-    // Fetch products with filtering and sorting
+    // Sorting logic: primary by custom_order, secondary by createdAt
+    const sortQuery = { 
+      custom_order: 1,
+      createdAt: -1
+    };
+
+    // Get total count of products matching the filter
+    const total = await productModel.countDocuments(filterQuery);
+
+    // Fetch products with filtering, pagination and sorting
     const products = await productModel
       .find(filterQuery)
       .populate("category")
-      .sort({ createdAt: -1 });
+      .skip(skip)
+      .limit(perPage)
+      .sort(sortQuery);
 
-    // Map products to include optimized Cloudinary photo URLs if available
+    // Process products to attach optimized Cloudinary photo URLs
+    // and collect promises for file size retrieval
+    const bandwidthPromises = [];
     const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject();
       if (productObj.photos) {
+        // Generate an optimized URL using lower quality for better bandwidth savings
         productObj.photoUrl = cloudinary.url(productObj.photos, {
-          transformation: [{ width: 200, height: 200, crop: "fill" }],
+          transformation: [{
+            quality: "30", // Lower quality (30%) to reduce bandwidth
+          }]
         });
+        // Add a promise to retrieve the file size for this photo
+        bandwidthPromises.push(getResourceBytes(productObj.photos));
+      } else {
+        // If no photo exists, add a zero-size placeholder
+        bandwidthPromises.push(Promise.resolve(0));
       }
       return productObj;
     });
 
+    // Wait for all Cloudinary API calls to get file sizes
+    const bytesArray = await Promise.all(bandwidthPromises);
+    const totalBytes = bytesArray.reduce((sum, current) => sum + current, 0);
+
+    // Enhanced response with pagination metadata
     res.status(200).send({
       success: true,
       category,
+      total,
       products: productsWithPhotos,
       count: products.length,
+      pagination: {
+        currentPage: page,
+        perPage,
+        totalPages: Math.ceil(total / perPage),
+        hasNextPage: skip + products.length < total,
+        hasPrevPage: page > 1
+      },
+      bandwidthUsedBytes: totalBytes
     });
   } catch (error) {
     console.log(error);
@@ -1619,13 +1660,18 @@ export const productCategoryController = async (req, res) => {
     });
   }
 };
-
 export const productSubcategoryController = async (req, res) => {
   try {
     const { subcategoryId } = req.params;
-    // Use provided isActive query parameter if available; default to "1" (active)
-    const isActiveFilter = req.query.isActive !== undefined ? req.query.isActive : "1";
-    const stocks = req.query.stock || "1"; // Default to "1" (products with stock > 0)
+    
+    // Pagination parameters
+    const perPage = parseInt(req.query.limit) || 10;
+    const page = parseInt(req.params.page) || 1;
+    const skip = (page - 1) * perPage;
+    
+    // Filter parameters
+    const isActiveFilter = req.query.isActive || "1";
+    const stocks = req.query.stock || "1";
 
     // Validate subcategory ID
     if (!mongoose.Types.ObjectId.isValid(subcategoryId)) {
@@ -1644,36 +1690,65 @@ export const productSubcategoryController = async (req, res) => {
       });
     }
 
-    // Build the filter query, including active status and stock filters
+    // Build the filter query
     const filterQuery = {
       subcategory: subcategoryId,
-      isActive: isActiveFilter, // Filter by active/inactive status based on query parameter
-      ...(stocks === "1" && { stock: { $gt: 0 } }), // Only products with stock > 0 if stocks === "1"
+      ...(isActiveFilter === "1" && { isActive: "1" }),
+      ...(stocks === "1" && { stock: { $gt: 0 } }),
     };
 
-    // Fetch products with the filter applied, sorting by custom order then createdAt
+    // Get total count of products matching the filter
+    const total = await productModel.countDocuments(filterQuery);
+
+    // Fetch products with filtering, pagination and sorting
     const products = await productModel
       .find(filterQuery)
       .sort({ custom_order: 1, createdAt: -1 })
-      .select("name photo photos _id perPiecePrice mrp stock slug custom_order");
+      .select("name photo photos _id perPiecePrice mrp stock slug custom_order")
+      .skip(skip)
+      .limit(perPage);
 
-    // Process products to include optimized Cloudinary photo URLs if photos exist
+    // Process products to include optimized Cloudinary photo URLs
+    // and collect promises for file size retrieval
+    const bandwidthPromises = [];
     const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject();
       if (productObj.photos) {
+        // Generate an optimized URL using lower quality for better bandwidth savings
         productObj.photoUrl = cloudinary.url(productObj.photos, {
-          transformation: [{ width: 200, height: 200, crop: "fill" }],
+          transformation: [{
+            quality: "30", // Lower quality (30%) to reduce bandwidth
+          }]
         });
+        // Add a promise to retrieve the file size for this photo
+        bandwidthPromises.push(getResourceBytes(productObj.photos));
+      } else {
+        // If no photo exists, add a zero-size placeholder
+        bandwidthPromises.push(Promise.resolve(0));
       }
       return productObj;
     });
 
-    // Send response
+    // Wait for all Cloudinary API calls to get file sizes
+    const bytesArray = await Promise.all(bandwidthPromises);
+    const totalBytes = bytesArray.reduce((sum, current) => sum + current, 0);
+
+    // Send enhanced response with pagination metadata
     res.status(200).send({
       success: true,
       message: "Products fetched successfully",
       subcategory,
       products: productsWithPhotos,
+      total,
+      count: products.length,
+      pagination: {
+        currentPage: page,
+        perPage,
+        totalPages: Math.ceil(total / perPage),
+        hasNextPage: skip + products.length < total,
+        hasPrevPage: page > 1
+      },
+      bandwidthUsedBytes: totalBytes
     });
   } catch (error) {
     console.error(error);
@@ -1684,7 +1759,6 @@ export const productSubcategoryController = async (req, res) => {
     });
   }
 };
-
 
 // productFiltersController
 export const productFiltersController = async (req, res) => {
