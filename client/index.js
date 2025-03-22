@@ -12,9 +12,9 @@ import * as Sentry from "@sentry/react";
 import { BrowserTracing } from "@sentry/tracing";
 
 Sentry.init({
-  dsn: "YOUR_SENTRY_FRONTEND_DSN", // Replace with your frontend DSN
+  dsn: "https://19728acf30c9c6873c0c163ccb56440f@o4508874583179264.ingest.us.sentry.io/4508997290426368", // Replace with your frontend DSN
   integrations: [new BrowserTracing()],
-  tracesSampleRate: 1.0, // Adjust sample rate as needed
+  tracesSampleRate: 1.0,
   environment: "production",
 });
 

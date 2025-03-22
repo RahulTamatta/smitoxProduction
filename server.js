@@ -20,6 +20,7 @@ import pincodeRoutes from "./routes/pincodeRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import minimumOrderRoutes from "./routes/miniMumRoutes.js";
 import imageRoutes from "./routes/imageRoutes.js";
+import * as Sentry from "@sentry/node";
 
 // Configure environment variables
 dotenv.config();
@@ -29,6 +30,13 @@ connectDB();
 
 // Create Express application
 const app = express();
+
+// Initialize Sentry with the most basic configuration
+Sentry.init({
+  dsn: "https://19728acf30c9c6873c0c163ccb56440f@o4508874583179264.ingest.us.sentry.io/4508997290426368",
+});
+
+// Skip the handlers for now until we can verify the correct Sentry version
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -64,6 +72,18 @@ app.use('/api/v1/carts', cartRoutes);
 // Serve React app for any other unknown routes
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "./client/build", "index.html"));
+});
+
+// Skip the Sentry error handler for now
+
+// Continue with your existing error handlers
+app.use((err, req, res, next) => {
+  console.error("Server error:", err);
+  res.status(500).json({
+    success: false,
+    message: "Internal server error",
+    error: process.env.NODE_ENV === "development" ? err.message : null
+  });
 });
 
 // Add error handler for image service
