@@ -1577,11 +1577,6 @@ export const productCategoryController = async (req, res) => {
       });
     }
 
-    // Pagination parameters
-    const perPage = parseInt(req.query.limit) || 10;
-    const page = parseInt(req.params.page) || 1;
-    const skip = (page - 1) * perPage;
-
     // Determine filters from query parameters (with defaults)
     const isActiveFilter = req.query.isActive || "1";
     const stocks = req.query.stock || "1";
@@ -1602,12 +1597,10 @@ export const productCategoryController = async (req, res) => {
     // Get total count of products matching the filter
     const total = await productModel.countDocuments(filterQuery);
 
-    // Fetch products with filtering, pagination and sorting
+    // Fetch products with filtering and sorting (no pagination)
     const products = await productModel
       .find(filterQuery)
       .populate("category")
-      .skip(skip)
-      .limit(perPage)
       .sort(sortQuery);
 
     // Process products to attach optimized Cloudinary photo URLs
@@ -1635,20 +1628,13 @@ export const productCategoryController = async (req, res) => {
     const bytesArray = await Promise.all(bandwidthPromises);
     const totalBytes = bytesArray.reduce((sum, current) => sum + current, 0);
 
-    // Enhanced response with pagination metadata
+    // Response without pagination metadata
     res.status(200).send({
       success: true,
       category,
       total,
       products: productsWithPhotos,
       count: products.length,
-      pagination: {
-        currentPage: page,
-        perPage,
-        totalPages: Math.ceil(total / perPage),
-        hasNextPage: skip + products.length < total,
-        hasPrevPage: page > 1
-      },
       bandwidthUsedBytes: totalBytes
     });
   } catch (error) {
@@ -1660,14 +1646,10 @@ export const productCategoryController = async (req, res) => {
     });
   }
 };
+
 export const productSubcategoryController = async (req, res) => {
   try {
     const { subcategoryId } = req.params;
-    
-    // Pagination parameters
-    const perPage = parseInt(req.query.limit) || 10;
-    const page = parseInt(req.params.page) || 1;
-    const skip = (page - 1) * perPage;
     
     // Filter parameters
     const isActiveFilter = req.query.isActive || "1";
@@ -1700,13 +1682,11 @@ export const productSubcategoryController = async (req, res) => {
     // Get total count of products matching the filter
     const total = await productModel.countDocuments(filterQuery);
 
-    // Fetch products with filtering, pagination and sorting
+    // Fetch products with filtering and sorting (no pagination)
     const products = await productModel
       .find(filterQuery)
       .sort({ custom_order: 1, createdAt: -1 })
-      .select("name photo photos _id perPiecePrice mrp stock slug custom_order")
-      .skip(skip)
-      .limit(perPage);
+      .select("name photo photos _id perPiecePrice mrp stock slug custom_order");
 
     // Process products to include optimized Cloudinary photo URLs
     // and collect promises for file size retrieval
@@ -1733,7 +1713,7 @@ export const productSubcategoryController = async (req, res) => {
     const bytesArray = await Promise.all(bandwidthPromises);
     const totalBytes = bytesArray.reduce((sum, current) => sum + current, 0);
 
-    // Send enhanced response with pagination metadata
+    // Send response without pagination metadata
     res.status(200).send({
       success: true,
       message: "Products fetched successfully",
@@ -1741,13 +1721,6 @@ export const productSubcategoryController = async (req, res) => {
       products: productsWithPhotos,
       total,
       count: products.length,
-      pagination: {
-        currentPage: page,
-        perPage,
-        totalPages: Math.ceil(total / perPage),
-        hasNextPage: skip + products.length < total,
-        hasPrevPage: page > 1
-      },
       bandwidthUsedBytes: totalBytes
     });
   } catch (error) {
@@ -1759,7 +1732,6 @@ export const productSubcategoryController = async (req, res) => {
     });
   }
 };
-
 // productFiltersController
 export const productFiltersController = async (req, res) => {
   try {
