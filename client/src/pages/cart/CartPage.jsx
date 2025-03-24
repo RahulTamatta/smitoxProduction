@@ -22,6 +22,9 @@ const CartPage = () => {
   const [minimumOrderCurrency, setMinimumOrderCurrency] = useState("");
   const [orderPlacementInProgress, setOrderPlacementInProgress] = useState(false);
   const [orderErrorMessage, setOrderErrorMessage] = useState("");
+  const [retryCount, setRetryCount] = useState(0); // Track payment retry attempts
+  const [isProcessing, setIsProcessing] = useState(false); // Track processing state
+  const [networkError, setNetworkError] = useState(false); // Track network errors
 
 
   // const [isPincodeAvailable, setIsPincodeAvailable] = useState(false);
@@ -255,6 +258,47 @@ const CartPage = () => {
       ////toast.error("Error checking pincode");
     }
   };
+  // Helper function to handle network errors with retry logic
+  const handlePaymentWithRetry = async () => {
+    if (isProcessing) return; // Prevent multiple clicks
+    
+    setIsProcessing(true);
+    setNetworkError(false);
+    setOrderErrorMessage("");
+    
+    try {
+      await handlePayment();
+    } catch (error) {
+      console.error("Payment processing error:", error);
+      
+      // Only retry network errors, not validation errors
+      const isNetworkError = error.message && (
+        error.message.includes("network") || 
+        error.message.includes("connection") ||
+        error.message.includes("abort") ||
+        error.message.includes("timeout")
+      );
+      
+      if (isNetworkError && retryCount < 2) {
+        setNetworkError(true);
+        setRetryCount(prev => prev + 1);
+        //toast.error("Network error. Retrying payment...");
+        
+        // Retry after a short delay
+        setTimeout(() => {
+          handlePaymentWithRetry();
+        }, 2000);
+      } else {
+        //toast.error("Payment failed. Please try again later.");
+        setOrderErrorMessage(
+          "Payment processing failed. Please check your internet connection and try again."
+        );
+      }
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handlePayment = async () => {
     const total = totalPrice();
   
@@ -314,86 +358,179 @@ const CartPage = () => {
       };
   
       if (paymentMethod === "COD" || paymentMethod === "Advance") {
-        const { data } = await axios.post("/api/v1/product/process-payment", payload);
-        if (data.success) {
-          await clearCart();
-          //toast.success("Order Placed Successfully!");
-          navigate("/dashboard/user/orders");
-        } else {
-          throw new Error(data.message || "Failed to place order");
+        // Configure timeout for the API request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        
+        try {
+          const { data } = await axios.post(
+            "/api/v1/product/process-payment", 
+            payload, 
+            {
+              signal: controller.signal,
+              timeout: 30000, // Axios timeout
+              headers: {
+                'Content-Type': 'application/json',
+                'Connection': 'keep-alive',
+                'Cache-Control': 'no-cache'
+              }
+            }
+          );
+          
+          clearTimeout(timeoutId);
+          
+          if (data.success) {
+            await clearCart();
+            //toast.success("Order Placed Successfully!");
+            navigate("/dashboard/user/orders");
+          } else {
+            throw new Error(data.message || "Failed to place order");
+          }
+        } catch (error) {
+          clearTimeout(timeoutId);
+          
+          // Enhanced error handling with more detailed messages
+          if (error.name === 'AbortError' || error.code === 'ECONNABORTED') {
+            throw new Error("Request timed out. Please check your internet connection and try again.");
+          }
+          
+          if (error.response) {
+            // The server responded with a status code outside the 2xx range
+            throw new Error(error.response.data.message || "Server responded with an error");
+          } else if (error.request) {
+            // The request was made but no response was received
+            throw new Error("No response from server. Please check your internet connection.");
+          } else {
+            // Something else happened in setting up the request
+            throw error;
+          }
         }
+        
         return;
       }
   
       if (paymentMethod === "Razorpay") {
-        const { data } = await axios.post("/api/v1/product/process-payment", payload);
-  
-        if (!data.success || !data.razorpayOrder) {
-          throw new Error(data.message || "Failed to create Razorpay order");
-        }
-  
-        const options = {
-          key: data.key,
-          amount: data.razorpayOrder.amount,
-          currency: "INR",
-          name: "Smitox",
-          description: "Order Payment",
-          order_id: data.razorpayOrder.id,
-          handler: async function (response) {
-            try {
-              const verifyPayload = {
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              };
-  
-              const verifyResponse = await axios.post(
-                "/api/v1/product/verify-payment", 
-                verifyPayload
-              );
-  
-              if (verifyResponse.data.success) {
-                await clearCart();
-                //toast.success("Payment successful! Order placed successfully");
-                navigate("/dashboard/user/orders");
-              } else {
-                throw new Error(verifyResponse.data.message || "Payment verification failed");
+        // Configure timeout for the API request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        
+        try {
+          const { data } = await axios.post(
+            "/api/v1/product/process-payment", 
+            payload, 
+            {
+              signal: controller.signal,
+              timeout: 30000, // Axios timeout
+              headers: {
+                'Content-Type': 'application/json',
+                'Connection': 'keep-alive',
+                'Cache-Control': 'no-cache'
               }
-            } catch (verifyError) {
-              //toast.error(verifyError.message || "Payment verification failed");
-              console.error("Verification error:", verifyError);
             }
-          },
-          prefill: {
-            name: auth?.user?.user_fullname || "",
-            email: auth?.user?.email || "",
-            contact: auth?.user?.phone || "",
-          },
-          theme: {
-            color: "#3399cc",
-          },
-          modal: {
-            ondismiss: function() {
-              setLoading(false);
-              setOrderPlacementInProgress(false);
-            }
+          );
+          
+          clearTimeout(timeoutId);
+  
+          if (!data.success || !data.razorpayOrder) {
+            throw new Error(data.message || "Failed to create Razorpay order");
           }
-        };
   
-        const rzp = new window.Razorpay(options);
-        rzp.open();
+          const options = {
+            key: data.key,
+            amount: data.razorpayOrder.amount,
+            currency: "INR",
+            name: "Smitox",
+            description: "Order Payment",
+            order_id: data.razorpayOrder.id,
+            handler: async function (response) {
+              try {
+                const verifyPayload = {
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                };
   
-        rzp.on('payment.failed', function (response) {
-          ////toast.error("Payment failed. Please try again.");
-          setLoading(false);
-          setOrderPlacementInProgress(false);
-        });
+                const verifyResponse = await axios.post(
+                  "/api/v1/product/verify-payment", 
+                  verifyPayload,
+                  {
+                    timeout: 30000, // 30 second timeout
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Connection': 'keep-alive'
+                    }
+                  }
+                );
+  
+                if (verifyResponse.data.success) {
+                  await clearCart();
+                  //toast.success("Payment successful! Order placed successfully");
+                  navigate("/dashboard/user/orders");
+                } else {
+                  throw new Error(verifyResponse.data.message || "Payment verification failed");
+                }
+              } catch (verifyError) {
+                //toast.error(verifyError.message || "Payment verification failed");
+                console.error("Verification error:", verifyError);
+                setOrderErrorMessage("Payment verification failed. Please contact support.");
+              } finally {
+                setLoading(false);
+                setOrderPlacementInProgress(false);
+              }
+            },
+            prefill: {
+              name: auth?.user?.user_fullname || "",
+              email: auth?.user?.email || "",
+              contact: auth?.user?.phone || "",
+            },
+            theme: {
+              color: "#3399cc",
+            },
+            modal: {
+              ondismiss: function() {
+                setLoading(false);
+                setOrderPlacementInProgress(false);
+              }
+            }
+          };
+  
+          const rzp = new window.Razorpay(options);
+          rzp.open();
+  
+          rzp.on('payment.failed', function (response) {
+            ////toast.error("Payment failed. Please try again.");
+            setLoading(false);
+            setOrderPlacementInProgress(false);
+            setOrderErrorMessage("Payment gateway reported a failure. Please try again or use a different payment method.");
+          });
+        } catch (error) {
+          clearTimeout(timeoutId);
+          
+          // Enhanced error handling with more detailed messages
+          let errorMessage = "Payment processing failed";
+          
+          if (error.name === 'AbortError' || error.code === 'ECONNABORTED') {
+            errorMessage = "Request timed out. Please check your internet connection and try again.";
+          } else if (error.response) {
+            errorMessage = error.response.data.message || "Server responded with an error";
+          } else if (error.request) {
+            errorMessage = "No response from server. Please check your internet connection.";
+          } else {
+            errorMessage = error.message || "Payment processing failed";
+          }
+          
+          setOrderErrorMessage(errorMessage);
+          //toast.error(errorMessage);
+          console.error("Payment error:", error);
+          throw error; // Rethrow for retry mechanism
+        }
       }
     } catch (error) {
       const errorMessage = error.response?.data?.message || error.message || "Payment processing failed";
       setOrderErrorMessage(errorMessage);
       //toast.error(errorMessage);
       console.error("Payment error:", error);
+      throw error; // Rethrow for retry mechanism
     } finally {
       if (paymentMethod === "COD" || paymentMethod === "Advance") {
         setLoading(false);
@@ -401,6 +538,7 @@ const CartPage = () => {
       }
     }
   };
+
   const handleProductClick = (slug) => {
     navigate(`/product/${slug}`);
   };
@@ -593,23 +731,40 @@ const CartPage = () => {
 
           <button
             className="btn btn-primary w-100"
-            onClick={handlePayment}
-            disabled={!canPlaceOrder()}
+            onClick={handlePaymentWithRetry}
+            disabled={!canPlaceOrder() || isProcessing}
           >
-            {orderPlacementInProgress ? "Processing..." : "Place Order"}
+            {isProcessing ? 
+              "Processing..." : 
+              networkError ? 
+                `Retrying (${retryCount})...` : 
+                "Place Order"}
           </button>
 
-          {/* {!isPincodeAvailable && (
-            <p className="text-danger mt-2">
-              Delivery is not available in your area.
-            </p>
-          )} */}
-          
-          {totalPrice() < minimumOrder && (
-            <p className="text-danger mt-2">
-              Please add more items to meet the minimum order amount of {minimumOrder} {minimumOrderCurrency}.
-            </p>
+          {/* Network error message */}
+          {networkError && (
+            <div className="alert alert-warning mt-2">
+              <AiFillWarning /> Network issues detected. Retrying payment...
+            </div>
           )}
+
+          {/* Order error message with more details */}
+          {orderErrorMessage && (
+            <div className="alert alert-danger mt-2">
+              <AiFillWarning /> {orderErrorMessage}
+              <p className="mt-2 small">
+                If you continue to face issues, please:
+                <br />
+                1. Check your internet connection
+                <br />
+                2. Try refreshing the page
+                <br />
+                3. Contact our support if the problem persists
+              </p>
+            </div>
+          )}
+          
+          {/* ...existing code... */}
         </div>
         </div>
       </div>

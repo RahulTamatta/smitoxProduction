@@ -1004,7 +1004,17 @@ const razorpay = new Razorpay({
 export const processPaymentController = async (req, res) => {
   try {
     console.log(`[Payment] Request initiated | IP: ${req.ip} | Method: ${req.method}`);
-    console.log(`[Payment] Request body: ${JSON.stringify(req.body, null, 2)}`);
+    
+    // Add request compression support
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Connection', 'keep-alive');
+    
+    // Sanitize the logging of sensitive data
+    const sanitizedBody = { ...req.body };
+    if (sanitizedBody.products) {
+      sanitizedBody.products = `[${sanitizedBody.products.length} items]`;
+    }
+    console.log(`[Payment] Request body (sanitized): ${JSON.stringify(sanitizedBody, null, 2)}`);
 
     // Authentication check
     if (!req.user || !req.user._id) {
@@ -1013,19 +1023,54 @@ export const processPaymentController = async (req, res) => {
         success: false,
         message: "Authentication required",
         reason: "User not authenticated",
+        requestId: `req-${Date.now()}` // Add request ID for tracking
       });
     }
 
     const { products, paymentMethod, amount, amountPending } = req.body;
 
-    // Validation
-    if (!products || !Array.isArray(products) || products.length === 0) {
+    // Enhanced validation with detailed error messages
+    if (!products || !Array.isArray(products)) {
       console.error(`[Payment] Validation failed | Invalid products array: ${JSON.stringify(products)}`);
       return res.status(400).json({
         success: false,
-        message: "Invalid request body. Products array is required and must not be empty.",
+        message: "Invalid request body. Products array is required.",
         reason: "Invalid products data",
+        requestId: `req-${Date.now()}`
       });
+    }
+
+    if (products.length === 0) {
+      console.error(`[Payment] Validation failed | Empty products array`);
+      return res.status(400).json({
+        success: false,
+        message: "Products array must not be empty.",
+        reason: "Empty products data",
+        requestId: `req-${Date.now()}`
+      });
+    }
+
+    // Validate each product has required fields
+    for (const [index, item] of products.entries()) {
+      if (!item.product || !mongoose.Types.ObjectId.isValid(item.product)) {
+        console.error(`[Payment] Validation failed | Invalid product ID at index ${index}: ${item.product}`);
+        return res.status(400).json({
+          success: false,
+          message: `Invalid product ID at position ${index + 1}`,
+          reason: "Invalid product data",
+          requestId: `req-${Date.now()}`
+        });
+      }
+      
+      if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+        console.error(`[Payment] Validation failed | Invalid quantity at index ${index}: ${item.quantity}`);
+        return res.status(400).json({
+          success: false,
+          message: `Invalid quantity at position ${index + 1}. Must be a positive integer.`,
+          reason: "Invalid quantity data",
+          requestId: `req-${Date.now()}`
+        });
+      }
     }
 
     if (!paymentMethod) {
@@ -1034,6 +1079,7 @@ export const processPaymentController = async (req, res) => {
         success: false,
         message: "Payment method is required",
         reason: "Missing payment method",
+        requestId: `req-${Date.now()}`
       });
     }
 
@@ -1045,6 +1091,7 @@ export const processPaymentController = async (req, res) => {
           success: false,
           message: "For COD orders, amount must be 0 or greater and amountPending must be positive.",
           reason: "Invalid amount values for COD",
+          requestId: `req-${Date.now()}`
         });
       }
     } else {
@@ -1055,6 +1102,7 @@ export const processPaymentController = async (req, res) => {
           success: false,
           message: "Invalid amount. Amount must be a positive number.",
           reason: "Invalid amount",
+          requestId: `req-${Date.now()}`
         });
       }
     }
@@ -1066,26 +1114,60 @@ export const processPaymentController = async (req, res) => {
       console.log(`[Payment] Processing ${paymentMethod} order`);
       
       try {
-        // Stock validation before creating order
-        for (const item of products) {
-          const product = await productModel.findById(item.product);
-          if (!product) {
-            console.error(`[Payment] Product not found | ID: ${item.product}`);
-            return res.status(404).json({
-              success: false,
-              message: `Product with ID ${item.product} not found`,
-              reason: "Product not found",
+        // Wrap stock validation in a timeout to prevent hanging
+        const stockValidationPromise = new Promise(async (resolve, reject) => {
+          try {
+            // Stock validation before creating order with improved error handling
+            for (const item of products) {
+              const product = await productModel.findById(item.product);
+              if (!product) {
+                console.error(`[Payment] Product not found | ID: ${item.product}`);
+                return reject({
+                  statusCode: 404,
+                  message: `Product with ID ${item.product} not found`,
+                  reason: "Product not found"
+                });
+              }
+              
+              if (product.stock < item.quantity) {
+                console.error(`[Payment] Insufficient stock | Product: ${product.name} | Available: ${product.stock} | Requested: ${item.quantity}`);
+                return reject({
+                  statusCode: 400,
+                  message: `Insufficient stock for product "${product.name}". Available: ${product.stock}, Requested: ${item.quantity}`,
+                  reason: "Insufficient stock"
+                });
+              }
+            }
+            resolve(true);
+          } catch (error) {
+            reject({
+              statusCode: 500,
+              message: `Error validating stock: ${error.message}`,
+              reason: "Stock validation error"
             });
           }
-          
-          if (product.stock < item.quantity) {
-            console.error(`[Payment] Insufficient stock | Product: ${product.name} | Available: ${product.stock} | Requested: ${item.quantity}`);
-            return res.status(400).json({
-              success: false,
-              message: `Insufficient stock for product "${product.name}". Available: ${product.stock}, Requested: ${item.quantity}`,
-              reason: "Insufficient stock",
+        });
+        
+        // Set a timeout for stock validation
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => {
+            reject({
+              statusCode: 408,
+              message: "Request timeout while validating stock",
+              reason: "Stock validation timeout"
             });
-          }
+          }, 30000); // 30-second timeout
+        });
+        
+        try {
+          await Promise.race([stockValidationPromise, timeoutPromise]);
+        } catch (validationError) {
+          return res.status(validationError.statusCode || 500).json({
+            success: false,
+            message: validationError.message,
+            reason: validationError.reason,
+            requestId: `req-${Date.now()}`
+          });
         }
 
         const totalOrderAmount = amountPending || amount;
@@ -1097,6 +1179,7 @@ export const processPaymentController = async (req, res) => {
             success: false,
             message: "Invalid total order amount. Either amount or amountPending must be positive.",
             reason: "Invalid total amount",
+            requestId: `req-${Date.now()}`
           });
         }
 
@@ -1120,24 +1203,39 @@ export const processPaymentController = async (req, res) => {
         await order.save();
         console.log(`[Payment] ${paymentMethod} order saved successfully | Order ID: ${order._id}`);
 
-        // Update stock for each product
+        // Update stock for each product with timeout handling
+        const updateStockPromise = new Promise(async (resolve, reject) => {
+          try {
+            await Promise.all(
+              products.map(async (item) => {
+                console.log(`[Payment] Updating stock for product: ${item.product} | Quantity: -${item.quantity}`);
+                const updatedProduct = await productModel.findByIdAndUpdate(
+                  item.product,
+                  { $inc: { stock: -item.quantity } }, // Decrease stock
+                  { new: true }
+                );
+                
+                if (!updatedProduct) {
+                  throw new Error(`Failed to update stock for product: ${item.product}`);
+                }
+                
+                console.log(`[Payment] Stock updated | Product: ${item.product} | New stock: ${updatedProduct.stock}`);
+              })
+            );
+            resolve(true);
+          } catch (error) {
+            reject(error);
+          }
+        });
+        
+        const stockUpdateTimeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => {
+            reject(new Error("Timeout while updating product stock"));
+          }, 30000); // 30-second timeout
+        });
+        
         try {
-          await Promise.all(
-            products.map(async (item) => {
-              console.log(`[Payment] Updating stock for product: ${item.product} | Quantity: -${item.quantity}`);
-              const updatedProduct = await productModel.findByIdAndUpdate(
-                item.product,
-                { $inc: { stock: -item.quantity } }, // Decrease stock
-                { new: true }
-              );
-              
-              if (!updatedProduct) {
-                throw new Error(`Failed to update stock for product: ${item.product}`);
-              }
-              
-              console.log(`[Payment] Stock updated | Product: ${item.product} | New stock: ${updatedProduct.stock}`);
-            })
-          );
+          await Promise.race([updateStockPromise, stockUpdateTimeoutPromise]);
         } catch (stockError) {
           console.error(`[Payment] Stock update failed | Error: ${stockError.message}`);
           // Attempt to roll back the order if stock update fails
@@ -1148,13 +1246,18 @@ export const processPaymentController = async (req, res) => {
             console.error(`[Payment] Failed to roll back order | Error: ${rollbackError.message}`);
           }
           
-          throw new Error(`Failed to update product stock: ${stockError.message}`);
+          return res.status(500).json({
+            success: false,
+            message: `Failed to update product stock: ${stockError.message}`,
+            requestId: `req-${Date.now()}`
+          });
         }
 
         return res.json({
           success: true,
           message: `${paymentMethod} order placed successfully`,
           order,
+          requestId: `req-${Date.now()}`
         });
       } catch (codError) {
         console.error(`[Payment] ${paymentMethod} order processing failed | Error: ${codError.message}`);
@@ -1162,6 +1265,7 @@ export const processPaymentController = async (req, res) => {
           success: false,
           message: `Error processing ${paymentMethod} order`,
           error: codError.message,
+          requestId: `req-${Date.now()}`
         });
       }
     }
@@ -1169,34 +1273,57 @@ export const processPaymentController = async (req, res) => {
     // Online payment via Razorpay
     console.log(`[Payment] Initiating Razorpay payment | Amount: ${amount}`);
     
-    // Validate product stock before creating Razorpay order
-    try {
-      for (const item of products) {
-        const product = await productModel.findById(item.product);
-        if (!product) {
-          console.error(`[Payment] Product not found | ID: ${item.product}`);
-          return res.status(404).json({
-            success: false,
-            message: `Product with ID ${item.product} not found`,
-            reason: "Product not found",
-          });
+    // Validate product stock before creating Razorpay order with timeout handling
+    const stockValidationPromise = new Promise(async (resolve, reject) => {
+      try {
+        for (const item of products) {
+          const product = await productModel.findById(item.product);
+          if (!product) {
+            console.error(`[Payment] Product not found | ID: ${item.product}`);
+            return reject({
+              statusCode: 404,
+              message: `Product with ID ${item.product} not found`,
+              reason: "Product not found"
+            });
+          }
+          
+          if (product.stock < item.quantity) {
+            console.error(`[Payment] Insufficient stock | Product: ${product.name} | Available: ${product.stock} | Requested: ${item.quantity}`);
+            return reject({
+              statusCode: 400,
+              message: `Insufficient stock for product "${product.name}". Available: ${product.stock}, Requested: ${item.quantity}`,
+              reason: "Insufficient stock"
+            });
+          }
         }
-        
-        if (product.stock < item.quantity) {
-          console.error(`[Payment] Insufficient stock | Product: ${product.name} | Available: ${product.stock} | Requested: ${item.quantity}`);
-          return res.status(400).json({
-            success: false,
-            message: `Insufficient stock for product "${product.name}". Available: ${product.stock}, Requested: ${item.quantity}`,
-            reason: "Insufficient stock",
-          });
-        }
+        resolve(true);
+      } catch (error) {
+        reject({
+          statusCode: 500,
+          message: `Error validating stock: ${error.message}`,
+          reason: "Stock validation error"
+        });
       }
-    } catch (stockCheckError) {
-      console.error(`[Payment] Stock validation failed | Error: ${stockCheckError.message}`);
-      return res.status(500).json({
+    });
+    
+    const stockValidationTimeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject({
+          statusCode: 408,
+          message: "Request timeout while validating stock",
+          reason: "Stock validation timeout"
+        });
+      }, 30000); // 30-second timeout
+    });
+    
+    try {
+      await Promise.race([stockValidationPromise, stockValidationTimeoutPromise]);
+    } catch (validationError) {
+      return res.status(validationError.statusCode || 500).json({
         success: false,
-        message: "Failed to validate product stock",
-        error: stockCheckError.message,
+        message: validationError.message,
+        reason: validationError.reason,
+        requestId: `req-${Date.now()}`
       });
     }
     
@@ -1211,10 +1338,19 @@ export const processPaymentController = async (req, res) => {
           amountPending: amountPending || 0,
           userId: req.user._id.toString(),
           products: JSON.stringify(products),
+          requestTimestamp: Date.now()
         },
       };
 
-      const razorpayOrder = await razorpay.orders.create(razorpayOrderData);
+      // Set a timeout for Razorpay API call
+      const razorpayPromise = razorpay.orders.create(razorpayOrderData);
+      const razorpayTimeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error("Razorpay API request timed out"));
+        }, 30000); // 30-second timeout
+      });
+      
+      const razorpayOrder = await Promise.race([razorpayPromise, razorpayTimeoutPromise]);
       console.log(`[Payment] Razorpay order created | Order ID: ${razorpayOrder.id} | Amount: ${razorpayOrder.amount/100}`);
 
       res.json({
@@ -1222,6 +1358,7 @@ export const processPaymentController = async (req, res) => {
         message: "Razorpay order initiated",
         razorpayOrder,
         key: process.env.RAZORPAY_KEY_ID,
+        requestId: `req-${Date.now()}`
       });
     } catch (razorpayError) {
       console.error(`[Payment] Razorpay order creation failed | Error: ${razorpayError.message}`);
@@ -1229,6 +1366,7 @@ export const processPaymentController = async (req, res) => {
         success: false,
         message: "Failed to create Razorpay order",
         error: razorpayError.message,
+        requestId: `req-${Date.now()}`
       });
     }
   } catch (error) {
@@ -1238,6 +1376,7 @@ export const processPaymentController = async (req, res) => {
       success: false,
       message: "Error in payment processing",
       error: error.message,
+      requestId: `req-${Date.now()}`
     });
   }
 };
