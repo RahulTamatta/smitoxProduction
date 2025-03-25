@@ -37,3 +37,21 @@
     }
   }
   
+  /* Stock Warning Modal Styles */
+  .stock-warning-modal .modal-title {
+    display: flex;
+    align-items: center;
+  }
+  
+  .stock-details {
+    border-left: 3px solid #dc3545;
+    background-color: #f8f9fa;
+  }
+  
+  .stock-warning-modal .modal-header {
+    border-bottom-color: #dc3545;
+  }
+  
+  .stock-warning-modal .modal-footer {
+    border-top-color: #eaeaea;
+  }

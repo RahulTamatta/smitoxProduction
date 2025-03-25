@@ -10,6 +10,7 @@ import { CartProvider } from "./context/cart";
 import "antd/dist/reset.css";
 import * as Sentry from "@sentry/react";
 import { BrowserTracing } from "@sentry/tracing";
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 Sentry.init({
   dsn: "https://19728acf30c9c6873c0c163ccb56440f@o4508874583179264.ingest.us.sentry.io/4508997290426368", // Replace with your frontend DSN

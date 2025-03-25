@@ -4,9 +4,11 @@ import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCart } from "../context/cart";
 import { useAuth } from "../context/auth";
+import { AiFillWarning } from 'react-icons/ai'; // Add this import
 import toast from "react-hot-toast";
 import ProductCard from "./ProductCard";
 import OptimizedImage from "../components/OptimizedImage";
+import StockPopup from "./cart/StockPopup"; // Import the StockPopup component
 
 const ProductDetails = () => {
   const params = useParams();
@@ -30,6 +32,10 @@ const ProductDetails = () => {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [isTablet, setIsTablet] = useState(window.innerWidth > 768 && window.innerWidth <= 1024);
+  const [showStockPopup, setShowStockPopup] = useState(false); // State for stock popup
+  const [isNetworkError, setIsNetworkError] = useState(false);
+  const [retryAttempts, setRetryAttempts] = useState(0);
+  const MAX_RETRIES = 3;
 
   // Debounce addToCart function
   const isAddingToCartRef = useRef(false);
@@ -100,15 +106,76 @@ const ProductDetails = () => {
     }
   }, [product._id, product.category, product.subcategory, auth?.user?._id]);
 
+  const axiosConfig = {
+    timeout: 30000, // 30 second timeout
+    headers: {
+      'Content-Type': 'application/json',
+      'Connection': 'keep-alive'
+    }
+  };
+
+  // Handle network status
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('[Network] Connection restored');
+      setIsNetworkError(false);
+      // Retry failed requests when connection is restored
+      if (retryAttempts > 0) {
+        getProduct();
+      }
+    };
+
+    const handleOffline = () => {
+      console.log('[Network] Connection lost');
+      setIsNetworkError(true);
+      toast.error("Internet connection lost. Please check your network.");
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [retryAttempts]);
+
   const getProduct = async () => {
+    if (!navigator.onLine) {
+      setIsNetworkError(true);
+      toast.error("No internet connection");
+      return;
+    }
+
     try {
-      const { data } = await axios.get(`/api/v1/product/get-product/${params.slug}`);
+      console.log(`[Product] Fetching product details for slug: ${params.slug}`);
+      const { data } = await axios.get(
+        `/api/v1/product/get-product/${params.slug}`,
+        axiosConfig
+      );
+
       if (data.success === true) {
+        console.log('[Product] Product fetched successfully');
         setProduct(data.product);
         setUnitSet(data?.product?.unitSet || 1);
+        setRetryAttempts(0); // Reset retry counter on success
       }
     } catch (error) {
-      console.error(error);
+      console.error('[Product] Error fetching product:', error);
+      
+      const isNetworkError = error.message && (
+        error.message.includes('network') ||
+        error.message.includes('timeout') ||
+        error.message.includes('abort')
+      );
+
+      if (isNetworkError && retryAttempts < MAX_RETRIES) {
+        console.log(`[Product] Retry attempt ${retryAttempts + 1}/${MAX_RETRIES}`);
+        setRetryAttempts(prev => prev + 1);
+        setTimeout(getProduct, 2000); // Retry after 2 seconds
+      } else {
+        toast.error("Failed to load product details. Please try again later.");
+      }
     }
   };
 
@@ -132,19 +199,42 @@ const ProductDetails = () => {
       return;
     }
 
-    if (isAddingToCartRef.current) return;
+    if (isAddingToCartRef.current) {
+      console.log('[Cart] Add to cart operation in progress');
+      return;
+    }
+
+    if (!navigator.onLine) {
+      toast.error("No internet connection. Please check your network.");
+      return;
+    }
+
     isAddingToCartRef.current = true;
+    setIsAddingToCart(true);
 
     try {
+      console.log('[Cart] Adding product to cart');
       const initialQuantity = unitSet * 1;
       const applicableBulk = getApplicableBulkProduct(initialQuantity);
 
-      const response = await axios.post(`/api/v1/carts/users/${auth.user._id}/cart`, {
-        productId: product._id,
-        quantity: initialQuantity,
-        price: applicableBulk ? parseFloat(applicableBulk.selling_price_set) : parseFloat(product.price),
-        bulkProductDetails: applicableBulk,
-      });
+      // Check stock before adding
+      if (initialQuantity > product.stock) {
+        setShowStockPopup(true);
+        return;
+      }
+
+      const response = await axios.post(
+        `/api/v1/carts/users/${auth.user._id}/cart`,
+        {
+          productId: product._id,
+          quantity: initialQuantity,
+          price: applicableBulk ? parseFloat(applicableBulk.selling_price_set) : parseFloat(product.price),
+          bulkProductDetails: applicableBulk,
+        },
+        axiosConfig
+      );
+
+      console.log('[Cart] Add to cart response:', response.data);
 
       if (response.data.status === "success") {
         setCart(response.data.cart);
@@ -152,17 +242,42 @@ const ProductDetails = () => {
         setSelectedBulk(applicableBulk);
         calculateTotalPrice(applicableBulk, initialQuantity);
         setShowQuantitySelector(true);
+        toast.success("Product added to cart");
       }
     } catch (error) {
-      console.error(error);
+      console.error('[Cart] Error adding to cart:', error);
+      
+      let errorMessage = "Failed to add product to cart";
+      
+      if (!navigator.onLine) {
+        errorMessage = "No internet connection. Please check your network.";
+      } else if (error.code === 'ECONNABORTED') {
+        errorMessage = "Request timed out. Please try again.";
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       isAddingToCartRef.current = false;
+      setIsAddingToCart(false);
     }
   };
 
   const handleQuantityChange = async (increment) => {
+    if (!navigator.onLine) {
+      toast.error("No internet connection. Please check your network.");
+      return;
+    }
+
     const newQuantity = displayQuantity + (increment ? 1 : -1) * unitSet;
     const updatedQuantity = Math.max(0, newQuantity);
+
+    // Check stock limit
+    if (increment && updatedQuantity > product.stock) {
+      setShowStockPopup(true);
+      return;
+    }
 
     if (updatedQuantity === 0) {
       await removeFromCart(product._id);
@@ -502,6 +617,12 @@ const ProductDetails = () => {
   }
   return (
     <Layout>
+      {isNetworkError && (
+        <div className="alert alert-warning m-2">
+          <AiFillWarning /> Network connection issues detected. 
+          Some features may not work properly.
+        </div>
+      )}
       <div style={containerStyle}>
         <div style={productDetailStyle}>
           {/* Product Image */}
@@ -819,6 +940,14 @@ const ProductDetails = () => {
           ))}
         </div>
       </div>
+      
+      {/* Stock Popup Modal */}
+      <StockPopup
+        show={showStockPopup}
+        onHide={() => setShowStockPopup(false)}
+        product={product}
+        requestedQuantity={quantity}
+      />
     </Layout>
   );
 };

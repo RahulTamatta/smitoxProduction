@@ -7,6 +7,8 @@ import DropIn from "braintree-web-drop-in-react";
 import { AiFillWarning } from "react-icons/ai";
 import axios from "axios";
 import toast from "react-hot-toast";
+import StockPopup from "./StockPopup"; // Import the StockPopup component
+import { Modal, Button } from 'react-bootstrap'; // Import Modal and Button from react-bootstrap
 import "./cartPage.css";
 //new build
 
@@ -25,10 +27,8 @@ const CartPage = () => {
   const [retryCount, setRetryCount] = useState(0); // Track payment retry attempts
   const [isProcessing, setIsProcessing] = useState(false); // Track processing state
   const [networkError, setNetworkError] = useState(false); // Track network errors
-
-
-  // const [isPincodeAvailable, setIsPincodeAvailable] = useState(false);
-  
+  const [showStockPopup, setShowStockPopup] = useState(false); // State for stock popup visibility
+  const [exceededProduct, setExceededProduct] = useState(null); // State for the product that exceeded stock
 
   const navigate = useNavigate();
 
@@ -108,16 +108,6 @@ const CartPage = () => {
     }
   };
 
-
-  // const getToken = async () => {
-  //   try {
-  //     const { data } = await axios.get("/api/v1/product/braintree/token");
-  //     setClientToken(data?.clientToken);
-  //   } catch (error) {
-  //     console.log(error);
-  //   }
-  // };
-
   const removeCartItem = async (pid) => {
     try {
       // Modified to include productId in the URL path instead of request body
@@ -147,6 +137,7 @@ const CartPage = () => {
       ////toast.error("Error clearing cart");
     }
   };
+
   useEffect(() => {
     // Dynamically load the Razorpay script
     const loadRazorpayScript = (src) => {
@@ -170,13 +161,21 @@ const CartPage = () => {
     initRazorpay();
   }, []);
 
- 
   const handleQuantityChange = async (productId, newQuantity) => {
+    const product = cart.find(item => item.product._id === productId)?.product;
+    if (!product) return;
+  
     if (newQuantity < 1) {
       removeCartItem(productId);
       return;
     }
-
+  
+    if (newQuantity > product.stock) {
+      setExceededProduct(product);
+      setShowStockPopup(true);
+      return;
+    }
+  
     try {
       await axios.post(
         `/api/v1/carts/users/${auth.user._id}/cartq/${productId}`,
@@ -188,7 +187,7 @@ const CartPage = () => {
           }
         }
       );
-
+  
       const updatedCart = cart.map(item => 
         item.product && item.product._id === productId 
           ? { ...item, quantity: newQuantity }
@@ -225,20 +224,18 @@ const CartPage = () => {
       return 0;
     }
   };
-  
 
-  // Calculate if order can be placed
   const canPlaceOrder = () => {
     const total = totalPrice();
     return (
       !loading &&
       !orderPlacementInProgress &&
-      // isPincodeAvailable &&
       total >= minimumOrder &&
       Array.isArray(cart) && cart.length > 0 &&
       (paymentMethod !== "Braintree" || instance)
     );
   };
+
   const checkPincode = async (pincode) => {
     try {
       const { data } = await axios.get("/api/v1/pincodes/get-pincodes");
@@ -258,7 +255,7 @@ const CartPage = () => {
       ////toast.error("Error checking pincode");
     }
   };
-  // Helper function to handle network errors with retry logic
+
   const handlePaymentWithRetry = async () => {
     if (isProcessing) return; // Prevent multiple clicks
     
@@ -301,16 +298,6 @@ const CartPage = () => {
 
   const handlePayment = async () => {
     const total = totalPrice();
-  
-    // if (!isPincodeAvailable) {
-    //   ////toast.error("Service is not available in your area or pincode.");
-    //   return;
-    // }
-  
-    // if (total < minimumOrder) {
-    //   //toast.error(`Minimum order amount is ${minimumOrderCurrency} ${minimumOrder}`);
-    //   return;
-    // }
   
     if (!auth?.user?._id) {
       ////toast.error("Please login to proceed with payment");
@@ -767,6 +754,17 @@ const CartPage = () => {
           {/* ...existing code... */}
         </div>
         </div>
+        {/* Stock Popup Modal */}
+        <StockPopup
+          show={showStockPopup}
+          onHide={() => setShowStockPopup(false)}
+          product={exceededProduct}
+          requestedQuantity={
+            exceededProduct ? 
+            cart.find(item => item.product._id === exceededProduct._id)?.quantity + 1 : 
+            0
+          }
+        />
       </div>
     </Layout>
   );
