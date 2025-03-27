@@ -296,33 +296,114 @@ const handleEditUser = async (e) => {
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   const renderPagination = () => {
-    const pageNumbers = [];
-    for (let i = 1; i <= Math.ceil(filteredUsers.length / usersPerPage); i++) {
-      pageNumbers.push(i);
+    const totalPages = Math.ceil(totalUsers / usersPerPage);
+    
+    // Don't render pagination if there's only one page
+    if (totalPages <= 1) return null;
+    
+    const pageButtonStyle = {
+      padding: '0.5rem 1rem',
+      borderRadius: '0.25rem',
+      border: 'none',
+      backgroundColor: '#e0e0e0',
+      color: '#455a64',
+      cursor: 'pointer',
+      transition: 'all 0.3s ease',
+      margin: '0 0.25rem'
+    };
+    
+    const activeButtonStyle = {
+      ...pageButtonStyle,
+      backgroundColor: '#1976d2',
+      color: 'white',
+    };
+    
+    // Calculate which page numbers to show
+    let pagesToShow = [];
+    const siblingCount = 2; // Increased from 1 to 2 to show more pages
+    
+    // Always include first and last page
+    const firstPage = 1;
+    const lastPage = totalPages;
+    
+    // Calculate range around current page
+    let startPage = Math.max(currentPage - siblingCount, 1);
+    let endPage = Math.min(currentPage + siblingCount, totalPages);
+    
+    // Adjust range to ensure we show at least 4 pages if possible
+    if (endPage - startPage + 1 < 4 && totalPages >= 4) {
+      if (startPage === 1) {
+        endPage = Math.min(startPage + 3, totalPages);
+      } else if (endPage === totalPages) {
+        startPage = Math.max(endPage - 3, 1);
+      }
+    }
+    
+    // Add page numbers
+    for (let i = startPage; i <= endPage; i++) {
+      pagesToShow.push(i);
+    }
+    
+    // Add first page if not included
+    if (!pagesToShow.includes(1)) {
+      pagesToShow = [1, '...', ...pagesToShow];
+    }
+    
+    // Add last page if not included
+    if (!pagesToShow.includes(totalPages) && totalPages > 1) {
+      pagesToShow = [...pagesToShow, '...', totalPages];
     }
 
     return (
-      <nav>
-        <ul style={{ display: 'flex', justifyContent: 'center', listStyle: 'none', padding: 0, margin: '1rem 0' }}>
-          {pageNumbers.map(number => (
-            <li key={number} style={{ margin: '0 0.25rem' }}>
+      <nav aria-label="Pagination" style={{ margin: '1.5rem 0' }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '0.5rem'
+        }}>
+          {/* Previous button */}
+          <button 
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            style={{
+              ...pageButtonStyle,
+              opacity: currentPage === 1 ? 0.5 : 1,
+              cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
+            }}
+          >
+            Previous
+          </button>
+          
+          {/* Page numbers */}
+          {pagesToShow.map((page, index) => 
+            typeof page === 'number' ? (
               <button
-                onClick={() => paginate(number)}
-                style={{
-                  padding: '0.5rem 1rem',
-                  borderRadius: '0.25rem',
-                  border: 'none',
-                  backgroundColor: currentPage === number ? '#1976d2' : '#e0e0e0',
-                  color: currentPage === number ? 'white' : '#455a64',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
+                key={index}
+                onClick={() => handlePageChange(page)}
+                style={currentPage === page ? activeButtonStyle : pageButtonStyle}
               >
-                {number}
+                {page}
               </button>
-            </li>
-          ))}
-        </ul>
+            ) : (
+              <span key={index} style={{ margin: '0 0.25rem' }}>{page}</span>
+            )
+          )}
+          
+          {/* Next button */}
+          <button 
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            style={{
+              ...pageButtonStyle,
+              opacity: currentPage === totalPages ? 0.5 : 1,
+              cursor: currentPage === totalPages ? 'not-allowed' : 'pointer'
+            }}
+          >
+            Next
+          </button>
+        </div>
       </nav>
     );
   };
