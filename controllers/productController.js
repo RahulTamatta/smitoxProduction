@@ -1716,6 +1716,11 @@ export const productCategoryController = async (req, res) => {
       });
     }
 
+    // Pagination parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
     // Determine filters from query parameters (with defaults)
     const isActiveFilter = req.query.isActive || "1";
     const stocks = req.query.stock || "1";
@@ -1736,15 +1741,18 @@ export const productCategoryController = async (req, res) => {
     // Get total count of products matching the filter
     const total = await productModel.countDocuments(filterQuery);
 
-    // Fetch products with filtering and sorting (no pagination)
+    // Fetch products with filtering, sorting, and pagination
     const products = await productModel
       .find(filterQuery)
       .populate("category")
-      .sort(sortQuery);
+      .sort(sortQuery)
+      .skip(skip)
+      .limit(limit);
+
+    // Calculate if there are more products to load
+    const hasMore = total > skip + products.length;
 
     // Process products to attach optimized Cloudinary photo URLs
-    // and collect promises for file size retrieval
-    const bandwidthPromises = [];
     const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject();
       if (productObj.photos) {
@@ -1754,27 +1762,20 @@ export const productCategoryController = async (req, res) => {
             quality: "30", // Lower quality (30%) to reduce bandwidth
           }]
         });
-        // Add a promise to retrieve the file size for this photo
-        bandwidthPromises.push(getResourceBytes(productObj.photos));
-      } else {
-        // If no photo exists, add a zero-size placeholder
-        bandwidthPromises.push(Promise.resolve(0));
       }
       return productObj;
     });
 
-    // Wait for all Cloudinary API calls to get file sizes
-    const bytesArray = await Promise.all(bandwidthPromises);
-    const totalBytes = bytesArray.reduce((sum, current) => sum + current, 0);
-
-    // Response without pagination metadata
+    // Response with pagination metadata
     res.status(200).send({
       success: true,
       category,
       total,
       products: productsWithPhotos,
       count: products.length,
-      bandwidthUsedBytes: totalBytes
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      hasMore
     });
   } catch (error) {
     console.log(error);
@@ -1789,6 +1790,11 @@ export const productCategoryController = async (req, res) => {
 export const productSubcategoryController = async (req, res) => {
   try {
     const { subcategoryId } = req.params;
+    
+    // Pagination parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
     
     // Filter parameters
     const isActiveFilter = req.query.isActive || "1";
@@ -1821,15 +1827,18 @@ export const productSubcategoryController = async (req, res) => {
     // Get total count of products matching the filter
     const total = await productModel.countDocuments(filterQuery);
 
-    // Fetch products with filtering and sorting (no pagination)
+    // Fetch products with filtering, sorting, and pagination
     const products = await productModel
       .find(filterQuery)
       .sort({ custom_order: 1, createdAt: -1 })
-      .select("name photo photos _id perPiecePrice mrp stock slug custom_order");
+      .select("name photo photos _id perPiecePrice mrp stock slug custom_order")
+      .skip(skip)
+      .limit(limit);
+
+    // Calculate if there are more products to load
+    const hasMore = total > skip + products.length;
 
     // Process products to include optimized Cloudinary photo URLs
-    // and collect promises for file size retrieval
-    const bandwidthPromises = [];
     const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject();
       if (productObj.photos) {
@@ -1839,20 +1848,11 @@ export const productSubcategoryController = async (req, res) => {
             quality: "30", // Lower quality (30%) to reduce bandwidth
           }]
         });
-        // Add a promise to retrieve the file size for this photo
-        bandwidthPromises.push(getResourceBytes(productObj.photos));
-      } else {
-        // If no photo exists, add a zero-size placeholder
-        bandwidthPromises.push(Promise.resolve(0));
       }
       return productObj;
     });
 
-    // Wait for all Cloudinary API calls to get file sizes
-    const bytesArray = await Promise.all(bandwidthPromises);
-    const totalBytes = bytesArray.reduce((sum, current) => sum + current, 0);
-
-    // Send response without pagination metadata
+    // Send response with pagination metadata
     res.status(200).send({
       success: true,
       message: "Products fetched successfully",
@@ -1860,7 +1860,9 @@ export const productSubcategoryController = async (req, res) => {
       products: productsWithPhotos,
       total,
       count: products.length,
-      bandwidthUsedBytes: totalBytes
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      hasMore
     });
   } catch (error) {
     console.error(error);
