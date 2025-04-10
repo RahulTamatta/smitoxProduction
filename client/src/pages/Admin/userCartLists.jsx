@@ -7,10 +7,6 @@ import CartSearchModal from "./addTocartModal.jsx";
 import { useNavigate, useLocation } from 'react-router-dom';
 import AddToCartPage from "./userCart.jsx";
 
-
-
-
-
 const UserList = () => {
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -74,18 +70,26 @@ const UserList = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`/api/v1/usersLists/users?page=${page}&limit=${usersPerPage}&search=${search}`);
+      const response = await axios.get(`/api/v1/usersLists/users`, {
+        params: {
+          page,
+          limit: usersPerPage,
+          search, // Pass the search term as-is
+        },
+      });
       const usersList = response.data.list || [];
       setUsers(usersList);
       setTotalUsers(response.data.total || usersList.length);
       filterUsers(usersList);
 
-      // Update URL with search and page params
+      // Update URL with search and page params only when necessary
       const params = new URLSearchParams();
       if (page > 1) params.set('page', page);
       if (search) params.set('search', search);
       const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
-      window.history.replaceState({}, '', newUrl);
+      if (newUrl !== window.location.href) {
+        window.history.replaceState({}, '', newUrl);
+      }
     } catch (error) {
       console.error('Error fetching users:', error);
       setError('Failed to fetch users. Please try again later.');
@@ -128,8 +132,6 @@ const UserList = () => {
     fetchUsers(searchFromUrl);
   }, [location]);
 
-
-
   const renderSearchSection = () => (
     <div style={{ marginBottom: '1.5rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -145,6 +147,7 @@ const UserList = () => {
             width: '300px',
             fontSize: '1rem'
           }}
+          autoFocus // Ensures the input field remains focused
         />
         <span style={{ color: '#666', fontSize: '0.875rem' }}>
           Showing {filteredUsers.length} of {totalUsers} users
