@@ -8,8 +8,12 @@ import Wishlist from '../models/wishlistModel.js';
 // Get all users with populated products, wishlist, and cart
 export const getUsers = async (req, res) => {
   try {
-    const { page = 1, limit = 20, search = '' } = req.query;
-    
+    let { page = 1, limit = 20, search = '' } = req.query;
+
+    // Ensure page and limit are positive integers
+    page = Math.max(1, parseInt(page, 10));
+    limit = Math.max(1, parseInt(limit, 10));
+
     let searchQuery = {};
     
     if (search) {
