@@ -1705,9 +1705,11 @@ export const getProductPhoto = async (req, res) => {
     });
   }
 };
+
+// Controller to get products by category slug with filtering
 export const productCategoryController = async (req, res) => {
   try {
-    // Find category by slug
+    // Find category by slug from URL parameters
     const category = await categoryModel.findOne({ slug: req.params.slug });
     if (!category) {
       return res.status(404).send({
@@ -1716,138 +1718,88 @@ export const productCategoryController = async (req, res) => {
       });
     }
 
-    // Pagination parameters
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
+    // --- Pagination Parameters ---
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1); // Ensure page is at least 1
+    const limit = Math.max(parseInt(req.query.limit, 10) || 20, 1); // Ensure limit is at least 1
     const skip = (page - 1) * limit;
 
-    // Determine filters from query parameters (with defaults)
-    const isActiveFilter = req.query.isActive || "1";
-    const stocks = req.query.stock || "1";
+    // --- Filter Parameter ---
+    const filter = req.query.filter?.trim().toLowerCase() || "active"; // Default to 'active' if no filter specified
 
-    // Build filter query including category and other filters
+    // --- Build Filter Query ---
     const filterQuery = {
-      category: category._id,
-      ...(isActiveFilter === "1" && { isActive: "1" }),
-      ...(stocks === "1" && { stock: { $gt: 0 } }),
+      category: category._id, // Always filter by the category ID
     };
 
-    // Sorting logic: primary by custom_order, secondary by createdAt
-    const sortQuery = { 
+    // Apply filters based on the 'filter' query parameter
+    switch (filter) {
+      case "active":
+        filterQuery.isActive = { $in: [true, "1"] }; // Products that are active (boolean true or string "1")
+        filterQuery.stock = { $gt: 0 }; // And have stock greater than 0
+        break;
+      case "inactive":
+        filterQuery.isActive = { $in: [false, "0"] }; // Products that are inactive (boolean false or string "0")
+        // No stock condition applied for inactive items by default
+        break;
+      case "outOfStock":
+        filterQuery.isActive = { $in: [true, "1"] }; // Consider only active products
+        filterQuery.stock = 0; // Products with stock exactly 0
+        break;
+      case "all":
+         // No additional isActive or stock filters applied when filter is 'all'
+         break;
+      default:
+        // Optional: Handle unexpected filter values, maybe return an error or default to 'active'
+        console.warn(`Unsupported filter value received in productCategoryController: ${filter}. Defaulting to active.`);
+        filterQuery.isActive = { $in: [true, "1"] };
+        filterQuery.stock = { $gt: 0 };
+        break;
+    }
+
+    // --- Sorting Logic ---
+    // Primary sort by custom_order (ascending), secondary by createdAt (descending)
+    const sortQuery = {
       custom_order: 1,
       createdAt: -1
     };
 
+    // --- Database Queries ---
     // Get total count of products matching the filter
     const total = await productModel.countDocuments(filterQuery);
 
     // Fetch products with filtering, sorting, and pagination
     const products = await productModel
       .find(filterQuery)
-      .populate("category")
+      .populate("category", "name") // Populate category name for context
       .sort(sortQuery)
+      .select("name category photos _id perPiecePrice mrp stock slug custom_order isActive") // Select necessary fields
       .skip(skip)
       .limit(limit);
 
+    // --- Post-processing and Response ---
     // Calculate if there are more products to load
     const hasMore = total > skip + products.length;
 
     // Process products to attach optimized Cloudinary photo URLs
     const productsWithPhotos = products.map((product) => {
-      const productObj = product.toObject();
+      const productObj = product.toObject(); // Convert Mongoose doc to plain object
       if (productObj.photos) {
-        // Generate an optimized URL using lower quality for better bandwidth savings
-        productObj.photoUrl = cloudinary.url(productObj.photos, {
-          transformation: [{
-            quality: "30", // Lower quality (30%) to reduce bandwidth
-          }]
-        });
-      }
-      return productObj;
-    });
-
-    // Response with pagination metadata
-    res.status(200).send({
-      success: true,
-      category,
-      total,
-      products: productsWithPhotos,
-      count: products.length,
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      hasMore
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).send({
-      success: false,
-      error: error.message,
-      message: "Error while getting products",
-    });
-  }
-};
-
-export const productSubcategoryController = async (req, res) => {
-  try {
-    const { subcategoryId } = req.params;
-    
-    // Pagination parameters
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
-    
-    // Filter parameters
-    const isActiveFilter = req.query.isActive || "1";
-    const stocks = req.query.stock || "1";
-
-    // Validate subcategory ID
-    if (!mongoose.Types.ObjectId.isValid(subcategoryId)) {
-      return res.status(400).send({
-        success: false,
-        message: "Invalid subcategory ID",
-      });
-    }
-
-    // Fetch the subcategory
-    const subcategory = await subcategoryModel.findById(subcategoryId);
-    if (!subcategory) {
-      return res.status(404).send({
-        success: false,
-        message: "Subcategory not found",
-      });
-    }
-
-    // Build the filter query
-    const filterQuery = {
-      subcategory: subcategoryId,
-      ...(isActiveFilter === "1" && { isActive: "1" }),
-      ...(stocks === "1" && { stock: { $gt: 0 } }),
-    };
-
-    // Get total count of products matching the filter
-    const total = await productModel.countDocuments(filterQuery);
-
-    // Fetch products with filtering, sorting, and pagination
-    const products = await productModel
-      .find(filterQuery)
-      .sort({ custom_order: 1, createdAt: -1 })
-      .select("name photo photos _id perPiecePrice mrp stock slug custom_order")
-      .skip(skip)
-      .limit(limit);
-
-    // Calculate if there are more products to load
-    const hasMore = total > skip + products.length;
-
-    // Process products to include optimized Cloudinary photo URLs
-    const productsWithPhotos = products.map((product) => {
-      const productObj = product.toObject();
-      if (productObj.photos) {
-        // Generate an optimized URL using lower quality for better bandwidth savings
-        productObj.photoUrl = cloudinary.url(productObj.photos, {
-          transformation: [{
-            quality: "30", // Lower quality (30%) to reduce bandwidth
-          }]
-        });
+        try {
+          // Generate an optimized URL using lower quality for better bandwidth savings
+          productObj.photoUrl = cloudinary.url(productObj.photos, { // Assuming 'photos' contains the Cloudinary public ID
+            transformation: [{
+              quality: "auto:low", // Use Cloudinary's auto low quality optimization
+              fetch_format: "auto" // Automatically select best format (webp, avif)
+            }]
+          });
+        } catch (cloudinaryError) {
+            console.error("Error generating Cloudinary URL:", cloudinaryError);
+            productObj.photoUrl = null; // Set to null or a placeholder if URL generation fails
+        }
+        // Optionally remove the original photos field if only the URL is needed client-side
+        // delete productObj.photos;
+      } else {
+        productObj.photoUrl = null; // Set to null if no photo ID exists
       }
       return productObj;
     });
@@ -1855,8 +1807,133 @@ export const productSubcategoryController = async (req, res) => {
     // Send response with pagination metadata
     res.status(200).send({
       success: true,
-      message: "Products fetched successfully",
-      subcategory,
+      category, // Send category details
+      total, // Total matching products
+      products: productsWithPhotos, // Products for the current page
+      count: products.length, // Count for the current page
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      hasMore // Indicate if more pages are available
+    });
+
+  } catch (error) {
+    // --- Error Handling ---
+    console.error("Error in productCategoryController:", error); // Log the detailed error
+    res.status(500).send({
+      success: false,
+      error: error.message,
+      message: "Error while getting products by category",
+    });
+  }
+};
+
+// Controller to get products by subcategory ID with filtering
+export const productSubcategoryController = async (req, res) => {
+  try {
+    const { subcategoryId } = req.params;
+
+    // --- Pagination Parameters ---
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.max(parseInt(req.query.limit, 10) || 20, 1);
+    const skip = (page - 1) * limit;
+
+    // --- Filter Parameter ---
+    const filter = req.query.filter?.trim().toLowerCase() || "active"; // Default to 'active'
+
+    // --- Validate Subcategory ID ---
+    if (!mongoose.Types.ObjectId.isValid(subcategoryId)) {
+      return res.status(400).send({
+        success: false,
+        message: "Invalid subcategory ID",
+      });
+    }
+
+    // Fetch the subcategory details
+    const subcategory = await subcategoryModel.findById(subcategoryId).populate('category', 'name'); // Also populate parent category name
+    if (!subcategory) {
+      return res.status(404).send({
+        success: false,
+        message: "Subcategory not found",
+      });
+    }
+
+    // --- Build Filter Query ---
+    const filterQuery = {
+      subcategory: subcategoryId, // Always filter by the subcategory ID
+    };
+
+    // Apply filters based on the 'filter' query parameter
+    switch (filter) {
+      case "active":
+        filterQuery.isActive = { $in: [true, "1"] };
+        filterQuery.stock = { $gt: 0 };
+        break;
+      case "inactive":
+        filterQuery.isActive = { $in: [false, "0"] };
+        break;
+      case "outOfStock":
+         filterQuery.isActive = { $in: [true, "1"] }; // Consider only active products
+        filterQuery.stock = 0;
+        break;
+       case "all":
+         // No additional isActive or stock filters applied
+         break;
+      default:
+        console.warn(`Unsupported filter value received in productSubcategoryController: ${filter}. Defaulting to active.`);
+        filterQuery.isActive = { $in: [true, "1"] };
+        filterQuery.stock = { $gt: 0 };
+        break;
+    }
+
+    // --- Sorting Logic ---
+    const sortQuery = {
+        custom_order: 1, // Primary sort by custom_order
+        createdAt: -1   // Secondary sort by creation date
+    };
+
+    // --- Database Queries ---
+    // Get total count of products matching the filter
+    const total = await productModel.countDocuments(filterQuery);
+
+    // Fetch products with filtering, sorting, and pagination
+    const products = await productModel
+      .find(filterQuery)
+      .sort(sortQuery)
+      .select("name photos _id perPiecePrice mrp stock slug custom_order isActive") // Select fields
+      .skip(skip)
+      .limit(limit);
+
+    // --- Post-processing and Response ---
+    // Calculate if there are more products to load
+    const hasMore = total > skip + products.length;
+
+    // Process products to include optimized Cloudinary photo URLs
+    const productsWithPhotos = products.map((product) => {
+      const productObj = product.toObject();
+      if (productObj.photos) {
+         try {
+            productObj.photoUrl = cloudinary.url(productObj.photos, { // Assuming 'photos' is the public ID
+                transformation: [{
+                    quality: "auto:low",
+                    fetch_format: "auto"
+                }]
+            });
+         } catch (cloudinaryError) {
+             console.error("Error generating Cloudinary URL:", cloudinaryError);
+             productObj.photoUrl = null;
+         }
+        // delete productObj.photos; // Optional: remove original field
+      } else {
+          productObj.photoUrl = null;
+      }
+      return productObj;
+    });
+
+    // Send response with pagination metadata
+    res.status(200).send({
+      success: true,
+      message: "Products fetched successfully by subcategory",
+      subcategory, // Send subcategory details
       products: productsWithPhotos,
       total,
       count: products.length,
@@ -1864,15 +1941,18 @@ export const productSubcategoryController = async (req, res) => {
       totalPages: Math.ceil(total / limit),
       hasMore
     });
+
   } catch (error) {
-    console.error(error);
+    // --- Error Handling ---
+    console.error("Error in productSubcategoryController:", error);
     res.status(500).send({
       success: false,
       error: error.message,
-      message: "Error while getting products",
+      message: "Error while getting products by subcategory",
     });
   }
 };
+
 // productFiltersController
 export const productFiltersController = async (req, res) => {
   try {
