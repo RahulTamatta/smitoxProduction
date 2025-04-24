@@ -16,14 +16,40 @@ export const getProductsForYouController = async (req, res) => {
         .send({ success: false, message: "Invalid category or subcategory ID" });
     }
 
+    // Build the base query
+    let query = {
+      categoryId: categoryId,
+      subcategoryId: subcategoryId,
+    };
+
+    // Apply filters if provided
+    if (req.query.filter && req.query.filter !== "all") {
+      switch (req.query.filter) {
+        case "active":
+          query.isActive = "1";
+          break;
+        case "inactive":
+          query.isActive = "0";
+          break;
+        case "outOfStock":
+          query["productId.stock"] = 0;
+          break;
+        default:
+          // Handle unexpected filter values
+          break;
+      }
+    }
+
+    // Fetch products with population and sorting
     const products = await productForYouModel
-      .find({})
+      .find(query)
       .populate("categoryId", "name")
       .populate("subcategoryId", "name")
-      .populate("productId", "name photos price slug perPiecePrice")
+      .populate("productId", "name photos price slug perPiecePrice stock") // Include stock in population
       .select("categoryId subcategoryId productId")
       .sort({ createdAt: -1 });
 
+    // Convert photos to base64
     const productsWithBase64Photos = products.map((productForYou) => {
       const productObj = productForYou.toObject();
 
@@ -55,6 +81,7 @@ export const getProductsForYouController = async (req, res) => {
     });
   }
 };
+
 
 export const getAllProductsForYouController = async (req, res) => {
   try {
