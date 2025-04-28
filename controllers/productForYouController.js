@@ -206,25 +206,66 @@ export const updateBannerController = async (req, res) => {
     });
   }
 };
-
 export const getBannersController = async (req, res) => {
   try {
+    // Build base query
+    const query = {};
+
+    // Apply isActive filter if provided
+    // Example: GET /api/banners?filter=active
+    if (req.query.filter && req.query.filter !== "all") {
+      switch (req.query.filter) {
+        case "active":
+          query.isActive = "1";
+          break;
+        case "inactive":
+          query.isActive = "0";
+          break;
+        default:
+          // if you need other filter types, handle them here
+          break;
+      }
+    }
+
+    // (Optional) Filter by categoryId or subcategoryId if passed as query params
+    // Example: GET /api/banners?categoryId=…&subcategoryId=…
+    if (req.query.categoryId) {
+      if (!mongoose.Types.ObjectId.isValid(req.query.categoryId)) {
+        return res.status(400).send({
+          success: false,
+          message: "Invalid categoryId",
+        });
+      }
+      query.categoryId = req.query.categoryId;
+    }
+
+    if (req.query.subcategoryId) {
+      if (!mongoose.Types.ObjectId.isValid(req.query.subcategoryId)) {
+        return res.status(400).send({
+          success: false,
+          message: "Invalid subcategoryId",
+        });
+      }
+      query.subcategoryId = req.query.subcategoryId;
+    }
+
+    // Fetch banners with population, selection, and sorting
     const banners = await productForYouModel
-      .find({})
+      .find(query)
       .populate("categoryId", "name")
       .populate("subcategoryId", "name")
       .populate("productId", "name photos perPiecePrice price slug")
-      .select("categoryId subcategoryId productId")
+      .select("categoryId subcategoryId productId isActive")
       .sort({ createdAt: -1 });
 
     res.status(200).send({
       success: true,
       countTotal: banners.length,
-      message: "All Banners",
+      message: "Filtered Banners",
       banners,
     });
   } catch (error) {
-    console.log(error);
+    console.error("Error in getting banners:", error);
     res.status(500).send({
       success: false,
       message: "Error in getting banners",
