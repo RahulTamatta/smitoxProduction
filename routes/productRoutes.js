@@ -31,6 +31,8 @@ router.post(
   formidable(),
   createProductController
 );
+// router.post('/generate-sku', generateSKU);
+
 
 router.put(
   "/update-product/:pid",
@@ -41,10 +43,6 @@ router.put(
 );
 
 router.get("/get-product", getProductController);
-import mongoose from 'mongoose';
-import Cart from '../models/cartModel.js';
-import Product from '../models/productModel.js';
-
 router.put("/updateStatus/products/:id", async (req, res) => {
   try {
     // Ensure `isActive` is provided in the request body
@@ -56,7 +54,7 @@ router.put("/updateStatus/products/:id", async (req, res) => {
     }
 
     // Find and update the product by ID
-    const product = await Product.findByIdAndUpdate(
+    const product = await productModel.findByIdAndUpdate(
       req.params.id,
       { isActive: req.body.isActive },
       { new: true, runValidators: true } // Use runValidators to ensure enum validation
@@ -67,11 +65,6 @@ router.put("/updateStatus/products/:id", async (req, res) => {
         success: false,
         message: "Product not found",
       });
-    }
-
-    // If the product is inactive, remove it from all carts
-    if (req.body.isActive === "0") {
-      await cleanupCartsForProduct(req.params.id);
     }
 
     // Send success response with updated product
@@ -88,49 +81,6 @@ router.put("/updateStatus/products/:id", async (req, res) => {
     });
   }
 });
-
-// Function to remove a specific product from all carts
-async function cleanupCartsForProduct(productId) {
-  try {
-    console.log(`Starting cleanup for product ID: ${productId}`);
-
-    // Connect to MongoDB (if not already connected)
-    if (!mongoose.connection.readyState) {
-      await mongoose.connect(process.env.MONGO_URI, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-      });
-      console.log('Connected to MongoDB');
-    }
-
-    // Get all carts
-    const carts = await Cart.find({});
-    console.log(`Found ${carts.length} carts to process`);
-
-    let totalRemovedItems = 0;
-
-    // Process each cart
-    for (const cart of carts) {
-      const originalItemCount = cart.products.length;
-      const validProducts = cart.products.filter(
-        (item) => item.product.toString() !== productId
-      );
-
-      // Update cart if items were removed
-      if (validProducts.length !== originalItemCount) {
-        cart.products = validProducts;
-        await cart.save();
-        console.log(`Updated cart ${cart._id}: Removed 1 item`);
-        totalRemovedItems++;
-      }
-    }
-
-    console.log(`Cleanup Summary for product ID ${productId}:`);
-    console.log(`Removed ${totalRemovedItems} items from carts`);
-  } catch (error) {
-    console.error(`Error during cleanup for product ID ${productId}:`, error);
-  }
-}
 
 
 router.get("/get-product/:slug", getSingleProductController);
