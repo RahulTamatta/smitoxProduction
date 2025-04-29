@@ -682,65 +682,60 @@ const getResourceBytes = (publicId) => {
 
 export const productListController = async (req, res) => {
   try {
-    const perPage = parseInt(req.query.limit) || 10;
-    const page = parseInt(req.params.page) || 1;
-    const isActiveFilter = req.query.isActive || "1";
-    const stocks = req.query.stock || "1";
-    const skip = (page - 1) * perPage;
+    // 1. Pagination params
+    const perPage = parseInt(req.query.limit, 10) || 10;
+    const page    = parseInt(req.params.page, 10) || 1;
+    const skip    = (page - 1) * perPage;
 
-    // Build the filter query
+    // 2. Enforce active + in-stock only
     const filterQuery = {
-      ...(isActiveFilter === "1" && { isActive: "1" }),
-      ...(stocks === "1" && { stock: { $gt: 0 } }),
+      isActive: "1",
+      stock:    { $gt: 0 }
     };
 
-    // Sorting logic: primary by custom_order, secondary by createdAt
-    const sortQuery = { 
+    // 3. Sorting (custom_order asc, then newest first)
+    const sortQuery = {
       custom_order: 1,
-      createdAt: -1
+      createdAt:   -1
     };
 
-    // Get total count of products matching the filter
+    // 4. Count total matching
     const total = await productModel.countDocuments(filterQuery);
 
-    // Fetch products with pagination and sorting
+    // 5. Fetch page of products
     const products = await productModel
-      .find(filterQuery, "name photo photos _id perPiecePrice mrp stock slug custom_order")
+      .find(
+        filterQuery,
+        "name photos perPiecePrice mrp stock slug custom_order"
+      )
+      .sort(sortQuery)
       .skip(skip)
-      .limit(perPage)
-      .sort(sortQuery);
+      .limit(perPage);
 
-    // Process products to attach optimized Cloudinary photo URLs
-    // and collect promises for file size retrieval
+    // 6. Attach optimized Cloudinary URLs & gather bandwidth promises
     const bandwidthPromises = [];
-    const productsWithPhotos = products.map((product) => {
-      const productObj = product.toObject();
-      if (productObj.photos) {
-        // Generate an optimized URL using low quality and auto format for better bandwidth savings
-        productObj.photoUrl = cloudinary.url(productObj.photos, {
+    const productsWithPhotos = products.map(prod => {
+      const p = prod.toObject();
+      if (p.photos) {
+        p.photoUrl = cloudinary.url(p.photos, {
           transformation: [{
-            // width: 200,
-            // height: 200,
-            // crop: "contain",
-            quality: "30", // Lower quality (30%) to reduce bandwidth
-            // fetch_format: "auto"
+            quality:      "30",
+            fetch_format: "auto"
           }]
         });
-        // Add a promise to retrieve the file size for this photo
-        bandwidthPromises.push(getResourceBytes(productObj.photos));
+        bandwidthPromises.push(getResourceBytes(p.photos));
       } else {
-        // If no photo exists, add a zero-size placeholder
         bandwidthPromises.push(Promise.resolve(0));
       }
-      return productObj;
+      return p;
     });
 
-    // Wait for all Cloudinary API calls to get file sizes
+    // 7. Compute total bandwidth
     const bytesArray = await Promise.all(bandwidthPromises);
-    const totalBytes = bytesArray.reduce((sum, current) => sum + current, 0);
-    
-    // Enhanced response with pagination metadata
-    res.status(200).send({
+    const bandwidthUsedBytes = bytesArray.reduce((sum, n) => sum + n, 0);
+
+    // 8. Respond
+    res.status(200).json({
       success: true,
       total,
       products: productsWithPhotos,
@@ -748,17 +743,17 @@ export const productListController = async (req, res) => {
         currentPage: page,
         perPage,
         totalPages: Math.ceil(total / perPage),
-        hasNextPage: skip + products.length < total,
+        hasNextPage: skip + productsWithPhotos.length < total,
         hasPrevPage: page > 1
       },
-      bandwidthUsedBytes: totalBytes
+      bandwidthUsedBytes
     });
   } catch (error) {
-    console.error(error);
-    res.status(400).send({
+    console.error("Error in productListController:", error);
+    res.status(500).json({
       success: false,
-      message: "Error fetching product data",
-      error: error.message,
+      message: "Error fetching products",
+      error: error.message
     });
   }
 };
