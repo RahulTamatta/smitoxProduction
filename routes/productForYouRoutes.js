@@ -6,7 +6,8 @@ import {
   getBannersController,
   getProductPhoto,
   updateBannerController,singleProductController,
-  deleteProductController
+  deleteProductController,
+  getActiveInStockProductsForYou // <-- Add this import
 } from "../controllers/productForYouController.js"; // Updated import based on your controllers
 import formidable from "express-formidable";
 
@@ -39,7 +40,10 @@ router.get("/get-products", getBannersController);
 // Get products by category and subcategory
 router.get("/products/:categoryId/:subcategoryId", getProductsForYouController);
 
-// router.get("/products/:categoryId/:subcategoryId", getProductsForYouController);
+
+
+// Add this new route for active and in-stock products
+router.get('/get-active-instock', getActiveInStockProductsForYou);
 
 // Delete a "Product for You"
 router.delete(
