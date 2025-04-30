@@ -104,7 +104,7 @@ const Products = () => {
           return axios.delete(`/api/v1/product/delete-product/${id}`);
         }
         return axios.put(`/api/v1/product/updateStatus/products/${id}`, {
-          isActive: action === "activate" ? "1" : "0"
+          isActive: action === "activate" ? true : false
         });
       });
 
