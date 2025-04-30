@@ -1071,6 +1071,17 @@ export const processPaymentController = async (req, res) => {
           requestId: `req-${Date.now()}`
         });
       }
+      
+      // Ensure price is a number (use default from schema if not provided)
+      if (item.price !== undefined && (isNaN(item.price) || item.price < 0)) {
+        console.error(`[Payment] Validation failed | Invalid price at index ${index}: ${item.price}`);
+        return res.status(400).json({
+          success: false,
+          message: `Invalid price at position ${index + 1}. Must be a non-negative number.`,
+          reason: "Invalid price data",
+          requestId: `req-${Date.now()}`
+        });
+      }
     }
 
     if (!paymentMethod) {
@@ -1187,7 +1198,7 @@ export const processPaymentController = async (req, res) => {
           products: products.map((item) => ({
             product: item.product,
             quantity: item.quantity,
-            price: item.price,
+            price: item.price || 0,  // Use default value if price is not provided
           })),
           payment: {
             paymentMethod,
@@ -1328,17 +1339,40 @@ export const processPaymentController = async (req, res) => {
     }
     
     try {
+      // Create a safe copy of product data for storage in Razorpay notes
+      const safeProducts = products.map(item => ({
+        product: item.product.toString(),
+        quantity: item.quantity,
+        price: item.price || 0
+      }));
+      
+      // Ensure products data is valid JSON and not too large
+      const productsString = JSON.stringify(safeProducts);
+      
+      // Check if products string is too large for Razorpay notes
+      if (productsString.length > 900) { // Leave some margin for other notes
+        console.warn(`[Payment] Products data too large (${productsString.length} chars), storing minimal info`);
+        // Store minimal product information instead
+        const minimalProducts = safeProducts.map(item => ({
+          p: item.product,
+          q: item.quantity
+        }));
+        var safeProductsJson = JSON.stringify(minimalProducts);
+      } else {
+        var safeProductsJson = productsString;
+      }
+
       const razorpayOrderData = {
         amount: Math.round(amount * 100),
         currency: "INR",
         receipt: `order_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
         notes: {
           paymentMethod,
-          baseAmount: amount,
-          amountPending: amountPending || 0,
+          baseAmount: amount.toString(), // Convert to string to prevent parsing issues
+          amountPending: (amountPending || 0).toString(), // Convert to string
           userId: req.user._id.toString(),
-          products: JSON.stringify(products),
-          requestTimestamp: Date.now()
+          products: safeProductsJson,
+          requestTimestamp: Date.now().toString() // Convert to string
         },
       };
 
@@ -1498,13 +1532,53 @@ export const verifyPaymentController = async (req, res) => {
       });
     }
 
-    // Parse products data
+    // Parse products data with robust error handling
     let products;
     try {
-      products = JSON.parse(razorpayOrder.notes.products);
+      // Check if the data is already an object
+      if (typeof razorpayOrder.notes.products === 'object' && !Array.isArray(razorpayOrder.notes.products)) {
+        products = razorpayOrder.notes.products;
+      } else {
+        // Handle and sanitize the input before parsing
+        let productsData = razorpayOrder.notes.products;
+        
+        // Log the raw data to help with debugging
+        console.log(`[Verification] Raw products data: ${typeof productsData === 'string' ? productsData.substring(0, 100) + '...' : JSON.stringify(productsData).substring(0, 100) + '...'}`);
+        
+        // Ensure it's a string before parsing
+        if (typeof productsData !== 'string') {
+          productsData = JSON.stringify(productsData);
+        }
+        
+        // Trim any whitespace or BOM characters
+        productsData = productsData.trim().replace(/^\uFEFF/, '');
+        
+        // Try parsing the data
+        products = JSON.parse(productsData);
+      }
+      
+      // Check if parsed data is an array
+      if (!Array.isArray(products)) {
+        throw new Error(`Parsed products is not an array: ${typeof products}`);
+      }
+      
       console.log(`[Verification] Parsed products data | Count: ${products.length}`);
+      
+      // Handle minified product data (if we saved minimal data in the notes)
+      if (products.length > 0 && products[0].p && products[0].q) {
+        console.log(`[Verification] Expanding minified product data`);
+        // Convert minimal format back to full format
+        products = products.map(item => ({
+          product: item.p,
+          quantity: item.q,
+          price: item.price || 0
+        }));
+      }
     } catch (parseError) {
       console.error(`[Verification] Failed to parse products data | Error: ${parseError.message}`);
+      console.error(`[Verification] Products data type: ${typeof razorpayOrder.notes.products}`);
+      console.error(`[Verification] Products data value: ${JSON.stringify(razorpayOrder.notes.products).substring(0, 200)}`);
+      
       return res.status(500).json({
         success: false,
         message: "Failed to parse order product data",
@@ -1519,12 +1593,16 @@ export const verifyPaymentController = async (req, res) => {
       session.startTransaction();
       console.log(`[Verification] Transaction started`);
 
-      // Create order
+      // Convert amount and amountPending from string to float if needed
+      const baseAmount = parseFloat(razorpayOrder.notes.baseAmount || razorpayOrder.amount/100);
+      const amountPending = parseFloat(razorpayOrder.notes.amountPending || 0);
+      
+      // Create order with values correctly typed
       const order = new orderModel({
         products: products.map((item) => ({
           product: item.product,
           quantity: item.quantity,
-          price: item.price,
+          price: item.price || 0, // Use default value if price is missing
         })),
         payment: {
           paymentMethod: "Razorpay",
@@ -1533,7 +1611,8 @@ export const verifyPaymentController = async (req, res) => {
           status: true,
         },
         buyer: razorpayOrder.notes.userId,
-        amount: parseFloat(razorpayOrder.notes.baseAmount),
+        amount: baseAmount,
+        amountPending: amountPending,
         status: "Pending",
       });
 
@@ -1596,7 +1675,6 @@ export const verifyPaymentController = async (req, res) => {
     });
   }
 };
-
 // Get payment status
 export const getPaymentStatusController = async (req, res) => {
   try {
