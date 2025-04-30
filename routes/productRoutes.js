@@ -1,7 +1,4 @@
 import express from "express";
-import cartModel from "../models/cartModel.js";
-import wishlistModel from "../models/wishlistModel.js";
-import productForYouModel from "../models/productForYouModel.js";
 import {
   createProductController,
   deleteProductController,
@@ -48,22 +45,19 @@ router.put(
 router.get("/get-product", getProductController);
 router.put("/updateStatus/products/:id", async (req, res) => {
   try {
-    // Ensure `isActive` is provided and convert to boolean if needed
-    if (req.body.isActive === undefined || req.body.isActive === null) {
+    // Ensure `isActive` is provided in the request body
+    if (!req.body.isActive) {
       return res.status(400).send({
         success: false,
         message: "isActive field is required",
       });
     }
-    
-    // Convert to the expected enum string "1" or "0"
-    const isActive = (req.body.isActive === true || req.body.isActive === "true" || req.body.isActive === "1") ? "1" : "0";
 
     // Find and update the product by ID
     const product = await productModel.findByIdAndUpdate(
       req.params.id,
-      { isActive: isActive },
-      { new: true, runValidators: true }
+      { isActive: req.body.isActive },
+      { new: true, runValidators: true } // Use runValidators to ensure enum validation
     );
 
     if (!product) {
@@ -73,46 +67,17 @@ router.put("/updateStatus/products/:id", async (req, res) => {
       });
     }
 
-    // If product is being set to inactive, remove it from carts, wishlists, and productForYou
-    if (isActive === "0") {
-      try {
-        console.log(`Product ${req.params.id} deactivated. Starting atomic cleanup...`);
-        // Remove from all cart products arrays
-        const cartUpdateResult = await cartModel.updateMany(
-          {},
-          { $pull: { products: { product: req.params.id } } }
-        );
-        console.log(`Carts updated: ${cartUpdateResult.modifiedCount}`);
-
-        // Remove from all wishlists
-        const wishlistUpdateResult = await wishlistModel.updateMany(
-          {},
-          { $pull: { products: { product: req.params.id } } }
-        );
-        console.log(`Wishlists updated: ${wishlistUpdateResult.modifiedCount}`);
-
-        // Remove from productForYou
-        const productForYouDeleteResult = await productForYouModel.deleteMany({ productId: req.params.id });
-        console.log(`ProductForYou deleted: ${productForYouDeleteResult.deletedCount}`);
-
-      } catch (cleanupError) {
-        console.error('Error cleaning up product references:', cleanupError);
-        // We don't want to fail the main operation if cleanup has issues
-      }
-    }
-
     // Send success response with updated product
     res.send({
       success: true,
       product,
-      message: isActive === "0" ? 'Product deactivated and removed from all carts, wishlists, and featured products' : 'Product status updated successfully'
     });
   } catch (error) {
-    console.error("Error updating product status:", error);
+    console.error("Error updating product status:", error); // Log the error for debugging
     res.status(500).send({
       success: false,
       message: "Server error",
-      error: error.message,
+      error: error.message, // Include error message for debugging
     });
   }
 });
