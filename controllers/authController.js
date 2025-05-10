@@ -79,9 +79,14 @@ export const verifyOTPAndLoginController = async (req, res) => {
         });
       }
 
-      // Generate JWT token with 365-day expiration
+      // Generate access token with 1-day expiration
       const token = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
+        expiresIn: "1d",
+      });
       
+      // Generate refresh token with 30-day expiration
+      const refreshToken = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
+        expiresIn: "30d",
       });
 
       return res.status(200).json({
@@ -104,6 +109,7 @@ export const verifyOTPAndLoginController = async (req, res) => {
           cart: user.cart,
         },
         token,
+        refreshToken,
       });
     } else {
       return res.status(400).json({
@@ -201,12 +207,17 @@ export const registerController = async (req, res) => {
     // Save the new user
     await newUser.save();
  
-    // Generate JWT token
+    // Generate access token with 1-day expiration
     const token = JWT.sign({ _id: newUser._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
+      expiresIn: "1d",
+    });
+
+    // Generate refresh token with 30-day expiration
+    const refreshToken = JWT.sign({ _id: newUser._id }, process.env.JWT_SECRET, {
+      expiresIn: "30d",
     });
  
-    // Send success response with user details and token
+    // Send success response with user details, token and refresh token
     res.status(201).json({
       success: true,
       message: "User registered successfully",
@@ -222,6 +233,7 @@ export const registerController = async (req, res) => {
         state: newUser.state
       },
       token,
+      refreshToken,
     });
  
   } catch (error) {
@@ -272,16 +284,22 @@ export const loginController = async (req, res) => {
       });
     }
 
-    // Generate JWT token with 365-day expiration
+    // Generate access token with 1-day expiration
     const token = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "365d", // Token expiration time set to 365 days
+      expiresIn: "1d", // Short-lived access token
+    });
+    
+    // Generate refresh token with 30-day expiration
+    const refreshToken = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "30d", // Long-lived refresh token
     });
 
-    // Return user details with token
+    // Return user details with token and refresh token
     res.status(200).send({
       success: true,
       message: "Login successful",
       token,
+      refreshToken,
       user: {
         _id: user._id,
         user_fullname: user.user_fullname,
@@ -763,54 +781,58 @@ export const deleteProductFromOrderController = async (req, res) => {
   try {
     const { orderId, productId } = req.params;
 
-    // Log incoming request
-    console.log(`Attempting to delete product from order. Order ID: ${orderId}, Product ID: ${productId}`);
-
-    // Find the order by ID
+    // Find the order
     const order = await orderModel.findById(orderId);
 
     if (!order) {
-      console.log(`Order not found. ID: ${orderId}`);
       return res.status(404).send({
         success: false,
-        message: "Order not found",
+        message: "Order not found"
       });
     }
 
-    // Check if the product exists in the order
+    // Check for the product in the order
     const productIndex = order.products.findIndex(
-      (product) => product._id.toString() === productId
+      (item) => item.product.toString() === productId
     );
 
     if (productIndex === -1) {
-      console.log(`Product not found in order. Product ID: ${productId}`);
       return res.status(404).send({
         success: false,
-        message: "Product not found in the order",
+        message: "Product not found in this order"
       });
     }
 
-    // Remove the product from the order
-    const removedProduct = order.products[productIndex];
+    // Calculate price to subtract
+    const productToRemove = order.products[productIndex];
+    const priceToSubtract = productToRemove.price * productToRemove.quantity;
+
+    // Remove the product from the array
     order.products.splice(productIndex, 1);
+
+    // Update order totals
+    order.amount = Math.max(0, order.amount - priceToSubtract);
+    order.amountPending = Math.max(0, order.amountPending - priceToSubtract);
 
     // Save the updated order
     await order.save();
 
-    console.log(`Product removed successfully. Product ID: ${productId} from Order ID: ${orderId}`);
+    // Load the updated order with populated data for response
+    const updatedOrder = await orderModel.findById(orderId)
+      .populate("products.product")
+      .populate("buyer");
 
-    return res.status(200).send({
+    res.status(200).send({
       success: true,
       message: "Product removed from order successfully",
-      removedProduct, // Send back the removed product details
-      order, // Updated order with the remaining products
+      order: updatedOrder
     });
   } catch (error) {
-    console.error(`Error deleting product from order. Order ID: ${orderId}, Product ID: ${productId}`, error);
-    return res.status(500).send({
+    console.error("Error removing product from order:", error);
+    res.status(500).send({
       success: false,
-      message: "An error occurred while deleting the product from the order",
-      error: error.message,
+      message: "Error removing product from order",
+      error: error.message
     });
   }
 };
@@ -819,15 +841,75 @@ export const deleteProductFromOrderController = async (req, res) => {
 //   try {
 //     const order = await orderModel.findById(req.params.orderId).populate('buyer').populate('products');
 //     if (!order) {
-//       return res.status(404).send('Order not found');
+//       return res.status(404).json({ success: false, message: 'Order not found' });
 //     }
 
-//     res.setHeader('Content-Type', 'application/pdf');
-//     res.setHeader('Content-Disposition', `attachment; filename=invoice-${order._id}.pdf`);
+//     // Create a PDF invoice
+//     // ...
 
-//     generateInvoicePDF(order, res);
+//     res.download(pdfPath, 'invoice.pdf');
 //   } catch (error) {
 //     console.error(error);
-//     res.status(500).send('Error generating invoice');
+//     res.status(500).json({ success: false, message: 'Error generating invoice' });
 //   }
 // });
+
+// Refresh token controller to handle token refreshing
+export const refreshTokenController = async (req, res) => {
+try {
+  const { refreshToken } = req.body;
+  
+  if (!refreshToken) {
+    return res.status(400).send({
+      success: false,
+      message: "Refresh token is required"
+    });
+  }
+
+  // Verify the refresh token
+  const decoded = JWT.verify(refreshToken, process.env.JWT_SECRET);
+  
+  // Check if user exists
+  const user = await userModel.findById(decoded._id);
+  if (!user) {
+    return res.status(404).send({
+      success: false,
+      message: "User not found"
+    });
+  }
+
+  // Generate a new access token
+  const newAccessToken = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
+    expiresIn: "1d"
+  });
+
+  // Generate a new refresh token (optional - you can keep using the same one until it expires)
+  const newRefreshToken = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
+    expiresIn: "30d"
+  });
+
+  res.status(200).send({
+    success: true,
+    message: "Token refreshed successfully",
+    token: newAccessToken,
+    refreshToken: newRefreshToken
+  });
+
+} catch (error) {
+  console.error("Token refresh error:", error);
+  
+  // Check if the error is because of token verification
+  if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+    return res.status(401).send({
+      success: false,
+      message: "Invalid or expired refresh token"
+    });
+  }
+  
+  res.status(500).send({
+    success: false,
+    message: "Error refreshing token",
+    error: error.message
+  });
+}
+};

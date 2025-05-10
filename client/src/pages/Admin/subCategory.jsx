@@ -29,10 +29,10 @@ const SubcategoryList = () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', 'smitoxphoto');
-      formData.append('cloud_name', 'djtiblazd');
+      formData.append('cloud_name', 'dj62teqfp');
 
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/djtiblazd/image/upload`,
+        `https://api.cloudinary.com/v1_1/dj62teqfp/image/upload`,
         {
           method: 'POST',
           body: formData,

@@ -8,9 +8,9 @@ import {
   updateOrderController,
   getOrdersController,
   getAllOrdersController,sendOTPController,verifyOTPAndLoginController,
-
   orderStatusController,
-  deleteProductFromOrderController,addTrackingInfo // Import your delete controller here
+  deleteProductFromOrderController,addTrackingInfo,
+  refreshTokenController // Import the refresh token controller
 } from '../controllers/authController.js';
 import { isAdmin, requireSignIn } from '../middlewares/authMiddleware.js';
 import orderModel from '../models/orderModel.js'; // Changed to import
@@ -29,6 +29,9 @@ router.post("/send-otp", sendOTPController);
 router.post("/verify-otp", verifyOTPAndLoginController);
 
 router.post("/login", loginController);
+
+//REFRESH TOKEN || POST
+router.post("/refresh-token", refreshTokenController);
 
 //Forgot Password || POST
 router.post("/forgot-password", forgotPasswordController);

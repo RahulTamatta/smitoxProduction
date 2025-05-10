@@ -173,10 +173,10 @@ const CreateProduct = () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', 'smitoxphoto');
-      formData.append('cloud_name', 'djtiblazd');
+      formData.append('cloud_name', 'dj62teqfp');
   
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/djtiblazd/image/upload`,
+        `https://api.cloudinary.com/v1_1/dj62teqfp/image/upload`,
         {
           method: 'POST',
           body: formData,
@@ -203,26 +203,35 @@ const CreateProduct = () => {
       toast.loading("Creating product...");
       const productData = new FormData();
   
-      // Upload photos in parallel if they exist
-      const uploadPromises = [];
-      
+      // Upload main photo if it exists
+      let mainPhotoUrl = "";
       if (photo) {
-        uploadPromises.push(
-          uploadToCloudinary(photo).then(url => {
-            productData.append("photos", url);
-          })
-        );
+        mainPhotoUrl = await uploadToCloudinary(photo);
+        productData.append("photos", mainPhotoUrl);
       }
   
-      // Handle multiple images in parallel
+      // Handle multiple images upload
       let allImageUrls = [...(multipleimages || [])];
       
-      if (images?.length) {
-        const newImagePromises = images.map(uploadToCloudinary);
-        const newUrls = await Promise.all(newImagePromises);
-        allImageUrls.push(...newUrls);
+      // Process multiple images if any are selected
+      if (images && images.length > 0) {
+        console.log(`Uploading ${images.length} additional images...`);
+        const imageUploadPromises = [];
+        
+        // Create a separate promise for each image upload
+        for (const imageFile of images) {
+          imageUploadPromises.push(uploadToCloudinary(imageFile));
+        }
+        
+        // Wait for all uploads to complete and collect URLs
+        const newImageUrls = await Promise.all(imageUploadPromises);
+        console.log(`Successfully uploaded ${newImageUrls.length} images`);
+        
+        // Add new image URLs to the existing ones
+        allImageUrls = [...allImageUrls, ...newImageUrls];
       }
       
+      // Add the image URLs as a JSON string
       productData.append("multipleimages", JSON.stringify(allImageUrls));
   
       // Add all other form fields
@@ -248,8 +257,7 @@ const CreateProduct = () => {
         }
       });
   
-      // Wait for all uploads to complete
-      await Promise.all(uploadPromises);
+      // All uploads have already been completed
   
       const { data } = await axios.post(
         "/api/v1/product/create-product",
@@ -405,7 +413,7 @@ const CreateProduct = () => {
 
               <div className="mb-3">
   <label className="btn btn-outline-secondary col-md-12">
-    {photo ? photo.name : "Upload Photo"}
+    {photo ? photo.name : "Upload Main Photo"}
     <input
       type="file"
       name="photo"
@@ -435,6 +443,89 @@ const CreateProduct = () => {
       </div>
     ) : null}
   </div>
+</div>
+
+{/* Multiple Images Upload */}
+<div className="mb-3">
+  <label className="btn btn-outline-secondary col-md-12">
+    Upload Additional Images
+    <input
+      type="file"
+      name="images"
+      accept="image/*"
+      multiple="multiple"
+      onChange={(e) => {
+        const selectedFiles = Array.from(e.target.files);
+        console.log(`Selected ${selectedFiles.length} files`);
+        setImages(prevImages => [...prevImages, ...selectedFiles]);
+      }}
+      hidden
+    />
+  </label>
+  <small className="d-block mt-2 text-muted">
+    You can select multiple images at once. These will be displayed in the product gallery.
+  </small>
+  
+  {/* Preview for newly selected images */}
+  {images && images.length > 0 && (
+    <div className="mt-3">
+      <h6>New Additional Images:</h6>
+      <div className="d-flex flex-wrap gap-2">
+        {images.map((img, index) => (
+          <div key={index} className="position-relative" style={{ width: '100px', height: '100px' }}>
+            <img
+              src={URL.createObjectURL(img)}
+              alt={`Product image ${index + 1}`}
+              style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+              className="border rounded"
+            />
+            <button
+              type="button"
+              className="btn btn-sm btn-danger position-absolute"
+              style={{ top: '0', right: '0', padding: '0 5px' }}
+              onClick={() => {
+                const newImages = [...images];
+                newImages.splice(index, 1);
+                setImages(newImages);
+              }}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+  
+  {/* Display existing multipleimages if any */}
+  {multipleimages && multipleimages.length > 0 && (
+    <div className="mt-3">
+      <h6>Existing Additional Images:</h6>
+      <div className="d-flex flex-wrap gap-2">
+        {multipleimages.map((imgUrl, index) => (
+          <div key={index} className="position-relative" style={{ width: '100px', height: '100px' }}>
+            <img
+              src={imgUrl}
+              alt={`Product image ${index + 1}`}
+              style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+              className="border rounded"
+            />
+            <button
+              type="button"
+              className="btn btn-sm btn-danger position-absolute"
+              style={{ top: '0', right: '0', padding: '0 5px' }}
+              onClick={() => {
+                const updatedImages = multipleimages.filter((_, i) => i !== index);
+                setMultipleImages(updatedImages);
+              }}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
 </div>
 {/* Custom Order */}
 <div className="mb-3">

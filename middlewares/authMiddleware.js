@@ -13,6 +13,10 @@ export const requireSignIn = async (req, res, next) => {
   } catch (error) {
     console.log(error);
     console.log("Invalid token");
+    return res.status(401).send({
+      success: false,
+      message: "Authentication failed. Token invalid or expired."
+    });
   }
 };
 

@@ -4,7 +4,8 @@ import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCart } from "../context/cart";
 import { useAuth } from "../context/auth";
-import { AiFillWarning } from 'react-icons/ai'; // Add this import
+import { AiFillWarning, AiFillYoutube } from 'react-icons/ai'; // Icons import
+import { FaExpand, FaTimes } from 'react-icons/fa'; // Additional icons for zoom
 import toast from "react-hot-toast";
 import ProductCard from "./ProductCard";
 import OptimizedImage from "../components/OptimizedImage";
@@ -35,6 +36,9 @@ const ProductDetails = () => {
   const [showStockPopup, setShowStockPopup] = useState(false); // State for stock popup
   const [isNetworkError, setIsNetworkError] = useState(false);
   const [retryAttempts, setRetryAttempts] = useState(0);
+  const [selectedImage, setSelectedImage] = useState(0); // Track the selected image index
+  const [showYoutubePopup, setShowYoutubePopup] = useState(false); // Controls YouTube popup
+  const [showImageZoom, setShowImageZoom] = useState(false); // Controls image zoom popup
   const MAX_RETRIES = 3;
 
   // Debounce addToCart function
@@ -78,6 +82,9 @@ const ProductDetails = () => {
       setQuantity(1);
       setProductsForYou([]);
       setProduct({}); // Clear previous product data
+      setSelectedImage(0); // Reset selected image to main image
+      setShowImageZoom(false); // Close image zoom if open
+      setShowYoutubePopup(false); // Close YouTube popup if open
       
       // Update the ref to current slug
       prevSlugRef.current = params?.slug;
@@ -625,24 +632,116 @@ const ProductDetails = () => {
       )}
       <div style={containerStyle}>
         <div style={productDetailStyle}>
-          {/* Product Image */}
+          {/* Product Image Gallery */}
           <div style={imageStyle}>
-            <OptimizedImage
-              src={product.photos}
-              alt={product.name}
+            {/* Main large image display */}
+            <div 
+              onClick={() => setShowImageZoom(true)}
               style={{ 
+                marginBottom: "10px", 
                 borderRadius: "8px",
-                width: "100%",
-                height: "auto",
-                maxHeight: isMobile ? "300px" : "500px"
+                overflow: "hidden",
+                boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+                position: "relative",
+                cursor: "zoom-in"
               }}
-              width={isMobile ? 300 : 500}
-              height={isMobile ? 300 : 500}
-              objectFit="contain"
-              backgroundColor="#ffffff"
-              quality={isMobile ? 75 : 85}
-              loading="eager"
-            />
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  top: "10px",
+                  right: "10px",
+                  zIndex: 2,
+                  backgroundColor: "rgba(255,255,255,0.7)",
+                  borderRadius: "50%",
+                  width: "30px",
+                  height: "30px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer"
+                }}
+              >
+                <FaExpand color="#333" size={16} />
+              </div>
+              <OptimizedImage
+                src={selectedImage === 0 ? product.photos : 
+                      (product.multipleimages && product.multipleimages.length > 1) ? 
+                      product.multipleimages[selectedImage - 1] : product.photos}
+                alt={product.name}
+                style={{ 
+                  borderRadius: "8px",
+                  width: "100%",
+                  height: "auto",
+                  maxHeight: isMobile ? "300px" : "500px"
+                }}
+                width={isMobile ? 300 : 500}
+                height={isMobile ? 300 : 500}
+                objectFit="contain"
+                backgroundColor="#ffffff"
+                quality={isMobile ? 75 : 85}
+                loading="eager"
+              />
+            </div>
+            
+            {/* Thumbnail gallery */}
+            {(product.multipleimages && product.multipleimages.length > 1) && (
+              <div style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "8px",
+                justifyContent: isMobile ? "center" : "flex-start"
+              }}>
+                {/* Main product image thumbnail */}
+                <div 
+                  onClick={() => setSelectedImage(0)}
+                  style={{
+                    width: isMobile ? "60px" : "80px",
+                    height: isMobile ? "60px" : "80px",
+                    border: selectedImage === 0 ? "2px solid #ffa41c" : "1px solid #ddd",
+                    borderRadius: "4px",
+                    overflow: "hidden",
+                    cursor: "pointer"
+                  }}
+                >
+                  <OptimizedImage
+                    src={product.photos}
+                    alt={`${product.name} - Main`}
+                    style={{ width: "100%", height: "100%" }}
+                    width={isMobile ? 60 : 80}
+                    height={isMobile ? 60 : 80}
+                    objectFit="cover"
+                    quality={60}
+                  />
+                </div>
+                
+                {/* Additional images thumbnails */}
+                {product.multipleimages.map((imgUrl, index) => (
+                  <div 
+                    key={index}
+                    onClick={() => setSelectedImage(index + 1)}
+                    style={{
+                      width: isMobile ? "60px" : "80px",
+                      height: isMobile ? "60px" : "80px",
+                      border: selectedImage === index + 1 ? "2px solid #ffa41c" : "1px solid #ddd",
+                      borderRadius: "4px",
+                      overflow: "hidden",
+                      cursor: "pointer"
+                    }}
+                  >
+                    <OptimizedImage
+                      src={imgUrl}
+                      alt={`${product.name} - ${index + 1}`}
+                      style={{ width: "100%", height: "100%" }}
+                      width={isMobile ? 60 : 80}
+                      height={isMobile ? 60 : 80}
+                      objectFit="cover"
+                      quality={60}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Product Info */}
@@ -657,6 +756,30 @@ const ProductDetails = () => {
                 fontSize: isMobile ? "16px" : "18px",
                 fontWeight: "500" 
               }}>Total Price: ₹{totalPrice.toFixed(2)}</span>
+              
+              {/* YouTube Button - Show only if product has YouTube URL */}
+              {product.youtubeUrl && (
+                <button
+                  onClick={() => setShowYoutubePopup(true)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    backgroundColor: "#ff0000",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                    padding: "5px 10px",
+                    marginTop: "10px",
+                    cursor: "pointer",
+                    fontSize: isMobile ? "14px" : "16px",
+                    fontWeight: "bold"
+                  }}
+                >
+                  <AiFillYoutube size={isMobile ? 16 : 20} />
+                  Watch Video
+                </button>
+              )}
               <div style={quantitySelectorStyle}>
                 <button 
                   onClick={() => handleQuantityChange(false)} 
@@ -864,7 +987,26 @@ const ProductDetails = () => {
               <div className="card product-card h-100" style={responsiveCardStyle}>
                 <div
                   style={{ cursor: "pointer" }}
-                  onClick={() => navigate(`/product/${item.productId.slug}`)}
+                  onClick={() => {
+                    // Force a complete reset of product state before navigation
+                    setSelectedImage(0);
+                    setShowImageZoom(false);
+                    setShowYoutubePopup(false);
+                    setDisplayQuantity(0);
+                    setShowQuantitySelector(false);
+                    setSelectedBulk(null);
+                    setTotalPrice(0);
+                    setIsInWishlist(false);
+                    setUnitSet(1);
+                    setQuantity(1);
+                    setProduct({});
+                    
+                    // Update the current slug reference before navigation
+                    prevSlugRef.current = item.productId.slug;
+                    
+                    // Navigate to the new product
+                    navigate(`/product/${item.productId.slug}`);
+                  }}
                 >
                   {/* Image container with fixed aspect ratio */}
                   <div style={{ 
@@ -948,6 +1090,174 @@ const ProductDetails = () => {
         product={product}
         requestedQuantity={quantity}
       />
+
+      {/* YouTube Video Popup */}
+      {showYoutubePopup && product.youtubeUrl && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          backgroundColor: "rgba(0, 0, 0, 0.8)",
+          zIndex: 1000,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          flexDirection: "column"
+        }}>
+          <div style={{
+            position: "relative",
+            width: isMobile ? "90%" : "70%",
+            maxWidth: "800px",
+            aspectRatio: "16/9"
+          }}>
+            <button
+              onClick={() => setShowYoutubePopup(false)}
+              style={{
+                position: "absolute",
+                top: "-40px",
+                right: "0",
+                backgroundColor: "transparent",
+                border: "none",
+                color: "white",
+                fontSize: "24px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+              }}
+            >
+              <FaTimes />
+            </button>
+            <iframe
+              width="100%"
+              height="100%"
+              src={product.youtubeUrl ? 
+                (product.youtubeUrl.includes('embed/') ? 
+                  product.youtubeUrl : 
+                  product.youtubeUrl.replace('watch?v=', 'embed/')
+                ) : ''}
+              title="YouTube video player"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            ></iframe>
+          </div>
+        </div>
+      )}
+
+      {/* Image Zoom Popup */}
+      {showImageZoom && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          backgroundColor: "rgba(0, 0, 0, 0.9)",
+          zIndex: 1000,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          flexDirection: "column"
+        }}>
+          <button
+            onClick={() => setShowImageZoom(false)}
+            style={{
+              position: "absolute",
+              top: "20px",
+              right: "20px",
+              backgroundColor: "transparent",
+              border: "none",
+              color: "white",
+              fontSize: "24px",
+              cursor: "pointer",
+              zIndex: 1001
+            }}
+          >
+            <FaTimes size={24} />
+          </button>
+          
+          <div style={{
+            width: "90%",
+            maxWidth: "1200px",
+            maxHeight: "90vh",
+            overflow: "hidden",
+            display: "flex",
+            justifyContent: "center"
+          }}>
+            <img
+              src={selectedImage === 0 ? product.photos : 
+                  (product.multipleimages && product.multipleimages.length > 0) ? 
+                  product.multipleimages[selectedImage - 1] : product.photos}
+              alt={product.name}
+              style={{
+                maxWidth: "100%",
+                maxHeight: "90vh",
+                objectFit: "contain"
+              }}
+            />
+          </div>
+          
+          {/* Thumbnail navigation in zoom view if there are multiple images */}
+          {(product.multipleimages && product.multipleimages.length > 0) && (
+            <div style={{
+              display: "flex",
+              overflowX: "auto",
+              gap: "10px",
+              padding: "15px",
+              marginTop: "15px",
+              maxWidth: "90%",
+              backgroundColor: "rgba(0,0,0,0.5)",
+              borderRadius: "8px"
+            }}>
+              {/* Main image thumbnail */}
+              <div
+                onClick={() => setSelectedImage(0)}
+                style={{
+                  width: "60px",
+                  height: "60px",
+                  border: selectedImage === 0 ? "2px solid #ffa41c" : "1px solid #555",
+                  borderRadius: "4px",
+                  overflow: "hidden",
+                  cursor: "pointer",
+                  flexShrink: 0
+                }}
+              >
+                <img
+                  src={product.photos}
+                  alt={`${product.name} - Main`}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              </div>
+              
+              {/* Additional images */}
+              {product.multipleimages.map((imgUrl, index) => (
+                <div
+                  key={index}
+                  onClick={() => setSelectedImage(index + 1)}
+                  style={{
+                    width: "60px",
+                    height: "60px",
+                    border: selectedImage === index + 1 ? "2px solid #ffa41c" : "1px solid #555",
+                    borderRadius: "4px",
+                    overflow: "hidden",
+                    cursor: "pointer",
+                    flexShrink: 0
+                  }}
+                >
+                  <img
+                    src={imgUrl}
+                    alt={`${product.name} - ${index + 1}`}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </Layout>
   );
 };

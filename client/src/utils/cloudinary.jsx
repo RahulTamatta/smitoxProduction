@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Add these from your Cloudinary dashboard
 const CLOUDINARY_UPLOAD_PRESET = "smitoxphoto";     // Your upload preset name
-const CLOUDINARY_CLOUD_NAME = "djtiblazd";             // Your cloud name
+const CLOUDINARY_CLOUD_NAME = "dj62teqfp";             // Your cloud name
 const CLOUDINARY_API_KEY = "719814162117114";     // Your API key from Cloudinary dashboard
 
 const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;

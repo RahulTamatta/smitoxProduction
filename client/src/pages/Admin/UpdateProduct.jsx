@@ -58,10 +58,10 @@ const UpdateProduct = () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', 'smitoxphoto');
-      formData.append('cloud_name', 'djtiblazd');
+      formData.append('cloud_name', 'dj62teqfp');
 
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/djtiblazd/image/upload`,
+        `https://api.cloudinary.com/v1_1/dj62teqfp/image/upload`,
         {
           method: 'POST',
           body: formData,
@@ -91,12 +91,8 @@ const UpdateProduct = () => {
       let photoUrl = "";
       if (photo) {
         // Upload the new file and set the returned URL
-        const uploadResult = await uploadToCloudinary(photo);
-        // Append only the URL to the form data
-        if (uploadResult) {
-          photoUrl = uploadResult;
-          productData.append("photos", photoUrl);
-        }
+        photoUrl = await uploadToCloudinary(photo);
+        productData.append("photos", photoUrl);
       } else if (photos) {
         // If no new file provided, use the fallback URL already stored in state
         productData.append("photos", photos);
@@ -104,26 +100,39 @@ const UpdateProduct = () => {
 
       // Handle multiple images upload
       let allImageUrls = [];
-      // If there are pre-existing multiple images (passed as a field), try to parse them
-      if (multipleimages) {
+      
+      // If there are existing multiple images, use them as the starting point
+      if (multipleimages && Array.isArray(multipleimages)) {
+        allImageUrls = [...multipleimages];
+      } else if (multipleimages && typeof multipleimages === "string") {
         try {
-          allImageUrls =
-            typeof multipleimages === "string"
-              ? JSON.parse(multipleimages)
-              : multipleimages;
+          // If it's a JSON string, parse it
+          allImageUrls = JSON.parse(multipleimages);
         } catch (err) {
+          console.error('Error parsing multipleimages:', err);
           allImageUrls = [];
         }
       }
-      // Upload new images if provided
-      if (images && images.length) {
-        const newUploadResults = await Promise.all(
-          images.map(uploadToCloudinary)
-        );
-        // Extract only the URL from each upload result
-        const newUrls = newUploadResults.map((result) => result);
-        allImageUrls = [...allImageUrls, ...newUrls];
+      
+      // Process new images if any are selected
+      if (images && images.length > 0) {
+        console.log(`Uploading ${images.length} additional images...`);
+        const imageUploadPromises = [];
+        
+        // Create a separate promise for each image upload
+        for (const imageFile of images) {
+          imageUploadPromises.push(uploadToCloudinary(imageFile));
+        }
+        
+        // Wait for all uploads to complete and collect URLs
+        const newImageUrls = await Promise.all(imageUploadPromises);
+        console.log(`Successfully uploaded ${newImageUrls.length} images`);
+        
+        // Add new image URLs to the existing ones
+        allImageUrls = [...allImageUrls, ...newImageUrls];
       }
+      
+      // Add the image URLs as a JSON string
       productData.append("multipleimages", JSON.stringify(allImageUrls));
 
       // Batch append all other form fields
@@ -197,6 +206,7 @@ const UpdateProduct = () => {
       const { data } = await axios.get(`/api/v1/product/get-product/${params.slug}`);
       if (data?.success) {
         const product = data.product;
+        console.log('Product data:', product);
 
         setName(product.name || "");
         setId(product._id || "");
@@ -222,25 +232,43 @@ const UpdateProduct = () => {
         setSku(product.sku || "");
         setFkTags(product.fk_tags ? product.fk_tags.join(", ") : "");
         setBulkProducts(product.bulkProducts || [{ minimum: "", maximum: "", discount_mrp: "", selling_price_set: "" }]);
-        setProducts(product.photo);
         setPhotos(product.photos || "");  // Set the single photo URL
         setCustomOrder(product.custom_order || "");
 
-        if (product.multipleimages && product.multipleimages.length > 0) {
-          try {
-            let parsedImages = Array.isArray(product.multipleimages) ? 
-              product.multipleimages.map(img => {
-                if (typeof img === 'string') {
+        // Handle multipleimages properly
+        if (product.multipleimages) {
+          console.log('Processing multipleimages:', product.multipleimages);
+          let processedImages = [];
+          
+          // If multipleimages is a string (JSON), try to parse it
+          if (typeof product.multipleimages === 'string') {
+            try {
+              processedImages = JSON.parse(product.multipleimages);
+            } catch (e) {
+              console.error('Error parsing multipleimages string:', e);
+              processedImages = [];
+            }
+          } 
+          // If multipleimages is already an array, use it directly
+          else if (Array.isArray(product.multipleimages)) {
+            processedImages = product.multipleimages.map(img => {
+              // If any array item is a string that needs parsing (like a JSON string)
+              if (typeof img === 'string' && img.startsWith('{')) {
+                try {
                   const parsed = JSON.parse(img);
-                  return parsed.url;
+                  return parsed.url || img;
+                } catch (e) {
+                  return img;
                 }
-                return img;
-              }) : [];
-            setMultipleImages(parsedImages);
-          } catch (e) {
-            console.error('Error parsing multipleimages:', e);
-            setMultipleImages([]);
+              }
+              return img;
+            });
           }
+          
+          console.log('Processed multipleimages:', processedImages);
+          setMultipleImages(processedImages);
+        } else {
+          setMultipleImages([]);
         }
       }
     } catch (error) {
@@ -489,7 +517,7 @@ const UpdateProduct = () => {
 
               <div className="mb-3">
                 <label className="btn btn-outline-secondary col-md-12">
-                  {photo ? photo.name : "Upload Photo"}
+                  {photo ? photo.name : "Upload Main Photo"}
                   <input
                     type="file"
                     name="photo"
@@ -519,6 +547,89 @@ const UpdateProduct = () => {
                     </div>
                   ) : null}
                 </div>
+              </div>
+
+              {/* Multiple Images Upload */}
+              <div className="mb-3">
+                <label className="btn btn-outline-secondary col-md-12">
+                  Upload Additional Images
+                  <input
+                    type="file"
+                    name="images"
+                    accept="image/*"
+                    multiple="multiple"
+                    onChange={(e) => {
+                      const selectedFiles = Array.from(e.target.files);
+                      console.log(`Selected ${selectedFiles.length} files`);
+                      setImages(prevImages => [...prevImages, ...selectedFiles]);
+                    }}
+                    hidden
+                  />
+                </label>
+                <small className="d-block mt-2 text-muted">
+                  You can select multiple images at once. These will be displayed in the product gallery.
+                </small>
+                
+                {/* Preview for newly selected images */}
+                {images && images.length > 0 && (
+                  <div className="mt-3">
+                    <h6>New Additional Images:</h6>
+                    <div className="d-flex flex-wrap gap-2">
+                      {images.map((img, index) => (
+                        <div key={index} className="position-relative" style={{ width: '100px', height: '100px' }}>
+                          <img
+                            src={URL.createObjectURL(img)}
+                            alt={`Product image ${index + 1}`}
+                            style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+                            className="border rounded"
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-danger position-absolute"
+                            style={{ top: '0', right: '0', padding: '0 5px' }}
+                            onClick={() => {
+                              const newImages = [...images];
+                              newImages.splice(index, 1);
+                              setImages(newImages);
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Display existing multipleimages */}
+                {multipleimages && multipleimages.length > 0 && (
+                  <div className="mt-3">
+                    <h6>Existing Additional Images:</h6>
+                    <div className="d-flex flex-wrap gap-2">
+                      {multipleimages.map((imgUrl, index) => (
+                        <div key={index} className="position-relative" style={{ width: '100px', height: '100px' }}>
+                          <img
+                            src={imgUrl}
+                            alt={`Product image ${index + 1}`}
+                            style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+                            className="border rounded"
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-danger position-absolute"
+                            style={{ top: '0', right: '0', padding: '0 5px' }}
+                            onClick={() => {
+                              const updatedImages = multipleimages.filter((_, i) => i !== index);
+                              setMultipleImages(updatedImages);
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="mb-3">
