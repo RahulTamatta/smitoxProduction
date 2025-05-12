@@ -666,7 +666,7 @@ const ProductDetails = () => {
               </div>
               <OptimizedImage
                 src={selectedImage === 0 ? product.photos : 
-                      (product.multipleimages && product.multipleimages.length > 1) ? 
+                      (product.multipleimages && product.multipleimages.length > 0) ? 
                       product.multipleimages[selectedImage - 1] : product.photos}
                 alt={product.name}
                 style={{ 
@@ -685,7 +685,7 @@ const ProductDetails = () => {
             </div>
             
             {/* Thumbnail gallery */}
-            {(product.multipleimages && product.multipleimages.length > 1) && (
+            {(product.multipleimages && product.multipleimages.length > 0) && (
               <div style={{
                 display: "flex",
                 flexWrap: "wrap",
