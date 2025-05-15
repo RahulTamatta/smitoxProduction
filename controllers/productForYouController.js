@@ -1,6 +1,7 @@
 import productForYouModel from "../models/productForYouModel.js";
 import productModel from "../models/productModel.js";
 import productForYou from "../models/productForYouModel.js";
+import subcategoryModel from "../models/subcategoryModel.js";
 import mongoose from 'mongoose';
 
 export const getProductsForYouController = async (req, res) => {
@@ -24,7 +25,7 @@ export const getProductsForYouController = async (req, res) => {
       .select("categoryId subcategoryId productId")
       .sort({ createdAt: -1 });
 
-    const productsWithBase64Photos = products.map((productForYou) => {
+    let productsWithBase64Photos = products.map((productForYou) => {
       const productObj = productForYou.toObject();
 
       if (
@@ -40,6 +41,9 @@ export const getProductsForYouController = async (req, res) => {
 
       return productObj;
     });
+
+    // Shuffle the products array
+    productsWithBase64Photos = productsWithBase64Photos.sort(() => Math.random() - 0.5);
 
     res.status(200).send({
       success: true,
@@ -231,11 +235,41 @@ export const getBannersController = async (req, res) => {
       .select("categoryId subcategoryId productId isActive")
       .sort({ createdAt: -1 });
 
+    // Get all unique category IDs from the banners
+    const categoryIds = [...new Set(banners
+      .filter(banner => banner.categoryId)
+      .map(banner => banner.categoryId._id.toString()))];
+
+    // Fetch all subcategories related to these categories
+    const subcategoriesByCategory = {};
+    
+    if (categoryIds.length > 0) {
+      // Use the imported subcategoryModel to fetch data
+      
+      // Fetch subcategories for all categories in one query
+      const relatedSubcategories = await subcategoryModel.find({
+        category: { $in: categoryIds }
+      }).select('name category');
+      
+      // Organize subcategories by category
+      for (const subcategory of relatedSubcategories) {
+        const categoryId = subcategory.category.toString();
+        if (!subcategoriesByCategory[categoryId]) {
+          subcategoriesByCategory[categoryId] = [];
+        }
+        subcategoriesByCategory[categoryId].push({
+          _id: subcategory._id,
+          name: subcategory.name
+        });
+      }
+    }
+
     res.status(200).send({
       success: true,
       countTotal: banners.length,
       message: "Filtered Banners",
       banners,
+      categorySubcategories: subcategoriesByCategory
     });
   } catch (error) {
     console.error("Error in getting banners:", error);
