@@ -856,60 +856,95 @@ export const deleteProductFromOrderController = async (req, res) => {
 
 // Refresh token controller to handle token refreshing
 export const refreshTokenController = async (req, res) => {
-try {
-  const { refreshToken } = req.body;
-  
-  if (!refreshToken) {
-    return res.status(400).send({
+  try {
+    const { refreshToken } = req.body;
+    
+    if (!refreshToken) {
+      return res.status(400).send({
+        success: false,
+        message: "Refresh token is required"
+      });
+    }
+
+    // Verify the refresh token
+    let decoded;
+    try {
+      decoded = JWT.verify(refreshToken, process.env.JWT_SECRET);
+    } catch (tokenError) {
+      // Handle specific JWT verification errors
+      if (tokenError.name === "TokenExpiredError") {
+        return res.status(401).send({
+          success: false,
+          message: "Refresh token has expired, please login again",
+          code: "REFRESH_TOKEN_EXPIRED"
+        });
+      } else {
+        return res.status(401).send({
+          success: false,
+          message: "Invalid refresh token",
+          code: "INVALID_REFRESH_TOKEN"
+        });
+      }
+    }
+    
+    // Check if user exists
+    const user = await userModel.findById(decoded._id);
+    if (!user) {
+      return res.status(404).send({
+        success: false,
+        message: "User not found",
+        code: "USER_NOT_FOUND"
+      });
+    }
+
+    // Check if user is active
+    if (user.status !== "active" && user.status) {
+      return res.status(403).send({
+        success: false,
+        message: "Account is not active",
+        code: "ACCOUNT_INACTIVE"
+      });
+    }
+
+    // Generate a new access token with shorter expiration (15 minutes)
+    const newAccessToken = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "15m" // Short-lived access token
+    });
+
+    // Generate a new refresh token with long expiration (30 days)
+    // Creating a new refresh token on each refresh adds an extra layer of security
+    const newRefreshToken = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "30d" // Long-lived refresh token
+    });
+
+    // Add useful data about token expiration for the client
+    const decodedAccess = JWT.decode(newAccessToken);
+    const decodedRefresh = JWT.decode(newRefreshToken);
+
+    res.status(200).send({
+      success: true,
+      message: "Token refreshed successfully",
+      token: newAccessToken,
+      refreshToken: newRefreshToken,
+      tokenExpiry: decodedAccess.exp * 1000, // Convert to milliseconds
+      refreshTokenExpiry: decodedRefresh.exp * 1000, // Convert to milliseconds
+      user: {
+        _id: user._id,
+        user_fullname: user.user_fullname,
+        email_id: user.email_id,
+        mobile_no: user.mobile_no,
+        role: user.role,
+        status: user.status
+      }
+    });
+  } catch (error) {
+    console.error("Token refresh error:", error);
+    
+    res.status(500).send({
       success: false,
-      message: "Refresh token is required"
+      message: "Error refreshing token",
+      error: error.message,
+      code: "SERVER_ERROR"
     });
   }
-
-  // Verify the refresh token
-  const decoded = JWT.verify(refreshToken, process.env.JWT_SECRET);
-  
-  // Check if user exists
-  const user = await userModel.findById(decoded._id);
-  if (!user) {
-    return res.status(404).send({
-      success: false,
-      message: "User not found"
-    });
-  }
-
-  // Generate a new access token
-  const newAccessToken = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
-    expiresIn: "1d"
-  });
-
-  // Generate a new refresh token (optional - you can keep using the same one until it expires)
-  const newRefreshToken = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
-    expiresIn: "30d"
-  });
-
-  res.status(200).send({
-    success: true,
-    message: "Token refreshed successfully",
-    token: newAccessToken,
-    refreshToken: newRefreshToken
-  });
-
-} catch (error) {
-  console.error("Token refresh error:", error);
-  
-  // Check if the error is because of token verification
-  if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
-    return res.status(401).send({
-      success: false,
-      message: "Invalid or expired refresh token"
-    });
-  }
-  
-  res.status(500).send({
-    success: false,
-    message: "Error refreshing token",
-    error: error.message
-  });
-}
 };
