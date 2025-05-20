@@ -264,11 +264,14 @@ export const getBannersController = async (req, res) => {
       }
     }
 
+    // Shuffle the banners array for random display
+    const shuffledBanners = [...banners].sort(() => Math.random() - 0.5);
+
     res.status(200).send({
       success: true,
-      countTotal: banners.length,
+      countTotal: shuffledBanners.length,
       message: "Filtered Banners",
-      banners,
+      banners: shuffledBanners,
       categorySubcategories: subcategoriesByCategory
     });
   } catch (error) {
