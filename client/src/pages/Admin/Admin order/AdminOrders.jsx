@@ -59,6 +59,9 @@ const AdminOrders = () => {
       setLoading(true);
       setError(null);
       const { data } = await axios.get(`/api/v1/auth/all-orders`, {
+        headers: {
+          Authorization: auth?.token
+        },
         params: {
           status: type,
           page,
@@ -97,9 +100,13 @@ const AdminOrders = () => {
 
   const handleStatusChange = async (orderId, value) => {
     try {
-      await axios.put(`/api/v1/auth/order-status/${orderId}`, {
-        status: value,
-      });
+      await axios.put(`/api/v1/auth/order-status/${orderId}`, 
+        { status: value },
+        {
+          headers: {
+            Authorization: auth?.token
+          }
+        });
       getOrders(orderType);
       message.success("Order status updated successfully");
     } catch (error) {
@@ -143,15 +150,12 @@ const AdminOrders = () => {
     if (!selectedOrder || !selectedOrder.products)
       return { subtotal: 0, gst: 0, total: 0 };
 
-    console.log("Selected Order:", selectedOrder);
-
     const subtotal = selectedOrder.products.reduce(
       (acc, product) => acc + Number(product.price) * Number(product.quantity),
       0
     );
 
     const gst = selectedOrder.products.reduce((acc, product) => {
-      console.log("Product GST:", product.gst); // Log GST for each product
       return (
         acc +
         (Number(product.price) *
@@ -161,16 +165,12 @@ const AdminOrders = () => {
       );
     }, 0);
 
-    console.log("Subtotal:", subtotal, "GST:", gst);
-
     const total =
       subtotal +
       gst +
       (Number(selectedOrder.deliveryCharges) || 0) +
       (Number(selectedOrder.codCharges) || 0) -
       (Number(selectedOrder.discount) || 0);
-
-    console.log("Total:", total);
 
     return { subtotal, gst, total };
   };
@@ -205,6 +205,11 @@ const AdminOrders = () => {
         { 
           productId: product._id, 
           quantity: product.unitSet || 1 // Ensure minimum quantity
+        },
+        {
+          headers: {
+            Authorization: auth?.token
+          }
         }
       );
   
@@ -229,17 +234,9 @@ const AdminOrders = () => {
       setAddProductError(error.response?.data?.message || "Error adding product to order");
     }
   };
-  // const handleCloseSearchModal = () => {
-  //   setShowSearchModal(false);
-  //   setSearchKeyword('');
-  //   setSearchResults([]);
-  // };
 
   const handleUpdateOrder = async () => {
     try {
-      // Log the values to debug
-      console.log("Updating order with:", selectedOrder);
-
       const {
         _id,
         status,
@@ -250,24 +247,10 @@ const AdminOrders = () => {
         products,
       } = selectedOrder;
 
-      // Ensure all numeric values are properly converted to numbers
       const numericCodCharges = Number(codCharges) || 0;
       const numericDeliveryCharges = Number(deliveryCharges) || 0;
       const numericDiscount = Number(discount) || 0;
       const numericAmount = Number(amount) || 0;
-
-      console.log("Prepared data:", {
-        status,
-        codCharges: numericCodCharges,
-        deliveryCharges: numericDeliveryCharges,
-        discount: numericDiscount,
-        amount: numericAmount,
-        products: products.map((p) => ({
-          _id: p._id,
-          quantity: Number(p.quantity) || 0,
-          price: Number(p.price) || 0,
-        })),
-      });
 
       const response = await axios.put(`/api/v1/auth/order/${_id}`, {
         status,
@@ -280,6 +263,11 @@ const AdminOrders = () => {
           quantity: Number(p.quantity) || 0,
           price: Number(p.price) || 0,
         })),
+      },
+      {
+        headers: {
+          Authorization: auth?.token
+        }
       });
 
       if (response.data.success) {
@@ -335,7 +323,12 @@ const AdminOrders = () => {
         setSelectedOrder(updatedOrder);
 
         const response = await axios.delete(
-          `/api/v1/auth/order/${selectedOrder._id}/remove-product/${productToRemove._id}`
+          `/api/v1/auth/order/${selectedOrder._id}/remove-product/${productToRemove._id}`,
+          {
+            headers: {
+              Authorization: auth?.token
+            }
+          }
         );
 
         if (response.data.success) {
@@ -356,6 +349,11 @@ const AdminOrders = () => {
     try {
       await axios.put(`/api/v1/auth/order-status/${selectedOrder._id}`, {
         status: "Delivered",
+      },
+      {
+        headers: {
+          Authorization: auth?.token
+        }
       });
       setShow(false);
       getOrders(orderType);
@@ -370,6 +368,11 @@ const AdminOrders = () => {
     try {
       await axios.put(`/api/v1/auth/order-status/${selectedOrder._id}`, {
         status: "Returned",
+      },
+      {
+        headers: {
+          Authorization: auth?.token
+        }
       });
       setShow(false);
       getOrders(orderType);
