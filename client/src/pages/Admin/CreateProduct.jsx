@@ -5,11 +5,13 @@ import toast from "react-hot-toast";
 import axios from "axios";
 import { Select } from "antd";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/auth"; // <-- Add this import
 
 const { Option } = Select;
 
 const CreateProduct = () => {
   const navigate = useNavigate();
+  const [auth] = useAuth(); // <-- Add this line
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [brands, setBrands] = useState([]);
@@ -263,7 +265,9 @@ const CreateProduct = () => {
         "/api/v1/product/create-product",
         productData,
         {
-          headers: { 'Content-Type': 'multipart/form-data' }
+          headers: { 'Content-Type': 'multipart/form-data' ,
+            'Authorization': auth?.token
+          }
         }
       );
   

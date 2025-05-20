@@ -359,7 +359,8 @@ const CartPage = () => {
               headers: {
                 'Content-Type': 'application/json',
                 'Connection': 'keep-alive',
-                'Cache-Control': 'no-cache'
+                'Cache-Control': 'no-cache',
+                'Authorization': auth?.token
               }
             }
           );
@@ -411,7 +412,8 @@ const CartPage = () => {
               headers: {
                 'Content-Type': 'application/json',
                 'Connection': 'keep-alive',
-                'Cache-Control': 'no-cache'
+                'Cache-Control': 'no-cache', 
+                    'Authorization': auth?.token
               }
             }
           );
@@ -444,7 +446,8 @@ const CartPage = () => {
                     timeout: 30000, // 30 second timeout
                     headers: {
                       'Content-Type': 'application/json',
-                      'Connection': 'keep-alive'
+                      'Connection': 'keep-alive',
+                      'Authorization': auth?.token
                     }
                   }
                 );

@@ -67,10 +67,15 @@ const authenticateUser = (req, res, next) => {
 
 // JWT verification middleware
 const verifyToken = (req, res, next) => {
-    const token = req.headers.authorization;
+    let token = req.headers.authorization || req.headers.Authorization;
 
     if (!token) {
         return res.status(401).json({ error: 'No token provided' });
+    }
+
+    // Accept 'Bearer <token>' or just the token
+    if (typeof token === "string" && token.startsWith("Bearer ")) {
+        token = token.slice(7);
     }
 
     try {

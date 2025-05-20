@@ -39,7 +39,7 @@ router.get("/get-products", getBannersController);
 // Get products by category and subcategory
 router.get("/products/:categoryId/:subcategoryId", getProductsForYouController);
 
-// router.get("/products/:categoryId/:subcategoryId", getProductsForYouController);
+;
 
 // Delete a "Product for You"
 router.delete(

@@ -3,8 +3,10 @@ import { Modal, Button, Form } from 'react-bootstrap';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import ReactPaginate from 'react-paginate';
+import { useAuth } from "../../context/auth"; // <-- Add this import
 
 const PincodeList = () => {
+  const [auth] = useAuth(); // <-- Add this line
   const [pincodes, setPincodes] = useState([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [itemsPerPage] = useState(5);
@@ -108,7 +110,7 @@ const PincodeList = () => {
 
     try {
       const { data } = await axios.post('/api/v1/pincodes/bulk-upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data', 'Authorization': auth?.token }
       });
 
       if (data.success) {
