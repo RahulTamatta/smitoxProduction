@@ -20,6 +20,8 @@ const UpdateProduct = () => {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
+  // YouTube URL state
+  const [youtubeUrl, setYoutubeUrl] = useState("");
   const [subcategory, setSubcategory] = useState("");
   const [brand, setBrand] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -171,10 +173,11 @@ const UpdateProduct = () => {
           }))
         ),
         custom_order: customOrder || "",
+        youtubeUrl, // Append YouTube URL
       };
 
       Object.entries(formFields).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
+        if (value !== undefined && value !== null && value !== "") {
           productData.append(key, value);
         }
       });
@@ -234,6 +237,7 @@ const UpdateProduct = () => {
         setBulkProducts(product.bulkProducts || [{ minimum: "", maximum: "", discount_mrp: "", selling_price_set: "" }]);
         setPhotos(product.photos || "");  // Set the single photo URL
         setCustomOrder(product.custom_order || "");
+        setYoutubeUrl(product.youtubeUrl || ""); // Prepopulate YouTube URL
 
         // Handle multipleimages properly
         if (product.multipleimages) {
@@ -960,6 +964,24 @@ const UpdateProduct = () => {
                 <button className="btn btn-primary" onClick={handleAddRow}>
                   Add Bulk Product
                 </button>
+              </div>
+
+              {/* YouTube URL Field */}
+              <div className="mb-3">
+                <label htmlFor="youtubeUrl" className="form-label">
+                  YouTube URL
+                </label>
+                <input
+                  id="youtubeUrl"
+                  type="text"
+                  value={youtubeUrl}
+                  placeholder="Enter YouTube URL"
+                  className="form-control"
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                />
+                <small className="text-muted">
+                  Enter a valid YouTube URL for the product video.
+                </small>
               </div>
 
               <div className="mb-3 d-flex justify-content-between">

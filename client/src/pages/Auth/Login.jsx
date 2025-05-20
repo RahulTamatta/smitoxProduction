@@ -31,38 +31,19 @@ const Login = () => {
       });
   
       if (res.data.success) {
+        const authData = {
+          user: res.data.user,
+          token: res.data.token,
+          sessionId: res.data.sessionId || sessionId
+        };
+        setAuth(authData);
+        localStorage.setItem("auth", JSON.stringify(authData));
+
         if (res.data.isNewUser) {
-          const authData = {
-            user: res.data.user,
-            token: res.data.token,
-            sessionId: res.data.sessionId || sessionId
-          };
-
-          // Set auth in state
-          setAuth(authData);
-
-          // Store full auth data in localStorage
-          localStorage.setItem("auth", JSON.stringify(authData));
-
-          //toast.success(res.data.message);
-          navigate(location.state || "/");
-          // Redirect to registration page if user is new
           navigate("/register", { state: { phoneNumber } });
+        } else if (res.data.user && res.data.user.verified === false) {
+          navigate("/verification");
         } else {
-          // Modify how we set auth to include all relevant data
-          const authData = {
-            user: res.data.user,
-            token: res.data.token,
-            sessionId: res.data.sessionId || sessionId
-          };
-
-          // Set auth in state
-          setAuth(authData);
-
-          // Store full auth data in localStorage
-          localStorage.setItem("auth", JSON.stringify(authData));
-
-          //toast.success(res.data.message);
           navigate(location.state || "/");
         }
       } else {
