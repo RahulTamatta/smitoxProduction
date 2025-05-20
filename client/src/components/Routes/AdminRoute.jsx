@@ -10,14 +10,34 @@ export default function PrivateRoute() {
 
   useEffect(() => {
     const authCheck = async () => {
-      const res = await axios.get("/api/v1/auth/admin-auth");
-      if (res.data.ok) {
-        setOk(true);
-      } else {
+      try {
+        const res = await axios.get("/api/v1/auth/admin-auth", {
+          headers: {
+            Authorization: auth?.token
+          }
+        });
+        if (res.data.ok) {
+          setOk(true);
+        } else {
+          setOk(false);
+          // If unauthorized, clear auth and redirect to login
+          localStorage.removeItem("auth");
+          window.location.href = "/adminlogin";
+        }
+      } catch (error) {
+        console.error("Admin auth check failed:", error);
         setOk(false);
+        localStorage.removeItem("auth");
+        window.location.href = "/adminlogin";
       }
     };
-    if (auth?.token) authCheck();
+    
+    if (auth?.token) {
+      authCheck();
+    } else {
+      // If no token, redirect to login
+      window.location.href = "/adminlogin";
+    }
   }, [auth?.token]);
 
   return ok ? <Outlet /> : <Spinner path="" />;
