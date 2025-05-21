@@ -48,7 +48,8 @@ const authenticateUser = (req, res, next) => {
                 _id: user._id,
                 username: user.username
             }, 
-            JWT_SECRET // No `expiresIn` specified, so the token never expires
+            JWT_SECRET,
+            { expiresIn: "1d" } // Always set expiry
         );
         
         // Ensure consistent user object structure

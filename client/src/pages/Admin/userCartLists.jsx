@@ -32,21 +32,6 @@ const UserList = () => {
   const pageFromUrl = parseInt(urlParams.get('page')) || 1;
   const searchFromUrl = urlParams.get('search') || '';
 
-  // Handle browser history changes
-  useEffect(() => {
-    const handleLocationChange = () => {
-      const params = new URLSearchParams(location.search);
-      const page = parseInt(params.get('page')) || 1;
-      const search = params.get('search') || '';
-      setCurrentPage(page);
-      setSearchTerm(search);
-    };
-
-    handleLocationChange();
-    window.addEventListener('popstate', handleLocationChange);
-    return () => window.removeEventListener('popstate', handleLocationChange);
-  }, [location]);
-
   // Debounce the search term
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
@@ -56,10 +41,55 @@ const UserList = () => {
     return () => clearTimeout(debounceTimer); // Cleanup on unmount or re-render
   }, [searchTerm]);
 
-  // Fetch users when debouncedSearchTerm changes
+  // --- Fix: Always fetch users when currentPage or debouncedSearchTerm changes ---
   useEffect(() => {
     fetchUsers(currentPage, debouncedSearchTerm);
-  }, [debouncedSearchTerm, currentPage]);
+    // eslint-disable-next-line
+  }, [currentPage, debouncedSearchTerm]);
+
+  // --- Fix: When searchTerm changes, reset to page 1 and update URL ---
+  useEffect(() => {
+    setCurrentPage(1);
+    // Update URL with search param only
+    const params = new URLSearchParams();
+    if (searchTerm) params.set('search', searchTerm);
+    window.history.replaceState({}, '', `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`);
+    // Debounce handled separately
+    // eslint-disable-next-line
+  }, [searchTerm]);
+
+  // --- Fix: When currentPage changes, update URL with both page and search ---
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (currentPage > 1) params.set('page', currentPage);
+    if (searchTerm) params.set('search', searchTerm);
+    window.history.replaceState({}, '', `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`);
+    // eslint-disable-next-line
+  }, [currentPage]);
+
+  // --- Fix: When currentPage changes, fetch users for that page and current search ---
+  useEffect(() => {
+    fetchUsers(currentPage, debouncedSearchTerm);
+    // eslint-disable-next-line
+  }, [currentPage, debouncedSearchTerm]);
+
+  // --- Fix: When users or filters change, filter users ---
+  useEffect(() => {
+    filterUsers(users);
+    // eslint-disable-next-line
+  }, [users, activeStatusFilter, activeOrderTypeFilter, activeRegularFilter]);
+
+  // --- Fix: Remove duplicate fetchUsers on mount ---
+  useEffect(() => {
+    // On mount, initialize from URL
+    const params = new URLSearchParams(location.search);
+    const page = parseInt(params.get('page')) || 1;
+    const search = params.get('search') || '';
+    setCurrentPage(page);
+    setSearchTerm(search);
+    setDebouncedSearchTerm(search);
+    // eslint-disable-next-line
+  }, []);
 
   const handleSearch = (value) => {
     setSearchTerm(value);
@@ -81,15 +111,6 @@ const UserList = () => {
       setUsers(usersList);
       setTotalUsers(response.data.total || usersList.length);
       filterUsers(usersList);
-
-      // Update URL with search and page params only when necessary
-      const params = new URLSearchParams();
-      if (page > 1) params.set('page', page);
-      if (search) params.set('search', search);
-      const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
-      if (newUrl !== window.location.href) {
-        window.history.replaceState({}, '', newUrl);
-      }
     } catch (error) {
       console.error('Error fetching users:', error);
       setError('Failed to fetch users. Please try again later.');
@@ -98,13 +119,9 @@ const UserList = () => {
     }
   };
 
-  useEffect(() => {
-    filterUsers();
-  }, [users, activeStatusFilter, activeOrderTypeFilter, activeRegularFilter]);
-  
   const filterUsers = (usersList = users) => {
     let result = usersList;
-  
+
     if (activeStatusFilter !== 'all') {
       result = result.filter(user => user.status === activeStatusFilter);
     }
@@ -114,23 +131,16 @@ const UserList = () => {
     if (activeRegularFilter !== 'all') {
       result = result.filter(user => user.regular === activeRegularFilter);
     }
-  
+
     setFilteredUsers(result);
   };
+
   const handlePageChange = (newPage) => {
     if (newPage >= 1) {
       setCurrentPage(newPage);
-      fetchUsers(newPage, searchTerm);
+      // Do NOT call fetchUsers here; useEffect will handle it
     }
   };
-
-  useEffect(() => {
-    // Initialize search term from URL if present
-    const params = new URLSearchParams(location.search);
-    const searchFromUrl = params.get('search') || "";
-    setSearchTerm(searchFromUrl);
-    fetchUsers(searchFromUrl);
-  }, [location]);
 
   const renderSearchSection = () => (
     <div style={{ marginBottom: '1.5rem' }}>
@@ -178,14 +188,6 @@ const UserList = () => {
     }
   };
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  useEffect(() => {
-    filterUsers();
-  }, [users, activeStatusFilter, activeOrderTypeFilter, activeRegularFilter]);
-
   const handleOpenSearchModal = (userId, user_fullname) => {
     const encodedName = encodeURIComponent(user_fullname);
     navigate(`/add-to-cart/${userId}/${encodedName}`);
@@ -229,50 +231,50 @@ const UserList = () => {
     if (!orderType || orderType === "0") return "";
     return orderType.toLowerCase();
   };
+
   const redirectToWhatsApp = (phoneNumber) => {
     if (!phoneNumber) {
-        console.error('Phone number is undefined or null');
-        return;
+      console.error('Phone number is undefined or null');
+      return;
     }
     const cleanNumber = String(phoneNumber).replace(/\D/g, ''); // Convert to string and remove non-digits
     if (!cleanNumber) {
-        console.error('Phone number is invalid or empty');
-        return;
+      console.error('Phone number is invalid or empty');
+      return;
     }
     const whatsappUrl = `https://wa.me/${cleanNumber}`;
     window.open(whatsappUrl, '_blank');
-};
+  };
 
-const openEditModal = (user) => {
-  console.log("Opening edit modal for user:", user); // Debugging
-  setEditingUser({
-    ...user,
-    pincode: user.pincode || '', // Initialize pincode if it exists
-  });
-  setIsEditModalOpen(true);
-};
-
-const handleEditUser = async (e) => {
-  e.preventDefault();
-  try {
-    await axios.put(`/api/v1/usersLists/users/${editingUser._id}`, {
-      ...editingUser,
-      pincode: editingUser.pincode || null, // Ensure pincode is sent to the API
+  const openEditModal = (user) => {
+    console.log("Opening edit modal for user:", user); // Debugging
+    setEditingUser({
+      ...user,
+      pincode: user.pincode || '', // Initialize pincode if it exists
     });
-    fetchUsers(); // Refresh the user list
-    closeEditModal(); // Close the modal
-  } catch (error) {
-    console.error('Error updating user:', error);
-    setError('Failed to update user. Please try again.');
-  }
-};
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditUser = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`/api/v1/usersLists/users/${editingUser._id}`, {
+        ...editingUser,
+        pincode: editingUser.pincode || null, // Ensure pincode is sent to the API
+      });
+      fetchUsers(); // Refresh the user list
+      closeEditModal(); // Close the modal
+    } catch (error) {
+      console.error('Error updating user:', error);
+      setError('Failed to update user. Please try again.');
+    }
+  };
 
   const closeEditModal = () => {
     setEditingUser(null);
     setIsEditModalOpen(false);
   };
 
- 
   const TabButton = ({ label, isActive, onClick }) => (
     <button
       onClick={onClick}
@@ -292,18 +294,14 @@ const handleEditUser = async (e) => {
     </button>
   );
 
-  const indexOfLastUser = currentPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const currentUsers = filteredUsers;
 
   const renderPagination = () => {
     const totalPages = Math.ceil(totalUsers / usersPerPage);
-    
+
     // Don't render pagination if there's only one page
     if (totalPages <= 1) return null;
-    
+
     const pageButtonStyle = {
       padding: '0.5rem 1rem',
       borderRadius: '0.25rem',
@@ -314,25 +312,25 @@ const handleEditUser = async (e) => {
       transition: 'all 0.3s ease',
       margin: '0 0.25rem'
     };
-    
+
     const activeButtonStyle = {
       ...pageButtonStyle,
       backgroundColor: '#1976d2',
       color: 'white',
     };
-    
+
     // Calculate which page numbers to show
     let pagesToShow = [];
     const siblingCount = 2; // Increased from 1 to 2 to show more pages
-    
+
     // Always include first and last page
     const firstPage = 1;
     const lastPage = totalPages;
-    
+
     // Calculate range around current page
     let startPage = Math.max(currentPage - siblingCount, 1);
     let endPage = Math.min(currentPage + siblingCount, totalPages);
-    
+
     // Adjust range to ensure we show at least 4 pages if possible
     if (endPage - startPage + 1 < 4 && totalPages >= 4) {
       if (startPage === 1) {
@@ -341,17 +339,17 @@ const handleEditUser = async (e) => {
         startPage = Math.max(endPage - 3, 1);
       }
     }
-    
+
     // Add page numbers
     for (let i = startPage; i <= endPage; i++) {
       pagesToShow.push(i);
     }
-    
+
     // Add first page if not included
     if (!pagesToShow.includes(1)) {
       pagesToShow = [1, '...', ...pagesToShow];
     }
-    
+
     // Add last page if not included
     if (!pagesToShow.includes(totalPages) && totalPages > 1) {
       pagesToShow = [...pagesToShow, '...', totalPages];
@@ -359,15 +357,15 @@ const handleEditUser = async (e) => {
 
     return (
       <nav aria-label="Pagination" style={{ margin: '1.5rem 0' }}>
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: '0.5rem'
         }}>
           {/* Previous button */}
-          <button 
+          <button
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
             style={{
@@ -378,9 +376,9 @@ const handleEditUser = async (e) => {
           >
             Previous
           </button>
-          
+
           {/* Page numbers */}
-          {pagesToShow.map((page, index) => 
+          {pagesToShow.map((page, index) =>
             typeof page === 'number' ? (
               <button
                 key={index}
@@ -393,9 +391,9 @@ const handleEditUser = async (e) => {
               <span key={index} style={{ margin: '0 0.25rem' }}>{page}</span>
             )
           )}
-          
+
           {/* Next button */}
-          <button 
+          <button
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
             style={{
@@ -477,7 +475,7 @@ const handleEditUser = async (e) => {
           <table style={{ width: '100%', borderCollapse: 'collapse', ...styles.tableBorder }}>
             <thead>
               <tr>
-                {['Name', 'Email', 'Phone', 'Address', 'Pincode','Status', 'Order Type', 'Actions'].map(header => (
+                {['Name', 'Email', 'Phone', 'Address', 'Pincode', 'Status', 'Order Type', 'Actions'].map(header => (
                   <th
                     key={header}
                     style={{
@@ -604,85 +602,94 @@ const handleEditUser = async (e) => {
         {renderPagination()}
 
         {isEditModalOpen && (
-  <div style={{
-    position: 'fixed',
-    inset: 0,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    zIndex: 1000
-  }}>
-    <div style={{
-      backgroundColor: 'white',
-      padding: '1.5rem',
-      borderRadius: '0.5rem',
-      width: '90%',
-      maxWidth: '500px'
-    }}>
-      <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-        Edit User
-      </h2>
-      <form onSubmit={handleEditUser}>
-        <div style={{ marginBottom: '1rem' }}>
-          <label>User Full Name</label>
-          <input
-            type="text"
-            value={editingUser?.user_fullname || ''}
-            onChange={(e) => setEditingUser({ ...editingUser, user_fullname: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
-          />
-        </div>
-        <div style={{ marginBottom: '1rem' }}>
-          <label>Mobile Number</label>
-          <input
-            type="text"
-            value={editingUser?.mobile_no || ''}
-            onChange={(e) => setEditingUser({ ...editingUser, mobile_no: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
-          />
-        </div>
-        <div style={{ marginBottom: '1rem' }}>
-          <label>Address</label>
-          <input
-            type="text"
-            value={editingUser?.address || ''}
-            onChange={(e) => setEditingUser({ ...editingUser, address: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
-          />
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-          <button
-            type="button"
-            onClick={closeEditModal}
-            style={{
-              padding: '0.5rem 1rem',
-              borderRadius: '0.25rem',
-              border: 'none',
-              backgroundColor: '#e0e0e0',
-              cursor: 'pointer'
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            style={{
-              padding: '0.5rem 1rem',
-              borderRadius: '0.25rem',
-              border: 'none',
-              backgroundColor: '#1976d2',
-              color: 'white',
-              cursor: 'pointer'
-            }}
-          >
-            Save changes
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-)}
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            zIndex: 1000
+          }}>
+            <div style={{
+              backgroundColor: 'white',
+              padding: '1.5rem',
+              borderRadius: '0.5rem',
+              width: '90%',
+              maxWidth: '500px'
+            }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+                Edit User
+              </h2>
+              <form onSubmit={handleEditUser}>
+                <div style={{ marginBottom: '1rem' }}>
+                  <label>User Full Name</label>
+                  <input
+                    type="text"
+                    value={editingUser?.user_fullname || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, user_fullname: e.target.value })}
+                    style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
+                  />
+                </div>
+                <div style={{ marginBottom: '1rem' }}>
+                  <label>Mobile Number</label>
+                  <input
+                    type="text"
+                    value={editingUser?.mobile_no || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, mobile_no: e.target.value })}
+                    style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
+                  />
+                </div>
+                <div style={{ marginBottom: '1rem' }}>
+                  <label>Address</label>
+                  <input
+                    type="text"
+                    value={editingUser?.address || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, address: e.target.value })}
+                    style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
+                  />
+                </div>
+                <div style={{ marginBottom: '1rem' }}>
+                  <label>Pincode</label>
+                  <input
+                    type="text"
+                    value={editingUser?.pincode || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, pincode: e.target.value })}
+                    style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={closeEditModal}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      borderRadius: '0.25rem',
+                      border: 'none',
+                      backgroundColor: '#e0e0e0',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    style={{
+                      padding: '0.5rem 1rem',
+                      borderRadius: '0.25rem',
+                      border: 'none',
+                      backgroundColor: '#1976d2',
+                      color: 'white',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Save changes
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </>
     );
   };
@@ -705,96 +712,6 @@ const handleEditUser = async (e) => {
           </div>
         </div>
       </div>
-
-      {isEditModalOpen && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '1.5rem',
-            borderRadius: '0.5rem',
-            width: '90%',
-            maxWidth: '500px'
-          }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-              Edit User
-            </h2>
-            <form onSubmit={handleEditUser}>
-              <div style={{ marginBottom: '1rem' }}>
-                <label>User Full Name</label>
-                <input
-                  type="text"
-                  value={editingUser?.user_fullname || ''}
-                  onChange={(e) => setEditingUser({ ...editingUser, user_fullname: e.target.value })}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
-                />
-              </div>
-              <div style={{ marginBottom: '1rem' }}>
-                <label>Mobile Number</label>
-                <input
-                  type="text"
-                  value={editingUser?.mobile_no || ''}
-                  onChange={(e) => setEditingUser({ ...editingUser, mobile_no: e.target.value })}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
-                />
-              </div>
-              <div style={{ marginBottom: '1rem' }}>
-                <label>Address</label>
-                <input
-                  type="text"
-                  value={editingUser?.address || ''}
-                  onChange={(e) => setEditingUser({ ...editingUser, address: e.target.value })}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
-                />
-              </div>
-              <div style={{ marginBottom: '1rem' }}>
-                <label>Pincode</label>
-                <input
-                  type="text"
-                  value={editingUser?.pincode || ''}
-                  onChange={(e) => setEditingUser({ ...editingUser, pincode: e.target.value })}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
-                />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                <button
-                  type="button"
-                  onClick={closeEditModal}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    borderRadius: '0.25rem',
-                    border: 'none',
-                    backgroundColor: '#e0e0e0',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  style={{
-                    padding: '0.5rem 1rem',
-                    borderRadius: '0.25rem',
-                    border: 'none',
-                    backgroundColor: '#1976d2',
-                    color: 'white',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Save changes
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </Layout>
   );
 };
