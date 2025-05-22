@@ -643,7 +643,8 @@ const ProductDetails = () => {
                 overflow: "hidden",
                 boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
                 position: "relative",
-                cursor: "zoom-in"
+                cursor: "zoom-in",
+                paddingTop: isMobile ? "16px" : "28px" // Added padding to top for better visual spacing
               }}
             >
               <div

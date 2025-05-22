@@ -425,7 +425,12 @@ const AdminOrders = () => {
     try {
       await axios.put(
         `/api/v1/auth/order/${selectedOrder._id}/tracking`,
-        trackingInfo
+        trackingInfo,
+        {
+          headers: {
+            Authorization: auth?.token
+          }
+        }
       );
       message.success("Tracking information added successfully");
       getOrders(orderType);
