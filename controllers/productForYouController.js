@@ -4,6 +4,49 @@ import productForYou from "../models/productForYouModel.js";
 import subcategoryModel from "../models/subcategoryModel.js";
 import mongoose from 'mongoose';
 
+export const adminGetProductsForYouController = async (req, res) => {
+  try {
+    // Fetch all products-for-you, populating necessary fields
+    const products = await productForYouModel
+      .find({})
+      .populate("categoryId", "name")
+      .populate("subcategoryId", "name")
+      .populate("productId", "name photos price slug perPiecePrice")
+      .select("categoryId subcategoryId productId")
+      .sort({ createdAt: -1 });
+
+    let productsWithBase64Photos = products.map((productForYou) => {
+      const productObj = productForYou.toObject();
+
+      if (
+        productObj.productId &&
+        productObj.productId.photos &&
+        productObj.productId.photos.data
+      ) {
+        productObj.productId.photoUrl = `data:${productObj.productId.photos.contentType};base64,${productObj.productId.photos.data.toString(
+          "base64"
+        )}`;
+        delete productObj.productId.photos;
+      }
+
+      return productObj;
+    });
+
+    res.status(200).send({
+      success: true,
+      message: "Admin products fetched successfully",
+      banners: productsWithBase64Photos,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({
+      success: false,
+      message: "Error in fetching admin products for you",
+      error: error.message,
+    });
+  }
+};
+
 export const getProductsForYouController = async (req, res) => {
   try {
     const { categoryId, subcategoryId } = req.params;

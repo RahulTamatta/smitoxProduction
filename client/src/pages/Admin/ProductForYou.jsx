@@ -12,6 +12,7 @@ import {
   Col,
 } from "react-bootstrap";
 import { Trash } from "lucide-react";
+import { useAuth } from "../../context/auth";
 import { toast } from "react-toastify";
 import Column from "antd/es/table/Column";
 import AdminMenu from "../../components/Layout/AdminMenu";
@@ -26,6 +27,7 @@ const ProductForYou = () => {
     subcategoryId: "",
     productId: "",
   });
+  const [auth] = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -39,7 +41,12 @@ const ProductForYou = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get("/api/v1/productForYou/get-products");
+      const response = await axios.get("/api/v1/productForYou/admin-get-products", {
+  headers: {
+    'Authorization': `Bearer ${auth.user.token}`,
+    'Content-Type': 'application/json'
+  }
+});
       setBanners(response.data.banners || []);
     } catch (error) {
       console.error("Error fetching banners:", error);
@@ -52,7 +59,12 @@ const ProductForYou = () => {
 
   const fetchCategories = async () => {
     try {
-      const { data } = await axios.get("/api/v1/category/get-category");
+      const { data } = await axios.get("/api/v1/category/get-category", {
+  headers: {
+    'Authorization': `Bearer ${auth.user.token}`,
+    'Content-Type': 'application/json'
+  }
+});
       if (data?.success) {
         setCategories(data.category || []);
       } else {
@@ -67,7 +79,12 @@ const ProductForYou = () => {
 
   const fetchSubcategories = async () => {
     try {
-      const { data } = await axios.get("/api/v1/subcategory/get-subcategories");
+      const { data } = await axios.get("/api/v1/subcategory/get-subcategories", {
+  headers: {
+    'Authorization': `Bearer ${auth.user.token}`,
+    'Content-Type': 'application/json'
+  }
+});
       if (data?.success) {
         setSubcategories(data.subcategories || []);
       } else {
@@ -126,7 +143,12 @@ const ProductForYou = () => {
     }
 
     try {
-      const response = await axios.post("/api/v1/productForYou/createProductForYou", data);
+      const response = await axios.post("/api/v1/productForYou/createProductForYou", data, {
+  headers: {
+    'Authorization': `Bearer ${auth.user.token}`,
+    'Content-Type': 'application/json'
+  }
+});
       //toast.success("Product added successfully");
       
       // Add the new banner to the existing banners
@@ -141,7 +163,12 @@ const ProductForYou = () => {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`/api/v1/productForYou/delete-product/${id}`);
+      await axios.delete(`/api/v1/productForYou/delete-product/${id}`, {
+  headers: {
+    'Authorization': `Bearer ${auth.user.token}`,
+    'Content-Type': 'application/json'
+  }
+});
       
       // Remove the deleted banner from the state
       setBanners(prevBanners => prevBanners.filter(banner => banner._id !== id));
@@ -279,15 +306,25 @@ const ProductForYou = () => {
                                   <td>
                                     {banner.productId?._id ? (
                                       <Image
-                                        src={banner.productId.photos}
-                                        alt={banner.productId?.name}
-                                        thumbnail
-                                        style={{
-                                          width: "50px",
-                                          height: "50px",
-                                          objectFit: "cover",
-                                        }}
-                                      />
+  src={
+    banner.productId.photoUrl ||
+    (banner.productId.multipleimages && banner.productId.multipleimages.length > 0
+      ? banner.productId.multipleimages[0]
+      : (typeof banner.productId.photos === 'string' ? banner.productId.photos : null)
+    )
+  }
+  alt={banner.productId?.name}
+  thumbnail
+  style={{
+    width: "50px",
+    height: "50px",
+    objectFit: "cover",
+  }}
+  onError={(e) => {
+    e.target.onerror = null;
+    e.target.src = '/placeholder-image.png';
+  }}
+/>
                                     ) : (
                                       "No image"
                                     )}

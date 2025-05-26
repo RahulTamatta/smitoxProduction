@@ -6,7 +6,8 @@ import {
   getBannersController,
   getProductPhoto,
   updateBannerController,singleProductController,
-  deleteProductController
+  deleteProductController,
+  adminGetProductsForYouController
 } from "../controllers/productForYouController.js"; // Updated import based on your controllers
 import formidable from "express-formidable";
 
@@ -23,6 +24,9 @@ router.post(
 
 router.get('/get-all', getAllProductsForYouController);
 router.get("/single-productImage/:id", singleProductController);
+
+// Admin route to get all products-for-you without pagination
+router.get("/admin-get-products", adminGetProductsForYouController);
 
 // Update a "Product for You"
 router.put(
