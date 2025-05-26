@@ -99,13 +99,14 @@ const ProductForYou = () => {
 
   const fetchProductsByCategoryOrSubcategory = async (
     categoryId,
-    subcategoryId
+    subcategoryId,
+    limit = 1000 // Fetch up to 1000 products by default
   ) => {
     try {
       setLoading(true);
-      let url = `/api/v1/product/product-category/${categoryId}`;
+      let url = `/api/v1/product/product-category/${categoryId}?limit=${limit}`;
       if (subcategoryId) {
-        url = `/api/v1/product/product-subcategory/${subcategoryId}`;
+        url = `/api/v1/product/product-subcategory/${subcategoryId}?limit=${limit}`;
       }
       const { data } = await axios.get(url);
       setFilteredProducts(data?.products || []);
