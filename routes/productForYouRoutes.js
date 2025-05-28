@@ -16,8 +16,8 @@ const router = express.Router();
 // Create a new "Product for You"
 router.post(
   "/createProductForYou",
-  requireSignIn,
-  isAdmin,
+  // requireSignIn,
+  // isAdmin,
   formidable(),
   createProductForYouController
 );
@@ -48,8 +48,8 @@ router.get("/products/:categoryId/:subcategoryId", getProductsForYouController);
 // Delete a "Product for You"
 router.delete(
   "/delete-product/:id",
-  requireSignIn,
-  isAdmin,
+  // requireSignIn,
+  // isAdmin,
   deleteProductController
 );
 
