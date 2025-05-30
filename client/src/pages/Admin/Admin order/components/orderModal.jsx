@@ -351,10 +351,10 @@ Thank you for your business!
               )}
             </p>
             <p>Mobile No: {selectedOrder.buyer?.mobile_no}</p>
-            <p>Address: {selectedOrder.buyer?.address}</p>
-            <p>Address: {selectedOrder.buyer?.city}</p>
-            <p>Address: {selectedOrder.buyer?.landmark}</p>
-            <p>Address: {selectedOrder.buyer?.state}</p>
+            <p>{selectedOrder.buyer?.address}</p>
+            <p>{selectedOrder.buyer?.city}</p>
+            <p>{selectedOrder.buyer?.landmark}</p>
+            <p>{selectedOrder.buyer?.state}</p>
             <p>Pincode: {selectedOrder.buyer?.pincode}</p>
             <p>Created At: {moment(selectedOrder.createdAt).format("LLLL")}</p>
 
