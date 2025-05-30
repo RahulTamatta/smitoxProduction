@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 import Layout from "../components/Layout/Layout";
 import { Heart } from "lucide-react";
 import { useAuth } from "../context/auth";
+import styles from "./CategoryProduct.module.css";
 
 const CategoryProduct = () => {
   const params = useParams();
@@ -348,7 +349,7 @@ const CategoryProduct = () => {
               overflowY: "auto" 
             }}
           >
-            <div style={{ minHeight: "calc(100vh - 200px)" }}>
+            <div className={styles.categoryProductContainer}>
               {loading ? (
                 <div className="text-center my-5">
                   <div className="spinner-border text-primary" role="status">
@@ -364,8 +365,7 @@ const CategoryProduct = () => {
                       ref={index === products.length - 1 ? lastProductElementRef : null}
                     >
                       <div
-                        className="card h-100 product-card shadow-sm"
-                        style={{ cursor: "pointer", position: "relative" }}
+                        className={`card h-100 product-card shadow-sm ${styles.productCard}`}
                         onClick={() => navigate(`/product/${p.slug}`)}
                       >
                         <button
@@ -373,18 +373,7 @@ const CategoryProduct = () => {
                             e.stopPropagation();
                             toggleWishlist(e, p._id);
                           }}
-                          className="btn btn-link p-0 bg-white rounded-circle shadow-sm"
-                          style={{
-                            position: "absolute",
-                            top: "8px",
-                            right: "8px",
-                            zIndex: 2,
-                            width: "32px",
-                            height: "32px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center"
-                          }}
+                          className={`btn btn-link p-0 bg-white rounded-circle shadow-sm ${styles.wishlistBtn}`}
                         >
                           <Heart
                             size={18}
@@ -396,29 +385,18 @@ const CategoryProduct = () => {
                         <div className="ratio ratio-1x1">
                           <img
                             src={p.photos}
-                            className="card-img-top p-2"
+                            className={`card-img-top p-2 ${styles.productImage}`}
                             alt={p.name}
-                            style={{
-                              objectFit: "contain",
-                              objectPosition: "center"
-                            }}
                           />
                         </div>
   
                         <div className="card-body p-2">
-                          <h6 className="card-title mb-2" style={{
-                            fontSize: "0.9rem",
-                            lineHeight: "1.2",
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden"
-                          }}>
+                          <h6 className={`card-title mb-2 ${styles.productTitle}`}>
                             {p.name}
                           </h6>
   
                           <div className="d-flex flex-column">
-                            <span className="text-primary fw-bold">
+                            <span className={styles.price}>
                               {p.perPiecePrice?.toLocaleString("en-IN", {
                                 style: "currency",
                                 currency: "INR",
@@ -426,7 +404,7 @@ const CategoryProduct = () => {
                               })}
                             </span>
                             {p.mrp && (
-                              <span className="text-muted text-decoration-line-through" style={{ fontSize: "0.8rem" }}>
+                              <span className={styles.mrp}>
                                 {p.mrp.toLocaleString("en-IN", {
                                   style: "currency",
                                   currency: "INR",

@@ -5,6 +5,7 @@ import { useAuth } from '../context/auth';
 import { Heart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import OptimizedImage from '../components/OptimizedImage';
+import styles from './ProductCard.module.css';
 
 const ProductCard = ({ product, onClick }) => {  
   const navigate = useNavigate();
@@ -114,14 +115,7 @@ const ProductCard = ({ product, onClick }) => {
   return (
     <div className="col-md-10 col-sm-10 col-12 mb-3">
       <div
-        className="card product-card h-100"
-        style={{ 
-          cursor: "pointer", 
-          position: "relative",
-          borderRadius: "8px",
-          overflow: "hidden",
-          boxShadow: "0 2px 5px rgba(0,0,0,0.1)"
-        }}
+        className={`card product-card h-100 ${styles.card}`}
         onClick={handleProductClick}
       >
         {/* Image container with fixed aspect ratio */}

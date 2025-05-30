@@ -1,90 +1,61 @@
 import React from "react";
-import { Link } from "react-router-dom";
 import { FaFacebook, FaInstagram, FaLinkedin, FaYoutube } from "react-icons/fa";
-import { NavLink } from "react-router-dom"; // Changed from Link to NavLink
+import { NavLink } from "react-router-dom";
+import styles from "./Footer.module.css";
 
 const Footer = () => {
-  // Style for active links
-  const activeStyle = {
-    color: "#ffffff", // Changed to white for better contrast with red background
-    fontWeight: "bold"
-  };
-  
-  // Footer container style with red background
-  const footerStyle = {
-    backgroundColor: "#FF0000", // Red background
-    padding: "20px 0",
-    color: "white"
-  };
-
   return (
-    <div className="footer" style={footerStyle}>
-      <h1 className="text-center">All Right Reserved &copy; Smitox</h1>
-      <p className="text-center mt-3">
-        <NavLink 
-          to="/about" 
-          style={({ isActive }) => isActive ? activeStyle : { color: "white" }}
-        >
+    <div className={styles.footer}>
+      <h1 className={styles.textCenter}>All Right Reserved &copy; Smitox</h1>
+      <p className={`${styles.textCenter} ${styles.mt3}`}>
+        <NavLink to="/about" className={({ isActive }) => isActive ? `${styles.navLink} ${styles.activeLink}` : styles.navLink}>
           About
-        </NavLink>|
-        <NavLink 
-          to="/contact"
-          style={({ isActive }) => isActive ? activeStyle : { color: "white" }}
-        >
+        </NavLink>
+        <NavLink to="/contact" className={({ isActive }) => isActive ? `${styles.navLink} ${styles.activeLink}` : styles.navLink}>
           Contact
-        </NavLink>|
-        <NavLink 
-          to="/policy"
-          style={({ isActive }) => isActive ? activeStyle : { color: "white" }}
-        >
+        </NavLink>
+        <NavLink to="/policy" className={({ isActive }) => isActive ? `${styles.navLink} ${styles.activeLink}` : styles.navLink}>
           Privacy Policy
-        </NavLink>|
-        <NavLink 
-          to="/terms"
-          style={({ isActive }) => isActive ? activeStyle : { color: "white" }}
-        >
+        </NavLink>
+        <NavLink to="/terms" className={({ isActive }) => isActive ? `${styles.navLink} ${styles.activeLink}` : styles.navLink}>
           Terms
-        </NavLink>|
-        <NavLink 
-          to="/returnPolicy"
-          style={({ isActive }) => isActive ? activeStyle : { color: "white" }}
-        >
+        </NavLink>
+        <NavLink to="/returnPolicy" className={({ isActive }) => isActive ? `${styles.navLink} ${styles.activeLink}` : styles.navLink}>
           Return Policy
         </NavLink>
       </p>
-      <div className="text-center mt-3">
-        {/* Social Media Links with Icons */}
+      <div className={`${styles.textCenter} ${styles.mt3}`}>
         <a
           href="https://www.facebook.com/Smitox-b2b-100585319028985/"
           target="_blank"
           rel="noopener noreferrer"
-          className="social-link"
+          className={styles.socialLink}
         >
-          <FaFacebook style={{ color: "white", fontSize: "24px", margin: "0 10px" }} />
+          <FaFacebook />
         </a>
         <a
           href="https://www.instagram.com/smitoxb2b?r=nametag"
           target="_blank"
           rel="noopener noreferrer"
-          className="social-link"
+          className={styles.socialLink}
         >
-          <FaInstagram style={{ color: "white", fontSize: "24px", margin: "0 10px" }} />
+          <FaInstagram />
         </a>
         <a
           href="https://www.linkedin.com/in/smitox-b2b-2a9475220"
           target="_blank"
           rel="noopener noreferrer"
-          className="social-link"
+          className={styles.socialLink}
         >
-          <FaLinkedin style={{ color: "white", fontSize: "24px", margin: "0 10px" }} />
+          <FaLinkedin />
         </a>
         <a
           href="https://youtube.com/@smitoxb2b"
           target="_blank"
           rel="noopener noreferrer"
-          className="social-link"
+          className={styles.socialLink}
         >
-          <FaYoutube style={{ color: "white", fontSize: "24px", margin: "0 10px" }} />
+          <FaYoutube />
         </a>
       </div>
     </div>

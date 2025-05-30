@@ -68,87 +68,13 @@ class CustomOrderService {
     return proposedOrder;
   }
 }
-export const createProductController = async (req, res) => {
+import { createProduct } from '../services/productService.js';
+
+export const createProductController = async (req, res, next) => {
   try {
-    console.log("req.files:", req.files);
-    console.log("req.imageUrl:", req.imageUrl);
-    const {
-      name,
-      description,
-      price,
-      category,
-      subcategory,
-      brand,
-      quantity,
-      shipping,
-      hsn,
-      unit,
-      unitSet,
-      additionalUnit,
-      stock,
-      gst,
-      gstType,
-      purchaseRate,
-      mrp,
-      perPiecePrice,
-      weight,
-      allowCOD,
-      returnProduct,
-      userId,
-      variants,
-      sets,
-      bulkProducts,
-      youtubeUrl,
-      sku,
-      tag,
-      fk_tags,
-      photos, // fallback if no image uploaded via middleware
-      multipleimages,
-      custom_order,
-    } = req.fields;
-
-    // Handle files from request
-    const { photo, images } = req.files || {};
-    console.log("photo:", photo);
-    console.log("images:", images);
-    console.log("photos:", photos);
-
-    // Photo validation for Buffer-based images
-    if (photo && photo.size > 1000000) {
-      return res
-        .status(400)
-        .send({ error: "Photo size should be less than 1MB." });
-    }
-
-    if (images) {
-      const imageArray = Array.isArray(images) ? images : [images];
-      for (let img of imageArray) {
-        if (img.size > 1000000) {
-          return res
-            .status(400)
-            .send({ error: "Each image size should be less than 1MB." });
-        }
-      }
-    }
-
-    // Function to upload image to Cloudinary
-    const uploadToCloudinary = async (file, folder) => {
-      try {
-        const result = await cloudinary.uploader.upload(file.path, {
-          folder: folder,
-          use_filename: true,
-          unique_filename: false,
-        });
-        return result.secure_url;
-      } catch (error) {
-        console.error("Cloudinary upload error:", error);
-        throw error;
-      }
-    };
-
-    // Upload primary photo to Cloudinary
-    let productPhoto = req.imageUrl || photos || null;
-    if (photo && !req.imageUrl) {
+    // Delegated to productService
+    const product = await createProduct(req.fields, req.files, req.imageUrl);
+    res.status(201).json({ success: true, product });    if (photo && !req.imageUrl) {
       try {
         const photoFile = {
           name: photo.name || "product-photo.jpg",

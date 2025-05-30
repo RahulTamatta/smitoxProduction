@@ -145,15 +145,16 @@ const ProductForYou = () => {
 
     try {
       const response = await axios.post("/api/v1/productForYou/createProductForYou", data, {
-        headers: {
-          'Authorization': `Bearer ${auth.user.token}`,
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+  headers: {
+    'Authorization': `Bearer ${auth.user.token}`,
+    'Content-Type': 'application/json'
+  }
+});
       //toast.success("Product added successfully");
       
-      // Refresh the banners list from the server
-      await fetchBanners();
+      // Add the new banner to the existing banners
+      setBanners(prevBanners => [...prevBanners, response.data.banner]);
+      
       resetForm();
     } catch (error) {
       console.error("Error submitting banner:", error);
