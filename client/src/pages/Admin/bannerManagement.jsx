@@ -95,10 +95,10 @@ const BannerManagement = () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', 'smitoxphoto'); // Use your upload preset
-      formData.append('cloud_name', 'dj62teqfp'); // Use your cloud name
+      formData.append('cloud_name', 'ddqfl3zo8'); // Use your cloud name
 
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/dj62teqfp/image/upload`,
+        `https://api.cloudinary.com/v1_1/ddqfl3zo8/image/upload`,
         {
           method: 'POST',
           body: formData,

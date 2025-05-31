@@ -2,7 +2,7 @@ import { v2 as cloudinary } from 'cloudinary';
 
 // Configure Cloudinary
 cloudinary.config({ 
-  cloud_name: 'dj62teqfp', 
+  cloud_name: 'ddqfl3zo8', 
   api_key: '719814162117114', 
   api_secret: 'VB_c0DClKeLugYJf9tMMIxXjXRE' 
 });

@@ -62,10 +62,10 @@ const UpdateProduct = () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', 'smitoxphoto');
-      formData.append('cloud_name', 'dj62teqfp');
+      formData.append('cloud_name', 'ddqfl3zo8');
 
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/dj62teqfp/image/upload`,
+        `https://api.cloudinary.com/v1_1/ddqfl3zo8/image/upload`,
         {
           method: 'POST',
           body: formData,
