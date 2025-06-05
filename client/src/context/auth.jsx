@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, createContext, useCallback } from "react";
+import { useState, useRef,useEffect, useContext, createContext, useCallback } from "react";
 import axios from "axios";
 
 const AuthContext = createContext();
@@ -12,8 +12,8 @@ const AuthProvider = ({ children }) => {
     token: "",
     refreshToken: "",
     sessionId: ""
-  });
-  const [refreshTimeout, setRefreshTimeout] = useState(null);
+  }); // Make sure refreshToken is always tracked
+  const refreshTimeout = useRef(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshSubscribers, setRefreshSubscribers] = useState([]);
 
@@ -22,11 +22,11 @@ const AuthProvider = ({ children }) => {
     setAuth({ user: null, token: "", refreshToken: "", sessionId: "" });
     localStorage.removeItem("auth");
     api.defaults.headers.common["Authorization"] = "";
-    if (refreshTimeout) clearTimeout(refreshTimeout);
+    if (refreshTimeout.current) clearTimeout(refreshTimeout.current);
     // Clear refresh subscribers
     setRefreshSubscribers([]);
     setIsRefreshing(false);
-  }, [refreshTimeout]);
+  }, []);
 
   // Add subscriber for waiting on token refresh
   const subscribeTokenRefresh = useCallback((callback) => {
@@ -154,8 +154,21 @@ const AuthProvider = ({ children }) => {
   // Setup token refresh based on expiry
   const setupTokenRefresh = useCallback((token) => {
     // Clear any previous timeouts
-    if (refreshTimeout) clearTimeout(refreshTimeout);
-    
+    if (refreshTimeout.current) clearTimeout(refreshTimeout.current);
+
+    // JWT expiry logging for access token
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const exp = payload.exp * 1000;
+        const now = Date.now();
+        const secondsLeft = Math.round((exp - now) / 1000);
+        console.log('[AuthContext] Access token expires at:', new Date(exp).toLocaleTimeString(), '| Seconds remaining:', secondsLeft);
+      } catch (e) {
+        console.log('[AuthContext] Could not decode access token:', e);
+      }
+    }
+
     if (token) {
       const decoded = decodeJwt(token);
       const expiry = decoded.exp ? decoded.exp * 1000 : null;
@@ -163,11 +176,13 @@ const AuthProvider = ({ children }) => {
       
       // Refresh 5 minutes before expiry to be safe
       if (expiry && expiry > now) {
-        const timeout = setTimeout(() => {
+        // For very short expiry (like 10s), refresh 2s before expiry
+        let delay = expiry - now - 2000;
+        if (delay < 0) delay = 0;
+        refreshTimeout.current = setTimeout(() => {
           refreshToken();
-        }, expiry - now - 300000); // 5 minutes before expiry
-        
-        setRefreshTimeout(timeout);
+        }, delay);
+        console.log('[AuthContext] Scheduled refresh in', delay / 1000, 'seconds');
       } else if (expiry && expiry <= now) {
         // Token already expired
         console.warn("Token already expired, refreshing now");
@@ -202,9 +217,8 @@ const AuthProvider = ({ children }) => {
     if (auth.token) {
       setupTokenRefresh(auth.token);
     }
-    
     return () => {
-      if (refreshTimeout) clearTimeout(refreshTimeout);
+      if (refreshTimeout.current) clearTimeout(refreshTimeout.current);
     };
     // eslint-disable-next-line
   }, [auth.token]);

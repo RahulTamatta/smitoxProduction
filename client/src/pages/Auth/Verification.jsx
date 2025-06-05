@@ -21,6 +21,9 @@ const Verification = () => {
       if (res.data.success && res.data.user.verified) {
         // Update auth context and localStorage
         const updatedAuth = { ...auth, user: res.data.user };
+        if (res.data.refreshToken) {
+          updatedAuth.refreshToken = res.data.refreshToken;
+        }
         setAuth(updatedAuth);
         localStorage.setItem("auth", JSON.stringify(updatedAuth));
         toast.success("Verification successful!");

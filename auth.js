@@ -49,7 +49,7 @@ const authenticateUser = (req, res, next) => {
                 username: user.username
             }, 
             JWT_SECRET,
-            { expiresIn: "1d" } // Always set expiry
+            { expiresIn: "365d" } // Always set expiry
         );
         
         // Ensure consistent user object structure

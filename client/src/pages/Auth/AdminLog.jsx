@@ -28,9 +28,26 @@ const AdminLogin = () => {
           ...auth,
           user: res.data.user,
           token: res.data.token,
+          refreshToken: res.data.refreshToken,
         });
-        localStorage.setItem("auth", JSON.stringify(res.data));
-        navigate( `/dashboard/admin`);
+        localStorage.setItem("auth", JSON.stringify({
+          ...res.data,
+          refreshToken: res.data.refreshToken
+        }));
+
+        // JWT expiry logging for access token
+        if (res.data.token) {
+          try {
+            const payload = JSON.parse(atob(res.data.token.split('.')[1]));
+            const exp = payload.exp * 1000;
+            const now = Date.now();
+            const secondsLeft = Math.round((exp - now) / 1000);
+            console.log('[Auth] Access token expires at:', new Date(exp).toLocaleTimeString(), '| Seconds remaining:', secondsLeft);
+          } catch (e) {
+            console.log('[Auth] Could not decode access token:', e);
+          }
+        }
+        navigate(`/dashboard/admin`);
       } else {
         //toast.error(res.data.message);
       }

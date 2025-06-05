@@ -34,10 +34,24 @@ const Login = () => {
         const authData = {
           user: res.data.user,
           token: res.data.token,
+          refreshToken: res.data.refreshToken,
           sessionId: res.data.sessionId || sessionId
         };
         setAuth(authData);
         localStorage.setItem("auth", JSON.stringify(authData));
+
+        // JWT expiry logging for access token
+        if (authData.token) {
+          try {
+            const payload = JSON.parse(atob(authData.token.split('.')[1]));
+            const exp = payload.exp * 1000;
+            const now = Date.now();
+            const secondsLeft = Math.round((exp - now) / 1000);
+            console.log('[Auth] Access token expires at:', new Date(exp).toLocaleTimeString(), '| Seconds remaining:', secondsLeft);
+          } catch (e) {
+            console.log('[Auth] Could not decode access token:', e);
+          }
+        }
 
         if (res.data.isNewUser) {
           navigate("/register", { state: { phoneNumber } });
