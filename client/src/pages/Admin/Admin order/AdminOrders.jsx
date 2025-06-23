@@ -37,14 +37,14 @@ const AdminOrders = () => {
   const [orderType, setOrderType] = useState("all-orders");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showSearch, setShowSearch] = useState(false);
+
   const [values, setValues] = useSearch();
-  const [searchKeyword, setSearchKeyword] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
+const [addProductError, setAddProductError] = useState("");
+
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showTrackingModal, setShowTrackingModal] = useState(false);
   const [trackingInfo, setTrackingInfo] = useState({ company: "", id: "" });
-  const [addProductError, setAddProductError] = useState(null);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -107,7 +107,7 @@ const AdminOrders = () => {
             Authorization: auth?.token
           }
         });
-      getOrders(orderType);
+      getOrders(orderType, currentPage, searchTerm);
       message.success("Order status updated successfully");
     } catch (error) {
       console.log(error);
@@ -122,7 +122,6 @@ const AdminOrders = () => {
 
   const handleClose = () => {
     setShow(false);
-    setShowSearch(false);
     setValues({ ...values, keyword: "", results: [] });
   };
 
@@ -181,8 +180,8 @@ const AdminOrders = () => {
 
   const handleCloseSearchModal = () => {
     setShowSearchModal(false);
-    setSearchKeyword("");
-    setSearchResults([]);
+    // Removed setSearchKeyword and setSearchResults as they are not defined
+
   };
 
   const handleAddToOrder = async (product) => {
@@ -227,7 +226,7 @@ const AdminOrders = () => {
       setSelectedOrder(updatedOrder);
       message.success("Product added successfully");
       handleCloseSearchModal();
-      getOrders(orderType);
+      getOrders(orderType, currentPage, searchTerm);
   
     } catch (error) {
       console.error("Add to order error:", error);
@@ -273,7 +272,7 @@ const AdminOrders = () => {
       if (response.data.success) {
         setSelectedOrder(response.data.order);
         setShow(false);
-        getOrders(orderType);
+        getOrders(orderType, currentPage, searchTerm);
         message.success("Order updated successfully");
       } else {
         message.error(response.data.message);
@@ -332,6 +331,7 @@ const AdminOrders = () => {
         );
 
         if (response.data.success) {
+          getOrders(orderType, currentPage, searchTerm);
           message.success("Product removed from order successfully");
         } else {
           message.error(response.data.message);
@@ -356,7 +356,7 @@ const AdminOrders = () => {
         }
       });
       setShow(false);
-      getOrders(orderType);
+      getOrders(orderType, currentPage, searchTerm);
       message.success("Order status updated to Delivered");
     } catch (error) {
       console.log(error);
@@ -375,7 +375,7 @@ const AdminOrders = () => {
         }
       });
       setShow(false);
-      getOrders(orderType);
+      getOrders(orderType, currentPage, searchTerm);
       message.success("Order status updated to Returned");
     } catch (error) {
       console.log(error);

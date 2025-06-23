@@ -3,9 +3,10 @@ import mongoose from 'mongoose';
 
 // 1) Configure NEW Cloudinary account
 cloudinary.config({
-  cloud_name: 'ddqfl3zo8',    // ← new account cloud name
-  api_key:    '297299912467234',       // ← new account API key
-  api_secret: 'jvvJg7orDXZvuCyTtHaKFXCeaqk'     // ← new account API secret
+  cloud_name: 'dvqh6a3gh', 
+  // Old account cloud name
+  api_key:  '119598853346493',    // Old account API key
+  api_secret: 'WR6abBlUvmedVLOiybbuUneX12k'    // ← new account API secret
 });
 
 // cloud_name: 'drz6y0abq', // Old account cloud name
@@ -48,7 +49,7 @@ async function runMigrationOldToNew() {
   console.log('✔️  MongoDB connected.');
 
   // Match URLs pointing at your OLD account
-  const oldCloudPattern = /res\.cloudinary\.com\/ddqfl3zo8/;
+  const oldCloudPattern = /res\.cloudinary\.com\/dvqh6a3gh/;
 
   let grandTotal = 0;
 

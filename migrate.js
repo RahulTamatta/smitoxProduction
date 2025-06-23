@@ -3,9 +3,10 @@ import { v2 as cloudinary } from 'cloudinary';
 
 // Configure OLD Cloudinary account
 cloudinary.config({
-  cloud_name: 'ddqfl3zo8', // Old account cloud name
-  api_key:  '441719398928222',    // Old account API key
-  api_secret: 'dH9exYkmPeStXWFcJWl_9RlRN0o' // Old account API secret
+  cloud_name: 'dvqh6a3gh', 
+  // Old account cloud name
+  api_key:  '119598853346493',    // Old account API key
+  api_secret: 'WR6abBlUvmedVLOiybbuUneX12k' // Old account API secret
 });
 
 // MongoDB connection

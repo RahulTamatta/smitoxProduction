@@ -763,7 +763,12 @@ export const productListController = async (req, res) => {
   }
 };
 
-// searchProductController
+// Utility to escape regex special characters
+function escapeRegex(str) {
+  // Escapes: . * + ? ^ $ { } ( ) | [ ] \ /
+  return str.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&');
+}
+
 export const searchProductController = async (req, res) => {
   try {
     const { keyword } = req.params;
@@ -771,10 +776,13 @@ export const searchProductController = async (req, res) => {
     const keywordNumber = Number(keyword);
     const isNumber = !isNaN(keywordNumber);
 
+    // Escape keyword for regex
+    const safeKeyword = escapeRegex(keyword);
+
     // Fetch category IDs based on name match
     const categories = await categoryModel
       .find({
-        name: { $regex: keyword, $options: "i" },
+        name: { $regex: safeKeyword, $options: "i" },
       })
       .select("_id")
       .lean();
@@ -783,7 +791,7 @@ export const searchProductController = async (req, res) => {
     // Fetch subcategory IDs based on name match
     const subcategories = await subcategoryModel
       .find({
-        name: { $regex: keyword, $options: "i" },
+        name: { $regex: safeKeyword, $options: "i" },
       })
       .select("_id")
       .lean();
@@ -794,11 +802,11 @@ export const searchProductController = async (req, res) => {
         $and: [
           {
             $or: [
-              { name: { $regex: keyword, $options: "i" } },
-              { description: { $regex: keyword, $options: "i" } },
-              { tag: { $regex: keyword, $options: "i" } },
-              { sku: { $regex: `^${keyword}`, $options: "i" } },
-              { slug: { $regex: keyword, $options: "i" } },
+              { name: { $regex: safeKeyword, $options: "i" } },
+              { description: { $regex: safeKeyword, $options: "i" } },
+              { tag: { $regex: safeKeyword, $options: "i" } },
+              { sku: { $regex: safeKeyword, $options: "i" } },
+              { slug: { $regex: safeKeyword, $options: "i" } },
               ...(isObjectId
                 ? [
                     { category: keyword },

@@ -487,15 +487,12 @@ export const getAllOrdersController = async (req, res) => {
       query.status = status;
     }
 
-    // Check if search is numeric
-    const isNumericSearch = /^\d+$/.test(search);
-
     const userSearchQuery = search
       ? {
           $or: [
             { user_fullname: { $regex: search, $options: "i" } },
-            // Only search mobile_no if the input is numeric
-            ...(isNumericSearch ? [{ mobile_no: Number(search) }] : []),
+            // Search mobile_no with regex for partial matches
+            { mobile_no: { $regex: search, $options: "i" } },
           ],
         }
       : {};
@@ -505,13 +502,32 @@ export const getAllOrdersController = async (req, res) => {
       const matchingUsers = await mongoose.model("User").find(userSearchQuery).select("_id");
       matchingUserIds = matchingUsers.map((user) => user._id);
 
-      query.$or = [
+      // Build search conditions
+      const searchConditions = [
+        // Order ID search (if valid ObjectId)
         ...(mongoose.Types.ObjectId.isValid(search) ? [{ _id: new mongoose.Types.ObjectId(search) }] : []),
+        
+        // User-related searches
         ...(matchingUserIds.length > 0 ? [{ buyer: { $in: matchingUserIds } }] : []),
+        
+        // Direct user info search (in case populate is not working)
+        { "buyerInfo.mobile_no": { $regex: search, $options: "i" } },
+        { "buyerInfo.user_fullname": { $regex: search, $options: "i" } },
+        
+        // Tracking and payment info
         { "tracking.id": { $regex: search, $options: "i" } },
         { "tracking.company": { $regex: search, $options: "i" } },
         { "payment.transactionId": { $regex: search, $options: "i" } },
+        
+        // Search in order items
+        { "products.name": { $regex: search, $options: "i" } },
+        { "products.sku": { $regex: search, $options: "i" } }
       ];
+      
+      // Only add $or if we have search conditions
+      if (searchConditions.length > 0) {
+        query.$or = searchConditions;
+      }
     }
 
     const total = await orderModel.countDocuments(query);
