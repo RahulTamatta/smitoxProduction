@@ -29,6 +29,8 @@ const CartPage = () => {
   const [networkError, setNetworkError] = useState(false); // Track network errors
   const [showStockPopup, setShowStockPopup] = useState(false); // State for stock popup visibility
   const [exceededProduct, setExceededProduct] = useState(null); // State for the product that exceeded stock
+  const [orderIdInProgress, setOrderIdInProgress] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const navigate = useNavigate();
 
@@ -99,12 +101,12 @@ const CartPage = () => {
       const { data } = await axios.get('/api/v1/minimumOrder/getMinimumOrder');
       if (data) {
         setMinimumOrder(data.amount);
-        setAdvcance(data.advance)
+        setAdvcance(data.advancePercentage || 0);
         setMinimumOrderCurrency(data.currency === "rupees" ? "INR" : data.currency);
       }
     } catch (error) {
       console.error('Error fetching minimum order:', error);
-      ////toast.error("Error fetching minimum order amount");
+      //toast.error("Error fetching minimum order amount");
     }
   };
 
@@ -297,10 +299,16 @@ const CartPage = () => {
   };
 
   const handlePayment = async () => {
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
     const total = totalPrice();
   
     if (!auth?.user?._id) {
-      ////toast.error("Please login to proceed with payment");
+      setIsSubmitting(false);
+      //toast.error("Please login to proceed with payment");
       return;
     }
   
@@ -323,8 +331,8 @@ const CartPage = () => {
           amountPending = total;
           break;
         case "Advance":
-          amount = total * 0.1; // 10% of total
-          amountPending = total * 0.9; // 90% of total
+          amount = (total * advance) / 100;
+          amountPending = (total * (100 - advance)) / 100;
           break;
         default:
           amount = 0;
@@ -341,13 +349,14 @@ const CartPage = () => {
           : [],
         paymentMethod,
         amount,
-        amountPending
+        amountPending,
+        orderIdInProgress
       };
   
-      if (paymentMethod === "COD" || paymentMethod === "Advance") {
-        // Configure timeout for the API request
+      // For COD orders
+      if (paymentMethod === "COD") {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
         
         try {
           const { data } = await axios.post(
@@ -355,10 +364,10 @@ const CartPage = () => {
             payload, 
             {
               signal: controller.signal,
-              timeout: 30000, // Axios timeout
+              timeout: 30000,
               headers: {
                 'Content-Type': 'application/json',
-                                'Cache-Control': 'no-cache',
+                'Cache-Control': 'no-cache',
                 'Authorization': auth?.token
               }
             }
@@ -367,6 +376,7 @@ const CartPage = () => {
           clearTimeout(timeoutId);
           
           if (data.success) {
+            setOrderIdInProgress(data.order._id);
             await clearCart();
             //toast.success("Order Placed Successfully!");
             navigate("/dashboard/user/orders");
@@ -375,31 +385,16 @@ const CartPage = () => {
           }
         } catch (error) {
           clearTimeout(timeoutId);
-          
-          // Enhanced error handling with more detailed messages
-          if (error.name === 'AbortError' || error.code === 'ECONNABORTED') {
-            throw new Error("Request timed out. Please check your internet connection and try again.");
-          }
-          
-          if (error.response) {
-            // The server responded with a status code outside the 2xx range
-            throw new Error(error.response.data.message || "Server responded with an error");
-          } else if (error.request) {
-            // The request was made but no response was received
-            throw new Error("No response from server. Please check your internet connection.");
-          } else {
-            // Something else happened in setting up the request
-            throw error;
-          }
+          handlePaymentError(error);
         }
         
         return;
       }
   
-      if (paymentMethod === "Razorpay") {
-        // Configure timeout for the API request
+      // For Razorpay and Advance payments
+      if (paymentMethod === "Razorpay" || paymentMethod === "Advance") {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
         
         try {
           const { data } = await axios.post(
@@ -407,27 +402,33 @@ const CartPage = () => {
             payload, 
             {
               signal: controller.signal,
-              timeout: 30000, // Axios timeout
+              timeout: 30000,
               headers: {
                 'Content-Type': 'application/json',
-                                'Cache-Control': 'no-cache', 
-                    'Authorization': auth?.token
+                'Cache-Control': 'no-cache', 
+                'Authorization': auth?.token
               }
             }
           );
           
           clearTimeout(timeoutId);
   
-          if (!data.success || !data.razorpayOrder) {
-            throw new Error(data.message || "Failed to create Razorpay order");
+          if (!data.success) {
+            throw new Error(data.message || "Failed to create payment order");
           }
-  
+
+          if (!data.razorpayOrder) {
+            throw new Error("Payment gateway configuration error");
+          }
+
+          setOrderIdInProgress(data.order?._id);
+
           const options = {
             key: data.key,
             amount: data.razorpayOrder.amount,
-            currency: "INR",
+            currency: data.razorpayOrder.currency,
             name: "Smitox",
-            description: "Order Payment",
+            description: paymentMethod === "Advance" ? `${advance}% Advance Payment` : "Full Payment",
             order_id: data.razorpayOrder.id,
             handler: async function (response) {
               try {
@@ -436,33 +437,29 @@ const CartPage = () => {
                   razorpay_payment_id: response.razorpay_payment_id,
                   razorpay_signature: response.razorpay_signature,
                 };
-  
-                const verifyResponse = await axios.post(
-                  "/api/v1/product/verify-payment", 
+
+                const { data: verifyData } = await axios.post(
+                  "/api/v1/product/verify-payment",
                   verifyPayload,
                   {
-                    timeout: 30000, // 30 second timeout
                     headers: {
-                      'Content-Type': 'application/json',
-                                            'Authorization': auth?.token
+                      'Authorization': auth?.token
                     }
                   }
                 );
-  
-                if (verifyResponse.data.success) {
+
+                if (verifyData.success) {
                   await clearCart();
-                  //toast.success("Payment successful! Order placed successfully");
                   navigate("/dashboard/user/orders");
                 } else {
-                  throw new Error(verifyResponse.data.message || "Payment verification failed");
+                  throw new Error(verifyData.message || "Payment verification failed");
                 }
-              } catch (verifyError) {
-                //toast.error(verifyError.message || "Payment verification failed");
-                console.error("Verification error:", verifyError);
-                setOrderErrorMessage("Payment verification failed. Please contact support.");
-              } finally {
+              } catch (error) {
+                setOrderErrorMessage(error.message || "Payment verification failed");
                 setLoading(false);
                 setOrderPlacementInProgress(false);
+                setIsSubmitting(false);
+                setOrderIdInProgress(null);
               }
             },
             prefill: {
@@ -477,6 +474,8 @@ const CartPage = () => {
               ondismiss: function() {
                 setLoading(false);
                 setOrderPlacementInProgress(false);
+                setIsSubmitting(false);
+                setOrderIdInProgress(null);
               }
             }
           };
@@ -485,45 +484,45 @@ const CartPage = () => {
           rzp.open();
   
           rzp.on('payment.failed', function (response) {
-            ////toast.error("Payment failed. Please try again.");
+            //toast.error("Payment failed. Please try again.");
             setLoading(false);
             setOrderPlacementInProgress(false);
+            setIsSubmitting(false);
+            setOrderIdInProgress(null);
             setOrderErrorMessage("Payment gateway reported a failure. Please try again or use a different payment method.");
           });
         } catch (error) {
           clearTimeout(timeoutId);
-          
-          // Enhanced error handling with more detailed messages
-          let errorMessage = "Payment processing failed";
-          
-          if (error.name === 'AbortError' || error.code === 'ECONNABORTED') {
-            errorMessage = "Request timed out. Please check your internet connection and try again.";
-          } else if (error.response) {
-            errorMessage = error.response.data.message || "Server responded with an error";
-          } else if (error.request) {
-            errorMessage = "No response from server. Please check your internet connection.";
-          } else {
-            errorMessage = error.message || "Payment processing failed";
-          }
-          
-          setOrderErrorMessage(errorMessage);
-          //toast.error(errorMessage);
-          console.error("Payment error:", error);
-          throw error; // Rethrow for retry mechanism
+          handlePaymentError(error);
         }
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || error.message || "Payment processing failed";
-      setOrderErrorMessage(errorMessage);
-      //toast.error(errorMessage);
-      console.error("Payment error:", error);
-      throw error; // Rethrow for retry mechanism
+      handlePaymentError(error);
     } finally {
-      if (paymentMethod === "COD" || paymentMethod === "Advance") {
-        setLoading(false);
-        setOrderPlacementInProgress(false);
-      }
+      setLoading(false);
+      setOrderPlacementInProgress(false);
+      setIsSubmitting(false);
     }
+  };
+
+  const handlePaymentError = (error) => {
+    let errorMessage = "Payment processing failed";
+    
+    if (error.name === 'AbortError' || error.code === 'ECONNABORTED') {
+      errorMessage = "Request timed out. Please check your internet connection and try again.";
+    } else if (error.response) {
+      errorMessage = error.response.data.message || "Server responded with an error";
+    } else if (error.request) {
+      errorMessage = "No response from server. Please check your internet connection.";
+    } else {
+      errorMessage = error.message || "Payment processing failed";
+    }
+    
+    setOrderErrorMessage(errorMessage);
+    //toast.error(errorMessage);
+    console.error("Payment error:", error);
+    setIsSubmitting(false);
+    setOrderIdInProgress(null);
   };
 
   const handleProductClick = (slug) => {
@@ -686,73 +685,91 @@ const CartPage = () => {
                 currency: minimumOrderCurrency || "INR",
               })}
             </p>
-            {   
-             <p className="text-danger">
-          
-         {totalPrice() < minimumOrder && (
+
+            {paymentMethod === "Advance" && (
+              <>
+                <p>
+                  Advance Payment ({advance}%):{" "}
+                  {((totalPrice() * advance) / 100).toLocaleString("en-US", {
+                    style: "currency",
+                    currency: minimumOrderCurrency || "INR",
+                  })}
+                </p>
+                <p>
+                  Balance Due:{" "}
+                  {((totalPrice() * (100 - advance)) / 100).toLocaleString("en-US", {
+                    style: "currency",
+                    currency: minimumOrderCurrency || "INR",
+                  })}
+                </p>
+              </>
+            )}
+            
+            {totalPrice() < minimumOrder && (
               <p className="text-danger">
                 Order total is below the minimum order amount.
               </p>
             )}
-        
-        </p>}
-        {   
-             <p className="text-danger">
-          <ul>
-  
-            <li>Courier charge will be added (depends on weight and COD amount).</li>
-            <li>10% advance payment is required to confirm the order.</li>
-          </ul>
-        </p>}
-        <div className="mb-3">
-            <label className="form-label">Payment Method</label>
-            <select
-              className="form-select"
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value)}
+            
+            <p className="text-danger">
+              <ul>
+                <li>Courier charge will be added (depends on weight and COD amount).</li>
+                {advance > 0 && (
+                  <li>{advance}% advance payment is required to confirm the order.</li>
+                )}
+              </ul>
+            </p>
+
+            <div className="mb-3">
+              <label className="form-label">Payment Method</label>
+              <select
+                className="form-select"
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+              >
+                <option value="COD">COD</option>
+                <option value="Razorpay">Razorpay</option>
+                {advance > 0 && <option value="Advance">Advance Payment</option>}
+              </select>
+            </div>
+
+            <button
+              className="btn btn-primary w-100"
+              onClick={handlePaymentWithRetry}
+              disabled={!canPlaceOrder() || isProcessing}
             >
-              <option value="COD">COD</option>
-              <option value="Razorpay">Razorpay</option>
-            </select>
+              {isProcessing ? 
+                "Processing..." : 
+                networkError ? 
+                  `Retrying (${retryCount})...` : 
+                  paymentMethod === "Advance" ? 
+                    `Pay ${advance}% Advance` : 
+                    "Place Order"}
+            </button>
+
+            {/* Network error message */}
+            {networkError && (
+              <div className="alert alert-warning mt-2">
+                <AiFillWarning /> Network issues detected. Retrying payment...
+              </div>
+            )}
+
+            {/* Order error message with more details */}
+            {orderErrorMessage && (
+              <div className="alert alert-danger mt-2">
+                <AiFillWarning /> {orderErrorMessage}
+                <p className="mt-2 small">
+                  If you continue to face issues, please:
+                  <br />
+                  1. Check your internet connection
+                  <br />
+                  2. Try refreshing the page
+                  <br />
+                  3. Contact our support if the problem persists
+                </p>
+              </div>
+            )}
           </div>
-
-          <button
-            className="btn btn-primary w-100"
-            onClick={handlePaymentWithRetry}
-            disabled={!canPlaceOrder() || isProcessing}
-          >
-            {isProcessing ? 
-              "Processing..." : 
-              networkError ? 
-                `Retrying (${retryCount})...` : 
-                "Place Order"}
-          </button>
-
-          {/* Network error message */}
-          {networkError && (
-            <div className="alert alert-warning mt-2">
-              <AiFillWarning /> Network issues detected. Retrying payment...
-            </div>
-          )}
-
-          {/* Order error message with more details */}
-          {orderErrorMessage && (
-            <div className="alert alert-danger mt-2">
-              <AiFillWarning /> {orderErrorMessage}
-              <p className="mt-2 small">
-                If you continue to face issues, please:
-                <br />
-                1. Check your internet connection
-                <br />
-                2. Try refreshing the page
-                <br />
-                3. Contact our support if the problem persists
-              </p>
-            </div>
-          )}
-          
-          {/* ...existing code... */}
-        </div>
         </div>
         {/* Stock Popup Modal */}
         <StockPopup

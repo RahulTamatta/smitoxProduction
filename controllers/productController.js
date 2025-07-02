@@ -1117,9 +1117,9 @@ export const processPaymentController = async (req, res) => {
 
     console.log(`[Payment] Processing payment for user: ${req.user._id} | Method: ${paymentMethod} | Amount: ${amount} | Pending: ${amountPending || 0}`);
 
-    // Handle COD and Advance orders immediately
-    if (paymentMethod === "COD" || paymentMethod === "Advance") {
-      console.log(`[Payment] Processing ${paymentMethod} order`);
+    // Handle COD orders immediately
+    if (paymentMethod === "COD") {
+      console.log(`[Payment] Processing COD order`);
       
       try {
         // Wrap stock validation in a timeout to prevent hanging
@@ -1278,8 +1278,8 @@ export const processPaymentController = async (req, res) => {
       }
     }
 
-    // Online payment via Razorpay
-    console.log(`[Payment] Initiating Razorpay payment | Amount: ${amount}`);
+    // Online payment via Razorpay (including Advance payments)
+    console.log(`[Payment] Initiating Razorpay payment | Amount: ${amount} | Method: ${paymentMethod}`);
     
     // Validate product stock before creating Razorpay order with timeout handling
     const stockValidationPromise = new Promise(async (resolve, reject) => {
