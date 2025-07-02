@@ -9,7 +9,7 @@ import AddToCartPage from "./userCart.jsx";
 
 const UserList = () => {
   const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]); // Initialize as empty array
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeStatusFilter, setActiveStatusFilter] = useState('all');
@@ -21,7 +21,6 @@ const UserList = () => {
   const [activeRegularFilter, setActiveRegularFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState("");
   const [totalUsers, setTotalUsers] = useState(0);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
@@ -91,17 +90,6 @@ const UserList = () => {
     setDebouncedSearchTerm(search);
     // eslint-disable-next-line
   }, []);
-
-  // Add window resize listener
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   const handleSearch = async (value) => {
     setSearchTerm(value);
     // Call backend for every character typed (including single char)
@@ -147,12 +135,7 @@ const UserList = () => {
       result = result.filter(user => getOrderType(user.order_type) === activeOrderTypeFilter.toLowerCase());
     }
     if (activeRegularFilter !== 'all') {
-      // Ensure we're comparing numbers
-      const filterValue = parseInt(activeRegularFilter);
-      result = result.filter(user => {
-        const userRegular = parseInt(user.regular) || 0;
-        return userRegular === filterValue;
-      });
+      result = result.filter(user => user.regular === activeRegularFilter);
     }
 
     setFilteredUsers(result);
@@ -165,17 +148,34 @@ const UserList = () => {
     }
   };
 
+  const renderSearchSection = () => (
+    <div style={{ marginBottom: '1.5rem' }}>
+      <form onSubmit={e => e.preventDefault()} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => handleSearch(e.target.value)}
+          placeholder="Search by name, email, phone, or address..."
+          style={{
+            padding: '0.5rem',
+            border: '1px solid #e0e0e0',
+            borderRadius: '0.25rem',
+            width: '300px',
+            fontSize: '1rem'
+          }}
+          autoFocus // Ensures the input field remains focused
+        />
+        <span style={{ color: '#666', fontSize: '0.875rem' }}>
+          Showing {((filteredUsers || []).length || 0)} of {(totalUsers || 0)} users
+        </span>
+      </form>
+    </div>
+  );
+
   const styles = {
     headerText: { color: '#1a237e' },
     errorText: { color: '#d32f2f' },
-    tableHeader: { 
-      backgroundColor: '#f5f5f5', 
-      color: '#2c3e50',
-      '@media (max-width: 768px)': {
-        fontSize: '0.9rem',
-        padding: '0.5rem'
-      }
-    },
+    tableHeader: { backgroundColor: '#f5f5f5', color: '#2c3e50' },
     tableBorder: { borderColor: '#e0e0e0' },
     statusBadge: {
       active: { backgroundColor: '#4caf50', color: 'white' },
@@ -191,100 +191,8 @@ const UserList = () => {
     modal: {
       overlay: { backgroundColor: 'rgba(0, 0, 0, 0.6)' },
       content: { backgroundColor: 'white', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }
-    },
-    responsiveContainer: {
-      margin: '1rem',
-      paddingTop: '5rem',
-      backgroundColor: '#ffffff',
-      borderRadius: '0.5rem',
-      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-      '@media (max-width: 768px)': {
-        margin: '0.5rem',
-        paddingTop: '3rem'
-      }
-    },
-    filterSection: {
-      marginBottom: '1.5rem',
-      '@media (max-width: 768px)': {
-        marginBottom: '1rem'
-      }
-    },
-    filterButtons: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '0.5rem',
-      '@media (max-width: 768px)': {
-        gap: '0.25rem'
-      }
-    },
-    searchSection: {
-      marginBottom: '1.5rem',
-      '@media (max-width: 768px)': {
-        marginBottom: '1rem'
-      }
-    },
-    searchInput: {
-      padding: '0.5rem',
-      border: '1px solid #e0e0e0',
-      borderRadius: '0.25rem',
-      width: '300px',
-      fontSize: '1rem',
-      '@media (max-width: 768px)': {
-        width: '100%',
-        fontSize: '0.9rem'
-      }
-    },
-    tableContainer: {
-      position: 'relative',
-      overflowX: 'auto',
-      '@media (max-width: 768px)': {
-        marginLeft: '-0.5rem',
-        marginRight: '-0.5rem'
-      }
-    },
-    tableCell: {
-      padding: '0.75rem',
-      '@media (max-width: 768px)': {
-        padding: '0.5rem',
-        fontSize: '0.9rem'
-      }
-    },
-    actionButtonsContainer: {
-      display: 'flex',
-      gap: '0.5rem',
-      '@media (max-width: 768px)': {
-        flexDirection: 'column',
-        gap: '0.25rem'
-      }
     }
   };
-
-  const renderSearchSection = () => (
-    <div style={styles.searchSection}>
-      <form onSubmit={e => e.preventDefault()} style={{ 
-        display: 'flex', 
-        flexDirection: isMobile ? 'column' : 'row',
-        alignItems: isMobile ? 'stretch' : 'center', 
-        gap: '1rem' 
-      }}>
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => handleSearch(e.target.value)}
-          placeholder="Search by name, email, phone, or address..."
-          style={styles.searchInput}
-          autoFocus
-        />
-        <span style={{ 
-          color: '#666', 
-          fontSize: isMobile ? '0.8rem' : '0.875rem',
-          textAlign: isMobile ? 'center' : 'left'
-        }}>
-          Showing {((filteredUsers || []).length || 0)} of {(totalUsers || 0)} users
-        </span>
-      </form>
-    </div>
-  );
 
   const handleOpenSearchModal = (userId, user_fullname) => {
     const encodedName = encodeURIComponent(user_fullname);
@@ -304,47 +212,12 @@ const UserList = () => {
 
   const toggleRegular = async (id, currentRegular) => {
     try {
-      setIsLoading(true);
-      // Ensure we're working with numbers
-      const current = parseInt(currentRegular) || 0;
-      const newRegular = current === 1 ? 0 : 1;
-      
-      const response = await axios.put(`/api/v1/usersLists/users/${id}/regular`, { 
-        regular: newRegular 
-      });
-
-      if (response.data && response.data.status === 'success') {
-        // Since the API response doesn't include the regular field, we'll use our newRegular value
-        const updatedUser = {
-          ...response.data.user,
-          regular: newRegular // Explicitly set the regular status
-        };
-
-        // Update both users and filtered users with the correct regular status
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            user._id === id ? { ...user, ...updatedUser, regular: newRegular } : user
-          )
-        );
-
-        setFilteredUsers(prevFiltered => 
-          prevFiltered.map(user => 
-            user._id === id ? { ...user, ...updatedUser, regular: newRegular } : user
-          )
-        );
-
-        // Clear any previous errors
-        setError(null);
-      } else {
-        throw new Error(response.data?.message || 'Failed to update regular status');
-      }
+      const newRegular = currentRegular === 1 ? 0 : 1;
+      await axios.put(`/api/v1/usersLists/users/${id}/regular`, { regular: newRegular });
+      fetchUsers();
     } catch (error) {
       console.error('Error toggling user regular status:', error);
-      setError(error.message || 'Failed to update user regular status. Please try again.');
-      // Revert optimistic update by fetching fresh data
-      await fetchUsers();
-    } finally {
-      setIsLoading(false);
+      setError('Failed to update user regular status. Please try again.');
     }
   };
 
@@ -436,15 +309,14 @@ const UserList = () => {
     if (totalPages <= 1) return null;
 
     const pageButtonStyle = {
-      padding: isMobile ? '0.35rem 0.75rem' : '0.5rem 1rem',
+      padding: '0.5rem 1rem',
       borderRadius: '0.25rem',
       border: 'none',
       backgroundColor: '#e0e0e0',
       color: '#455a64',
       cursor: 'pointer',
       transition: 'all 0.3s ease',
-      margin: '0 0.25rem',
-      fontSize: isMobile ? '0.85rem' : '1rem'
+      margin: '0 0.25rem'
     };
 
     const activeButtonStyle = {
@@ -455,7 +327,7 @@ const UserList = () => {
 
     // Calculate which page numbers to show
     let pagesToShow = [];
-    const siblingCount = isMobile ? 1 : 2; // Show fewer pages on mobile
+    const siblingCount = 2; // Increased from 1 to 2 to show more pages
 
     // Always include first and last page
     const firstPage = 1;
@@ -465,12 +337,12 @@ const UserList = () => {
     let startPage = Math.max(currentPage - siblingCount, 1);
     let endPage = Math.min(currentPage + siblingCount, totalPages);
 
-    // Adjust range to ensure we show at least 3 pages if possible
-    if (endPage - startPage + 1 < 3 && totalPages >= 3) {
+    // Adjust range to ensure we show at least 4 pages if possible
+    if (endPage - startPage + 1 < 4 && totalPages >= 4) {
       if (startPage === 1) {
-        endPage = Math.min(startPage + 2, totalPages);
+        endPage = Math.min(startPage + 3, totalPages);
       } else if (endPage === totalPages) {
-        startPage = Math.max(endPage - 2, 1);
+        startPage = Math.max(endPage - 3, 1);
       }
     }
 
@@ -490,13 +362,13 @@ const UserList = () => {
     }
 
     return (
-      <nav aria-label="Pagination" style={{ margin: isMobile ? '1rem 0' : '1.5rem 0' }}>
+      <nav aria-label="Pagination" style={{ margin: '1.5rem 0' }}>
         <div style={{
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
           flexWrap: 'wrap',
-          gap: isMobile ? '0.25rem' : '0.5rem'
+          gap: '0.5rem'
         }}>
           {/* Previous button */}
           <button
@@ -508,7 +380,7 @@ const UserList = () => {
               cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
             }}
           >
-            {isMobile ? '←' : 'Previous'}
+            Previous
           </button>
 
           {/* Page numbers */}
@@ -522,12 +394,7 @@ const UserList = () => {
                 {page}
               </button>
             ) : (
-              <span key={index} style={{ 
-                margin: '0 0.25rem',
-                fontSize: isMobile ? '0.85rem' : '1rem'
-              }}>
-                {page}
-              </span>
+              <span key={index} style={{ margin: '0 0.25rem' }}>{page}</span>
             )
           )}
 
@@ -541,7 +408,7 @@ const UserList = () => {
               cursor: currentPage === totalPages ? 'not-allowed' : 'pointer'
             }}
           >
-            {isMobile ? '→' : 'Next'}
+            Next
           </button>
         </div>
       </nav>
@@ -574,11 +441,11 @@ const UserList = () => {
           User List
         </h1>
 
-        <div style={styles.filterSection}>
+        <div style={{ marginBottom: '1.5rem' }}>
           <h3 style={{ ...styles.headerText, fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.5rem' }}>
             Status Filter:
           </h3>
-          <div style={styles.filterButtons}>
+          <div>
             <TabButton label="All" isActive={activeStatusFilter === 'all'} onClick={() => setActiveStatusFilter('all')} />
             <TabButton label="Active" isActive={activeStatusFilter === 'active'} onClick={() => setActiveStatusFilter('active')} />
             <TabButton label="Blocked" isActive={activeStatusFilter === 'blocked'} onClick={() => setActiveStatusFilter('blocked')} />
@@ -586,358 +453,280 @@ const UserList = () => {
           </div>
         </div>
 
-        <div style={styles.filterSection}>
-          <h3 style={{ ...styles.headerText, fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-            Regular Filter:
-          </h3>
-          <div style={styles.filterButtons}>
-            <TabButton label="All" isActive={activeRegularFilter === 'all'} onClick={() => setActiveRegularFilter('all')} />
-            <TabButton label="Regular" isActive={activeRegularFilter === 1} onClick={() => setActiveRegularFilter(1)} />
-            <TabButton label="Non-regular" isActive={activeRegularFilter === 0} onClick={() => setActiveRegularFilter(0)} />
-          </div>
-        </div>
-
-        {renderSearchSection()}
-
-        <div style={styles.tableContainer}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', ...styles.tableBorder }}>
-            <thead>
-              <tr>
-                {['Name', 'Email', 'Phone', 'Address', 'Pincode', 'Status', 'Order Type', 'Actions'].map(header => (
-                  <th
-                    key={header}
-                    style={{
-                      ...styles.tableHeader,
-                      padding: isMobile ? '0.5rem' : '0.75rem',
-                      textAlign: 'left',
-                      borderBottom: '2px solid #e0e0e0',
-                      fontSize: isMobile ? '0.85rem' : '1rem',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    {header}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-                    Loading...
-                  </td>
-                </tr>
-              ) : currentUsers.length === 0 ? (
-                <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-                    No users found.
-                  </td>
-                </tr>
-              ) : (
-                currentUsers.map((user) => (
-                  <tr key={user._id} style={{ borderBottom: '1px solid #e0e0e0' }}>
-                    <td style={styles.tableCell}>{user.user_fullname}</td>
-                    <td style={styles.tableCell}>{user.email_id}</td>
-                    <td style={styles.tableCell}>
-                      {user.mobile_no && (
-                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap' }}>
-                          <span style={{ 
-                            overflow: 'hidden', 
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            maxWidth: isMobile ? '100px' : '150px'
-                          }}>
-                            {user.mobile_no}
-                          </span>
-                          <MessageCircle
-                            onClick={() => !isLoading && redirectToWhatsApp(user.mobile_no)}
-                            style={{ 
-                              cursor: isLoading ? 'not-allowed' : 'pointer', 
-                              marginLeft: '0.5rem', 
-                              color: '#25D366', 
-                              opacity: isLoading ? 0.5 : 1,
-                              flexShrink: 0
-                            }}
-                            size={isMobile ? 16 : 18}
-                          />
-                        </div>
-                      )}
-                    </td>
-                    <td style={{
-                      ...styles.tableCell,
-                      maxWidth: isMobile ? '150px' : '200px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      {user.address || 'N/A'}
-                    </td>
-                    <td style={styles.tableCell}>{user.pincode || 'N/A'}</td>
-                    <td style={styles.tableCell}>
-                      {renderRegularButton(user)}
-                    </td>
-                    <td style={styles.tableCell}>
-                      <div style={styles.actionButtonsContainer}>
-                        {['COD', 'Advance'].map((type) => (
-                          <label key={type} style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            cursor: isLoading ? 'not-allowed' : 'pointer',
-                            color: styles.orderTypeLabel.color,
-                            opacity: isLoading ? 0.6 : 1,
-                            fontSize: isMobile ? '0.8rem' : '0.9rem'
-                          }}>
-                            <input
-                              type="radio"
-                              name={`orderType-${user._id}`}
-                              value={type}
-                              checked={getOrderType(user.order_type) === type.toLowerCase()}
-                              onChange={() => !isLoading && updateOrderType(user._id, type)}
-                              style={{ marginRight: '0.25rem' }}
-                              disabled={isLoading}
-                            />
-                            {type}
-                          </label>
-                        ))}
-                      </div>
-                    </td>
-                    <td style={styles.tableCell}>
-                      <div style={styles.actionButtonsContainer}>
-                        <button
-                          onClick={() => !isLoading && toggleStatus(user._id, user.status)}
-                          style={{
-                            ...(user.status === 1 ? styles.actionButton.danger : styles.actionButton.success),
-                            padding: isMobile ? '0.15rem 0.5rem' : '0.25rem 0.75rem',
-                            borderRadius: '0.25rem',
-                            border: 'none',
-                            cursor: isLoading ? 'not-allowed' : 'pointer',
-                            transition: 'all 0.3s ease',
-                            opacity: isLoading ? 0.6 : 1,
-                            fontSize: isMobile ? '0.8rem' : '0.9rem',
-                            width: '100%'
-                          }}
-                          disabled={isLoading}
-                        >
-                          {user.status === 1 ? 'Block' : 'Activate'}
-                        </button>
-                        <button
-                          onClick={() => !isLoading && openEditModal(user)}
-                          style={{
-                            ...styles.actionButton.primary,
-                            padding: isMobile ? '0.15rem 0.5rem' : '0.25rem 0.75rem',
-                            borderRadius: '0.25rem',
-                            border: 'none',
-                            cursor: isLoading ? 'not-allowed' : 'pointer',
-                            transition: 'all 0.3s ease',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            opacity: isLoading ? 0.6 : 1,
-                            fontSize: isMobile ? '0.8rem' : '0.9rem',
-                            width: '100%'
-                          }}
-                          disabled={isLoading}
-                        >
-                          <Edit size={isMobile ? 14 : 16} style={{ marginRight: '0.25rem' }} /> Edit
-                        </button>
-                        <button
-                          onClick={() => !isLoading && handleOpenSearchModal(user._id, user.user_fullname)}
-                          style={{
-                            backgroundColor: '#007bff',
-                            color: '#ffffff',
-                            padding: isMobile ? '0.15rem 0.5rem' : '0.25rem 0.75rem',
-                            borderRadius: '0.25rem',
-                            border: 'none',
-                            cursor: isLoading ? 'not-allowed' : 'pointer',
-                            opacity: isLoading ? 0.6 : 1,
-                            fontSize: isMobile ? '0.8rem' : '0.9rem',
-                            width: '100%'
-                          }}
-                          disabled={isLoading}
-                        >
-                          Cart
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        {renderPagination()}
-      </>
-    );
-  };
-
-  const renderEditModal = () => {
-    return (
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-        zIndex: 1000,
-        padding: isMobile ? '1rem' : 0
-      }}>
-        <div style={{
-          backgroundColor: 'white',
-          padding: isMobile ? '1rem' : '1.5rem',
-          borderRadius: '0.5rem',
-          width: '90%',
-          maxWidth: '500px',
-          maxHeight: isMobile ? '90vh' : '80vh',
-          overflowY: 'auto'
-        }}>
-          <h2 style={{ 
-            fontSize: isMobile ? '1.1rem' : '1.25rem', 
-            fontWeight: 'bold', 
-            marginBottom: '1rem' 
-          }}>
-            Edit User
-          </h2>
-          <form onSubmit={handleEditUser}>
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ fontSize: isMobile ? '0.9rem' : '1rem' }}>User Full Name</label>
-              <input
-                type="text"
-                value={editingUser?.user_fullname || ''}
-                onChange={(e) => setEditingUser({ ...editingUser, user_fullname: e.target.value })}
-                style={{ 
-                  width: '100%', 
-                  padding: isMobile ? '0.4rem' : '0.5rem', 
-                  borderRadius: '0.25rem', 
-                  border: '1px solid #e0e0e0',
-                  fontSize: isMobile ? '0.9rem' : '1rem'
-                }}
-              />
-            </div>
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ fontSize: isMobile ? '0.9rem' : '1rem' }}>Mobile Number</label>
-              <input
-                type="text"
-                value={editingUser?.mobile_no || ''}
-                onChange={(e) => setEditingUser({ ...editingUser, mobile_no: e.target.value })}
-                style={{ 
-                  width: '100%', 
-                  padding: isMobile ? '0.4rem' : '0.5rem', 
-                  borderRadius: '0.25rem', 
-                  border: '1px solid #e0e0e0',
-                  fontSize: isMobile ? '0.9rem' : '1rem'
-                }}
-              />
-            </div>
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ fontSize: isMobile ? '0.9rem' : '1rem' }}>Address</label>
-              <input
-                type="text"
-                value={editingUser?.address || ''}
-                onChange={(e) => setEditingUser({ ...editingUser, address: e.target.value })}
-                style={{ 
-                  width: '100%', 
-                  padding: isMobile ? '0.4rem' : '0.5rem', 
-                  borderRadius: '0.25rem', 
-                  border: '1px solid #e0e0e0',
-                  fontSize: isMobile ? '0.9rem' : '1rem'
-                }}
-              />
-            </div>
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ fontSize: isMobile ? '0.9rem' : '1rem' }}>Pincode</label>
-              <input
-                type="text"
-                value={editingUser?.pincode || ''}
-                onChange={(e) => setEditingUser({ ...editingUser, pincode: e.target.value })}
-                style={{ 
-                  width: '100%', 
-                  padding: isMobile ? '0.4rem' : '0.5rem', 
-                  borderRadius: '0.25rem', 
-                  border: '1px solid #e0e0e0',
-                  fontSize: isMobile ? '0.9rem' : '1rem'
-                }}
-              />
-            </div>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'flex-end', 
-              gap: isMobile ? '0.5rem' : '0.75rem',
-              marginTop: isMobile ? '1rem' : '1.5rem'
-            }}>
-              <button
-                type="button"
-                onClick={closeEditModal}
-                style={{
-                  padding: isMobile ? '0.4rem 0.8rem' : '0.5rem 1rem',
-                  borderRadius: '0.25rem',
-                  border: 'none',
-                  backgroundColor: '#e0e0e0',
-                  cursor: 'pointer',
-                  fontSize: isMobile ? '0.9rem' : '1rem'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                style={{
-                  padding: isMobile ? '0.4rem 0.8rem' : '0.5rem 1rem',
-                  borderRadius: '0.25rem',
-                  border: 'none',
-                  backgroundColor: '#1976d2',
-                  color: 'white',
-                  cursor: 'pointer',
-                  fontSize: isMobile ? '0.9rem' : '1rem'
-                }}
-              >
-                Save changes
-              </button>
-            </div>
-          </form>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h3 style={{ ...styles.headerText, fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+          Regular Filter:
+        </h3>
+        <div>
+          <TabButton label="All" isActive={activeRegularFilter === 'all'} onClick={() => setActiveRegularFilter('all')} />
+          <TabButton label="Regular" isActive={activeRegularFilter === 1} onClick={() => setActiveRegularFilter(1)} />
+          <TabButton label="Non-regular" isActive={activeRegularFilter === 0} onClick={() => setActiveRegularFilter(0)} />
         </div>
       </div>
-    );
-  };
 
-  const renderRegularButton = (user) => {
-    const isRegular = Number(user.regular) === 1;
-    return (
-      <button
-        onClick={() => !isLoading && toggleRegular(user._id, Number(user.regular))}
-        style={{
-          ...(isRegular ? styles.actionButton.success : styles.actionButton.danger),
-          marginRight: '0.5rem',
-          padding: isMobile ? '0.15rem 0.5rem' : '0.25rem 0.75rem',
-          borderRadius: '0.25rem',
-          border: 'none',
-          cursor: isLoading ? 'not-allowed' : 'pointer',
-          transition: 'all 0.3s ease',
-          opacity: isLoading ? 0.6 : 1,
-          fontSize: isMobile ? '0.8rem' : '0.9rem'
-        }}
-        disabled={isLoading}
-      >
-        {isRegular ? 'Regular' : 'Non-regular'}
-      </button>
-    );
-  };
+      {renderSearchSection()}
+
+      <div style={{ position: 'relative', overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', ...styles.tableBorder }}>
+          <thead>
+            <tr>
+              {['Name', 'Email', 'Phone', 'Address', 'Pincode', 'Status', 'Order Type', 'Actions'].map(header => (
+                <th
+                  key={header}
+                  style={{
+                    ...styles.tableHeader,
+                    padding: '0.75rem',
+                    textAlign: 'left',
+                    borderBottom: '2px solid #e0e0e0'
+                  }}
+                >
+                  {header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              <tr>
+                <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+                  Loading...
+                </td>
+              </tr>
+            ) : currentUsers.length === 0 ? (
+              <tr>
+                <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+                  No users found.
+                </td>
+              </tr>
+            ) : (
+              currentUsers.map((user) => (
+                <tr key={user._id} style={{ borderBottom: '1px solid #e0e0e0' }}>
+                  <td style={{ padding: '0.75rem' }}>{user.user_fullname}</td>
+                  <td style={{ padding: '0.75rem' }}>{user.email_id}</td>
+                  <td style={{ padding: '0.75rem' }}>
+                    {user.mobile_no && (
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        {user.mobile_no}
+                        <MessageCircle
+                          onClick={() => !isLoading && redirectToWhatsApp(user.mobile_no)}
+                          style={{ cursor: isLoading ? 'not-allowed' : 'pointer', marginLeft: '0.5rem', color: '#25D366', opacity: isLoading ? 0.5 : 1 }}
+                          size={18}
+                        />
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ padding: '0.75rem' }}>{user.address || 'N/A'}</td>
+                  <td style={{ padding: '0.75rem' }}>{user.pincode || 'N/A'}</td>
+                  <td style={{ padding: '0.75rem' }}>
+                    <button
+                      onClick={() => !isLoading && toggleRegular(user._id, user.regular)}
+                      style={{
+                        ...(user.regular === 1 ? styles.actionButton.success : styles.actionButton.danger),
+                        marginRight: '0.5rem',
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '0.25rem',
+                        border: 'none',
+                        cursor: isLoading ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.3s ease',
+                        opacity: isLoading ? 0.6 : 1
+                      }}
+                      disabled={isLoading}
+                    >
+                      {user.regular === 1 ? 'Regular' : 'Non-regular'}
+                    </button>
+                  </td>
+                  <td style={{ padding: '0.75rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {['COD', 'Advance'].map((type) => (
+                        <label key={type} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          cursor: isLoading ? 'not-allowed' : 'pointer',
+                          color: styles.orderTypeLabel.color,
+                          opacity: isLoading ? 0.6 : 1
+                        }}>
+                          <input
+                            type="radio"
+                            name={`orderType-${user._id}`}
+                            value={type}
+                            checked={getOrderType(user.order_type) === type.toLowerCase()}
+                            onChange={() => !isLoading && updateOrderType(user._id, type)}
+                            style={{ marginRight: '0.25rem' }}
+                            disabled={isLoading}
+                          />
+                          {type}
+                        </label>
+                      ))}
+                    </div>
+                  </td>
+                  <td style={{ padding: '0.75rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        onClick={() => !isLoading && toggleStatus(user._id, user.status)}
+                        style={{
+                          ...(user.status === 1 ? styles.actionButton.danger : styles.actionButton.success),
+                          marginRight: '0.5rem',
+                          padding: '0.25rem 0.75rem',
+                          borderRadius: '0.25rem',
+                          border: 'none',
+                          cursor: isLoading ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.3s ease',
+                          opacity: isLoading ? 0.6 : 1
+                        }}
+                        disabled={isLoading}
+                      >
+                        {user.status === 1 ? 'Block' : 'Activate'}
+                      </button>
+                      <button
+                        onClick={() => !isLoading && openEditModal(user)}
+                        style={{
+                          ...styles.actionButton.primary,
+                          padding: '0.25rem 0.75rem',
+                          borderRadius: '0.25rem',
+                          border: 'none',
+                          cursor: isLoading ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.3s ease',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          opacity: isLoading ? 0.6 : 1
+                        }}
+                        disabled={isLoading}
+                      >
+                        <Edit size={16} style={{ marginRight: '0.25rem' }} /> Edit
+                      </button>
+                      <button
+                        onClick={() => !isLoading && handleOpenSearchModal(user._id, user.user_fullname)}
+                        style={{
+                          backgroundColor: '#007bff',
+                          color: '#ffffff',
+                          padding: '0.5rem 1rem',
+                          borderRadius: '0.25rem',
+                          border: 'none',
+                          cursor: isLoading ? 'not-allowed' : 'pointer',
+                          opacity: isLoading ? 0.6 : 1
+                        }}
+                        disabled={isLoading}
+                      >
+                        Cart
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      {renderPagination()}
+    </>
+  );
+};
+
+const renderEditModal = () => {
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      zIndex: 1000
+    }}>
+      <div style={{
+        backgroundColor: 'white',
+        padding: '1.5rem',
+        borderRadius: '0.5rem',
+        width: '90%',
+        maxWidth: '500px'
+      }}>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+          Edit User
+        </h2>
+        <form onSubmit={handleEditUser}>
+          <div style={{ marginBottom: '1rem' }}>
+            <label>User Full Name</label>
+            <input
+              type="text"
+              value={editingUser?.user_fullname || ''}
+              onChange={(e) => setEditingUser({ ...editingUser, user_fullname: e.target.value })}
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
+            />
+          </div>
+          <div style={{ marginBottom: '1rem' }}>
+            <label>Mobile Number</label>
+            <input
+              type="text"
+              value={editingUser?.mobile_no || ''}
+              onChange={(e) => setEditingUser({ ...editingUser, mobile_no: e.target.value })}
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
+            />
+          </div>
+          <div style={{ marginBottom: '1rem' }}>
+            <label>Address</label>
+            <input
+              type="text"
+              value={editingUser?.address || ''}
+              onChange={(e) => setEditingUser({ ...editingUser, address: e.target.value })}
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
+            />
+          </div>
+          <div style={{ marginBottom: '1rem' }}>
+            <label>Pincode</label>
+            <input
+              type="text"
+              value={editingUser?.pincode || ''}
+              onChange={(e) => setEditingUser({ ...editingUser, pincode: e.target.value })}
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid #e0e0e0' }}
+            />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+            <button
+              type="button"
+              onClick={closeEditModal}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '0.25rem',
+                border: 'none',
+                backgroundColor: '#e0e0e0',
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '0.25rem',
+                border: 'none',
+                backgroundColor: '#1976d2',
+                color: 'white',
+                cursor: 'pointer'
+              }}
+            >
+              Save changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )}
 
   return (
     <Layout title="User List">
-      <div style={styles.responsiveContainer}>
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: isMobile ? 'column' : 'row',
-          gap: '1rem' 
-        }}>
-          <div style={{ 
-            flex: isMobile ? 'none' : '0 0 250px',
-            marginBottom: isMobile ? '1rem' : '0'
-          }}>
+      <div style={{
+        margin: '1rem',
+        paddingTop: '5rem',
+        backgroundColor: '#ffffff',
+        borderRadius: '0.5rem',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+      }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+          <div style={{ flex: '0 0 250px' }}>
             <AdminMenu />
           </div>
           <div style={{ flex: '1', minWidth: '0' }}>
@@ -945,7 +734,6 @@ const UserList = () => {
           </div>
         </div>
       </div>
-      {isEditModalOpen && renderEditModal()}
     </Layout>
   );
 };
