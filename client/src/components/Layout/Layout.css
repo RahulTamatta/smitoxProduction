@@ -1,0 +1,475 @@
+/* Layout Component Responsive Styles */
+
+/* Global Layout Container */
+.layout-container {
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Content Wrapper Utilities */
+/* .content-wrapper {
+  min-height: 100%;
+  position: relative;
+} */
+
+/* Responsive Typography */
+.layout-container h1,
+.layout-container h2,
+.layout-container h3,
+.layout-container h4,
+.layout-container h5,
+.layout-container h6 {
+  line-height: 1.4;
+  margin-bottom: 1rem;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+  .layout-container {
+    font-size: 14px;
+  }
+  
+  .content-wrapper {
+    padding: 0 !important; /* Remove all padding on mobile */
+    margin: 0 !important; /* Remove margins */
+  }
+  
+  /* Ensure no extra spacing on mobile */
+  .layout-container main {
+    padding: 0 !important;
+    margin-top: 60px !important; /* Just the header height */
+  }
+  
+  /* Fix specific spacing issues on mobile */
+  .searchInput {
+    margin-top: 0 !important;
+    top: 60px !important; /* Position below header */
+  }
+  
+  /* Banner container mobile spacing */
+  .banner-container {
+    margin: 5px !important;
+  }
+  
+  /* Mobile navigation adjustments */
+  .navbar-nav {
+    font-size: 0.8rem;
+  }
+  
+  /* Mobile button spacing */
+  .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+  
+  /* Remove any container padding that might cause white space */
+  .container,
+  .container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  
+  /* Fix any extra margins that could cause white space */
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Ensure mobile layout has no gaps */
+  .layout-container * {
+    box-sizing: border-box;
+  }
+}
+
+/* Tablet Optimizations */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .layout-container {
+    font-size: 15px;
+  }
+  
+  .content-wrapper {
+    padding: 0rem !important;
+  }
+}
+
+/* Desktop Optimizations */
+@media (min-width: 1025px) {
+  .layout-container {
+    font-size: 16px;
+  }
+  
+  .content-wrapper {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+}
+
+/* Large Desktop Optimizations */
+@media (min-width: 1440px) {
+  .content-wrapper {
+    max-width: 1600px;
+  }
+}
+
+/* Header Fixed Position Utilities */
+.header-fixed-spacer {
+  height: 80px; /* Default header height */
+}
+
+@media (max-width: 768px) {
+  .header-fixed-spacer {
+    height: 60px; /* Mobile header height */
+  }
+}
+
+/* Footer Sticky Bottom */
+.layout-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.layout-container main {
+  flex: 1;
+}
+
+/* Professional Scrollbar Styling */
+.layout-container ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.layout-container ::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.layout-container ::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.layout-container ::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Focus Styles for Accessibility */
+.layout-container a:focus,
+.layout-container button:focus,
+.layout-container input:focus,
+.layout-container select:focus,
+.layout-container textarea:focus {
+  outline: 2px solid #d32f2f;
+  outline-offset: 2px;
+}
+
+/* Loading States */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+/* Container Responsive Utilities */
+.container-responsive {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+@media (min-width: 576px) {
+  .container-responsive {
+    max-width: 540px;
+  }
+}
+
+@media (min-width: 768px) {
+  .container-responsive {
+    max-width: 720px;
+    padding: 0 1.5rem;
+  }
+}
+
+@media (min-width: 992px) {
+  .container-responsive {
+    max-width: 960px;
+    padding: 0 2rem;
+  }
+}
+
+@media (min-width: 1200px) {
+  .container-responsive {
+    max-width: 1140px;
+  }
+}
+
+@media (min-width: 1400px) {
+  .container-responsive {
+    max-width: 1320px;
+  }
+}
+
+/* Card and Component Spacing */
+.card-responsive {
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s ease;
+}
+
+.card-responsive:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 768px) {
+  .card-responsive {
+    margin-bottom: 0.75rem;
+    border-radius: 6px;
+  }
+}
+
+/* Button Responsive Utilities */
+.btn-responsive {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .btn-responsive {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Form Responsive Utilities */
+.form-responsive {
+  width: 100%;
+}
+
+.form-responsive .form-control {
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  transition: border-color 0.3s ease;
+}
+
+.form-responsive .form-control:focus {
+  border-color: #d32f2f;
+  box-shadow: 0 0 0 0.2rem rgba(211, 47, 47, 0.25);
+}
+
+@media (max-width: 768px) {
+  .form-responsive .form-control {
+    padding: 0.6rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Grid Responsive Utilities */
+.grid-responsive {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 576px) {
+  .grid-responsive-sm-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .grid-responsive-md-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .grid-responsive-md-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 992px) {
+  .grid-responsive-lg-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .grid-responsive-lg-5 {
+    grid-template-columns: repeat(5, 1fr);
+  }
+  
+  .grid-responsive-lg-6 {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+/* Text Responsive Utilities */
+.text-responsive-sm {
+  font-size: 0.875rem;
+}
+
+.text-responsive-base {
+  font-size: 1rem;
+}
+
+.text-responsive-lg {
+  font-size: 1.125rem;
+}
+
+@media (max-width: 768px) {
+  .text-responsive-sm {
+    font-size: 0.75rem;
+  }
+  
+  .text-responsive-base {
+    font-size: 0.875rem;
+  }
+  
+  .text-responsive-lg {
+    font-size: 1rem;
+  }
+}
+
+/* Spacing Responsive Utilities */
+.spacing-responsive-sm {
+  padding: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.spacing-responsive-md {
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.spacing-responsive-lg {
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+@media (max-width: 768px) {
+  .spacing-responsive-sm {
+    padding: 0.25rem;
+    margin: 0.25rem 0;
+  }
+  
+  .spacing-responsive-md {
+    padding: 0.5rem;
+    margin: 0.5rem 0;
+  }
+  
+  .spacing-responsive-lg {
+    padding: 0.75rem;
+    margin: 0.75rem 0;
+  }
+}
+
+/* Hide/Show Utilities */
+.hide-mobile {
+  display: block;
+}
+
+.show-mobile {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none;
+  }
+  
+  .show-mobile {
+    display: block;
+  }
+}
+
+.hide-desktop {
+  display: none;
+}
+
+.show-desktop {
+  display: block;
+}
+
+@media (min-width: 769px) {
+  .hide-desktop {
+    display: none;
+  }
+  
+  .show-desktop {
+    display: block;
+  }
+}
+
+/* Professional Animation Utilities */
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+.slide-in-up {
+  animation: slideInUp 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Image Responsive Utilities */
+.img-responsive {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+.img-responsive-cover {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+  .img-responsive-cover {
+    height: 150px;
+  }
+}
+
+/* Professional Shadow Utilities */
+.shadow-sm {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-md {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-lg {
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-xl {
+  box-shadow: 0 20px 25px rgba(0, 0, 0, 0.1);
+}

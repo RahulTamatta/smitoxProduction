@@ -1,20 +1,16 @@
-import React, { useState, useEffect,useRef,Suspense } from "react";
-import { useNavigate } from "react-router-dom";
-import Slider from "react-slick";
 import axios from "axios";
-import toast from "react-hot-toast";
-import Layout from "./../components/Layout/Layout";
-import { AiOutlineReload } from "react-icons/ai";
-import "../styles/Homepage.css";
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
-import { useCart } from "../context/cart";
-import SearchInput from "../components/Form/SearchInput";
-import ProductCard from "./ProductCard"; // Import the new ProductCard component
-import WhatsAppButton from './whatsapp'; // Adjust the import path as needed
-import { useLocation } from 'react-router-dom';
+import { Suspense, useEffect, useState } from "react";
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
+import { useLocation, useNavigate } from "react-router-dom";
+import Slider from "react-slick";
+import "slick-carousel/slick/slick-theme.css";
+import "slick-carousel/slick/slick.css";
+import { useCart } from "../context/cart";
+import "../styles/Homepage.css";
+import Layout from "./../components/Layout/Layout";
+import ProductCard from "./ProductCard"; // Import the new ProductCard component
+import WhatsAppButton from './whatsapp'; // Adjust the import path as needed
 
 
 
@@ -379,7 +375,7 @@ useEffect(() => {
     <Layout title={"All Products - Best offers"}>
       {/* Mobile Search */}
     
-      {isMobile && (
+      {/* {isMobile && (
         <div 
           className="searchInput" 
           style={{
@@ -393,7 +389,7 @@ useEffect(() => {
         >
           <SearchInput />
         </div>
-      )}
+      )} */}
   
       {/* Banner Section */}
     {/* Banner Section */}

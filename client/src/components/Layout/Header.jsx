@@ -1,12 +1,11 @@
-import axios from "axios";
-import React, { useEffect, useState } from "react";
-import { NavLink, Link } from "react-router-dom";
-import { useAuth } from "../../context/auth";
-import toast from "react-hot-toast";
-import SearchInput from "../Form/SearchInput";
+import { HeartOutlined, HomeOutlined, LoginOutlined, ShoppingCartOutlined, UserOutlined } from '@ant-design/icons';
 import { Badge } from "antd";
-import { HeartOutlined, UserOutlined,ShoppingCartOutlined, HomeOutlined, LoginOutlined } from '@ant-design/icons';
+import axios from "axios";
+import { useEffect, useState } from "react";
+import { Link, NavLink } from "react-router-dom";
 import logo from "../../../src/assets/images/logo.png";
+import { useAuth } from "../../context/auth";
+import SearchInput from "../Form/SearchInput";
 
 const Header = () => {
   const [auth, setAuth] = useAuth();
@@ -27,7 +26,6 @@ const Header = () => {
       console.error("Error fetching data:", error);
     }
   };
-
 
   const fetchCartCount = async () => {
     try {
@@ -113,35 +111,95 @@ const Header = () => {
     sessionStorage.removeItem('homepageScrollPosition');
   };
 
+  const logoStyles = {
+    height: isMobile ? "50px" : "60px", // Smaller logo on mobile
+    maxWidth: "100%",
+    objectFit: "contain",
+    transition: "height 0.3s ease"
+  };
+
+  const navbarStyles = {
+    backgroundColor: "#d32f2f",
+    borderBottom: "none",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+    height: isMobile ? "60px" : "70px", // Fixed height instead of minHeight
+    minHeight: isMobile ? "60px" : "70px",
+    maxHeight: isMobile ? "60px" : "70px", // Ensure height doesn't exceed
+    padding: isMobile ? "0.25rem 0.75rem" : "0.75rem 1.5rem", // Reduced mobile padding
+    display: "flex",
+    alignItems: "center"
+  };
+
+  const containerStyles = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    maxWidth: "100%",
+    margin: "0 auto",
+    padding: "0"
+  };
+
+  const logoContainerStyles = {
+    display: "flex",
+    alignItems: "center",
+    flexShrink: 0,
+    marginRight: isMobile ? "0.25rem" : "1rem" // Reduced margin for mobile
+  };
+
+  const searchContainerStyles = {
+    flex: isMobile ? "1" : "1",
+    display: "flex",
+    maxWidth: isMobile ? "150px" : "600px", // Further reduced for mobile
+    minWidth: isMobile ? "120px" : "200px", // Ensure minimum width
+    margin: isMobile ? "0 0.25rem" : "0 1rem", // Reduced margin for mobile
+    overflow: "hidden" // Prevent overflow
+  };
+
+  const navItemsStyles = {
+    display: "flex",
+    alignItems: "center",
+    gap: isMobile ? "0.5rem" : "1rem",
+    margin: "0",
+    padding: "0",
+    listStyle: "none"
+  };
+
+  const mobileNavStyles = {
+    display: isMobile ? "flex" : "none",
+    alignItems: "center",
+    gap: "0.25rem", // Reduced gap for mobile
+    flexShrink: 0 // Prevent shrinking
+  };
+
+  const desktopNavStyles = {
+    display: isMobile ? "none" : "flex",
+    alignItems: "center",
+    gap: "1rem"
+  };
+
   return (
-    <nav className="navbar navbar-expand bg-body-tertiary fixed-top">
-      <div className="container-fluid d-flex align-items-center">
+    <nav className="navbar navbar-expand" style={navbarStyles}>
+      <div className="container-fluid" style={containerStyles}>
         {/* Logo */}
-        <div className="d-flex align-items-center me-4">
-          <Link to="/" className="navbar-brand" onClick={handleHomeClick}>
+        <div style={logoContainerStyles}>
+          <Link to="/" className="navbar-brand" onClick={handleHomeClick} style={{ margin: 0, padding: 0 }}>
             <img
-              src={logo}  // Using imported logo
-              alt="Company Logo"
-              style={{
-                height: "80px",
-                maxWidth: "100%",
-                objectFit: "contain",
-              }}
+              src={logo}
+              alt="Smitox Logo"
+              style={logoStyles}
             />
           </Link>
         </div>
 
-        {/* For Mobile: Hide the search input */}
-        <div className={`flex-grow-1 me-4 ${isMobile ? 'd-none' : 'd-block'}`}>
+        {/* Search - Now visible on both desktop and mobile */}
+        <div style={searchContainerStyles}>
           <SearchInput />
         </div>
 
-        {/* Navbar items (will show only on desktop, not mobile) */}
-        <div className={`d-flex ${isMobile ? 'd-none' : 'd-block'}`}>
-          <ul
-            className="navbar-nav ms-auto mb-2 mb-lg-0"
-            style={{ fontSize: isMobile ? "0.875rem" : "1rem" }}
-          >
+        {/* Desktop Navigation */}
+        <div style={desktopNavStyles}>
+          <ul className="navbar-nav" style={navItemsStyles}>
             <li className="nav-item">
               <NavLink to="/" className="nav-link d-flex align-items-center" onClick={handleHomeClick}>
                 <HomeOutlined style={{ marginRight: "5px", color: "white" }} />
@@ -208,81 +266,85 @@ const Header = () => {
           </ul>
         </div>
 
-        {/* For Mobile: Display only the logo, login, wishlist, and cart */}
-  {/* For Mobile: Display home, login, wishlist, and cart */}
-<div className={`d-flex ${isMobile ? 'd-block' : 'd-none'} ms-auto`}>
-  <ul className="navbar-nav mb-2 mb-lg-0">
-    <li className="nav-item">
-      <NavLink to="/" className="nav-link" onClick={handleHomeClick}>
-        <HomeOutlined style={{ marginRight: "5px", color: "white" }} />
-        Home
-      </NavLink>
-    </li>
+        {/* Mobile Navigation */}
+        <div style={mobileNavStyles}>
+          <ul className="navbar-nav" style={{
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: "0.25rem",
+            margin: 0,
+            padding: 0,
+            listStyle: "none",
+            fontSize: "0.75rem"
+          }}>
+            <li className="nav-item">
+              <NavLink to="/" className="nav-link p-1" onClick={handleHomeClick} style={{ color: "white", padding: "0.25rem 0.5rem" }}>
+                <HomeOutlined style={{ color: "white", fontSize: "14px" }} />
+              </NavLink>
+            </li>
 
-    {!auth?.user ? (
-      <li className="nav-item">
-        <NavLink to="/login" className="nav-link">
-          <LoginOutlined style={{ marginRight: "5px", color: "white" }} />
-          Login
-        </NavLink>
-      </li>
-    ) : (
-      <li className="nav-item dropdown">
-        <NavLink
-          className="nav-link dropdown-toggle"
-          href="#"
-          role="button"
-          data-bs-toggle="dropdown"
-          style={{ border: "none", color: "white" }}
-        >
-          <UserOutlined style={{ marginRight: "5px", color: "white" }} />
-          {auth?.user?.user_fullname.slice(0, 5)}
-        </NavLink>
-        <ul className="dropdown-menu">
-          <li>
-            <NavLink
-              to={`/dashboard/${auth?.user?.role === 1 ? "admin" : "user"}`}
-              className="dropdown-item"
-            >
-              Dashboard
-            </NavLink>
-          </li>
-          <li>
-            <NavLink
-              onClick={handleLogout}
-              to="/login"
-              className="dropdown-item"
-            >
-              Logout
-            </NavLink>
-          </li>
-        </ul>
-      </li>
-    )}
+            {!auth?.user ? (
+              <li className="nav-item">
+                <NavLink to="/login" className="nav-link p-1" style={{ color: "white", padding: "0.25rem 0.5rem" }}>
+                  <LoginOutlined style={{ color: "white", fontSize: "14px" }} />
+                </NavLink>
+              </li>
+            ) : (
+              <li className="nav-item dropdown">
+                <NavLink
+                  className="nav-link dropdown-toggle p-1"
+                  href="#"
+                  role="button"
+                  data-bs-toggle="dropdown"
+                  style={{ border: "none", color: "white", padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
+                >
+                  <UserOutlined style={{ color: "white", fontSize: "14px" }} />
+                </NavLink>
+                <ul className="dropdown-menu">
+                  <li>
+                    <NavLink
+                      to={`/dashboard/${auth?.user?.role === 1 ? "admin" : "user"}`}
+                      className="dropdown-item"
+                      style={{ fontSize: "0.8rem" }}
+                    >
+                      Dashboard
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink
+                      onClick={handleLogout}
+                      to="/login"
+                      className="dropdown-item"
+                      style={{ fontSize: "0.8rem" }}
+                    >
+                      Logout
+                    </NavLink>
+                  </li>
+                </ul>
+              </li>
+            )}
 
-    <li className="nav-item">
-      <NavLink to="/wishlist" className="nav-link">
-        <Badge count={wishlistCount} showZero offset={[10, -5]}>
-          <HeartOutlined style={{ marginRight: "5px", color: "white", fontSize: "15px" }} />
-        </Badge>
-        Wishlist
-      </NavLink>
-    </li>
-    <li className="nav-item">
-      <NavLink to="/cart" className="nav-link">
-        <Badge count={cartCount} showZero offset={[10, -5]}>
-          <ShoppingCartOutlined style={{ marginRight: "5px", color: "white", fontSize: "15px" }} />
-        </Badge>
-        Cart
-      </NavLink>
-    </li>
-  </ul>
-</div>
+            <li className="nav-item">
+              <NavLink to="/wishlist" className="nav-link p-1" style={{ color: "white", padding: "0.25rem 0.5rem" }}>
+                <Badge count={wishlistCount} showZero offset={[8, -3]} size="small">
+                  <HeartOutlined style={{ color: "white", fontSize: "14px" }} />
+                </Badge>
+              </NavLink>
+            </li>
+            <li className="nav-item">
+              <NavLink to="/cart" className="nav-link p-1" style={{ color: "white", padding: "0.25rem 0.5rem" }}>
+                <Badge count={cartCount} showZero offset={[8, -3]} size="small">
+                  <ShoppingCartOutlined style={{ color: "white", fontSize: "14px" }} />
+                </Badge>
+              </NavLink>
+            </li>
+          </ul>
+        </div>
         
       </div>
     </nav>
   );
 };
-
 
 export default Header;

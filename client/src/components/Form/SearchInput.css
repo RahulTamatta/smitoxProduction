@@ -1,0 +1,65 @@
+.search-form {
+  display: flex;
+  align-items: center;
+  background-color: #fff;
+  border-radius: 4px;
+  /* shrink vertical padding, bump horizontal */
+  padding: 2px 8px;
+  /* constrain height */
+  height: 36px;
+  width: 100%;
+  max-width: 500px;
+  flex: 1;
+  margin: 0 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  /* fill the form’s height */
+  height: 100%;
+  /* adjust internal padding if you like */
+  padding: 0 6px;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.search-button {
+  /* fill the form’s height so icon is centered */
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 6px;
+  color: #2874f0;
+}
+
+/* Tablet */
+@media (max-width: 768px) {
+  .search-form {
+    max-width: 100%;
+    margin: 0 8px;
+    height: 34px;
+  }
+  .search-input {
+    font-size: 0.9rem;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .search-form {
+    max-width: 100%;
+    margin: 0 4px;
+    height: 32px;
+    padding: 1px 1px;
+  }
+  .search-input {
+    font-size: 0.4rem;
+  }
+}

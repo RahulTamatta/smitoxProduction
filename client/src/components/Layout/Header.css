@@ -1,16 +1,233 @@
+/* Header Component Styles */
+
+/* Heartbeat animation for special effects */
 @keyframes heartbeat {
-    0%, 100% {
-      transform: scale(1);
-    }
-    50% {
-      transform: scale(1.2);
-    }
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+.icon.heartbeat {
+  animation: heartbeat 1.5s infinite !important;
+  color: white !important;
+  font-size: 15px !important;
+  margin-right: 5px !important;
+}
+
+/* Navbar Responsive Styles */
+.navbar {
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.navbar-brand {
+  transition: all 0.3s ease;
+}
+
+.navbar-brand:hover {
+  transform: scale(1.05);
+}
+
+/* Navigation Links */
+.nav-link {
+  position: relative;
+  transition: all 0.3s ease;
+  border-radius: 4px;
+  margin: 0 2px;
+}
+
+.nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.nav-link.active {
+  background-color: rgba(255, 255, 255, 0.2);
+  font-weight: 600;
+}
+
+/* Badge Styles */
+.ant-badge {
+  font-size: 12px;
+}
+
+.ant-badge-count {
+  background-color: #ff4757;
+  border: 1px solid #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Mobile Navigation Improvements */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0.5rem 0.75rem;
   }
   
-  .icon.heartbeat {
-    animation: heartbeat 1.5s infinite !important; /* Ensure priority */
-    color: white !important; /* Ensure priority */
-    font-size: 15px !important; /* Ensure priority */
-    margin-right: 5px !important; /* Ensure priority */
+  .navbar-brand {
+    font-size: 1.1rem;
   }
+  
+  .nav-link {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+    margin: 0 1px;
+  }
+  
+  .dropdown-menu {
+    font-size: 0.85rem;
+    min-width: 140px;
+  }
+  
+   .dropdown-item {
+    padding: 0.6rem 1.2rem;
+    transition: background-color 0.2s ease;
+  }
+}
+
+/* Desktop Navigation */
+@media (min-width: 769px) {
+  .navbar {
+    padding: 0.75rem 1.5rem;
+  }
+  
+  .nav-link {
+    padding: 0.6rem 1rem;
+    font-size: 0.95rem;
+  }
+  
+  .dropdown-menu {
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: none;
+  }
+  
+  .dropdown-item {
+    padding: 0.6rem 1.2rem;
+    transition: background-color 0.2s ease;
+  }
+  
+  .dropdown-item:hover {
+    background-color: #f8f9fa;
+    color: #d32f2f;
+  }
+}
+
+/* Search Input Responsive Styles */
+.search-form {
+  width: 100%;
+  max-width: 500px;
+}
+
+.search-form .form-control {
+  border-radius: 25px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 0.6rem 1.2rem;
+  transition: all 0.3s ease;
+}
+
+.search-form .form-control:focus {
+  border-color: rgba(255, 255, 255, 0.5);
+  background-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.search-form .form-control::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.search-form .btn {
+  border-radius: 25px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 0.6rem 1.2rem;
+  transition: all 0.3s ease;
+}
+
+.search-form .btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+/* Logo Responsive Styles */
+.navbar-brand img {
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+@media (max-width: 480px) {
+  .navbar-brand img {
+    height: 40px !important;
+  }
+}
+
+/* User Dropdown Improvements */
+.dropdown-toggle::after {
+  margin-left: 0.5rem;
+  transition: transform 0.3s ease;
+}
+
+.dropdown-toggle[aria-expanded="true"]::after {
+  transform: rotate(180deg);
+}
+
+/* Animation for mobile nav items */
+@media (max-width: 768px) {
+  .navbar-nav {
+    animation: slideInRight 0.3s ease;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Professional hover effects */
+.nav-link:hover .anticon {
+  transform: scale(1.1);
+  transition: transform 0.2s ease;
+}
+
+/* Accessibility improvements */
+.nav-link:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
+}
+
+.dropdown-item:focus {
+  outline: 2px solid #d32f2f;
+  outline-offset: 2px;
+  background-color: #f8f9fa;
+}
+
+/* Loading state for badges */
+.badge-loading {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
   
