@@ -29,6 +29,7 @@ const CartPage = () => {
   const [networkError, setNetworkError] = useState(false); // Track network errors
   const [showStockPopup, setShowStockPopup] = useState(false); // State for stock popup visibility
   const [exceededProduct, setExceededProduct] = useState(null); // State for the product that exceeded stock
+  const [userOrderType, setUserOrderType] = useState(null); // Store user's order type
 
   const navigate = useNavigate();
 
@@ -74,12 +75,49 @@ const CartPage = () => {
     if (auth?.token && auth?.user?._id) {
       getCart();
       fetchMinimumOrder();
+      fetchUserOrderType();
       if (auth?.user?.pincode) {
         checkPincode(auth.user.pincode);
       }
       // getToken();
     }
   }, [auth?.token, auth?.user?._id]);
+
+  // Function to fetch user's order type
+  const fetchUserOrderType = async () => {
+    try {
+      const { data } = await axios.get(`/api/v1/usersLists/users/${auth.user._id}`);
+      if (data.status === 'success') {
+        setUserOrderType(data.user.order_type);
+        
+        // Set default payment method based on user's order type
+        if (data.user.order_type === 0 || data.user.order_type === 2) {
+          setPaymentMethod("COD");
+        } else if (data.user.order_type === 1) {
+          setPaymentMethod("Advance");
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user order type:', error);
+      setUserOrderType(0); // Default to COD
+    }
+  };
+
+  // Function to get available payment methods based on user's order type
+  const getAvailablePaymentMethods = () => {
+    if (userOrderType === null) return []; // Loading state
+    
+    // Handle both old and new order_type values
+    if (userOrderType === 0 || userOrderType === 2) {
+      // COD users can use COD and Razorpay
+      return ['COD', 'Razorpay'];
+    } else if (userOrderType === 1) {
+      // Advance users can use Advance and Razorpay
+      return ['Advance', 'Razorpay'];
+    }
+    
+    return ['COD']; // Default fallback
+  };
 
   const getCart = async () => {
     try {
@@ -732,13 +770,27 @@ const CartPage = () => {
               className="form-select"
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value)}
+              disabled={userOrderType === null}
             >
-              <option value="COD">COD</option>
-              <option value="Razorpay">Razorpay</option>
-              {advancePercentage > 0 && (
-                <option value="Advance">Advance Payment ({advancePercentage}%)</option>
+              {userOrderType === null ? (
+                <option value="">Loading...</option>
+              ) : (
+                getAvailablePaymentMethods().map((method) => (
+                  <option key={method} value={method}>
+                    {method === 'COD' ? 'Cash on Delivery (COD)' : 
+                     method === 'Razorpay' ? 'Online Payment (Razorpay)' : 
+                     method === 'Advance' ? `Advance Payment (${advancePercentage}%)` : method}
+                  </option>
+                ))
               )}
             </select>
+            {userOrderType !== null && (
+              <small className="form-text text-muted">
+                {userOrderType === 0 || userOrderType === 2 ? 
+                  'You are authorized for COD and online payments.' : 
+                  'You are authorized for advance payments only.'}
+              </small>
+            )}
           </div>
 
           <button

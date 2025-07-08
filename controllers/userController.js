@@ -61,6 +61,30 @@ export const getUsers = async (req, res) => {
     res.status(500).json({ status: 'error', message: error.message });
   }
 };
+// Get single user by ID
+export const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const user = await userModel
+      .findById(id)
+      .populate('products')
+      .populate('wishlist')
+      .populate('cart.product');
+
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+
+    res.json({ status: 'success', user });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+};
+
 // Update user information by ID
 export const updateUser = async (req, res) => {
   try {
@@ -185,13 +209,67 @@ export const updateOrderType = async (req, res) => {
   try {
     const { id } = req.params;
     const { order_type } = req.body;
-    const updatedUser = await userModel.findByIdAndUpdate(id, { order_type }, { new: true })
+    
+    // Convert string values to numeric enum values
+    let numericOrderType;
+    if (typeof order_type === 'string') {
+      switch (order_type.toLowerCase()) {
+        case 'cod':
+          numericOrderType = 0;
+          break;
+        case 'advance':
+          numericOrderType = 1;
+          break;
+        default:
+          return res.status(400).json({
+            status: 'error',
+            message: 'Invalid order_type. Must be "COD", "Advance", or numeric values 0, 1'
+          });
+      }
+    } else if (typeof order_type === 'number') {
+      // Validate numeric values
+      if (![0, 1].includes(order_type)) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Invalid order_type. Must be 0 (COD) or 1 (Advance)'
+        });
+      }
+      numericOrderType = order_type;
+    } else {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid order_type format. Must be string or number'
+      });
+    }
+    
+    const updatedUser = await userModel.findByIdAndUpdate(
+      id, 
+      { order_type: numericOrderType }, 
+      { new: true }
+    )
       .populate('products')
       .populate('wishlist')
       .populate('cart.product');
-    res.json({ status: 'success', user: updatedUser });
+      
+    if (!updatedUser) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    res.json({ 
+      status: 'success', 
+      message: 'User order type updated successfully',
+      user: updatedUser 
+    });
   } catch (error) {
-    res.status(500).json({ status: 'error', message: error.message });
+    console.error('Error updating user order type:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Error updating user order type',
+      error: error.message 
+    });
   }
 };
 // Get Wishlist for a User
