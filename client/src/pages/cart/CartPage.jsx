@@ -20,7 +20,7 @@ const CartPage = () => {
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("COD");
   const [minimumOrder, setMinimumOrder] = useState(0);
-  const [advance, setAdvcance] = useState(0);
+  const [advancePercentage, setAdvancePercentage] = useState(0);
   const [minimumOrderCurrency, setMinimumOrderCurrency] = useState("");
   const [orderPlacementInProgress, setOrderPlacementInProgress] = useState(false);
   const [orderErrorMessage, setOrderErrorMessage] = useState("");
@@ -99,7 +99,7 @@ const CartPage = () => {
       const { data } = await axios.get('/api/v1/minimumOrder/getMinimumOrder');
       if (data) {
         setMinimumOrder(data.amount);
-        setAdvcance(data.advance)
+        setAdvancePercentage(data.advancePercentage || 0);
         setMinimumOrderCurrency(data.currency === "rupees" ? "INR" : data.currency);
       }
     } catch (error) {
@@ -323,8 +323,9 @@ const CartPage = () => {
           amountPending = total;
           break;
         case "Advance":
-          amount = total * 0.1; // 10% of total
-          amountPending = total * 0.9; // 90% of total
+          const advanceAmount = (advancePercentage / 100) * total;
+          amount = advanceAmount;
+          amountPending = total - advanceAmount;
           break;
         default:
           amount = 0;
@@ -344,7 +345,7 @@ const CartPage = () => {
         amountPending
       };
   
-      if (paymentMethod === "COD" || paymentMethod === "Advance") {
+      if (paymentMethod === "COD") {
         // Configure timeout for the API request
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
@@ -396,7 +397,7 @@ const CartPage = () => {
         return;
       }
   
-      if (paymentMethod === "Razorpay") {
+      if (paymentMethod === "Razorpay" || paymentMethod === "Advance") {
         // Configure timeout for the API request
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
@@ -427,7 +428,7 @@ const CartPage = () => {
             amount: data.razorpayOrder.amount,
             currency: "INR",
             name: "Smitox",
-            description: "Order Payment",
+            description: paymentMethod === "Advance" ? "Advance Payment" : "Order Payment",
             order_id: data.razorpayOrder.id,
             handler: async function (response) {
               try {
@@ -678,6 +679,25 @@ const CartPage = () => {
                 currency: minimumOrderCurrency || "INR",
               })}
             </p>
+            
+            {advancePercentage > 0 && paymentMethod === "Advance" && (
+              <>
+                <p>
+                  Advance Amount ({advancePercentage}%):{" "}
+                  {((advancePercentage / 100) * totalPrice()).toLocaleString("en-US", {
+                    style: "currency",
+                    currency: minimumOrderCurrency || "INR",
+                  })}
+                </p>
+                <p>
+                  Remaining Amount:{" "}
+                  {(totalPrice() - (advancePercentage / 100) * totalPrice()).toLocaleString("en-US", {
+                    style: "currency",
+                    currency: minimumOrderCurrency || "INR",
+                  })}
+                </p>
+              </>
+            )}
 
             <p>
               Minimum Order:{" "}
@@ -701,7 +721,9 @@ const CartPage = () => {
           <ul>
   
             <li>Courier charge will be added (depends on weight and COD amount).</li>
-            <li>10% advance payment is required to confirm the order.</li>
+            {advancePercentage > 0 && (
+              <li>{advancePercentage}% advance payment is available to confirm the order.</li>
+            )}
           </ul>
         </p>}
         <div className="mb-3">
@@ -713,6 +735,9 @@ const CartPage = () => {
             >
               <option value="COD">COD</option>
               <option value="Razorpay">Razorpay</option>
+              {advancePercentage > 0 && (
+                <option value="Advance">Advance Payment ({advancePercentage}%)</option>
+              )}
             </select>
           </div>
 

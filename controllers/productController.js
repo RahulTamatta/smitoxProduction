@@ -1117,8 +1117,8 @@ export const processPaymentController = async (req, res) => {
 
     console.log(`[Payment] Processing payment for user: ${req.user._id} | Method: ${paymentMethod} | Amount: ${amount} | Pending: ${amountPending || 0}`);
 
-    // Handle COD and Advance orders immediately
-    if (paymentMethod === "COD" || paymentMethod === "Advance") {
+    // Handle COD orders immediately
+    if (paymentMethod === "COD") {
       console.log(`[Payment] Processing ${paymentMethod} order`);
       
       try {
