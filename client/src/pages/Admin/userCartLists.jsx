@@ -151,7 +151,7 @@ const UserList = () => {
       result = result.filter(user => user.status === statusValue);
     }
     if (activeOrderTypeFilter !== 'all') {
-      result = result.filter(user => getOrderType(user.order_type) === activeOrderTypeFilter.toLowerCase());
+      result = result.filter(user => getOrderType(user.order_type) === activeOrderTypeFilter);
     }
     if (activeRegularFilter !== 'all') {
       // Ensure we're comparing numbers
