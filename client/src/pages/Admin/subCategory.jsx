@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
 import axios from "axios";
-import Layout from "../../components/Layout/Layout";
-import AdminMenu from "../../components/Layout/AdminMenu";
-import { Button, Form, Card, Row, Col, ToggleButton, Modal } from "react-bootstrap";
+import { useEffect, useState } from "react";
+import { Button, Card, Col, Form, Modal, Row, ToggleButton } from "react-bootstrap";
 import toast from "react-hot-toast";
+import AdminMenu from "../../components/Layout/AdminMenu";
+import Layout from "../../components/Layout/Layout";
 
 const SubcategoryList = () => {
   const [subcategories, setSubcategories] = useState([]);
@@ -29,10 +29,10 @@ const SubcategoryList = () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', 'smitoxphoto');
-      formData.append('cloud_name', 'dvqh6a3gh');
+      formData.append('cloud_name', 'do3y11hpa');
 
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/dvqh6a3gh/image/upload`,
+        `https://api.cloudinary.com/v1_1/do3y11hpa/image/upload`,
         {
           method: 'POST',
           body: formData,

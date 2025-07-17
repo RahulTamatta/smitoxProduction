@@ -3,10 +3,10 @@ import mongoose from 'mongoose';
 
 // 1) Configure NEW Cloudinary account
 cloudinary.config({
-  cloud_name: 'dvqh6a3gh', 
+  cloud_name: 'do3y11hpa', 
   // Old account cloud name
-  api_key:  '119598853346493',    // Old account API key
-  api_secret: 'WR6abBlUvmedVLOiybbuUneX12k'    // ← new account API secret
+  api_key:  '231928166969927',    // Old account API key
+   api_secret: '-dSBIq0hEP8QNQsVJbxKqhy0Nww'    // ← new account API secret
 });
 
 // cloud_name: 'drz6y0abq', // Old account cloud name

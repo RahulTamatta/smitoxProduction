@@ -1,14 +1,12 @@
-import React, { useEffect, useState } from "react";
-import Layout from "./../../components/Layout/Layout";
-import AdminMenu from "./../../components/Layout/AdminMenu";
-import toast from "react-hot-toast";
-import axios from "axios";
-import CategoryForm from "../../components/Form/CategoryForm";
 import { Modal } from "antd";
+import axios from "axios";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import AdminMenu from "./../../components/Layout/AdminMenu";
+import Layout from "./../../components/Layout/Layout";
 
 
 import { Select } from "antd";
-import { useNavigate } from "react-router-dom";
 
 const { Option } = Select;
 
@@ -28,10 +26,10 @@ const CreateCategory = () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', 'smitoxphoto');
-      formData.append('cloud_name', 'dvqh6a3gh');
+      formData.append('cloud_name', 'do3y11hpa');
 
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/dvqh6a3gh/image/upload`,
+        `https://api.cloudinary.com/v1_1/do3y11hpa/image/upload`,
         {
           method: 'POST',
           body: formData,

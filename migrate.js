@@ -1,12 +1,12 @@
-import mongoose from 'mongoose';
 import { v2 as cloudinary } from 'cloudinary';
+import mongoose from 'mongoose';
 
 // Configure OLD Cloudinary account
 cloudinary.config({
-  cloud_name: 'dvqh6a3gh', 
+  cloud_name: 'do3y11hpa', 
   // Old account cloud name
-  api_key:  '119598853346493',    // Old account API key
-  api_secret: 'WR6abBlUvmedVLOiybbuUneX12k' // Old account API secret
+  api_key:  '231928166969927',    // Old account API key
+  api_secret: '-dSBIq0hEP8QNQsVJbxKqhy0Nww' // Old account API secret
 });
 
 // MongoDB connection
