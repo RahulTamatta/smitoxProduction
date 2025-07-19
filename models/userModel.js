@@ -148,7 +148,7 @@ const userSchema = new mongoose.Schema(
     },
     status: {
       type: Number,
-      enum: [0, 1, 2], // 0 = Pending, 1 = Active, 2 = Blocked
+      enum: [0, 1], // 0 = Pending, 1 = Approved
       default: 0,
     },
     flag: {
@@ -176,7 +176,7 @@ const userSchema = new mongoose.Schema(
     },
     order_type: {
       type: Number,
-      enum: [0, 1], // 0 = COD, 1 = Advance
+      enum: [0, 1, 2], // 0 = COD, 1 = Prepared, 2 = Advance
       default: 0,
     },
     return_status: {
@@ -251,11 +251,6 @@ const userSchema = new mongoose.Schema(
     ],
     role: {
       type: Number,
-      default: 0,
-    },
-    regular: {
-      type: Number,
-      enum: [0, 1, 2], // 0 = Non-regular, 1 = Regular, 2 = VIP
       default: 0,
     },
   },

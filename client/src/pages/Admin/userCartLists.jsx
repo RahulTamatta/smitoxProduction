@@ -141,14 +141,7 @@ const UserList = () => {
     let result = usersList;
 
     if (activeStatusFilter !== 'all') {
-      // Map filter values to the correct enum values
-      const statusMap = {
-        'pending': 0,
-        'active': 1,
-        'blocked': 2
-      };
-      const statusValue = statusMap[activeStatusFilter];
-      result = result.filter(user => user.status === statusValue);
+      result = result.filter(user => user.status === activeStatusFilter);
     }
     if (activeOrderTypeFilter !== 'all') {
       result = result.filter(user => getOrderType(user.order_type) === activeOrderTypeFilter);
@@ -300,8 +293,7 @@ const UserList = () => {
 
   const toggleStatus = async (id, currentStatus) => {
     try {
-      // Toggle between Active (1) and Blocked (2)
-      const newStatus = currentStatus === 1 ? 2 : 1;
+      const newStatus = currentStatus === 1 ? 0 : 1;
       await axios.put(`/api/v1/usersLists/users/${id}/status`, { status: newStatus });
       fetchUsers();
     } catch (error) {
@@ -369,23 +361,8 @@ const UserList = () => {
   };
 
   const getOrderType = (orderType) => {
-    // Handle numeric values from backend
-    if (typeof orderType === 'number') {
-      switch (orderType) {
-        case 0: return 'cod';
-        case 1: return 'advance';
-        case 2: return 'advance'; // Handle old value for backward compatibility
-        default: return 'cod'; // Default to COD
-      }
-    }
-    
-    // Handle string values
-    if (typeof orderType === 'string') {
-      return orderType.toLowerCase();
-    }
-    
-    // Default to COD if orderType is undefined or null
-    return 'cod';
+    if (!orderType || orderType === "0") return "";
+    return orderType.toLowerCase();
   };
 
   const redirectToWhatsApp = (phoneNumber) => {

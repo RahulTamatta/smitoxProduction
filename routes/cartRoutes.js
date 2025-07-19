@@ -1,7 +1,6 @@
 import express from 'express';
 import { 
   getUsers, 
-  getUserById,
   updateUser, 
   toggleUserStatus, 
   toggleLiveProduct, 
@@ -23,7 +22,6 @@ const router = express.Router();
 
 // Existing routes
 router.get('/users', getUsers);
-router.get('/users/:id', getUserById);
 router.put('/users/:id', updateUser);
 router.put('/users/:id/status', toggleUserStatus);
 router.put('/users/:id/regular', updateUserRegular);
