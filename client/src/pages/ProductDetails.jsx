@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useRef } from "react";
 import Layout from "./../components/Layout/Layout";
 import axios from "axios";
@@ -10,6 +12,34 @@ import toast from "react-hot-toast";
 import ProductCard from "./ProductCard";
 import OptimizedImage from "../components/OptimizedImage";
 import StockPopup from "./cart/StockPopup"; // Import the StockPopup component
+
+function normalizeProductForCard(product) {
+  // Helper to check if a value is a valid non-empty image URL
+  const isValidImage = (val) =>
+    typeof val === "string" && val.trim() !== "" && val !== "/placeholder-image.jpg";
+
+  let photo = product?.photos;
+  if (!isValidImage(photo)) {
+    let images = product?.multipleimages;
+    if (typeof images === "string") {
+      try {
+        images = JSON.parse(images);
+      } catch {
+        images = [];
+      }
+    }
+    if (Array.isArray(images)) {
+      images = images.filter(isValidImage);
+      if (images.length > 0) {
+        photo = images[0];
+      }
+    }
+    if (!isValidImage(photo)) {
+      photo = "/placeholder-image.jpg";
+    }
+  }
+  return { ...product, photos: photo };
+}
 
 const ProductDetails = () => {
   const params = useParams();
@@ -192,7 +222,12 @@ const ProductDetails = () => {
         `/api/v1/productForYou/products/${product.category?._id}/${product.subcategory?._id}`
       );
       if (data?.success) {
-        setProductsForYou(data.products || []);
+        setProductsForYou(
+          (data.products || []).map(item => ({
+            ...item,
+            productId: normalizeProductForCard(item.productId)
+          }))
+        );
       }
     } catch (error) {
       // Error handling is already commented out
@@ -985,100 +1020,25 @@ const ProductDetails = () => {
               key={item.productId?._id}
               className={isMobile ? "col-6 mb-2" : "col-lg-4 col-md-4 col-sm-6 mb-3"}
             >
-              <div className="card product-card h-100" style={responsiveCardStyle}>
-                <div
-                  style={{ cursor: "pointer" }}
-                  onClick={() => {
-                    // Force a complete reset of product state before navigation
-                    setSelectedImage(0);
-                    setShowImageZoom(false);
-                    setShowYoutubePopup(false);
-                    setDisplayQuantity(0);
-                    setShowQuantitySelector(false);
-                    setSelectedBulk(null);
-                    setTotalPrice(0);
-                    setIsInWishlist(false);
-                    setUnitSet(1);
-                    setQuantity(1);
-                    setProduct({});
-                    
-                    // Update the current slug reference before navigation
-                    prevSlugRef.current = item.productId.slug;
-                    
-                    // Navigate to the new product
-                    navigate(`/product/${item.productId.slug}`);
-                  }}
-                >
-                  {/* Image container with fixed aspect ratio */}
-                  <div style={{ 
-                    position: "relative",
-                    paddingTop: "75%", // 4:3 aspect ratio
-                    width: "100%",
-                    overflow: "hidden"
-                  }}>
-                    <OptimizedImage
-                      src={item.productId.photos || '/placeholder-image.jpg'}
-                      alt={item.productId.name}
-                      className="card-img-top product-image"
-                      width={isMobile ? 150 : 200}
-                      height={isMobile ? 150 : 200}
-                      objectFit="contain"
-                      backgroundColor="#ffffff"
-                      quality={isMobile ? 70 : 75}
-                      loading="lazy"
-                      style={{
-                        position: "absolute",
-                        top: "0",
-                        left: "0",
-                        width: "100%",
-                        height: "100%",
-                        padding: isMobile ? "5px" : "8px",
-                      }}
-                    />
-                  </div>
-                  
-                  <div className="p-2 d-flex flex-column h-100">
-                    {/* Product Name with ellipsis */}
-                    <div style={{
-                      fontSize: isMobile ? "0.8rem" : "0.9rem",
-                      fontWeight: "600",
-                      color: "#333",
-                      marginBottom: isMobile ? "6px" : "10px",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      lineHeight: "1.4",
-                      height: isMobile ? "2.4em" : "2.8em"
-                    }}>
-                      {item.productId.name}
-                    </div>
-                    
-                    {/* Price Section */}
-                    <div className="d-flex flex-column h-100">
-                      <h5 style={{
-                        fontSize: isMobile ? "0.9rem" : "1rem",
-                        fontWeight: "700",
-                        color: "#333",
-                        margin: 0
-                      }}>
-                        ₹{item.productId.perPiecePrice}
-                      </h5>
-                      {item.productId.mrp && (
-                        <h6 style={{
-                          fontSize: isMobile ? "0.7rem" : "0.8rem",
-                          textDecoration: "line-through",
-                          color: "red",
-                          margin: "2px 0 0 0"
-                        }}>
-                          ₹{item.productId.mrp}
-                        </h6>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <ProductCard
+                product={normalizeProductForCard(item.productId)}
+                onClick={() => {
+                  setSelectedImage(0);
+                  setShowImageZoom(false);
+                  setShowYoutubePopup(false);
+                  setDisplayQuantity(0);
+                  setShowQuantitySelector(false);
+                  setSelectedBulk(null);
+                  setTotalPrice(0);
+                  setIsInWishlist(false);
+                  setUnitSet(1);
+                  setQuantity(1);
+                  setProduct({});
+                  setProductsForYou([]); // Clear to prevent stale/blank cards
+                  prevSlugRef.current = item.productId.slug;
+                  navigate(`/product/${item.productId.slug}`);
+                }}
+              />
             </div>
           ))}
         </div>

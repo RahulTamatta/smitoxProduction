@@ -733,9 +733,16 @@ const CartPage = () => {
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value)}
             >
-              <option value="COD">COD</option>
+              {/* Always show Razorpay */}
               <option value="Razorpay">Razorpay</option>
-              {advancePercentage > 0 && (
+              
+              {/* Show COD only for order_type 0 (COD users) or undefined/null order_type */}
+              {(!auth?.user?.order_type || auth?.user?.order_type === 0) && (
+                <option value="COD">COD</option>
+              )}
+              
+              {/* Show Advance only for order_type 2 (Advance users) and when advance percentage is available */}
+              {auth?.user?.order_type === 2 && advancePercentage > 0 && (
                 <option value="Advance">Advance Payment ({advancePercentage}%)</option>
               )}
             </select>

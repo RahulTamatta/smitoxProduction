@@ -139,21 +139,21 @@ const HomePage = () => {
   const loadMore = async () => {
     try {
       if (loading) return; // Prevent multiple simultaneous calls
-      
+
       setLoading(true);
       const nextPage = page + 1;
-      
+
       const { data } = await axios.get(`/api/v1/product/product-list/${nextPage}`, {
         params: { limit: 12 } // Ensure consistent page size
       });
-      
+
       if (data.products.length === 0) {
         setHasMore(false);
       } else {
         setProducts([...products, ...data.products]);
         setPage(nextPage); // Update page after successful data fetch
       }
-      
+
       setLoading(false);
     } catch (error) {
       console.log(error);
@@ -206,10 +206,10 @@ const HomePage = () => {
   const handleBannerClick = (banner) => {
     if (banner.categoryId) {
       navigate(`/category/${banner.subcategoryId._id}`, {
-        state: { 
+        state: {
           selectedSubcategory: banner.subcategoryId._id || null,
           fromBanner: true,
-          bannerName:banner._id,
+          bannerName: banner._id,
           slug: banner.subcategoryId,
         }
       });
@@ -251,114 +251,114 @@ const HomePage = () => {
 
   const [currentSlide, setCurrentSlide] = useState(0);
 
-const bannerSettings = {
-  dots: true,
-  infinite: true,
-  speed: 500,
-  slidesToShow: 1,
-  slidesToScroll: 1,
-  autoplay: true,
-  autoplaySpeed: 2000,
-  beforeChange: (_, next) => setCurrentSlide(next),
-  nextArrow: (
-    <button
-      type="button"
-      style={{
-        position: 'absolute',
-        right: '30px', // Adjusted to account for container padding
-        top: '50%',
-        transform: 'translateY(-50%)',
-        width: '40px',
-        height: '40px',
-        backgroundColor: '#f0f0f0',
-        borderRadius: '50%',
-        border: '1px solid #e0e0e0',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        cursor: 'pointer',
-        zIndex: 2, // Increased z-index
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#666',
-        transition: 'all 0.3s ease'
-      }}
-    >
-      <span style={{ fontSize: '24px', fontWeight: 'bold' }}>&rsaquo;</span>
-    </button>
-  ),
-  prevArrow: (
-    <button
-      type="button"
-      style={{
-        position: 'absolute',
-        left: '30px', // Adjusted to account for container padding
-        top: '50%',
-        transform: 'translateY(-50%)',
-        width: '40px',
-        height: '40px',
-        backgroundColor: '#f0f0f0',
-        borderRadius: '50%',
-        border: '1px solid #e0e0e0',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        cursor: 'pointer',
-        zIndex: 2, // Increased z-index
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#666',
-        transition: 'all 0.3s ease'
-      }}
-    >
-      <span style={{ fontSize: '24px', fontWeight: 'bold' }}>&lsaquo;</span>
-    </button>
-  ),
-  appendDots: dots => (
-    <div
-      style={{
-        position: 'absolute',
-        bottom: '10px',
-        width: '100%',
-        display: 'flex',
-        justifyContent: 'center',
-        gap: '5px',
-        zIndex: 2 // Increased z-index
-      }}
-    >
-      {dots}
-    </div>
-  ),
-  customPaging: i => (
-    <div
-      style={{
-        width: '8px',
-        height: '8px',
-        backgroundColor: currentSlide === i ? 'red' : 'rgba(255,0,0,0.5)', // Active dot: solid red, Inactive dots: transparent red
-        borderRadius: '50%',
-        transition: 'all 0.3s ease',
-      }}
-    />
-  )
-  
-};
-const handleProductClick = (product) => {
-  // Save current scroll position before navigating
-  sessionStorage.setItem(`scrollPosition_${location.pathname}`, window.scrollY.toString());
-  navigate(`/product/${product.slug}`);
-};
-useEffect(() => {
-  // Restore scroll position on component mount
-  const savedScrollPosition = sessionStorage.getItem(`scrollPosition_${location.pathname}`);
-  if (savedScrollPosition) {
-    window.scrollTo(0, parseInt(savedScrollPosition, 10));
-    sessionStorage.removeItem(`scrollPosition_${location.pathname}`);
-  }
+  const bannerSettings = {
+    dots: true,
+    infinite: true,
+    speed: 500,
+    slidesToShow: 1,
+    slidesToScroll: 1,
+    autoplay: true,
+    autoplaySpeed: 2000,
+    beforeChange: (_, next) => setCurrentSlide(next),
+    nextArrow: (
+      <button
+        type="button"
+        style={{
+          position: 'absolute',
+          right: '30px', // Adjusted to account for container padding
+          top: '50%',
+          transform: 'translateY(-50%)',
+          width: '40px',
+          height: '40px',
+          backgroundColor: '#f0f0f0',
+          borderRadius: '50%',
+          border: '1px solid #e0e0e0',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          cursor: 'pointer',
+          zIndex: 2, // Increased z-index
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#666',
+          transition: 'all 0.3s ease'
+        }}
+      >
+        <span style={{ fontSize: '24px', fontWeight: 'bold' }}>&rsaquo;</span>
+      </button>
+    ),
+    prevArrow: (
+      <button
+        type="button"
+        style={{
+          position: 'absolute',
+          left: '30px', // Adjusted to account for container padding
+          top: '50%',
+          transform: 'translateY(-50%)',
+          width: '40px',
+          height: '40px',
+          backgroundColor: '#f0f0f0',
+          borderRadius: '50%',
+          border: '1px solid #e0e0e0',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          cursor: 'pointer',
+          zIndex: 2, // Increased z-index
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#666',
+          transition: 'all 0.3s ease'
+        }}
+      >
+        <span style={{ fontSize: '24px', fontWeight: 'bold' }}>&lsaquo;</span>
+      </button>
+    ),
+    appendDots: dots => (
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '10px',
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+          gap: '5px',
+          zIndex: 2 // Increased z-index
+        }}
+      >
+        {dots}
+      </div>
+    ),
+    customPaging: i => (
+      <div
+        style={{
+          width: '8px',
+          height: '8px',
+          backgroundColor: currentSlide === i ? 'red' : 'rgba(255,0,0,0.5)', // Active dot: solid red, Inactive dots: transparent red
+          borderRadius: '50%',
+          transition: 'all 0.3s ease',
+        }}
+      />
+    )
 
-  // Save scroll position on component unmount
-  return () => {
-    sessionStorage.setItem(`scrollPosition_${location.pathname}`, window.scrollY);
   };
-}, [location.pathname]);
-  
+  const handleProductClick = (product) => {
+    // Save current scroll position before navigating
+    sessionStorage.setItem(`scrollPosition_${location.pathname}`, window.scrollY.toString());
+    navigate(`/product/${product.slug}`);
+  };
+  useEffect(() => {
+    // Restore scroll position on component mount
+    const savedScrollPosition = sessionStorage.getItem(`scrollPosition_${location.pathname}`);
+    if (savedScrollPosition) {
+      window.scrollTo(0, parseInt(savedScrollPosition, 10));
+      sessionStorage.removeItem(`scrollPosition_${location.pathname}`);
+    }
+
+    // Save scroll position on component unmount
+    return () => {
+      sessionStorage.setItem(`scrollPosition_${location.pathname}`, window.scrollY);
+    };
+  }, [location.pathname]);
+
   if (isBlocked) {
     return (
       <Layout title="Account Blocked">
@@ -371,10 +371,10 @@ useEffect(() => {
   }
 
   return (
-    
+
     <Layout title={"All Products - Best offers"}>
       {/* Mobile Search */}
-    
+
       {/* {isMobile && (
         <div 
           className="searchInput" 
@@ -390,70 +390,70 @@ useEffect(() => {
           <SearchInput />
         </div>
       )} */}
-  
+
       {/* Banner Section */}
-    {/* Banner Section */}
-<div
-  className="banner-container"
-  style={{
-    height: 'auto', // Remove fixed height
-    overflow: 'hidden',
-    margin: isMobile ? '10px' : '20px',
-    borderRadius: '15px',
-    position: 'relative',
-  }}
->
-  <Slider {...{
-    ...bannerSettings,
-    // Update banner settings for better responsiveness
-    responsive: [
-      {
-        breakpoint: 768, // Mobile breakpoint
-        settings: {
-          arrows: false, // Hide arrows on mobile
-          dots: true,
-          autoplay: true,
-          autoplaySpeed: 3000,
-        }
-      }
-    ]
-  }}>
-    {banners.map((banner) => (
-      <div key={banner._id} onClick={() => handleBannerClick(banner)}>
-        <div style={{
+      {/* Banner Section */}
+      <div
+        className="banner-container"
+        style={{
+          height: 'auto', // Remove fixed height
+          overflow: 'hidden',
+          margin: isMobile ? '10px' : '20px',
+          borderRadius: '15px',
           position: 'relative',
-          paddingTop: isMobile ? '56.25%' : '35%', // 16:9 aspect ratio for mobile, wider for desktop
-          width: '100%',
+        }}
+      >
+        <Slider {...{
+          ...bannerSettings,
+          // Update banner settings for better responsiveness
+          responsive: [
+            {
+              breakpoint: 768, // Mobile breakpoint
+              settings: {
+                arrows: false, // Hide arrows on mobile
+                dots: true,
+                autoplay: true,
+                autoplaySpeed: 3000,
+              }
+            }
+          ]
         }}>
-          <img
-            src={banner.photos}
-            alt={banner.bannerName}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'fill',
-              borderRadius: '15px',
-            }}
-          />
-        </div>
+          {banners.map((banner) => (
+            <div key={banner._id} onClick={() => handleBannerClick(banner)}>
+              <div style={{
+                position: 'relative',
+                paddingTop: isMobile ? '56.25%' : '35%', // 16:9 aspect ratio for mobile, wider for desktop
+                width: '100%',
+              }}>
+                <img
+                  src={banner.photos}
+                  alt={banner.bannerName}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'fill',
+                    borderRadius: '15px',
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </Slider>
       </div>
-    ))}
-  </Slider>
-</div>
-  
+
       {/* Categories Section */}
       <div style={{ padding: '20px 0', marginTop: '20px' }}>
-        <h2 style={{ 
-          textAlign: 'center', 
+        <h2 style={{
+          textAlign: 'center',
           marginBottom: '20px',
           fontSize: isMobile ? '1.5rem' : '2rem'
         }}>
           Shop by Category
         </h2>
-        <div style={{ 
+        <div style={{
           overflowX: 'auto',
           WebkitOverflowScrolling: 'touch',
           padding: '0 10px'
@@ -465,7 +465,7 @@ useEffect(() => {
             minWidth: 'fit-content'
           }}>
             {categories.map((c) => (
-              <div 
+              <div
                 key={c._id}
                 onClick={() => navigate(`/category/${c.slug}`)}
                 style={{
@@ -509,39 +509,38 @@ useEffect(() => {
           </div>
         </div>
       </div>
-  
+
       {/* All Products Section */}
       <div className="container mt-4">
         <h2 className="text-center mb-4" style={{ fontSize: isMobile ? '1.5rem' : '2rem' }}>
           Trending Products
         </h2>
-        <div className="row g-3">
-          {products.map((p) => (
-            <div 
-              key={p._id} 
-              className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3" // Change col-lg-3 to col-lg-4
-      
-              style={{ padding: '8px' }}
-            >
-            <ProductCard 
-  product={p}
-  photoUrl={p.photoUrl}
-/>
-            </div>
-          ))}
-        </div>
-        
+        <div className="row g-1">
+  {products.map((p) => (
+    <div
+      key={p._id}
+      className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3"
+      style={{ padding: '2px' }} // Minimal padding
+    >
+      <ProductCard
+        product={p}
+        photoUrl={p.photoUrl}
+      />
+    </div>
+  ))}
+</div>
+
         {/* Pagination and Load More */}
         <div className="text-center mt-4 mb-5">
           {/* Pagination indicator */}
           {products.length > 0 && (
             <div className="mb-3">
               <span className="text-muted">
-                Page {page} of {Math.ceil(total/12)} • Showing {products.length} of {total} products
+                Page {page} of {Math.ceil(total / 12)} • Showing {products.length} of {total} products
               </span>
             </div>
           )}
-          
+
           {hasMore && products.length < total && (
             <button
               className="btn btn-primary"
@@ -567,13 +566,13 @@ useEffect(() => {
               )}
             </button>
           )}
-          
+
           {!hasMore && products.length > 0 && (
             <p className="text-muted">No more products to show</p>
           )}
         </div>
       </div>
-  
+
       {/* Products For You Section */}
       {productsForYou.length > 0 && (
         <div className="container mt-5">
@@ -582,12 +581,12 @@ useEffect(() => {
           </h2>
           <div className="row g-3">
             {productsForYou.map((item, index) => (
-              <div 
-                key={item.productId?._id || index} 
+              <div
+                key={item.productId?._id || index}
                 className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-2"
                 style={{ padding: '8px' }}
               >
-                <ProductCard 
+                <ProductCard
                   product={item.productId}
                   photoUrl={item.productId?.photoUrl}
                   style={{
@@ -600,9 +599,9 @@ useEffect(() => {
           </div>
         </div>
       )}
-  
+
       <Suspense fallback={null}>
-        <WhatsAppButton 
+        <WhatsAppButton
           style={{
             position: 'fixed',
             bottom: isMobile ? '70px' : '30px',
@@ -611,8 +610,9 @@ useEffect(() => {
           }}
         />
       </Suspense>
-   
+
     </Layout>
-  );}
+  );
+}
 
 export default HomePage;

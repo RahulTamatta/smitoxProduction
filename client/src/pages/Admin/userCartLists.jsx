@@ -362,7 +362,30 @@ const UserList = () => {
 
   const getOrderType = (orderType) => {
     if (!orderType || orderType === "0") return "";
-    return orderType.toLowerCase();
+    if (typeof orderType === "string") return orderType.toLowerCase();
+    if (typeof orderType === "number") return String(orderType);
+    return "";
+  };
+
+  // Map numeric order_type to display labels
+  const getOrderTypeLabel = (orderType) => {
+    const numericType = typeof orderType === 'string' ? parseInt(orderType) : orderType;
+    switch (numericType) {
+      case 0: return 'COD';
+      case 1: return 'Prepared';
+      case 2: return 'Advance';
+      default: return 'COD';
+    }
+  };
+
+  // Map label to numeric value
+  const getOrderTypeValue = (label) => {
+    switch (label.toLowerCase()) {
+      case 'cod': return 0;
+      case 'prepared': return 1;
+      case 'advance': return 2;
+      default: return 0;
+    }
   };
 
   const redirectToWhatsApp = (phoneNumber) => {
@@ -691,8 +714,8 @@ const UserList = () => {
                               type="radio"
                               name={`orderType-${user._id}`}
                               value={type}
-                              checked={getOrderType(user.order_type) === type.toLowerCase()}
-                              onChange={() => !isLoading && updateOrderType(user._id, type)}
+                              checked={getOrderTypeLabel(user.order_type) === type}
+                              onChange={() => !isLoading && updateOrderType(user._id, getOrderTypeValue(type))}
                               style={{ marginRight: '0.25rem' }}
                               disabled={isLoading}
                             />
