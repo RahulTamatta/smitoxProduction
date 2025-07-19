@@ -1,11 +1,11 @@
-import { Select } from "antd";
-import axios from "axios";
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import Layout from "./../../components/Layout/Layout";
+import AdminMenu from "./../../components/Layout/AdminMenu";
 import toast from "react-hot-toast";
+import axios from "axios";
+import { Select } from "antd";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/auth"; // <-- Add this import
-import AdminMenu from "./../../components/Layout/AdminMenu";
-import Layout from "./../../components/Layout/Layout";
 
 const { Option } = Select;
 
@@ -175,10 +175,10 @@ const CreateProduct = () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', 'smitoxphoto');
-      formData.append('cloud_name', 'do3y11hpa');
+      formData.append('cloud_name', 'dvqh6a3gh');
   
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/do3y11hpa/image/upload`,
+        `https://api.cloudinary.com/v1_1/dvqh6a3gh/image/upload`,
         {
           method: 'POST',
           body: formData,

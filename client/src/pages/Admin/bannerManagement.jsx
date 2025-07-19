@@ -1,7 +1,8 @@
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Pencil, PlusCircle, Trash } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { Alert, Button, Form, Modal, Spinner, Table } from 'react-bootstrap';
+import { Modal, Button, Form, Table, Spinner, Alert } from 'react-bootstrap';
+import { PlusCircle, Pencil, Trash } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 const BannerManagement = () => {
   const [banners, setBanners] = useState([]);
@@ -94,10 +95,10 @@ const BannerManagement = () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', 'smitoxphoto'); // Use your upload preset
-      formData.append('cloud_name', 'do3y11hpa'); // Use your cloud name
+      formData.append('cloud_name', 'dvqh6a3gh'); // Use your cloud name
 
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/do3y11hpa/image/upload`,
+        `https://api.cloudinary.com/v1_1/dvqh6a3gh/image/upload`,
         {
           method: 'POST',
           body: formData,

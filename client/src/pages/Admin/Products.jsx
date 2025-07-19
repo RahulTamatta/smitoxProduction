@@ -1,8 +1,11 @@
-import axios from "axios";
-import { useEffect, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
 import AdminMenu from "../../components/Layout/AdminMenu";
 import Layout from "./../../components/Layout/Layout";
+import axios from "axios";
+import toast from "react-hot-toast";
+import { Link } from "react-router-dom";
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Edit, Trash2, MessageCircle } from "lucide-react";
 
 const Products = () => {
   const navigate = useNavigate();
@@ -210,7 +213,7 @@ const Products = () => {
     <Layout>
       <div style={{ 
         display: 'flex', 
-        flexDirection: 'row', 
+        flexDirection: 'column', 
         minHeight: '100vh',
         padding: isMobile ? '8px' : '16px' 
       }}>
