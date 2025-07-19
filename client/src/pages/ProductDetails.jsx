@@ -193,8 +193,29 @@ const ProductDetails = () => {
 
       if (data.success === true) {
         console.log('[Product] Product fetched successfully');
-        setProduct(data.product);
-        setUnitSet(data?.product?.unitSet || 1);
+        
+        // Parse multipleimages if it's a JSON string
+        let processedProduct = { ...data.product };
+        if (processedProduct.multipleimages && typeof processedProduct.multipleimages === 'string') {
+          try {
+            processedProduct.multipleimages = JSON.parse(processedProduct.multipleimages);
+          } catch (error) {
+            console.warn('Failed to parse multipleimages:', error);
+            processedProduct.multipleimages = [];
+          }
+        }
+        
+        // Ensure multipleimages is an array and filter out invalid URLs
+        if (Array.isArray(processedProduct.multipleimages)) {
+          processedProduct.multipleimages = processedProduct.multipleimages.filter(img => 
+            typeof img === 'string' && img.trim() !== '' && img !== '/placeholder-image.jpg'
+          );
+        } else {
+          processedProduct.multipleimages = [];
+        }
+        
+        setProduct(processedProduct);
+        setUnitSet(processedProduct?.unitSet || 1);
         setRetryAttempts(0); // Reset retry counter on success
       }
     } catch (error) {
@@ -721,7 +742,7 @@ const ProductDetails = () => {
             </div>
             
             {/* Thumbnail gallery */}
-            {(product.multipleimages && product.multipleimages.length > 1) && (
+            {(product.multipleimages && product.multipleimages.length > 0) && (
               <div style={{
                 display: "flex",
                 flexWrap: "wrap",
@@ -1162,7 +1183,7 @@ const ProductDetails = () => {
           </div>
           
           {/* Thumbnail navigation in zoom view if there are multiple images */}
-          {(product.multipleimages && product.multipleimages.length > 1) && (
+          {(product.multipleimages && product.multipleimages.length > 0) && (
             <div style={{
               display: "flex",
               overflowX: "auto",
