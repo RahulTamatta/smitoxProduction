@@ -69,6 +69,7 @@ const ProductDetails = () => {
   const [selectedImage, setSelectedImage] = useState(0); // Track the selected image index
   const [showYoutubePopup, setShowYoutubePopup] = useState(false); // Controls YouTube popup
   const [showImageZoom, setShowImageZoom] = useState(false); // Controls image zoom popup
+  const [loadedImages, setLoadedImages] = useState(new Set()); // Track which images have loaded successfully
   const MAX_RETRIES = 3;
 
   // Debounce addToCart function
@@ -115,6 +116,7 @@ const ProductDetails = () => {
       setSelectedImage(0); // Reset selected image to main image
       setShowImageZoom(false); // Close image zoom if open
       setShowYoutubePopup(false); // Close YouTube popup if open
+      setLoadedImages(new Set()); // Reset loaded images tracking
       
       // Update the ref to current slug
       prevSlugRef.current = params?.slug;
@@ -207,13 +209,27 @@ const ProductDetails = () => {
         
         // Ensure multipleimages is an array and filter out invalid URLs
         if (Array.isArray(processedProduct.multipleimages)) {
-          processedProduct.multipleimages = processedProduct.multipleimages.filter(img => 
-            typeof img === 'string' && img.trim() !== '' && img !== '/placeholder-image.jpg'
-          );
+          processedProduct.multipleimages = processedProduct.multipleimages.filter(img => {
+            if (typeof img !== 'string' || !img.trim()) return false;
+            if (img === '/placeholder-image.jpg') return false;
+            // Filter out string representations of null/undefined
+            if (img === 'null' || img === 'undefined' || img === '[null]' || img === '[undefined]') return false;
+            // Filter out empty arrays or objects as strings
+            if (img === '[]' || img === '{}' || img === 'null' || img === 'false') return false;
+            // Check if it's a valid URL format
+            try {
+              const url = new URL(img);
+              return url.protocol === 'http:' || url.protocol === 'https:';
+            } catch {
+              // If not a full URL, check if it's a valid relative path
+              return img.startsWith('/') && img !== '/' && img.length > 1 || img.includes('cloudinary.com') || img.includes('res.cloudinary.com');
+            }
+          });
         } else {
           processedProduct.multipleimages = [];
         }
         
+        console.log('[Product] Processed multipleimages:', processedProduct.multipleimages);
         setProduct(processedProduct);
         setUnitSet(processedProduct?.unitSet || 1);
         setRetryAttempts(0); // Reset retry counter on success
@@ -723,7 +739,7 @@ const ProductDetails = () => {
               </div>
               <OptimizedImage
                 src={selectedImage === 0 ? product.photos : 
-                      (product.multipleimages && product.multipleimages.length > 0) ? 
+                      (product.multipleimages && Array.isArray(product.multipleimages) && product.multipleimages.length > 0 && selectedImage <= product.multipleimages.length) ? 
                       product.multipleimages[selectedImage - 1] : product.photos}
                 alt={product.name}
                 style={{ 
@@ -742,7 +758,7 @@ const ProductDetails = () => {
             </div>
             
             {/* Thumbnail gallery */}
-            {(product.multipleimages && product.multipleimages.length > 0) && (
+            {(product.multipleimages && Array.isArray(product.multipleimages) && product.multipleimages.length > 0) && (
               <div style={{
                 display: "flex",
                 flexWrap: "wrap",
@@ -771,32 +787,60 @@ const ProductDetails = () => {
                     quality={60}
                   />
                 </div>
-                
                 {/* Additional images thumbnails */}
-                {product.multipleimages.map((imgUrl, index) => (
-                  <div 
-                    key={index}
-                    onClick={() => setSelectedImage(index + 1)}
-                    style={{
-                      width: isMobile ? "60px" : "80px",
-                      height: isMobile ? "60px" : "80px",
-                      border: selectedImage === index + 1 ? "2px solid #ffa41c" : "1px solid #ddd",
-                      borderRadius: "4px",
-                      overflow: "hidden",
-                      cursor: "pointer"
-                    }}
-                  >
-                    <OptimizedImage
-                      src={imgUrl}
-                      alt={`${product.name} - ${index + 1}`}
-                      style={{ width: "100%", height: "100%" }}
-                      width={isMobile ? 60 : 80}
-                      height={isMobile ? 60 : 80}
-                      objectFit="cover"
-                      quality={60}
-                    />
-                  </div>
-                ))}
+                {product.multipleimages
+                  .map((imgUrl, index) => {
+                    // Skip if imgUrl is invalid
+                    if (!imgUrl || typeof imgUrl !== 'string' || !imgUrl.trim()) {
+                      console.warn(`Invalid image URL at index ${index}:`, imgUrl);
+                      return null;
+                    }
+                    
+                    return {
+                      imgUrl,
+                      index,
+                      key: `thumb-${index}`
+                    };
+                  })
+                  .filter(Boolean) // Remove null entries
+                  .map(({ imgUrl, index, key }) => (
+                    <div 
+                      key={key}
+                      data-thumbnail="true"
+                      onClick={() => setSelectedImage(index + 1)}
+                      style={{
+                        width: isMobile ? "60px" : "80px",
+                        height: isMobile ? "60px" : "80px",
+                        border: selectedImage === index + 1 ? "2px solid #ffa41c" : "1px solid #ddd",
+                        borderRadius: "4px",
+                        overflow: "hidden",
+                        cursor: "pointer",
+                        backgroundColor: "#f8f9fa"
+                      }}
+                    >
+                      <OptimizedImage
+                        src={imgUrl}
+                        alt={`${product.name} - ${index + 1}`}
+                        style={{ width: "100%", height: "100%" }}
+                        width={isMobile ? 60 : 80}
+                        height={isMobile ? 60 : 80}
+                        objectFit="cover"
+                        quality={60}
+                        backgroundColor="transparent"
+                        onLoad={() => {
+                          setLoadedImages(prev => new Set([...prev, imgUrl]));
+                        }}
+                        onError={(e) => {
+                          console.error(`Failed to load thumbnail image:`, imgUrl);
+                          // Hide the entire thumbnail container if image fails
+                          const container = e.target.closest('[data-thumbnail]');
+                          if (container) {
+                            container.style.display = 'none';
+                          }
+                        }}
+                      />
+                    </div>
+                  ))}
               </div>
             )}
           </div>
@@ -1171,7 +1215,7 @@ const ProductDetails = () => {
           }}>
             <img
               src={selectedImage === 0 ? product.photos : 
-                  (product.multipleimages && product.multipleimages.length > 1) ? 
+                  (product.multipleimages && Array.isArray(product.multipleimages) && product.multipleimages.length > 0 && selectedImage <= product.multipleimages.length) ? 
                   product.multipleimages[selectedImage - 1] : product.photos}
               alt={product.name}
               style={{
@@ -1183,7 +1227,7 @@ const ProductDetails = () => {
           </div>
           
           {/* Thumbnail navigation in zoom view if there are multiple images */}
-          {(product.multipleimages && product.multipleimages.length > 0) && (
+          {(product.multipleimages && Array.isArray(product.multipleimages) && product.multipleimages.length > 0) && (
             <div style={{
               display: "flex",
               overflowX: "auto",
@@ -1215,7 +1259,10 @@ const ProductDetails = () => {
               </div>
               
               {/* Additional images */}
-              {product.multipleimages.map((imgUrl, index) => (
+              {product.multipleimages
+                .filter(imgUrl => imgUrl && typeof imgUrl === 'string' && imgUrl.trim() && 
+                  imgUrl !== 'null' && imgUrl !== '[null]' && imgUrl !== 'undefined')
+                .map((imgUrl, index) => (
                 <div
                   key={index}
                   onClick={() => setSelectedImage(index + 1)}

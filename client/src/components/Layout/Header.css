@@ -60,10 +60,67 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Mobile Navigation Improvements */
+/* Mobile Search Bar Styles - Amazon-like */
 @media (max-width: 768px) {
+  /* Ensure header structure doesn't add unwanted margins to page content */
+  body {
+    padding-top: 0 !important;
+  }
+  
+  /* Mobile search bar styling */
+  .mobile-search-bar {
+    background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Mobile search input styling */
+  .mobile-search-bar .search-form {
+    width: 100%;
+    margin: 0;
+  }
+  
+  .mobile-search-bar .search-form .form-control {
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background-color: rgba(255, 255, 255, 0.95);
+    color: #333;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .mobile-search-bar .search-form .form-control:focus {
+    border-color: #fff;
+    background-color: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    color: #333;
+  }
+  
+  .mobile-search-bar .search-form .form-control::placeholder {
+    color: #666;
+  }
+  
+  .mobile-search-bar .search-form .btn {
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #d32f2f;
+    padding: 0.6rem 1rem;
+    font-weight: 600;
+  }
+  
+  .mobile-search-bar .search-form .btn:hover {
+    background-color: #fff;
+    border-color: #fff;
+    transform: none;
+  }
+  
+  /* Main navbar mobile adjustments */
   .navbar {
-    padding: 0.5rem 0.75rem;
+    padding: 0.5rem 1rem;
+    min-height: 55px;
+    max-height: 55px;
   }
   
   .navbar-brand {
@@ -81,9 +138,26 @@
     min-width: 140px;
   }
   
-   .dropdown-item {
+  .dropdown-item {
     padding: 0.6rem 1.2rem;
     transition: background-color 0.2s ease;
+  }
+  
+  /* Mobile nav icons spacing */
+  .navbar-nav {
+    gap: 0.5rem;
+  }
+  
+  /* Mobile responsive badge positioning */
+  .ant-badge {
+    position: relative;
+  }
+  
+  .ant-badge-count {
+    font-size: 10px;
+    min-width: 16px;
+    height: 16px;
+    line-height: 14px;
   }
 }
 
@@ -91,6 +165,7 @@
 @media (min-width: 769px) {
   .navbar {
     padding: 0.75rem 1.5rem;
+    min-height: 70px;
   }
   
   .nav-link {
@@ -166,6 +241,17 @@
   .navbar-brand img {
     height: 40px !important;
   }
+  
+  .navbar {
+    padding: 0.4rem 0.8rem;
+    min-height: 50px;
+    max-height: 50px;
+  }
+  
+  /* Extra small screens - reduce search bar padding */
+  .mobile-search-bar {
+    padding: 0.6rem 0.8rem;
+  }
 }
 
 /* User Dropdown Improvements */
@@ -230,4 +316,18 @@
     opacity: 1;
   }
 }
-  
+
+/* Sticky behavior for mobile search */
+@media (max-width: 768px) {
+  .mobile-search-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Smooth transitions for responsive changes */
+* {
+  transition: all 0.3s ease;
+}
