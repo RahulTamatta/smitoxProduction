@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
-import Layout from "../../components/Layout/Layout";
-import AdminMenu from "../../components/Layout/AdminMenu";
-import { Button, Form, Card, Row, Col, ToggleButton, Modal } from "react-bootstrap";
+import { useEffect, useState } from "react";
+import { Button, Card, Col, Form, Modal, Row, ToggleButton } from "react-bootstrap";
 import toast from "react-hot-toast";
+import AdminMenu from "../../components/Layout/AdminMenu";
+import Layout from "../../components/Layout/Layout";
+import { api } from "../../context/auth";
 
 const SubcategoryList = () => {
   const [subcategories, setSubcategories] = useState([]);
@@ -29,10 +29,10 @@ const SubcategoryList = () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', 'smitoxphoto');
-      formData.append('cloud_name', 'dvqh6a3gh');
+      formData.append('cloud_name', 'do3y11hpa');
 
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/dvqh6a3gh/image/upload`,
+        `https://api.cloudinary.com/v1_1/do3y11hpa/image/upload`,
         {
           method: 'POST',
           body: formData,
@@ -52,32 +52,26 @@ const SubcategoryList = () => {
     }
   };
 
-  // Fetch categories
+  // Get all categories for dropdown
   const getAllCategories = async () => {
     try {
-      const { data } = await axios.get("/api/v1/category/get-category");
-      if (data?.success) {
-        setCategories(data.category);
-      }
+      const { data } = await api.get("/api/v1/category/get-category");
+      setCategories(data?.category || []);
     } catch (error) {
-      console.error(error);
-      ////toast.error("Failed to fetch categories.");
+      console.error("Error fetching categories:", error);
+      ////toast.error("Failed to load categories.");
     }
   };
 
-  // Fetch subcategories
+  // Get all subcategories
   const getAllSubcategories = async () => {
     try {
-      const { data } = await axios.get("/api/v1/subcategory/get-subcategories");
-      if (data?.success) {
-        setSubcategories(data.subcategories);
-      } else {
-        setSubcategories([]);
-      }
+      const { data } = await api.get("/api/v1/subcategory/get-subcategories");
+      setSubcategories(data.subcategories || []);
+      setLoading(false);
     } catch (error) {
-      console.error(error);
-      ////toast.error("Failed to fetch subcategories.");
-    } finally {
+      console.error("Error fetching subcategories:", error);
+      ////toast.error("Failed to load subcategories.");
       setLoading(false);
     }
   };
@@ -93,10 +87,11 @@ const SubcategoryList = () => {
         photoUrl = await uploadToCloudinary(photos);
       }
 
-      const { data } = await axios.post("/api/v1/subcategory/create-subcategory", {
+      const { data } = await api.post("/api/v1/subcategory/create-subcategory", {
         name,
-  parentCategoryId,
-        photos: photoUrl
+        parentCategoryId,
+        photos: photoUrl,
+        isActive
       });
 
       if (data?.success) {
@@ -119,22 +114,24 @@ const SubcategoryList = () => {
   };
 
   // Update subcategory
-  const handleEditSubmit = async (e) => {
+  const handleUpdate = async (e) => {
     e.preventDefault();
+    if (!editingSubcategory) return;
+
     try {
       toast.loading("Updating subcategory...");
 
-      let photoUrl = "";
-      if (editPhotos && editPhotos instanceof File) {
+      let photoUrl = editingSubcategory.photos;
+      if (editPhotos) {
         photoUrl = await uploadToCloudinary(editPhotos);
       }
 
-      const { data } = await axios.put(
+      const { data } = await api.put(
         `/api/v1/subcategory/update-subcategory/${editingSubcategory._id}`,
         {
           name: editName,
-          category: editParentCategoryId,
-          photos: photoUrl || editingSubcategory.photos,
+          parentCategoryId: editParentCategoryId,
+          photos: photoUrl,
           isActive: editIsActive,
         }
       );
@@ -158,7 +155,7 @@ const SubcategoryList = () => {
   // Delete subcategory
   const handleDelete = async (id) => {
     try {
-      const { data } = await axios.delete(`/api/v1/subcategory/delete-subcategory/${id}`);
+      const { data } = await api.delete(`/api/v1/subcategory/delete-subcategory/${id}`);
       if (data?.success) {
         toast.success("Subcategory deleted successfully.");
         getAllSubcategories();
@@ -171,10 +168,13 @@ const SubcategoryList = () => {
     }
   };
 
-  // Toggle active status
-  const handleToggleActive = async (subcategory) => {
+  // Toggle subcategory status
+  const toggleSubcategoryStatus = async (id, currentStatus) => {
     try {
-      const { data } = await axios.put(`/api/v1/subcategory/toggle-active/${subcategory._id}`);
+      const { data } = await api.patch(
+        `/api/v1/subcategory/toggle-subcategory/${id}`,
+        { isActive: !currentStatus }
+      );
       if (data?.success) {
         toast.success("Subcategory status updated.");
         getAllSubcategories();
@@ -313,7 +313,7 @@ const SubcategoryList = () => {
                             type="checkbox"
                             variant={subcategory.isActive ? "outline-success" : "outline-danger"}
                             checked={subcategory.isActive}
-                            onChange={() => handleToggleActive(subcategory)}
+                            onChange={() => toggleSubcategoryStatus(subcategory._id, subcategory.isActive)}
                           >
                             {subcategory.isActive ? "Active" : "Inactive"}
                           </ToggleButton>
@@ -331,7 +331,7 @@ const SubcategoryList = () => {
                 <Modal.Title>Edit Subcategory</Modal.Title>
               </Modal.Header>
               <Modal.Body>
-                <Form onSubmit={handleEditSubmit}>
+                <Form onSubmit={handleUpdate}>
                   <Form.Group className="mb-3">
                     <Form.Label>Subcategory Name</Form.Label>
                     <Form.Control

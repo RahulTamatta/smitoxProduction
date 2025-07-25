@@ -1,14 +1,9 @@
-import React, { useEffect, useState } from "react";
-import Layout from "./../../components/Layout/Layout";
-import AdminMenu from "./../../components/Layout/AdminMenu";
+import { Modal, Select } from "antd";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import axios from "axios";
-import CategoryForm from "../../components/Form/CategoryForm";
-import { Modal } from "antd";
-
-
-import { Select } from "antd";
-import { useNavigate } from "react-router-dom";
+import AdminMenu from "../../components/Layout/AdminMenu";
+import Layout from "../../components/Layout/Layout";
+import { api } from "../../context/auth";
 
 const { Option } = Select;
 
@@ -28,10 +23,10 @@ const CreateCategory = () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', 'smitoxphoto');
-      formData.append('cloud_name', 'dvqh6a3gh');
+      formData.append('cloud_name', 'do3y11hpa');
 
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/dvqh6a3gh/image/upload`,
+        `https://api.cloudinary.com/v1_1/do3y11hpa/image/upload`,
         {
           method: 'POST',
           body: formData,
@@ -62,9 +57,19 @@ const CreateCategory = () => {
         photoUrl = await uploadToCloudinary(photos);
       }
 
-      const { data } = await axios.post("/api/v1/category/create-category", {
-        name,
-        photos: photoUrl
+      // Get token from localStorage
+      const auth = JSON.parse(localStorage.getItem('auth')) || {};
+      const token = auth.token;
+
+      if (!token) {
+        toast.dismiss();
+        toast.error("Please login to continue");
+        return;
+      }
+
+      const { data } = await api.post("/api/v1/category/create-category", { 
+        name, 
+        photos: photoUrl 
       });
 
       if (data?.success) {
@@ -87,7 +92,7 @@ const CreateCategory = () => {
   // get all categories
   const getAllCategory = async () => {
     try {
-      const { data } = await axios.get("/api/v1/category/get-category");
+      const { data } = await api.get("/api/v1/category/get-category");
       if (data?.success) {
         setCategories(data?.category);
       }
@@ -112,7 +117,17 @@ const CreateCategory = () => {
         photoUrl = await uploadToCloudinary(updatedPhoto);
       }
 
-      const { data } = await axios.put(
+      // Get token from localStorage
+      const auth = JSON.parse(localStorage.getItem('auth')) || {};
+      const token = auth.token;
+
+      if (!token) {
+        toast.dismiss();
+        toast.error("Please login to continue");
+        return;
+      }
+
+      const { data } = await api.put(
         `/api/v1/category/update-category/${selected._id}`,
         {
           name: updatedName,
@@ -142,9 +157,16 @@ const CreateCategory = () => {
   // delete category
   const handleDelete = async (pId) => {
     try {
-      const { data } = await axios.delete(
-        `/api/v1/category/delete-category/${pId}`
-      );
+      // Get token from localStorage
+      const auth = JSON.parse(localStorage.getItem('auth')) || {};
+      const token = auth.token;
+
+      if (!token) {
+        toast.error("Please login to continue");
+        return;
+      }
+
+      const { data } = await api.delete(`/api/v1/category/delete-category/${pId}`);
       if (data.success) {
         toast.success(`Category is deleted`);
         getAllCategory();
