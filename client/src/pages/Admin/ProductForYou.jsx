@@ -13,10 +13,7 @@ import {
 } from "react-bootstrap";
 import { Trash } from "lucide-react";
 import { useAuth } from "../../context/auth";
-import { toast } from "react-toastify";
-import Column from "antd/es/table/Column";
-import AdminMenu from "../../components/Layout/AdminMenu";
-import Layout from "../../components/Layout/Layout";
+import AdminPageTemplate from "../../features/admin/components/layout/AdminPageTemplate";
 const ProductForYou = () => {
   const [banners, setBanners] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -35,6 +32,7 @@ const ProductForYou = () => {
     fetchBanners();
     fetchCategories();
     fetchSubcategories();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchBanners = async () => {
@@ -144,7 +142,7 @@ const ProductForYou = () => {
     }
 
     try {
-      const response = await axios.post("/api/v1/productForYou/createProductForYou", data, {
+      await axios.post("/api/v1/productForYou/createProductForYou", data, {
         headers: {
           'Authorization': `Bearer ${auth.user.token}`,
           'Content-Type': 'multipart/form-data'
@@ -186,12 +184,9 @@ const ProductForYou = () => {
   };
 
   return (
-    <Layout title={"All Orders Data"}>
+    <AdminPageTemplate title="Product For You Management">
       <div className="row dashboard">
-        <div className="col-md-3">
-          <AdminMenu />
-        </div>
-        <div className="col-md-9">
+        <div className="col-md-12">
           <Container fluid className="site-width">
             <Row>
               <Col xs={12} className="align-self-center">
@@ -203,7 +198,7 @@ const ProductForYou = () => {
                     <li className="breadcrumb-item">Master</li>
                     <li className="breadcrumb-item">Product For You</li>
                     <li className="breadcrumb-item active">
-                      <a href="#">Product For You table</a>
+                      <span>Product For You table</span>
                     </li>
                   </ol>
                 </div>
@@ -356,7 +351,7 @@ const ProductForYou = () => {
           </Container>
         </div>
       </div>
-    </Layout>
+    </AdminPageTemplate>
   );
 };
 

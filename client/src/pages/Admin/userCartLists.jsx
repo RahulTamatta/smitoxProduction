@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { MessageCircle, Edit } from 'lucide-react';
-import Layout from "../../components/Layout/Layout";
-import AdminMenu from "../../components/Layout/AdminMenu";
+import AdminPageTemplate from "../../features/admin/components/layout/AdminPageTemplate";
 import CartSearchModal from "./addTocartModal.jsx";
 import { useNavigate, useLocation } from 'react-router-dom';
 import AddToCartPage from "./userCart.jsx";
@@ -950,26 +949,22 @@ const UserList = () => {
   };
 
   return (
-    <Layout title="User List">
-      <div style={styles.responsiveContainer}>
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: isMobile ? 'column' : 'row',
-          gap: '1rem' 
-        }}>
-          <div style={{ 
-            flex: isMobile ? 'none' : '0 0 250px',
-            marginBottom: isMobile ? '1rem' : '0'
-          }}>
-            <AdminMenu />
-          </div>
-          <div style={{ flex: '1', minWidth: '0' }}>
-            {renderContent()}
-          </div>
+    <AdminPageTemplate 
+      title="User Cart Lists" 
+      loading={isLoading}
+      breadcrumbs={[
+        { label: 'Dashboard', href: '/dashboard/admin' },
+        { label: 'Users', href: '#' },
+        { label: 'Cart Lists' }
+      ]}
+    >
+      <div className="admin-card">
+        <div className="admin-card-body">
+          {renderContent()}
         </div>
       </div>
       {isEditModalOpen && renderEditModal()}
-    </Layout>
+    </AdminPageTemplate>
   );
 };
 

@@ -10,6 +10,7 @@ import toast from "react-hot-toast";
 import StockPopup from "./StockPopup"; // Import the StockPopup component
 import { Modal, Button } from 'react-bootstrap'; // Import Modal and Button from react-bootstrap
 import "./cartPage.css";
+import PostPaymentWaitingDialog from "./PostPaymentWaitingDialog"; // Import the post-payment waiting dialog
 //new build
 
 const CartPage = () => {
@@ -29,6 +30,7 @@ const CartPage = () => {
   const [networkError, setNetworkError] = useState(false); // Track network errors
   const [showStockPopup, setShowStockPopup] = useState(false); // State for stock popup visibility
   const [exceededProduct, setExceededProduct] = useState(null); // State for the product that exceeded stock
+  const [showPostPaymentDialog, setShowPostPaymentDialog] = useState(false); // State for post-payment waiting dialog
 
   const navigate = useNavigate();
 
@@ -453,7 +455,15 @@ const CartPage = () => {
                 if (verifyResponse.data.success) {
                   await clearCart();
                   //toast.success("Payment successful! Order placed successfully");
-                  navigate("/dashboard/user/orders");
+                  
+                  // Show post-payment waiting dialog
+                  setShowPostPaymentDialog(true);
+                  
+                  // Wait for 3 seconds before redirecting
+                  setTimeout(() => {
+                    setShowPostPaymentDialog(false);
+                    navigate("/dashboard/user/orders");
+                  }, 3000);
                 } else {
                   throw new Error(verifyResponse.data.message || "Payment verification failed");
                 }
@@ -796,6 +806,12 @@ const CartPage = () => {
             cart.find(item => item.product._id === exceededProduct._id)?.quantity + 1 : 
             0
           }
+        />
+        
+        {/* Post Payment Waiting Dialog */}
+        <PostPaymentWaitingDialog
+          show={showPostPaymentDialog}
+          onHide={() => setShowPostPaymentDialog(false)}
         />
       </div>
     </Layout>

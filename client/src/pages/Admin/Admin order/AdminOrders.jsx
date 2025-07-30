@@ -12,8 +12,7 @@ import {
 import axios from "axios";
 import moment from "moment";
 import { message } from "antd";
-import AdminMenu from "../../../components/Layout/AdminMenu";
-import Layout from "../../../components/Layout/Layout";
+import AdminLayout from "../../../features/admin/components/layout/AdminLayout";
 import { useAuth } from "../../../context/auth";
 import { useSearch } from "../../../context/search";
 import OrderModal from "./components/orderModal";
@@ -442,12 +441,9 @@ const [addProductError, setAddProductError] = useState("");
   };
 
   return (
-    <Layout title={"All Orders Data"}>
+    <AdminLayout title={"All Orders Data"}>
       <div className="row dashboard">
-        <div className="col-md-3">
-          <AdminMenu />
-        </div>
-        <div className="col-md-9">
+        <div className="col-md-12">
           <Nav variant="pills" className="mb-3">
             <Nav.Item>
               <Nav.Link
@@ -742,7 +738,7 @@ const [addProductError, setAddProductError] = useState("");
         handleClose={handleCloseSearchModal}
         handleAddToOrder={handleAddToOrder}
       />
-    </Layout>
+    </AdminLayout>
   );
 };
 

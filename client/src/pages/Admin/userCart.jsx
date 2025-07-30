@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import Layout from "../../components/Layout/Layout";
+import AdminLayout from "../../features/admin/components/layout/AdminLayout";
 import { useNavigate } from "react-router-dom";
 import DropIn from "braintree-web-drop-in-react";
 import { AiFillWarning } from "react-icons/ai";
@@ -140,7 +140,7 @@ const AddToCartPages = () => {
   }, [userId]);
 
   return (
-    <Layout>
+    <AdminLayout>
 <div className="cart-page container" style={{ paddingTop: '100px' }}>
 
 <div className="col-12">
@@ -289,7 +289,7 @@ const AddToCartPages = () => {
    
         </div>
       </div>
-    </Layout>
+    </AdminLayout>
   );
 };
 

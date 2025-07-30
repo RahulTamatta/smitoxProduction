@@ -2,8 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { Modal, Button, Form, Table } from "react-bootstrap";
-import Layout from "../../components/Layout/Layout";
-import AdminMenu from "../../components/Layout/AdminMenu";
+import AdminLayout from "../../features/admin/components/layout/AdminLayout";
 import BrandForm from "../../components/Form/brandForm";
 
 const CreateBrand = () => {
@@ -84,13 +83,10 @@ const CreateBrand = () => {
   };
 
   return (
-    <Layout title={"Dashboard - Brands"}>
+    <AdminLayout title={"Dashboard - Brands"}>
       <div className="container-fluid m-3 p-3 dashboard">
         <div className="row">
-          <div className="col-md-3">
-            <AdminMenu />
-          </div>
-          <div className="col-md-9">
+          <div className="col-md-12">
             <h1>Manage Brands</h1>
 
             {/* Create Brand Form */}
@@ -164,7 +160,7 @@ const CreateBrand = () => {
           </div>
         </div>
       </div>
-    </Layout>
+    </AdminLayout>
   );
 };
 

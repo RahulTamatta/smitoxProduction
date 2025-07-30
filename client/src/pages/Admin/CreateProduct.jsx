@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/auth"; // <-- Add this import
-import AdminMenu from "./../../components/Layout/AdminMenu";
-import Layout from "./../../components/Layout/Layout";
+import AdminPageTemplate from "../../features/admin/components/layout/AdminPageTemplate";
 
 const { Option } = Select;
 
@@ -321,14 +320,10 @@ const CreateProduct = () => {
   };
 
   return (
-    <Layout title={"Dashboard - Create Product"}>
+    <AdminPageTemplate title="Create Product">
       <div className="container-fluid m-3 p-3 dashboard">
         <div className="row">
-          <div className="col-md-3">
-            <AdminMenu />
-          </div>
-          <div className="col-md-9">
-            <h1>Create Product</h1>
+          <div className="col-md-12">
             <div className="m-1 w-75">
               {/* Category dropdown */}
               <div className="mb-3">
@@ -901,7 +896,7 @@ const CreateProduct = () => {
           </div>
         </div>
       </div>
-    </Layout>
+    </AdminPageTemplate>
   );
 };
 

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import AdminMenu from "../../components/Layout/AdminMenu";
-import Layout from "./../../components/Layout/Layout";
+import AdminLayout from "../../features/admin/components/layout/AdminLayout";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
@@ -210,14 +209,13 @@ const Products = () => {
   );
 
   return (
-    <Layout>
+    <AdminLayout>
       <div style={{ 
         display: 'flex', 
         flexDirection: 'column', 
         minHeight: '100vh',
         padding: isMobile ? '8px' : '16px' 
       }}>
-        <AdminMenu />
         <div style={{ 
           width: '100%',
           backgroundColor: '#f3f4f6',
@@ -511,7 +509,7 @@ const Products = () => {
 </div>
         </div>
       </div>
-    </Layout>
+    </AdminLayout>
   );
 };
 export default Products;

@@ -1,0 +1,361 @@
+/* AdminLayout.css */
+
+.admin-layout {
+  display: flex;
+  height: 100vh;
+  flex-direction: row;
+  background-color: #f5f6fa;
+}
+
+.admin-sidebar {
+  width: 260px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 0;
+  transition: all 0.3s ease-in-out;
+  border-right: none;
+  overflow-y: auto;
+  box-shadow: 4px 0 15px rgba(102, 126, 234, 0.15);
+  position: relative;
+}
+
+.admin-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.admin-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+}
+
+.admin-content {
+  flex-grow: 1;
+  padding: 0;
+  overflow-y: auto;
+  background-color: #f5f6fa;
+  min-height: 100vh;
+}
+
+.admin-page-content {
+  padding: 24px;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.admin-header {
+  display: none;
+}
+
+.admin-header-left {
+  display: flex;
+  align-items: center;
+}
+
+.admin-header-right {
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-header {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 0;
+}
+
+.sidebar-header h4, .sidebar-header h5 {
+  color: white;
+  font-weight: 600;
+  margin: 0;
+}
+
+.dashboard-menu {
+  padding: 0;
+}
+
+.dashboard-menu .list-group-item {
+  border: none;
+  border-radius: 0;
+  margin-bottom: 0;
+  transition: all 0.3s ease;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  padding: 14px 20px;
+  font-weight: 500;
+  border-left: 3px solid transparent;
+}
+
+.dashboard-menu .list-group-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-left-color: #fff;
+  transform: none;
+}
+
+.dashboard-menu .list-group-item.active {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: white;
+  border-left-color: #fff;
+  font-weight: 600;
+}
+
+.dashboard-menu .dropdown-toggle {
+  background: transparent !important;
+  border: none !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.dashboard-menu .dropdown-toggle:hover {
+  color: white !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dashboard-menu .dropdown-toggle::after {
+  margin-left: auto;
+}
+
+.dashboard-menu .dropdown-menu {
+  background: rgba(255, 255, 255, 0.95);
+  border: none;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  margin-top: 5px;
+}
+
+.dashboard-menu .dropdown-item {
+  color: #495057;
+  padding: 10px 20px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.dashboard-menu .dropdown-item:hover {
+  background-color: #667eea;
+  color: white;
+}
+
+/* Page Header Styles */
+.admin-page-header {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  margin-bottom: 24px;
+  border: 1px solid #e9ecef;
+}
+
+.admin-page-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.admin-breadcrumb {
+  background: transparent;
+  padding: 0;
+  margin: 8px 0 0 0;
+}
+
+.admin-breadcrumb .breadcrumb-item {
+  color: #6c757d;
+  font-size: 14px;
+}
+
+.admin-breadcrumb .breadcrumb-item.active {
+  color: #667eea;
+}
+
+/* Card Styles */
+.admin-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e9ecef;
+  margin-bottom: 24px;
+}
+
+.admin-card-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e9ecef;
+  background: transparent;
+}
+
+.admin-card-body {
+  padding: 24px;
+}
+
+/* Table Responsive Styles */
+.admin-table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e9ecef;
+  overflow: hidden;
+}
+
+.admin-table {
+  margin: 0;
+  width: 100%;
+}
+
+.admin-table th {
+  background: #f8f9fa;
+  border: none;
+  color: #495057;
+  font-weight: 600;
+  padding: 16px;
+  font-size: 14px;
+}
+
+.admin-table td {
+  border: none;
+  padding: 16px;
+  vertical-align: middle;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.admin-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+@media (max-width: 768px) {
+  .admin-layout {
+    flex-direction: column;
+  }
+
+  .admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-bottom: none;
+    position: sticky;
+    top: 0;
+    z-index: 1001;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .admin-header .admin-header-logo img {
+    height: 32px;
+  }
+
+  .admin-header .admin-user-name {
+    color: white;
+    font-weight: 500;
+  }
+
+  .admin-header .btn-link {
+    color: white !important;
+  }
+
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 1000;
+    transform: translateX(-100%);
+    width: 320px;
+    box-shadow: 5px 0 25px rgba(0,0,0,0.3);
+  }
+
+  .admin-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .admin-content {
+    padding: 0;
+    margin-top: 0;
+  }
+
+  .admin-page-content {
+    padding: 16px;
+  }
+
+  .admin-page-header {
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .admin-page-title {
+    font-size: 24px;
+  }
+
+  .admin-card {
+    margin-bottom: 16px;
+    border-radius: 8px;
+  }
+
+  .admin-card-body {
+    padding: 16px;
+  }
+
+  .admin-table-container {
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+
+  .admin-table {
+    min-width: 600px;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 12px 8px;
+    font-size: 14px;
+  }
+
+  .hamburger-menu {
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+  }
+
+  .hamburger-menu:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    backdrop-filter: blur(2px);
+  }
+
+  /* Mobile-specific form styles */
+  .form-control {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .btn {
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+
+  /* Mobile pagination */
+  .pagination {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .page-link {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 769px) {
+  .admin-layout {
+    flex-direction: row;
+  }
+}
+

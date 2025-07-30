@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../context/auth"; // <-- Add this import
-import AdminMenu from "./../../components/Layout/AdminMenu";
-import Layout from "./../../components/Layout/Layout";
+import AdminLayout from "../../features/admin/components/layout/AdminLayout";
 
 const { Option } = Select;
 
@@ -429,13 +428,10 @@ const UpdateProduct = () => {
   };
 
   return (
-    <Layout title={"Dashboard - Update Product"}>
+    <AdminLayout title={"Dashboard - Update Product"}>
       <div className="container-fluid m-3 p-3 dashboard">
         <div className="row">
-          <div className="col-md-3">
-            <AdminMenu />
-          </div>
-          <div className="col-md-9">
+          <div className="col-md-12">
             <h1>Update Product</h1>
             <div className="m-1 w-75">
               <div className="col-md-4">
@@ -998,7 +994,7 @@ const UpdateProduct = () => {
           </div>
         </div>
       </div>
-    </Layout>
+    </AdminLayout>
   );
 };
 
