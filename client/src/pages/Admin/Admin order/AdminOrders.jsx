@@ -1,24 +1,21 @@
-import React, { useState, useEffect } from "react";
-import {
-  Table,
-  Button,
-  Modal,
-  Form,
-  Nav,
-  Spinner,
-  Alert,
-  InputGroup,
-  Dropdown,
-  Row,
-  Col,
-  Card,
-} from "react-bootstrap";
+import { message } from "antd";
 import axios from "axios";
 import moment from "moment";
-import { message } from "antd";
-import AdminLayout from "../../../features/admin/components/layout/AdminLayout";
+import { useEffect, useState } from "react";
+import {
+  Alert,
+  Button,
+  Col,
+  Form,
+  Modal,
+  Nav,
+  Row,
+  Spinner,
+  Table
+} from "react-bootstrap";
 import { useAuth } from "../../../context/auth";
 import { useSearch } from "../../../context/search";
+import AdminLayout from "../../../features/admin/components/layout/AdminLayout";
 import OrderModal from "./components/orderModal";
 import SearchModal from "./components/searchModal";
 
@@ -472,6 +469,10 @@ const [addProductError, setAddProductError] = useState("");
           aValue = new Date(a.createdAt).getTime();
           bValue = new Date(b.createdAt).getTime();
           break;
+        case "orderId":
+          aValue = a._id;
+          bValue = b._id;
+          break;
         default:
           aValue = a[sortBy];
           bValue = b[sortBy];
@@ -606,12 +607,27 @@ const [addProductError, setAddProductError] = useState("");
   <thead>
     <tr>
       <th style={{ fontSize: '0.8rem', padding: '4px' }}>#</th>
-      <th style={{ fontSize: '0.8rem', padding: '4px' }}>Order Id</th>
+<th 
+  style={{ fontSize: '0.8rem', padding: '4px', cursor: 'pointer' }}
+  onClick={() => handleSortChange('orderId')}
+>
+  Order Id <span style={{ fontWeight: 'bold' }}>{sortBy === 'orderId' ? (sortOrder === 'asc' ? '↑' : '↓') : '↕'}</span>
+</th>
       {/* <th style={{ fontSize: '0.8rem', padding: '4px' }}>Tracking Information</th> */}
-      <th style={{ fontSize: '0.8rem', padding: '4px' }}>Total</th>
+<th 
+  style={{ fontSize: '0.8rem', padding: '4px', cursor: 'pointer' }}
+  onClick={() => handleSortChange('total')}
+>
+  Total <span style={{ fontWeight: 'bold' }}>{sortBy === 'total' ? (sortOrder === 'asc' ? '↑' : '↓') : '↕'}</span>
+</th>
       <th style={{ fontSize: '0.8rem', padding: '4px' }}>Payment</th>
       <th style={{ fontSize: '0.8rem', padding: '4px' }}>Status</th>
-      <th style={{ fontSize: '0.8rem', padding: '4px' }}>Created</th>
+<th 
+  style={{ fontSize: '0.8rem', padding: '4px', cursor: 'pointer' }}
+  onClick={() => handleSortChange('createdAt')}
+>
+  Created <span style={{ fontWeight: 'bold' }}>{sortBy === 'createdAt' ? (sortOrder === 'asc' ? '↑' : '↓') : '↕'}</span>
+</th>
       <th style={{ fontSize: '0.8rem', padding: '4px' }}>Actions</th>
     </tr>
   </thead>
