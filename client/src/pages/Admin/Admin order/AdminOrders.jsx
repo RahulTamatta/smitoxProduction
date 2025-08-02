@@ -8,6 +8,10 @@ import {
   Spinner,
   Alert,
   InputGroup,
+  Dropdown,
+  Row,
+  Col,
+  Card,
 } from "react-bootstrap";
 import axios from "axios";
 import moment from "moment";
@@ -48,6 +52,11 @@ const [addProductError, setAddProductError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [totalOrders, setTotalOrders] = useState(0);
+  
+  // Sorting and filtering states
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [paymentFilter, setPaymentFilter] = useState("all");
 
   useEffect(() => {
     if (auth?.token) getOrders(orderType, currentPage, searchTerm);
@@ -214,6 +223,8 @@ const [addProductError, setAddProductError] = useState("");
       if (!addResponse.data.success) {
         throw new Error(addResponse.data.message);
       }
+
+      // Refresh order data after adding product
   
       // Preserve original amount in the updated order data
       const updatedOrder = {
@@ -221,10 +232,12 @@ const [addProductError, setAddProductError] = useState("");
         amount: originalAmount // Maintain the original paid amount
       };
   
-      // Update local state with preserved amount
-      setSelectedOrder(updatedOrder);
+      // Set the fresh order data from the API response first
+      setSelectedOrder(addResponse.data.order);
       message.success("Product added successfully");
       handleCloseSearchModal();
+      
+      // Refresh the orders list
       getOrders(orderType, currentPage, searchTerm);
   
     } catch (error) {
@@ -320,8 +333,13 @@ const [addProductError, setAddProductError] = useState("");
         const updatedOrder = { ...selectedOrder, products: updatedProducts };
         setSelectedOrder(updatedOrder);
 
+        // Use the product ObjectId for deletion
+        const productId = typeof productToRemove.product === 'object' 
+          ? productToRemove.product._id 
+          : productToRemove.product;
+          
         const response = await axios.delete(
-          `/api/v1/auth/order/${selectedOrder._id}/remove-product/${productToRemove._id}`,
+          `/api/v1/auth/order/${selectedOrder._id}/remove-product/${productId}`,
           {
             headers: {
               Authorization: auth?.token
@@ -440,6 +458,61 @@ const [addProductError, setAddProductError] = useState("");
     }
   };
 
+  // Sorting and filtering functions
+  const sortOrders = (ordersToSort) => {
+    return [...ordersToSort].sort((a, b) => {
+      let aValue, bValue;
+      
+      switch (sortBy) {
+        case "total":
+          aValue = calculateTotalsad(a).total;
+          bValue = calculateTotalsad(b).total;
+          break;
+        case "createdAt":
+          aValue = new Date(a.createdAt).getTime();
+          bValue = new Date(b.createdAt).getTime();
+          break;
+        default:
+          aValue = a[sortBy];
+          bValue = b[sortBy];
+      }
+      
+      if (sortOrder === "asc") {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+  };
+
+  const filterOrdersByPayment = (ordersToFilter) => {
+    if (paymentFilter === "all") return ordersToFilter;
+    return ordersToFilter.filter(order => {
+      const paymentMethod = order.payment?.paymentMethod?.toLowerCase();
+      if (paymentFilter === "cod") {
+        return paymentMethod === "cod" || paymentMethod === "cash on delivery";
+      }
+      return paymentMethod === paymentFilter.toLowerCase();
+    });
+  };
+
+  const handleSortChange = (newSortBy) => {
+    if (sortBy === newSortBy) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(newSortBy);
+      setSortOrder("desc");
+    }
+  };
+
+  // Get processed orders (filtered and sorted)
+  const getProcessedOrders = () => {
+    let processedOrders = [...orders];
+    processedOrders = filterOrdersByPayment(processedOrders);
+    processedOrders = sortOrders(processedOrders);
+    return processedOrders;
+  };
+
   return (
     <AdminLayout title={"All Orders Data"}>
       <div className="row dashboard">
@@ -474,14 +547,43 @@ const [addProductError, setAddProductError] = useState("");
           </Nav>
 
           <div className="mb-4">
-  <input
-    type="text"
-    className="form-control w-25"
-    placeholder="Search orders by ID, buyer name..."
-    value={searchTerm}
-    onChange={(e) => handleSearch(e.target.value)}
-  />
-</div>
+            <Row>
+              <Col md={6}>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Search orders by ID, buyer name..."
+                  value={searchTerm}
+                  onChange={(e) => handleSearch(e.target.value)}
+                />
+              </Col>
+              <Col md={3}>
+                <div className="d-flex align-items-center">
+                  <span className="me-2">Sort By:</span>
+                  <Form.Select
+                    value={sortBy}
+                    onChange={(e) => handleSortChange(e.target.value)}
+                  >
+                    <option value="createdAt">Date {sortOrder === "desc" ? "(New → Old)" : "(Old → New)"}</option>
+                    <option value="total">Total Amount {sortOrder === "desc" ? "(High → Low)" : "(Low → High)"}</option>
+                  </Form.Select>
+                </div>
+              </Col>
+              <Col md={3}>
+                <div className="d-flex align-items-center">
+                  <span className="me-2">Payment:</span>
+                  <Form.Select
+                    value={paymentFilter}
+                    onChange={(e) => setPaymentFilter(e.target.value)}
+                  >
+                    <option value="all">All Payment Types</option>
+                    <option value="cod">Cash on Delivery</option>
+                    <option value="razorpay">Razorpay</option>
+                  </Form.Select>
+                </div>
+              </Col>
+            </Row>
+          </div>
 
           {loading ? (
             <Spinner animation="border" role="status">
@@ -515,7 +617,7 @@ const [addProductError, setAddProductError] = useState("");
   </thead>
 
   <tbody>
-    {orders.map((o, index) => {
+    {getProcessedOrders().map((o, index) => {
       const totals = calculateTotalsad(o);
       return (
         <tr key={o._id} style={{ fontSize: '0.7rem', padding: '2px' }}>
@@ -689,6 +791,9 @@ const [addProductError, setAddProductError] = useState("");
           handleUpdateOrder={handleUpdateOrder}
           handleDelivered={handleDelivered}
           handleReturned={handleReturned}
+          getOrders={getOrders}
+          orderType={orderType}
+          onOrderUpdate={(updatedOrder) => setSelectedOrder(updatedOrder)}
           handleAddToOrder={(product) => handleAddToOrder(product).catch(error => {
             setAddProductError(error.message);
           })}

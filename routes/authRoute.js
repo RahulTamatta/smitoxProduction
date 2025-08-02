@@ -20,6 +20,38 @@ import orderModel from '../models/orderModel.js'; // Changed to import
 //router object
 const router = express.Router();
 
+// Fetch single order
+router.get("/order/:orderId", requireSignIn, isAdmin, async (req, res) => {
+  try {
+    const order = await orderModel
+      .findById(req.params.orderId)
+      .populate({
+        path: "products.product",
+        select: "name photo photos multipleimages price images sku gst isActive stock"
+      })
+      .populate("buyer", "user_fullname mobile_no address city state landmark pincode");
+
+    if (!order) {
+      return res.status(404).send({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    res.send({
+      success: true,
+      order
+    });
+  } catch (error) {
+    console.error("Error fetching order:", error);
+    res.status(500).send({
+      success: false,
+      message: "Error fetching order",
+      error: error.message
+    });
+  }
+});
+
 //routing
 //REGISTER || METHOD POST
 router.post("/register", registerController);

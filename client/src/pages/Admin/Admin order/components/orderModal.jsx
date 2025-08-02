@@ -375,7 +375,7 @@ Thank you for your business!
               <tbody>
                 {products.length > 0 ? (
                   products.map((product, index) => {
-                    const productData = product.product || {};
+                    const productData = typeof product.product === 'object' ? product.product : {};
                     const quantity = product.quantity || 0;
                     const price = product.price || 0;
                     const gst = productData.gst || 0;
@@ -391,10 +391,21 @@ Thank you for your business!
                       <tr key={product._id || index}>
                         <td>
                           <img
-                            src={productData.photos || "https://via.placeholder.com/50"}
-                            alt={productData.name || "Product image"}
+                            src={
+                              productData.photos ||
+                              product.photos ||
+                              (productData.multipleimages && productData.multipleimages[0]) ||
+                              (product.multipleimages && product.multipleimages[0]) ||
+                              "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNSAzNUM5MS4xIDI1IDI1IDkuMSAyNSAyNVMzOS4xIDI1IDI1IDI1WiIgZmlsbD0iI0NCQ0JDQiIvPgo8L3N2Zz4K"
+                            }
+                            alt={productData.name || product.name || "Product image"}
                             width="50"
                             className="img-fluid"
+                            onError={(e) => {
+                              if (e.target.src !== "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNSAzNUM5MS4xIDI1IDI1IDkuMSAyNSAyNVMzOS4xIDI1IDI1IDI1WiIgZmlsbD0iI0NCQ0JDQiIvPgo8L3N2Zz4K") {
+                                e.target.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNSAzNUM5MS4xIDI1IDI1IDkuMSAyNSAyNVMzOS4xIDI1IDI1IDI1WiIgZmlsbD0iI0NCQ0JDQiIvPgo8L3N2Zz4K";
+                              }
+                            }}
                           />
                         </td>
                         <td>{productData.name || "Unnamed Product"}</td>
@@ -403,6 +414,7 @@ Thank you for your business!
                             type="number"
                             value={quantity}
                             onChange={(e) => handleProductChange(index, "quantity", e.target.value)}
+                            onWheel={(e) => e.currentTarget.blur()}
                           />
                         </td>
                         <td>
@@ -410,6 +422,7 @@ Thank you for your business!
                             type="number"
                             value={price}
                             onChange={(e) => handleProductChange(index, "price", e.target.value)}
+                            onWheel={(e) => e.currentTarget.blur()}
                             style={{ width: "100px" }}
                           />
                         </td>
@@ -457,6 +470,7 @@ Thank you for your business!
                       type="number"
                       value={selectedOrder.deliveryCharges || 0}
                       onChange={(e) => handleInputChange("deliveryCharges", e.target.value)}
+                      onWheel={(e) => e.currentTarget.blur()}
                     />
                   </td>
                   <td>₹{Number(selectedOrder.deliveryCharges || 0).toFixed(2)}</td>
@@ -469,6 +483,7 @@ Thank you for your business!
                       type="number"
                       value={selectedOrder.codCharges || 0}
                       onChange={(e) => handleInputChange("codCharges", e.target.value)}
+                      onWheel={(e) => e.currentTarget.blur()}
                     />
                   </td>
                   <td>₹{Number(selectedOrder.codCharges || 0).toFixed(2)}</td>
@@ -481,6 +496,7 @@ Thank you for your business!
                       type="number"
                       value={selectedOrder.discount || 0}
                       onChange={(e) => handleInputChange("discount", e.target.value)}
+                      onWheel={(e) => e.currentTarget.blur()}
                     />
                   </td>
                   <td>₹{Number(selectedOrder.discount || 0).toFixed(2)}</td>
@@ -502,6 +518,7 @@ Thank you for your business!
                       type="number"
                       value={selectedOrder.amount || 0}
                       onChange={(e) => handleInputChange("amount", e.target.value)}
+                      onWheel={(e) => e.currentTarget.blur()}
                     />
                   </td>
                   <td>₹{Number(selectedOrder.amount || 0).toFixed(2)}</td>
@@ -628,6 +645,15 @@ Thank you for your business!
           style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
         >
           Share to WhatsApp
+        </Button>
+        <Button
+          variant="info"
+          onClick={() => {
+            generatePDF();
+            window.open(`/preview-order/${selectedOrder._id}`, '_blank');
+          }} 
+        >
+          Preview Order
         </Button>
       </Modal.Footer>
     </Modal>

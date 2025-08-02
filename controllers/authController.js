@@ -540,7 +540,7 @@ export const getAllOrdersController = async (req, res) => {
       })
       .populate({
         path: "products.product",
-        select: "name photos gst price",
+        select: "name photo photos multipleimages gst price images",
       })
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -646,7 +646,7 @@ export const addProductToOrderController = async (req, res) => {
       .findById(orderId)
       .populate({
         path: "products.product",
-        select: "name photo price images sku gst isActive stock"
+        select: "name photo photos multipleimages price images sku gst isActive stock"
       })
       .populate("buyer", "name email");
 
