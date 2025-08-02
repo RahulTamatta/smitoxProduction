@@ -7,6 +7,7 @@ import "../../styles/AdminLayout.css";
 
 const AdminLayout = ({ children, title, description, keywords, author }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
@@ -23,7 +24,11 @@ const AdminLayout = ({ children, title, description, keywords, author }) => {
   }, []);
 
   const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
+    if (isMobile) {
+      setIsSidebarOpen(!isSidebarOpen);
+    } else {
+      setIsSidebarCollapsed(!isSidebarCollapsed);
+    }
   };
 
   const closeSidebar = () => {
@@ -41,6 +46,31 @@ const AdminLayout = ({ children, title, description, keywords, author }) => {
         <title>{title}</title>
       </Helmet>
 
+      {/* Desktop Header with Hamburger Menu */}
+      {!isMobile && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          left: isSidebarCollapsed ? '70px' : '270px',
+          zIndex: 1000,
+          transition: 'left 0.3s ease-in-out'
+        }}>
+          <button 
+            className="btn btn-light"
+            onClick={toggleSidebar}
+            style={{
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: '1px solid #ddd',
+              background: 'white',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}
+          >
+            <i className="fas fa-bars"></i>
+          </button>
+        </div>
+      )}
+
       {/* Mobile Header with Hamburger Menu */}
       {isMobile && (
         <AdminHeader onToggleSidebar={toggleSidebar} />
@@ -51,6 +81,8 @@ const AdminLayout = ({ children, title, description, keywords, author }) => {
         isOpen={isSidebarOpen} 
         onClose={closeSidebar}
         isMobile={isMobile}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={toggleSidebar}
       />
 
       {/* Main Content */}

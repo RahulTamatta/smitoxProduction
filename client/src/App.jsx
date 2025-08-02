@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom"; // Remove ScrollRestoration
 import HomePage from "./pages/HomePage";
 import About from "./pages/About";
+import './styles/ProductCard.css';  // Import the new styles for product cards
 import Contact from "./pages/Contact";
 import Policy from "./pages/Policy";
 import Pagenotfound from "./pages/Pagenotfound";

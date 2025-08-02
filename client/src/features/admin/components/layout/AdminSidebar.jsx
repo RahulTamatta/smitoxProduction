@@ -12,8 +12,8 @@ import {
   CloseOutlined 
 } from "@ant-design/icons";
 
-const AdminSidebar = ({ isOpen, onClose, isMobile }) => {
-  const sidebarClass = `admin-sidebar ${isOpen ? 'open' : ''}`;
+const AdminSidebar = ({ isOpen, onClose, isMobile, isCollapsed, onToggleCollapse }) => {
+  const sidebarClass = `admin-sidebar ${isOpen ? 'open' : ''} ${!isMobile && isCollapsed ? 'collapsed' : ''}`;
 
   return (
     <div className={sidebarClass}>

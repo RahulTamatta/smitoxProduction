@@ -90,9 +90,9 @@ const ProductCard = ({ product, onClick }) => {
       };
     } else {
       return {
-        name: "1rem",
-        price: "1.25rem",
-        mrp: "0.875rem",
+        name: "1.25rem",
+        price: "1.5rem",
+        mrp: "1rem",
       };
     }
   };

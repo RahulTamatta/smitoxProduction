@@ -9,13 +9,35 @@
 
 .admin-sidebar {
   width: 260px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
   padding: 0;
   transition: all 0.3s ease-in-out;
   border-right: none;
   overflow-y: auto;
-  box-shadow: 4px 0 15px rgba(102, 126, 234, 0.15);
+  box-shadow: 4px 0 15px rgba(211, 47, 47, 0.15);
   position: relative;
+}
+
+.admin-sidebar.collapsed {
+  width: 60px;
+}
+
+.admin-sidebar.collapsed .sidebar-header h4,
+.admin-sidebar.collapsed .sidebar-header h5 {
+  display: none;
+}
+
+.admin-sidebar.collapsed .dashboard-menu .list-group-item {
+  text-align: center;
+  padding: 14px 8px;
+}
+
+.admin-sidebar.collapsed .dashboard-menu .list-group-item span:last-child {
+  display: none;
+}
+
+.admin-sidebar.collapsed .dropdown-toggle::after {
+  display: none;
 }
 
 .admin-sidebar::-webkit-scrollbar {
