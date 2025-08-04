@@ -13,7 +13,7 @@ import {
   Spinner,
   Table
 } from "react-bootstrap";
-import { useAuth } from "../../../context/auth";
+import { useAuth } from "../../../context/authContext";
 import { useSearch } from "../../../context/search";
 import AdminLayout from "../../../features/admin/components/layout/AdminLayout";
 import OrderModal from "./components/orderModal";

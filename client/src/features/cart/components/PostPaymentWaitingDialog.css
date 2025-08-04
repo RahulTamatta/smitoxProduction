@@ -1,0 +1,194 @@
+.post-payment-dialog {
+  position: relative;
+  z-index: 1050;
+}
+
+.modal-content-wrapper {
+  overflow: hidden;
+  position: relative;
+  border-radius: 15px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.success-animation {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(134, 182, 255, 0.8), rgba(78, 135, 255, 0.8));
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.check-icon {
+  width: 80px;
+  height: 80px;
+  position: relative;
+  border-radius: 50%;
+  background-color: white;
+}
+
+.icon-line {
+  height: 5px;
+  background-color: #4a90e2;
+  display: block;
+  border-radius: 2px;
+  position: absolute;
+  z-index: 10;
+}
+
+.icon-line.line-tip {
+  top: 46%;
+  left: 18%;
+  width: 30%;
+  transform: rotate(45deg);
+}
+
+.icon-line.line-long {
+  top: 54%;
+  right: 17%;
+  width: 50%;
+  transform: rotate(-45deg);
+}
+
+.icon-circle {
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  border: 5px solid #4a90e2;
+}
+
+.icon-fix {
+  position: absolute;
+  top: 8px;
+  width: 5px;
+  height: 85px;
+  background-color: white;
+}
+
+.dialog-content {
+  position: relative;
+  z-index: 20;
+  text-align: center;
+}
+
+.step-icon {
+  font-size: 30px;
+  margin-bottom: 10px;
+}
+
+.progress-steps {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.progress-step {
+  position: relative;
+  text-align: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.step-indicator {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.completed-icon {
+  color: green;
+}
+
+.spinner-icon {
+  animation: spin 1s linear infinite;
+  font-size: 20px;
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.step-connector {
+  height: 4px;
+  background-color: rgba(0, 0, 0, 0.1);
+  flex-grow: 1;
+  align-self: center;
+  margin: 0 10px;
+}
+
+.loading-bar-container {
+  margin-top: 15px;
+  position: relative;
+}
+
+.loading-bar {
+  height: 5px;
+  background: rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.loading-progress {
+  height: 100%;
+  background: #4a90e2;
+  transition: width 0.3s ease;
+}
+
+.floating-elements {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.floating-circle {
+  position: absolute;
+  background: #6BA5FF;
+  border-radius: 50%;
+  opacity: 0.5;
+  animation: floating 4s ease-in-out infinite;
+}
+
+@keyframes floating {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.circle-1 {
+  top: 10%;
+  left: 10%;
+  width: 15px;
+  height: 15px;
+  animation-delay: 0.5s;
+}
+
+.circle-2 {
+  top: 25%;
+  right: 15%;
+  width: 20px;
+  height: 20px;
+}
+
+.circle-3 {
+  bottom: 20%;
+  left: 20%;
+  width: 10px;
+  height: 10px;
+  animation-delay: 1s;
+}

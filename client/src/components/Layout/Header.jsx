@@ -3,8 +3,8 @@ import { Badge } from "antd";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
-import logo from "../../../src/assets/images/logo.png";
-import { useAuth } from "../../context/auth";
+import logo from "../../assets/images/logo.png";
+import { useAuth } from "../../context/authContext";
 import SearchInput from "../Form/SearchInput";
 
 const Header = () => {

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button, Card, Col, Form, Modal, Row, ToggleButton } from "react-bootstrap";
 import toast from "react-hot-toast";
 import AdminLayout from "../../features/admin/components/layout/AdminLayout";
-import { api } from "../../context/auth";
+import { api } from "../../context/authContext";
 
 const SubcategoryList = () => {
   const [subcategories, setSubcategories] = useState([]);

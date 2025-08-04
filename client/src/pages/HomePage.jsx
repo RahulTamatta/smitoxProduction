@@ -6,8 +6,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
-import { useCart } from "../context/cart";
-import "../styles/Homepage.css";
+import { useCart } from "../context/cartContext";
+import "../assets/styles/Homepage.css";
 import Layout from "./../components/Layout/Layout";
 import ProductCard from "./ProductCard"; // Import the new ProductCard component
 import WhatsAppButton from './whatsapp'; // Adjust the import path as needed

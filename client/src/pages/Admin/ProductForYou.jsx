@@ -12,7 +12,7 @@ import {
   Col,
 } from "react-bootstrap";
 import { Trash } from "lucide-react";
-import { useAuth } from "../../context/auth";
+import { useAuth } from "../../context/authContext";
 import AdminPageTemplate from "../../features/admin/components/layout/AdminPageTemplate";
 const ProductForYou = () => {
   const [banners, setBanners] = useState([]);

@@ -4,7 +4,7 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import Layout from "../components/Layout/Layout";
 import { Heart } from "lucide-react";
-import { useAuth } from "../context/auth";
+import { useAuth } from "../context/authContext";
 
 const CategoryProduct = () => {
   const params = useParams();

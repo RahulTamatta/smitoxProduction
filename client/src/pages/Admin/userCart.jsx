@@ -6,8 +6,8 @@ import { AiFillWarning } from "react-icons/ai";
 import axios from "axios";
 import toast from "react-hot-toast";
 import "../cart/cartPage.css"
-import { useCart } from "../../context/cart";
-import { useAuth } from "../../context/auth";
+import { useCart } from "../../context/cartContext";
+import { useAuth } from "../../context/authContext";
 import { useParams } from 'react-router-dom';
 import CartSearchModal from "../Admin/addTocartModal";
 

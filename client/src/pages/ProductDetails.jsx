@@ -4,14 +4,14 @@ import React, { useState, useEffect, useRef } from "react";
 import Layout from "./../components/Layout/Layout";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
-import { useCart } from "../context/cart";
-import { useAuth } from "../context/auth";
+import { useCart } from "../context/cartContext";
+import { useAuth } from "../context/authContext";
 import { AiFillWarning, AiFillYoutube } from 'react-icons/ai'; // Icons import
 import { FaExpand, FaTimes } from 'react-icons/fa'; // Additional icons for zoom
 import toast from "react-hot-toast";
 import ProductCard from "./ProductCard";
-import OptimizedImage from "../components/OptimizedImage";
-import StockPopup from "./cart/StockPopup"; // Import the StockPopup component
+import OptimizedImage from "../components/UI/OptimizedImage";
+import StockPopup from "../features/cart/components/StockPopup"; // Import the StockPopup component
 
 function normalizeProductForCard(product) {
   // Helper to check if a value is a valid non-empty image URL

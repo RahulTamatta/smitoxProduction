@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { MenuOutlined, LogoutOutlined } from "@ant-design/icons";
-import { useAuth } from "../../../../context/auth";
+import { useAuth } from "../../../../context/authContext";
 import logo from "../../../../assets/images/logo.png";
 
 const AdminHeader = ({ onToggleSidebar }) => {

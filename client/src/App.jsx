@@ -1,23 +1,23 @@
 import { Routes, Route } from "react-router-dom"; // Remove ScrollRestoration
 import HomePage from "./pages/HomePage";
 import About from "./pages/About";
-import './styles/ProductCard.css';  // Import the new styles for product cards
+import './assets/styles/ProductCard.css';  // Import the new styles for product cards
 import Contact from "./pages/Contact";
 import Policy from "./pages/Policy";
 import Pagenotfound from "./pages/Pagenotfound";
-import Register from "./pages/Auth/Register";
-import Login from "./pages/Auth/Login";
+import Register from "./features/auth/components/Register";
+import Login from "./features/auth/components/Login";
 import Dashboard from "./pages/user/Dashboard";
 import PrivateRoute from "./components/Routes/Private";
-import ForgotPasssword from "./pages/Auth/ForgotPasssword";
+import ForgotPasssword from "./features/auth/components/ForgotPasssword";
 import AdminRoute from "./components/Routes/AdminRoute";
-import AdminDashboard from "./pages/Admin/AdminDashboard";
+import AdminDashboard from "./features/admin/pages/DashboardPage";
 import CreateCategory from "./pages/Admin/CreateCategory";
 import SubcategoryList from "./pages/Admin/subCategory";
 import BrandList from "./pages/Admin/brandList";
 import MinimumOrder from "./pages/Admin/minimumOrder.jsx";
 import CreateProduct from "./pages/Admin/CreateProduct";
-import Users from "./pages/Admin/Users";
+import Users from "./features/admin/pages/UsersPage";
 import UsersLists from "./pages/Admin/userCartLists";
 import Orders from "./pages/user/Orders";
 import Profile from "./pages/user/Profile";
@@ -27,21 +27,21 @@ import Search from "./pages/Search";
 import ProductDetails from "./pages/ProductDetails";
 import Categories from "./pages/Categories";
 import CategoryProduct from "./pages/CategoryProduct";
-import CartPage from "./pages/cart/CartPage.jsx";
+import CartPage from "./features/cart/components/CartPage.jsx";
 import AdminOrders from "./pages/Admin/Admin order/AdminOrders.jsx";
 import PincodeList from "./pages/Admin/PinCode.jsx";
 import Terms from "./pages/TermsofUse";
 import ReturnPolicy from "./pages/returnPolicy.jsx";
-import BannerManagement from "./pages/Admin/bannerManagement";
+import BannerManagement from "./features/banners/components/BannerManagement";
 import ProductForYou from "./pages/Admin/ProductForYou.jsx";
 import WishlistPage from "./pages/wishlists.jsx";
 import AddToCartPage from "./pages/Admin/userCart.jsx";
 
-import AdminLogin from "./pages/Auth/AdminLog.jsx";
+import AdminLogin from "./features/auth/components/AdminLog.jsx";
 // Import Redux provider and store
 import { Provider } from 'react-redux';
-import store from './redux/store';
-import ScrollToTop from './components/ScrollToTop'; // Ensure correct import
+import store from './store/store';
+import ScrollToTop from './components/UI/ScrollToTop'; // Ensure correct import
 
 function App() {
 

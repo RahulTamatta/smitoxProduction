@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { useAuth } from '../context/auth';
+import { useAuth } from '../context/authContext';
 import { Heart } from 'lucide-react';
 import toast from 'react-hot-toast';
-import OptimizedImage from '../components/OptimizedImage';
+import OptimizedImage from "../components/UI/OptimizedImage";
 
 const ProductCard = ({ product, onClick }) => {  
   const navigate = useNavigate();

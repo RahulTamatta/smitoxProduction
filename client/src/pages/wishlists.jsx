@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
 import Layout from "../components/Layout/Layout";
-import { useCart } from "../context/cart";
-import { useAuth } from "../context/auth";
+import { useCart } from "../context/cartContext";
+import { useAuth } from "../context/authContext";
 import ProductCard from "../pages/ProductCard"; // Ensure this path is correct
 
 const WishlistPage = () => {

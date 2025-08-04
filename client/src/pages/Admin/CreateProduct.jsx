@@ -3,17 +3,25 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/auth"; // <-- Add this import
+import { useAuth } from "../../context/authContext"; 
 import AdminPageTemplate from "../../features/admin/components/layout/AdminPageTemplate";
+import { useProductData } from "./hooks/useProductData";
 
 const { Option } = Select;
 
 const CreateProduct = () => {
   const navigate = useNavigate();
   const [auth] = useAuth(); // <-- Add this line
-  const [categories, setCategories] = useState([]);
-  const [subcategories, setSubcategories] = useState([]);
-  const [brands, setBrands] = useState([]);
+  const {
+    categories,
+    subcategories,
+    brands,
+    filterSubcategoriesByCategory,
+    getAllCategories,
+    getSubcategories,
+    getAllBrands
+  } = useProductData(auth);
+
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
@@ -24,7 +32,7 @@ const CreateProduct = () => {
   const [shipping, setShipping] = useState(false);
   const [hsn, setHsn] = useState("");
   const [photo, setPhoto] = useState(null);
-  const [images, setImages] = useState([]); // Added for multiple images
+  const [images, setImages] = useState([]);
   const [bulkProducts, setBulkProducts] = useState([
     { minimum: "", maximum: "", discount_mrp: "", selling_price_set: "" },
   ]);
@@ -50,61 +58,11 @@ const CreateProduct = () => {
   const [photos, setPhotos] = useState(""); 
   const [multipleimages, setMultipleImages] = useState([]);
 
-  
-  useEffect(() => {
-    getAllCategories();
-    getSubcategories();
-    getAllBrands();
-  }, []);
-
-  const getAllCategories = async () => {
-    try {
-      const { data } = await axios.get("/api/v1/category/get-category");
-      if (data?.success) {
-        setCategories(data?.category);
-      }
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-      ////toast.error("Something went wrong in getting categories");
-    }
-  };
-
-  const getSubcategories = async () => {
-    try {
-      const { data } = await axios.get("/api/v1/subcategory/get-subcategories");
-      if (data?.success) {
-        setSubcategories(data?.subcategories || []);
-      } else {
-        setSubcategories([]);
-      }
-    } catch (error) {
-      console.log(error);
-      ////toast.error("Something went wrong in getting subcategories");
-      setSubcategories([]);
-    }
-  };
-
-  const getAllBrands = async () => {
-    try {
-      const { data } = await axios.get("/api/v1/brand/get-brands");
-      if (data?.success) {
-        setBrands(data?.brands);
-      }
-    } catch (error) {
-      console.error("Error fetching brands:", error);
-      ////toast.error("Something went wrong in getting brands");
-    }
-  };
 
   const handleCategoryChange = (value) => {
     setCategory(value);
     setSubcategory("");
     setBrand("");
-
-    const filteredSubcategories = subcategories.filter(
-      (subcat) => subcat.category === value
-    );
-    setSubcategories(filteredSubcategories);
   };
 
   const handleBrandChange = (value) => {

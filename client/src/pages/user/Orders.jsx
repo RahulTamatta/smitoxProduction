@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import UserMenu from "../../components/Layout/UserMenu";
 import Layout from "../../components/Layout/Layout";
 import axios from "axios";
-import { useAuth } from "../../context/auth";
+import { useAuth } from "../../context/authContext";
 import moment from "moment";
 
 const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {

@@ -2,7 +2,7 @@ import { Modal, Select } from "antd";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import AdminLayout from "../../features/admin/components/layout/AdminLayout";
-import { api } from "../../context/auth";
+import axios from "axios";
 
 const { Option } = Select;
 
@@ -66,9 +66,13 @@ const CreateCategory = () => {
         return;
       }
 
-      const { data } = await api.post("/api/v1/category/create-category", { 
+      const { data } = await axios.post("/api/v1/category/create-category", { 
         name, 
         photos: photoUrl 
+      }, {
+        headers: {
+          Authorization: token
+        }
       });
 
       if (data?.success) {
@@ -91,7 +95,7 @@ const CreateCategory = () => {
   // get all categories
   const getAllCategory = async () => {
     try {
-      const { data } = await api.get("/api/v1/category/get-category");
+      const { data } = await axios.get("/api/v1/category/get-category");
       if (data?.success) {
         setCategories(data?.category);
       }
@@ -126,11 +130,16 @@ const CreateCategory = () => {
         return;
       }
 
-      const { data } = await api.put(
+      const { data } = await axios.put(
         `/api/v1/category/update-category/${selected._id}`,
         {
           name: updatedName,
           photos: photoUrl || selected.photos
+        },
+        {
+          headers: {
+            Authorization: token
+          }
         }
       );
 
@@ -165,7 +174,11 @@ const CreateCategory = () => {
         return;
       }
 
-      const { data } = await api.delete(`/api/v1/category/delete-category/${pId}`);
+      const { data } = await axios.delete(`/api/v1/category/delete-category/${pId}`, {
+        headers: {
+          Authorization: token
+        }
+      });
       if (data.success) {
         toast.success(`Category is deleted`);
         getAllCategory();

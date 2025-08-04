@@ -3,7 +3,7 @@ import { Modal, Button, Form } from 'react-bootstrap';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import ReactPaginate from 'react-paginate';
-import { useAuth } from "../../context/auth"; // <-- Add this import
+import { useAuth } from "../../context/authContext"; // <-- Add this import
 
 const PincodeList = () => {
   const [auth] = useAuth(); // <-- Add this line

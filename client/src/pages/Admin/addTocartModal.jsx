@@ -1,7 +1,7 @@
 
 import { Modal, Form, Button, ListGroup, InputGroup } from 'react-bootstrap';
 import axios from 'axios';
-import { useAuth } from '../../context/auth';
+import { useAuth } from '../../context/authContext';
 import { toast } from 'react-hot-toast';
 import React, { useState, useEffect } from 'react';
 

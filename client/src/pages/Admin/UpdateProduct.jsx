@@ -3,7 +3,7 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate, useParams } from "react-router-dom";
-import { useAuth } from "../../context/auth"; // <-- Add this import
+import { useAuth } from "../../context/authContext"; // <-- Add this import
 import AdminLayout from "../../features/admin/components/layout/AdminLayout";
 
 const { Option } = Select;

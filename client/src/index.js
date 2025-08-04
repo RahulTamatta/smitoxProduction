@@ -3,15 +3,15 @@ import ReactDOM from "react-dom/client";
 import "./index.css";
 import App from "./App";
 import { BrowserRouter } from "react-router-dom";
-import { AuthProvider } from "./context/auth";
+import { AuthProvider } from "./context/authContext";
 import { SearchProvider } from "./context/search";
-import { CartProvider } from "./context/cart";
+import { CartProvider } from "./context/cartContext";
 import "antd/dist/reset.css";
 import { Toaster } from "react-hot-toast";
-import { Provider } from 'react-redux'; // Import Provider
-import store from './redux/store'; // Import your Redux store
 
-// Enable browser's automatic scroll restoration using window.history
+// Redux imports
+import { Provider } from 'react-redux';
+import store from './store/store';
 if ('scrollRestoration' in window.history) {
   window.history.scrollRestoration = 'auto';
 }
