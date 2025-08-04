@@ -68,3 +68,54 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+### **📁 Final Directory Structure:**
+
+src/
+├── assets/
+│ ├── images/ # ✅ All image assets
+│ └── styles/ # ✅ All CSS stylesheets
+├── components/
+│ ├── Layout/ # ✅ Header, Footer, Layout
+│ └── UI/ # ✅ Button, Card, Spinner, OptimizedImage
+├── features/ # ✅ Feature-based architecture
+│ ├── auth/
+│ │ ├── api/ # ✅ authApi.ts
+│ │ ├── components/ # ✅ Login, Register, etc.
+│ │ ├── hooks/ # ✅ useAuth.ts
+│ │ └── pages/ # ✅ LoginPage, RegisterPage
+│ ├── admin/
+│ │ ├── api/ # ✅ adminApi.ts
+│ │ ├── components/ # ✅ AdminHeader, AdminSidebar, etc.
+│ │ ├── hooks/ # ✅ useAdminDashboard.ts
+│ │ └── pages/ # ✅ DashboardPage, UsersPage
+│ ├── cart/
+│ │ ├── api/ # ✅ cartApi.ts
+│ │ ├── components/ # ✅ CartPage, PostPaymentWaitingDialog
+│ │ └── hooks/ # ✅ useCart.ts
+│ ├── categories/
+│ │ ├── api/ # ✅ categoriesApi.ts
+│ │ ├── components/ # ✅ CategoryForm, SubCategoryForm
+│ │ └── hooks/ # ✅ useCategories.ts
+│ ├── orders/
+│ │ ├── api/ # ✅ ordersApi.ts
+│ │ ├── components/ # ✅ OrdersTable, OrderModal
+│ │ └── hooks/ # ✅ useOrders.ts
+│ ├── products/
+│ │ ├── api/ # ✅ productsApi.ts
+│ │ ├── components/ # ✅ ProductCard, ProductsTable
+│ │ └── hooks/ # ✅ useProducts.ts
+│ ├── banners/
+│ │ └── components/ # ✅ Banner, BannerManagement
+│ └── dealSlider/
+│ └── components/ # ✅ DealSlider
+├── context/
+│ ├── authContext.jsx # ✅ Renamed & updated imports
+│ ├── cartContext.jsx # ✅ Renamed & updated imports
+│ └── search.jsx # ✅ Existing file
+├── hooks/ # ✅ Custom hooks
+├── services/
+│ └── apiClient.ts # ✅ Centralized API client
+├── store/
+│ └── store.js # ✅ Redux store (moved from redux/)
+└── utils/ # ✅ Utility functions

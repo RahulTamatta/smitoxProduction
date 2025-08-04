@@ -1,0 +1,298 @@
+/* Order Preview Styles */
+
+.preview-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+.no-print {
+  display: block;
+  margin-bottom: 20px;
+}
+
+.preview-controls {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.print-btn, .close-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  margin: 0 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.print-btn:hover, .close-btn:hover {
+  background-color: #0056b3;
+}
+
+.close-btn {
+  background-color: #6c757d;
+}
+
+.close-btn:hover {
+  background-color: #5a6268;
+}
+
+.loading, .error {
+  text-align: center;
+  padding: 50px;
+  font-size: 18px;
+  color: #666;
+}
+
+.error {
+  color: #dc3545;
+}
+
+.invoice {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 30px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.invoice-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid #007bff;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+}
+
+.company-info h1 {
+  color: #007bff;
+  font-size: 28px;
+  margin: 10px 0;
+  text-align: center;
+}
+
+.company-info h2 {
+  color: #333;
+  font-size: 20px;
+  margin: 5px 0;
+}
+
+.company-logo {
+  max-height: 60px;
+  max-width: 200px;
+  object-fit: contain;
+  margin-bottom: 10px;
+}
+
+.invoice-info {
+  text-align: right;
+}
+
+.invoice-info p {
+  margin: 5px 0;
+  font-size: 14px;
+}
+
+.customer-info {
+  margin-bottom: 30px;
+}
+
+.customer-info h3 {
+  color: #007bff;
+  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 5px;
+  margin-bottom: 15px;
+}
+
+.customer-details p {
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.order-details {
+  margin-bottom: 30px;
+}
+
+.order-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  font-size: 12px;
+}
+
+.order-table th {
+  background-color: #007bff;
+  color: white;
+  padding: 12px 8px;
+  text-align: center;
+  font-weight: 600;
+  border: 1px solid #0056b3;
+}
+
+.order-table td {
+  padding: 10px 8px;
+  text-align: center;
+  border: 1px solid #dee2e6;
+  vertical-align: middle;
+}
+
+.order-table tbody tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+.order-table tbody tr:hover {
+  background-color: #e3f2fd;
+}
+
+.order-summary {
+  border-top: 2px solid #dee2e6;
+  padding-top: 20px;
+  margin-bottom: 30px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.summary-row:last-child {
+  border-bottom: none;
+}
+
+.total-row {
+  background-color: #f8f9fa;
+  padding: 12px 15px;
+  margin: 10px -15px;
+  border-radius: 5px;
+  border: 2px solid #007bff;
+  font-size: 16px;
+}
+
+.tracking-info {
+  background-color: #e7f3ff;
+  padding: 15px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  border-left: 4px solid #007bff;
+}
+
+.order-info {
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+}
+
+.order-info p {
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.disclaimer {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 5px;
+  padding: 15px;
+  margin: 20px 0;
+}
+
+.disclaimer h4 {
+  color: #856404;
+  margin-bottom: 10px;
+}
+
+.disclaimer ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.disclaimer li {
+  margin: 5px 0;
+  font-size: 12px;
+  color: #856404;
+}
+
+.invoice-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid #dee2e6;
+}
+
+.footer-left, .footer-right {
+  flex: 1;
+}
+
+.footer-right {
+  text-align: right;
+}
+
+.signature-line {
+  width: 200px;
+  height: 1px;
+  border-bottom: 1px solid #333;
+  margin-top: 50px;
+  margin-left: auto;
+}
+
+/* Print Styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .preview-container {
+    background: white;
+    padding: 0;
+    margin: 0;
+    max-width: none;
+  }
+  
+  .invoice {
+    box-shadow: none;
+    border: none;
+    padding: 20px;
+  }
+  
+  .order-table {
+    font-size: 10px;
+  }
+  
+  .order-table th {
+    background-color: #007bff !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+  }
+  
+  .total-row {
+    background-color: #f8f9fa !important;
+    -webkit-print-color-adjust: exact;
+  }
+  
+  .tracking-info {
+    background-color: #e7f3ff !important;
+    -webkit-print-color-adjust: exact;
+  }
+  
+  .order-info {
+    background-color: #f8f9fa !important;
+    -webkit-print-color-adjust: exact;
+  }
+  
+  .disclaimer {
+    background-color: #fff3cd !important;
+    -webkit-print-color-adjust: exact;
+  }
+}

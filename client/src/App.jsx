@@ -30,6 +30,7 @@ import CategoryProduct from "./pages/CategoryProduct";
 import CartPage from "./features/cart/components/CartPage.jsx";
 import AdminOrders from "./pages/Admin/Admin order/AdminOrders.jsx";
 import PincodeList from "./pages/Admin/PinCode.jsx";
+import OrderPreview from "./pages/Admin/Admin order/components/OrderPreview.jsx";
 import Terms from "./pages/TermsofUse";
 import ReturnPolicy from "./pages/returnPolicy.jsx";
 import BannerManagement from "./features/banners/components/BannerManagement";
@@ -92,6 +93,7 @@ function App() {
         <Route path="/terms" element={<Terms />} />
         <Route path="/returnPolicy" element={<ReturnPolicy />} />
         <Route path="/add-to-cart/:userId/:user_fullname" element={<AddToCartPage />} />
+        <Route path="/preview-order/:orderId" element={<OrderPreview />} />
 
         <Route path="*" element={<Pagenotfound />} />
       </Routes>

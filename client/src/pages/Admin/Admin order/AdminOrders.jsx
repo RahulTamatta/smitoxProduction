@@ -76,6 +76,14 @@ const [addProductError, setAddProductError] = useState("");
       });
       setOrders(Array.isArray(data.orders) ? data.orders : []);
       setTotalOrders(data.total);
+      
+      // Debug logging - remove in production
+      if (data.orders && data.orders.length > 0) {
+        console.log('Order data structure:', data.orders[0]);
+        if (data.orders[0].products && data.orders[0].products.length > 0) {
+          console.log('Product structure:', data.orders[0].products[0]);
+        }
+      }
     } catch (error) {
       console.log(error);
       setError("Error fetching orders. Please try again.");
@@ -160,11 +168,12 @@ const [addProductError, setAddProductError] = useState("");
     );
 
     const gst = selectedOrder.products.reduce((acc, product) => {
+      const productData = typeof product.product === 'object' ? product.product : {};
       return (
         acc +
         (Number(product.price) *
           Number(product.quantity) *
-          (Number(product.gst) || 0)) /
+          (Number(productData.gst) || 0)) /
           100
       );
     }, 0);
@@ -301,11 +310,12 @@ const [addProductError, setAddProductError] = useState("");
     );
 
     const gst = order.products.reduce((acc, product) => {
+      const productData = typeof product.product === 'object' ? product.product : {};
       return (
         acc +
         (Number(product.price) *
           Number(product.quantity) *
-          (Number(product.gst) || 0)) /
+          (Number(productData.gst) || 0)) /
           100
       );
     }, 0);
@@ -397,27 +407,13 @@ const [addProductError, setAddProductError] = useState("");
     }
   };
 
-  const handleDownloadPDF = async () => {
+  const handleDownloadPDF = () => {
     try {
-      const response = await axios.get(
-        `/api/v1/auth/order/${selectedOrder._id}/invoice`,
-        {
-          responseType: "blob",
-        }
-      );
-
-      const blob = new Blob([response.data], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `invoice-${selectedOrder._id}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      // Open PDF in new tab instead of downloading
+      window.open(`/api/v1/auth/order/${selectedOrder._id}/invoice`, '_blank');
     } catch (error) {
       console.log(error);
-      message.error("Error downloading order invoice");
+      message.error("Error opening order invoice");
     }
   };
 

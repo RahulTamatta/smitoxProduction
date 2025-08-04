@@ -20,7 +20,7 @@ import orderModel from '../models/orderModel.js'; // Changed to import
 //router object
 const router = express.Router();
 
-// Fetch single order
+// Fetch single order (Admin only)
 router.get("/order/:orderId", requireSignIn, isAdmin, async (req, res) => {
   try {
     const order = await orderModel
@@ -47,6 +47,38 @@ router.get("/order/:orderId", requireSignIn, isAdmin, async (req, res) => {
     res.status(500).send({
       success: false,
       message: "Error fetching order",
+      error: error.message
+    });
+  }
+});
+
+// Public order preview route (no authentication required)
+router.get("/order/:orderId/preview", async (req, res) => {
+  try {
+    const order = await orderModel
+      .findById(req.params.orderId)
+      .populate({
+        path: "products.product",
+        select: "name photo photos multipleimages price images sku gst isActive stock"
+      })
+      .populate("buyer", "user_fullname mobile_no address city state landmark pincode");
+
+    if (!order) {
+      return res.status(404).send({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    res.send({
+      success: true,
+      order
+    });
+  } catch (error) {
+    console.error("Error fetching order preview:", error);
+    res.status(500).send({
+      success: false,
+      message: "Error fetching order preview",
       error: error.message
     });
   }
@@ -98,5 +130,44 @@ router.put("/order/:orderId", requireSignIn, isAdmin, updateOrderController);
 
 // remove product from order
 router.delete("/order/:orderId/remove-product/:productId", requireSignIn, isAdmin, deleteProductFromOrderController);
+
+// Generate PDF invoice (public route for preview)
+router.get("/order/:orderId/invoice", async (req, res) => {
+  try {
+    const order = await orderModel
+      .findById(req.params.orderId)
+      .populate({
+        path: "products.product",
+        select: "name photo photos multipleimages price images sku gst isActive stock"
+      })
+      .populate("buyer", "user_fullname mobile_no address city state landmark pincode");
+
+    if (!order) {
+      return res.status(404).send({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    // Set headers to display PDF in browser instead of downloading
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline; filename="invoice.pdf"');
+    
+    // For now, we'll return JSON response since PDF generation is not implemented
+    // This can be extended later with proper PDF generation library like puppeteer or pdfkit
+    res.json({
+      success: true,
+      message: "PDF generation not implemented yet",
+      order: order
+    });
+  } catch (error) {
+    console.error("Error generating invoice:", error);
+    res.status(500).send({
+      success: false,
+      message: "Error generating invoice",
+      error: error.message
+    });
+  }
+});
 
 export default router;

@@ -4,6 +4,7 @@ import axios from "axios";
 import moment from "moment";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
+import { useAuth } from "../../../../context/authContext";
 
 const OrderModal = ({
   show,
@@ -307,6 +308,7 @@ Thank you for your business!
     try {
       const response = await axios.get(`/api/v1/auth/order/${orderId}`);
       if (response.data.success) {
+        console.log('Refreshed order data:', response.data.order);
         onOrderUpdate(response.data.order);
         setLocalOrder(response.data.order);
       }
@@ -375,10 +377,19 @@ Thank you for your business!
               <tbody>
                 {products.length > 0 ? (
                   products.map((product, index) => {
-                    const productData = typeof product.product === 'object' ? product.product : {};
-                    const quantity = product.quantity || 0;
-                    const price = product.price || 0;
-                    const gst = productData.gst || 0;
+                    // Enhanced product data extraction with fallbacks
+                    const productData = typeof product.product === 'object' ? product.product : product;
+                    const quantity = Number(product.quantity) || 0;
+                    const price = Number(product.price) || Number(productData.price) || Number(productData.perPiecePrice) || 0;
+                    const gst = Number(productData.gst) || 0;
+
+                    // Enhanced product name and image extraction
+                    const productName = productData.name || product.name || "Unnamed Product";
+                    const productImage = productData.photos || 
+                                       product.photos || 
+                                       (productData.multipleimages && productData.multipleimages[0]) ||
+                                       (product.multipleimages && product.multipleimages[0]) ||
+                                       "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNSAzNUM5MS4xIDI1IDI1IDkuMSAyNSAyNVMzOS4xIDI1IDI1IDI1WiIgZmlsbD0iI0NCQ0JDQiIvPgo8L3N2Zz4K";
 
                     const netAmount = (price * quantity).toFixed(2);
                     const taxAmount = ((price * quantity) * (gst / 100)).toFixed(2);
@@ -387,18 +398,23 @@ Thank you for your business!
                         ? ((price * quantity) * (1 + gst / 100)).toFixed(2)
                         : (price * quantity).toFixed(2);
 
+                    // Debug logging (remove in production)
+                    console.log('Product debug:', {
+                      index,
+                      productName,
+                      price,
+                      quantity,
+                      gst,
+                      productData,
+                      originalProduct: product
+                    });
+
                     return (
                       <tr key={product._id || index}>
                         <td>
                           <img
-                            src={
-                              productData.photos ||
-                              product.photos ||
-                              (productData.multipleimages && productData.multipleimages[0]) ||
-                              (product.multipleimages && product.multipleimages[0]) ||
-                              "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNSAzNUM5MS4xIDI1IDI1IDkuMSAyNSAyNVMzOS4xIDI1IDI1IDI1WiIgZmlsbD0iI0NCQ0JDQiIvPgo8L3N2Zz4K"
-                            }
-                            alt={productData.name || product.name || "Product image"}
+                            src={productImage}
+                            alt={productName}
                             width="50"
                             className="img-fluid"
                             onError={(e) => {
@@ -408,7 +424,7 @@ Thank you for your business!
                             }}
                           />
                         </td>
-                        <td>{productData.name || "Unnamed Product"}</td>
+                        <td>{productName}</td>
                         <td>
                           <Form.Control
                             type="number"
@@ -649,7 +665,6 @@ Thank you for your business!
         <Button
           variant="info"
           onClick={() => {
-            generatePDF();
             window.open(`/preview-order/${selectedOrder._id}`, '_blank');
           }} 
         >
