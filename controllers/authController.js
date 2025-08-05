@@ -763,12 +763,30 @@ export const addProductToOrderController = async (req, res) => {
       });
     }
 
-    // Recalculate total amount
-    const totalAmount = order.products.reduce(
+    // Recalculate amounts properly
+    const totalProductAmount = order.products.reduce(
       (total, product) => total + (product.quantity * product.price), 
       0
     );
-    order.amount = totalAmount;
+    
+    // Calculate new total amount including charges and discounts
+    const deliveryCharges = Number(order.deliveryCharges) || 0;
+    const codCharges = Number(order.codCharges) || 0;
+    const discount = Number(order.discount) || 0;
+    const newTotalAmount = totalProductAmount + deliveryCharges + codCharges - discount;
+    
+    // Update amountPending = newTotalAmount - amount (amount paid)
+    order.amountPending = newTotalAmount - (Number(order.amount) || 0);
+    
+    console.log('addProductToOrder - Calculation:', {
+      totalProductAmount,
+      deliveryCharges,
+      codCharges,
+      discount,
+      newTotalAmount,
+      currentAmount: order.amount,
+      calculatedAmountPending: order.amountPending
+    });
 
     // Save updated order
     await order.save();
@@ -916,6 +934,16 @@ export const updateOrderController = async (req, res) => {
 
     // Calculate amount pending
     order.amountPending = newTotalAmount - order.amount;
+    
+    console.log('updateOrder - Calculation:', {
+      totalProductAmount,
+      deliveryCharges: order.deliveryCharges,
+      codCharges: order.codCharges,
+      discount: order.discount,
+      newTotalAmount,
+      amountPaid: order.amount,
+      calculatedAmountPending: order.amountPending
+    });
 
     // Save the updated order
     await order.save();
@@ -973,16 +1001,23 @@ export const deleteProductFromOrderController = async (req, res) => {
       });
     }
 
-    // Calculate price to subtract
-    const productToRemove = order.products[productIndex];
-    const priceToSubtract = productToRemove.price * productToRemove.quantity;
-
     // Remove the product from the array
     order.products.splice(productIndex, 1);
 
-    // Update order totals
-    order.amount = Math.max(0, order.amount - priceToSubtract);
-    order.amountPending = Math.max(0, order.amountPending - priceToSubtract);
+    // Recalculate total product amount after removal
+    const totalProductAmount = order.products.reduce(
+      (total, product) => total + (product.quantity * product.price), 
+      0
+    );
+    
+    // Calculate new total amount including charges and discounts
+    const deliveryCharges = Number(order.deliveryCharges) || 0;
+    const codCharges = Number(order.codCharges) || 0;
+    const discount = Number(order.discount) || 0;
+    const newTotalAmount = totalProductAmount + deliveryCharges + codCharges - discount;
+    
+    // Recalculate amountPending = newTotalAmount - amount (amount paid should NOT change)
+    order.amountPending = newTotalAmount - (Number(order.amount) || 0);
 
     // Save the updated order
     await order.save();

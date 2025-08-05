@@ -7,24 +7,38 @@ const SearchModal = ({ show, handleClose, handleAddToOrder }) => {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchResults, setSearchResults] = useState([]);
 
-  // Function to get price display
+  // Function to get price display - enhanced for set-based pricing
   const getPriceDisplay = (product) => {
+    const unitSet = product.unitSet || 1;
+    const initialQuantity = unitSet * 1; // 1 set
+    
     if (product.bulkProducts && product.bulkProducts.length > 0) {
       const sortedBulkProducts = [...product.bulkProducts]
         .filter(bp => bp && bp.minimum)
         .sort((a, b) => a.minimum - b.minimum);
 
-      // Show the lowest and highest bulk pricing
+      // Check if initial quantity qualifies for bulk pricing
+      const applicableBulk = sortedBulkProducts.find(bulk => {
+        return initialQuantity >= bulk.minimum * unitSet &&
+               (!bulk.maximum || initialQuantity <= bulk.maximum * unitSet);
+      });
+
+      if (applicableBulk) {
+        return `₹${parseFloat(applicableBulk.selling_price_set).toFixed(2)} per set (Bulk Applied)`;
+      }
+      
+      // Show bulk pricing range if available but not applicable to initial quantity
       if (sortedBulkProducts.length > 0) {
         const lowestBulk = sortedBulkProducts[0];
         const highestBulk = sortedBulkProducts[sortedBulkProducts.length - 1];
-        
-        return `₹${lowestBulk.selling_price_set.toFixed(2)} - ₹${highestBulk.selling_price_set.toFixed(2)}`;
+        return `₹${parseFloat(product.price || (product.perPiecePrice * unitSet) || 0).toFixed(2)} per set (Bulk: ₹${lowestBulk.selling_price_set.toFixed(2)} - ₹${highestBulk.selling_price_set.toFixed(2)})`;
       }
     }
     
-    // Fallback to per piece or default price
-    return `₹${(product.perPiecePrice || product.price).toFixed(2)}`;
+    // Fallback to set price calculation
+    const perPiecePrice = parseFloat(product.perPiecePrice || 0);
+    const setPrice = parseFloat(product.price || (perPiecePrice * unitSet) || 0);
+    return `₹${setPrice.toFixed(2)} per set`;
   };
 
   const handleSearch = async (e) => {
@@ -64,10 +78,15 @@ const SearchModal = ({ show, handleClose, handleAddToOrder }) => {
               className="d-flex justify-content-between align-items-center"
             >
               <img
-                src={product.photos}
+                src={product.photos || `/api/v1/product/product-photo/${product._id}`}
                 alt={product.name}
                 width="50"
                 className="me-2"
+                onError={(e) => {
+                  if (e.target.src !== "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNSAzNUM5MS4xIDI1IDI1IDkuMSAyNSAyNVMzOS4xIDI1IDI1IDI1WiIgZmlsbD0iI0NCQ0JDQiIvPgo8L3N2Zz4K") {
+                    e.target.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNSAzNUM5MS4xIDI1IDI1IDkuMSAyNSAyNVMzOS4xIDI1IDI1IDI1WiIgZmlsbD0iI0NCQ0JDQiIvPgo8L3N2Zz4K";
+                  }
+                }}
               />
               <div>
                 <div>{product.name}</div>

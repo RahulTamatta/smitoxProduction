@@ -18,6 +18,7 @@ import { useSearch } from "../../../context/search";
 import AdminLayout from "../../../features/admin/components/layout/AdminLayout";
 import OrderModal from "./components/orderModal";
 import SearchModal from "./components/searchModal";
+import "./AdminOrders.css";
 
 const AdminOrders = () => {
   const [status] = useState([
@@ -153,10 +154,32 @@ const [addProductError, setAddProductError] = useState("");
     setSelectedOrder((prevOrder) => {
       if (!prevOrder?.products) return prevOrder;
       const updatedProducts = [...prevOrder.products];
+      const currentProduct = updatedProducts[index];
+      
+      // Update the field
       updatedProducts[index] = {
-        ...updatedProducts[index],
+        ...currentProduct,
         [field]: Number(value),
       };
+      
+      // If quantity changed, recalculate price based on bulk pricing
+      if (field === 'quantity') {
+        const productData = typeof currentProduct.product === 'object' 
+          ? currentProduct.product 
+          : currentProduct;
+          
+        if (productData && Number(value) > 0) {
+          const pricingResult = calculateProductPrice(productData, Number(value));
+          updatedProducts[index].price = pricingResult.unitPrice;
+          
+          console.log(`Price recalculated for ${productData.name}:`, {
+            quantity: Number(value),
+            newUnitPrice: pricingResult.unitPrice,
+            bulkApplied: pricingResult.bulkApplied?.minimum || 'None'
+          });
+        }
+      }
+      
       return { ...prevOrder, products: updatedProducts };
     });
   };
@@ -201,6 +224,65 @@ const [addProductError, setAddProductError] = useState("");
 
   };
 
+  // Enhanced pricing calculation function similar to ProductDetails.jsx
+  const getApplicableBulkProduct = (product, quantity) => {
+    if (!product.bulkProducts || product.bulkProducts.length === 0) return null;
+
+    const unitSet = product.unitSet || 1;
+    const sortedBulkProducts = [...product.bulkProducts]
+      .filter((bulk) => bulk && bulk.minimum)
+      .sort((a, b) => b.minimum - a.minimum);
+
+    // Check if quantity qualifies for the highest bulk tier first
+    if (
+      sortedBulkProducts.length > 0 &&
+      quantity >= sortedBulkProducts[0].minimum * unitSet
+    ) {
+      return sortedBulkProducts[0];
+    }
+
+    // Find the appropriate bulk tier for the quantity
+    for (let i = 0; i < sortedBulkProducts.length; i++) {
+      const bulk = sortedBulkProducts[i];
+      if (
+        quantity >= bulk.minimum * unitSet &&
+        (!bulk.maximum || quantity <= bulk.maximum * unitSet)
+      ) {
+        return bulk;
+      }
+    }
+
+    return null;
+  };
+
+  // Calculate total price based on quantity and bulk pricing (SET-based pricing)
+  const calculateProductPrice = (product, quantity) => {
+    const unitSet = product.unitSet || 1;
+    const applicableBulk = getApplicableBulkProduct(product, quantity);
+    
+    if (applicableBulk) {
+      // Use bulk pricing - selling_price_set is the price per set
+      return {
+        unitPrice: parseFloat(applicableBulk.selling_price_set), // This is price per SET
+        totalPrice: quantity * parseFloat(applicableBulk.selling_price_set),
+        bulkApplied: applicableBulk,
+        priceType: 'bulk_set'
+      };
+    } else {
+      // Use regular pricing - calculate SET price from per-piece price
+      const perPiecePrice = parseFloat(product.perPiecePrice || 0);
+      const setPriceFromPiece = perPiecePrice * unitSet; // Convert per-piece to per-set
+      const setPrice = parseFloat(product.price || setPriceFromPiece || 0); // Use product.price (set price) if available
+      
+      return {
+        unitPrice: setPrice, // This is price per SET
+        totalPrice: quantity * setPrice,
+        bulkApplied: null,
+        priceType: 'regular_set'
+      };
+    }
+  };
+
   const handleAddToOrder = async (product) => {
     try {
       if (product.isActive === "0" || product.stock <= 0) {
@@ -212,15 +294,30 @@ const [addProductError, setAddProductError] = useState("");
         return;
       }
   
-      // Capture current paid amount before adding product
-      const originalAmount = selectedOrder.amount;
+      // Calculate proper pricing using enhanced set-based logic from product detail page
+      const unitSet = product.unitSet || 1;
+      const initialQuantity = unitSet * 1; // Start with 1 set
+      
+      // Calculate pricing with bulk consideration
+      const pricingResult = calculateProductPrice(product, initialQuantity);
+      
+      console.log('Adding product with pricing:', {
+        productName: product.name,
+        quantity: initialQuantity,
+        unitSet: unitSet,
+        unitPrice: pricingResult.unitPrice,
+        totalPrice: pricingResult.totalPrice,
+        bulkApplied: pricingResult.bulkApplied?.minimum || 'None'
+      });
   
-      // Send only essential data to server
+      // Send product data with proper pricing to server
       const addResponse = await axios.put(
         `/api/v1/auth/order/${selectedOrder._id}/add`,
         { 
           productId: product._id, 
-          quantity: product.unitSet || 1 // Ensure minimum quantity
+          quantity: initialQuantity,
+          price: pricingResult.unitPrice, // Use calculated unit price
+          bulkProductDetails: pricingResult.bulkApplied // Include bulk details if applicable
         },
         {
           headers: {
@@ -233,10 +330,19 @@ const [addProductError, setAddProductError] = useState("");
         throw new Error(addResponse.data.message);
       }
 
-      // Set the fresh order data from the API response
-      // The backend now properly populates buyer information
-      setSelectedOrder(addResponse.data.order);
-      message.success("Product added successfully");
+      // Use the updated order from the response directly
+      const updatedOrder = addResponse.data.order;
+      console.log('Product added, updated order from backend:', {
+        orderId: updatedOrder._id,
+        productsCount: updatedOrder.products?.length,
+        amountPending: updatedOrder.amountPending,
+        amount: updatedOrder.amount
+      });
+      
+      // Update the selected order immediately with backend response
+      setSelectedOrder(updatedOrder);
+      
+      message.success(`Product added successfully with ${pricingResult.bulkApplied ? 'bulk' : 'regular'} pricing`);
       handleCloseSearchModal();
       
       // Refresh the orders list

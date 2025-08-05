@@ -1,0 +1,309 @@
+/* Admin Orders Responsive Styles */
+
+/* Table container for horizontal scrolling on mobile */
+.orders-table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Table styles */
+.orders-table {
+  min-width: 900px; /* Ensures table doesn't get too cramped */
+  border-collapse: collapse;
+  width: 100%;
+  background: white;
+}
+
+/* Responsive table headers */
+.orders-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  text-align: left;
+  padding: 12px 8px;
+  border-bottom: 2px solid #dee2e6;
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+
+/* Table cells */
+.orders-table td {
+  padding: 8px;
+  border-bottom: 1px solid #e9ecef;
+  vertical-align: top;
+  font-size: 0.8rem;
+}
+
+/* Order info cell styling */
+.order-info-cell {
+  min-width: 200px;
+}
+
+.order-info-name {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #333;
+}
+
+.order-info-id {
+  display: inline-block;
+  padding: 4px 8px;
+  border: 1px solid #007bff;
+  border-radius: 4px;
+  background-color: #e7f1ff;
+  font-weight: bold;
+  color: #007bff;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  margin-bottom: 4px;
+  font-size: 0.75rem;
+}
+
+.order-info-id:hover {
+  background-color: #cfe2ff;
+}
+
+.order-info-mobile {
+  color: #666;
+  font-size: 0.75rem;
+}
+
+.order-info-tracking {
+  margin-top: 4px;
+}
+
+/* Tracking button styles */
+.tracking-btn {
+  font-size: 0.6rem;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin: 2px 0;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  white-space: nowrap;
+}
+
+/* Action button styles */
+.action-btn {
+  font-size: 0.6rem;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin: 2px 0;
+  background-color: #17a2b8;
+  color: #fff;
+  border: none;
+  white-space: nowrap;
+}
+
+/* Filters container */
+.orders-filters {
+  margin-bottom: 1.5rem;
+}
+
+.orders-filters .row {
+  align-items: center;
+}
+
+.orders-filters .form-control,
+.orders-filters .form-select {
+  font-size: 0.9rem;
+}
+
+/* Nav pills styling */
+.orders-nav-pills {
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.orders-nav-pills .nav-link {
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+/* Pagination container */
+.orders-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.orders-pagination .btn {
+  font-size: 0.85rem;
+  padding: 6px 12px;
+}
+
+.orders-pagination .text-muted {
+  font-size: 0.85rem;
+}
+
+/* Status badges */
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-pending { background-color: #fff3cd; color: #856404; }
+.status-confirmed { background-color: #cce5ff; color: #004085; }
+.status-accepted { background-color: #d4edda; color: #155724; }
+.status-cancelled { background-color: #f8d7da; color: #721c24; }
+.status-rejected { background-color: #f8d7da; color: #721c24; }
+.status-dispatched { background-color: #d1ecf1; color: #0c5460; }
+.status-delivered { background-color: #d4edda; color: #155724; }
+.status-returned { background-color: #e2e3e5; color: #383d41; }
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .orders-filters .row {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .orders-filters .col-md-3,
+  .orders-filters .col-md-6 {
+    width: 100%;
+    max-width: none;
+  }
+  
+  .orders-nav-pills {
+    justify-content: center;
+  }
+  
+  .orders-nav-pills .nav-link {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+  }
+  
+  .orders-pagination {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .orders-pagination .d-flex {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .orders-table th,
+  .orders-table td {
+    padding: 6px 4px;
+    font-size: 0.75rem;
+  }
+  
+  .order-info-cell {
+    min-width: 150px;
+  }
+  
+  .order-info-id {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+  }
+  
+  .tracking-btn,
+  .action-btn {
+    font-size: 0.55rem;
+    padding: 1px 4px;
+  }
+}
+
+@media (max-width: 576px) {
+  .orders-table {
+    min-width: 800px;
+  }
+  
+  .orders-table th,
+  .orders-table td {
+    padding: 4px 2px;
+    font-size: 0.7rem;
+  }
+  
+  .order-info-cell {
+    min-width: 120px;
+  }
+  
+  .order-info-name {
+    font-size: 0.7rem;
+  }
+  
+  .order-info-mobile {
+    font-size: 0.65rem;
+  }
+  
+  .status-badge {
+    font-size: 0.6rem;
+    padding: 2px 6px;
+  }
+}
+
+/* Loading and error states */
+.orders-loading {
+  text-align: center;
+  padding: 3rem;
+}
+
+.orders-error {
+  padding: 2rem;
+  text-align: center;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 8px;
+  color: #721c24;
+}
+
+.orders-empty {
+  padding: 2rem;
+  text-align: center;
+  background-color: #d1ecf1;
+  border: 1px solid #bee5eb;
+  border-radius: 8px;
+  color: #0c5460;
+}
+
+/* Sort indicator styles */
+.sort-indicator {
+  font-weight: bold;
+  margin-left: 8px;
+  font-size: 18px;
+  color: #007bff;
+}
+
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+  position: relative;
+}
+
+.sortable-header:hover {
+  background-color: #e9ecef;
+}
+
+.sortable-header.active {
+  background-color: #e3f2fd;
+  border-bottom: 2px solid #1976d2;
+}
+
+/* Ensure table responsiveness */
+@media (max-width: 992px) {
+  .table-responsive {
+    border-radius: 8px;
+  }
+  
+  .orders-table-container {
+    margin: 0 -15px;
+    border-radius: 0;
+  }
+}

@@ -27,9 +27,17 @@ const AddToCartPages = () => {
   const [showSearchModal, setShowSearchModal] = useState(false);
   
   const [selectedUserId, setSelectedUserId] = useState(null);
-    const handleOpenSearchModal = (userId) => {
+  const handleOpenSearchModal = (userId) => {
     setSelectedUserId(userId);
     setShowSearchModal(true);
+  };
+  
+  const handleCloseSearchModal = () => {
+    setShowSearchModal(false);
+    // Refresh cart data when modal closes
+    if (userId) {
+      getCart(userId);
+    }
   };
   
   const getPriceForProduct = (product, quantity) => {
@@ -241,7 +249,7 @@ const getCart = async (userId) => {
 {/* Move this outside the header but keep it in the component */}
 <CartSearchModal
   show={showSearchModal}
-  handleClose={() => setShowSearchModal(false)} // Add this prop
+  handleClose={handleCloseSearchModal}
   userId={selectedUserId}
 />
         <div className="row">

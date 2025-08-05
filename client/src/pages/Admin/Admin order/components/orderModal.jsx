@@ -33,6 +33,10 @@ const OrderModal = ({
   // Update local state when selectedOrder changes
   useEffect(() => {
     setLocalOrder(selectedOrder);
+    // Force a re-render by logging the current amountPending
+    if (selectedOrder) {
+      console.log('OrderModal: selectedOrder updated, amountPending:', selectedOrder.amountPending);
+    }
   }, [selectedOrder]);
 
   // Refresh data when modal is shown
@@ -41,6 +45,15 @@ const OrderModal = ({
       refreshOrderData();
     }
   }, [show, orderId]);
+
+  // Add an effect to refresh when products array length changes (when products are added/removed)
+  useEffect(() => {
+    if (selectedOrder?.products && show) {
+      console.log('OrderModal: Products array changed, length:', selectedOrder.products.length);
+      // No need for timeout since we now get immediate data from backend
+      console.log('OrderModal: Current amountPending after product change:', selectedOrder.amountPending);
+    }
+  }, [selectedOrder?.products?.length, show]);
 
   const convertToWords = (num) => {
     const a = [
@@ -201,7 +214,7 @@ const OrderModal = ({
         doc.text(`Discount: Rs. ${Number(selectedOrder.discount || 0).toFixed(2)}`, 20, finalY + 30);
         doc.text(`Total Amount: Rs. ${Number(totals.total).toFixed(2)}`, 20, finalY + 35);
         doc.text(`Amount Paid: Rs. ${Number(selectedOrder.amount || 0).toFixed(2)}`, 20, finalY + 40);
-        doc.text(`Amount Pending: Rs. ${Number(totals.total - (selectedOrder.amount || 0)).toFixed(2)}`, 20, finalY + 45);
+        doc.text(`Amount Pending: Rs. ${Number(selectedOrder.amountPending ?? (totals.total - (selectedOrder.amount || 0))).toFixed(2)}`, 20, finalY + 45);
   
         // Add amount in words
         doc.text(`Amount in Words: ${convertToWords(Math.round(totals.total))}`, 20, finalY + 60);
@@ -294,7 +307,7 @@ COD Charges: Rs. ${Number(selectedOrder.codCharges || 0).toFixed(2)}
 Discount: Rs. ${Number(selectedOrder.discount || 0).toFixed(2)}
 *Total Amount: Rs. ${totals.total.toFixed(2)}*
 Amount Paid: Rs. ${Number(selectedOrder.amount || 0).toFixed(2)}
-Amount Pending: Rs. ${(totals.total - Number(selectedOrder.amount || 0)).toFixed(2)}
+Amount Pending: Rs. ${Number(selectedOrder.amountPending ?? (totals.total - Number(selectedOrder.amount || 0))).toFixed(2)}
 
 Thank you for your business!
 `;
@@ -548,7 +561,21 @@ Thank you for your business!
                 <tr>
                   <td colSpan="4"></td>
                   <td>Amount Pending:</td>
-                  <td>₹{(calculateTotals().total - Number(selectedOrder.amount || 0)).toFixed(2)}</td>
+                  <td>
+                    {(() => {
+                      const backendValue = selectedOrder.amountPending;
+                      const frontendCalculation = calculateTotals().total - Number(selectedOrder.amount || 0);
+                      console.log('Debug Amount Pending:', {
+                        backendAmountPending: backendValue,
+                        frontendCalculation: frontendCalculation,
+                        total: calculateTotals().total,
+                        amountPaid: selectedOrder.amount,
+                        finalValue: Number(backendValue ?? frontendCalculation).toFixed(2)
+                      });
+                      return `₹${Number(backendValue ?? frontendCalculation).toFixed(2)}`;
+                    })()
+                    }
+                  </td>
                 </tr>
               </tbody>
             </Table>
