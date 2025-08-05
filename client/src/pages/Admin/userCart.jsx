@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from "react";
 import AdminLayout from "../../features/admin/components/layout/AdminLayout";
 import { useNavigate } from "react-router-dom";
-import DropIn from "braintree-web-drop-in-react";
 import { AiFillWarning } from "react-icons/ai";
 import axios from "axios";
 import toast from "react-hot-toast";
 import "../cart/cartPage.css"
-import { useCart } from "../../context/cartContext";
 import { useAuth } from "../../context/authContext";
 import { useParams } from 'react-router-dom';
 import CartSearchModal from "../Admin/addTocartModal";
@@ -24,7 +22,8 @@ const AddToCartPages = () => {
   const [isPincodeAvailable, setIsPincodeAvailable] = useState(false);
   const [auth] = useAuth();
   const navigate = useNavigate();
-  const { userId ,user_fullname} = useParams();
+  const { userId } = useParams();
+  const [userName, setUserName] = useState("");
   const [showSearchModal, setShowSearchModal] = useState(false);
   
   const [selectedUserId, setSelectedUserId] = useState(null);
@@ -57,10 +56,11 @@ const AddToCartPages = () => {
     if (userId) {
       getCart(userId);
       fetchMinimumOrder();
+      fetchUserName(userId);
     }
   }, [userId]);
 
-  const getCart = async (userId) => {
+const getCart = async (userId) => {
     try {
       const { data } = await axios.get(`/api/v1/carts/users/${userId}/cart`);
       setCart(data.cart || []);
@@ -68,6 +68,16 @@ const AddToCartPages = () => {
       console.error("Error fetching cart:", error);
       ////toast.error("Error fetching cart");
       setCart([]);
+    }
+  };
+
+  const fetchUserName = async (userId) => {
+    try {
+      const { data } = await axios.get(`/api/v1/usersLists/users/${userId}`);
+      setUserName(data.user_fullname || "User");
+    } catch (error) {
+      console.error("Error fetching user name:", error);
+      setUserName("User");
     }
   };
 
@@ -92,6 +102,24 @@ const AddToCartPages = () => {
     } catch (error) {
       console.error("Error removing item:", error);
       ////toast.error("Error removing item from cart");
+    }
+  };
+
+  const clearCart = async () => {
+    try {
+      if (!userId) return;
+
+      const response = await axios.delete(`/api/v1/carts/users/${userId}/cart`);
+
+      if (response.data.status === 'success') {
+        setCart([]);
+        //toast.success("Cart cleared successfully");
+      } else {
+        ////toast.error("Failed to clear cart");
+      }
+    } catch (error) {
+      console.log(error);
+      ////toast.error("Error clearing cart");
     }
   };
 
@@ -131,7 +159,57 @@ const AddToCartPages = () => {
     }
   };
 
-  const decodedUserName = decodeURIComponent(user_fullname);
+  const handlePayment = async () => {
+    const total = totalPrice();
+
+    setLoading(true);
+    setOrderPlacementInProgress(true);
+    setOrderErrorMessage("");
+
+    try {
+      const payload = {
+        products: Array.isArray(cart)
+          ? cart.map(item => ({
+              product: item.product._id,
+              quantity: item.quantity,
+              price: getPriceForProduct(item.product, item.quantity),
+            }))
+          : [],
+        paymentMethod,
+        amount: 0,
+        amountPending: total
+      };
+
+      const { data } = await axios.post(
+        "/api/v1/product/process-payment", 
+        payload, 
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache',
+            'X-Admin-Order': 'true',
+            'X-Order-User-Id': userId,
+            'Authorization': auth?.token
+          }
+        }
+      );
+
+      if (data.success) {
+        await clearCart();
+        toast.success("Order placed successfully on behalf of the user!");
+      } else {
+        throw new Error(data.message || "Failed to place order");
+      }
+    } catch (error) {
+      console.error("Payment error:", error);
+      setOrderErrorMessage("Payment processing failed. Please try again.");
+      toast.error("Failed to place order. Please try again.");
+    } finally {
+      setLoading(false);
+      setOrderPlacementInProgress(false);
+    }
+  };
+
 
   useEffect(() => {
     if (userId) {
@@ -147,8 +225,8 @@ const AddToCartPages = () => {
   <h1 className="text-center bg-light p-2 mb-1">
     <p className="text-center">
       {cart?.length
-        ? ` ${decodedUserName} Have ${cart.length} items in his cart `
-        : "His Cart Is Empty"}
+        ? ` ${userName} has ${cart.length} items in their cart `
+        : `${userName}'s Cart Is Empty`}
     </p>
     {/* Add this button */}
     <button 
@@ -286,7 +364,80 @@ const AddToCartPages = () => {
               )
             ))}
           </div>
-   
+          
+          {/* Cart Summary Section */}
+          <div className="col-md-5">
+            <div className="card">
+              <div className="card-body">
+                <h4 className="card-title">Cart Summary</h4>
+                <hr />
+                <div className="mb-3">
+                  <p className="d-flex justify-content-between">
+                    <span>Total Items:</span>
+                    <span>{cart.length}</span>
+                  </p>
+                  <p className="d-flex justify-content-between">
+                    <span>Total Amount:</span>
+                    <span>
+                      {totalPrice().toLocaleString("en-US", {
+                        style: "currency",
+                        currency: minimumOrderCurrency || "INR",
+                      })}
+                    </span>
+                  </p>
+                  <p className="d-flex justify-content-between text-muted">
+                    <span>Minimum Order:</span>
+                    <span>
+                      {minimumOrder.toLocaleString("en-US", {
+                        style: "currency",
+                        currency: minimumOrderCurrency || "INR",
+                      })}
+                    </span>
+                  </p>
+                </div>
+                
+                {totalPrice() < minimumOrder && (
+                  <div className="alert alert-warning" role="alert">
+                    <AiFillWarning className="me-2" />
+                    Order total is below the minimum order amount.
+                  </div>
+                )}
+                
+                <div className="mb-3">
+                  <small className="text-muted">
+                    • Order will be placed using COD (Cash on Delivery) only
+                    <br />
+                    • Courier charges will be added based on weight and COD amount
+                    <br />
+                    • Order will be placed on behalf of {userName}
+                  </small>
+                </div>
+                
+                <button
+                  className="btn btn-success w-100 mb-2"
+                  onClick={handlePayment}
+                  disabled={orderPlacementInProgress || cart.length === 0 || totalPrice() < minimumOrder}
+                  style={{ fontSize: '1.1rem', fontWeight: 'bold' }}
+                >
+                  {orderPlacementInProgress ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Placing Order...
+                    </>
+                  ) : (
+                    `Place Order (COD)`
+                  )}
+                </button>
+                
+                {orderErrorMessage && (
+                  <div className="alert alert-danger mt-2" role="alert">
+                    <AiFillWarning className="me-2" />
+                    {orderErrorMessage}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </AdminLayout>

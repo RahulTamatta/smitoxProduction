@@ -143,7 +143,7 @@ router.get('/:workType', async(req, res)=>{
     }
 })
 
-router.put('/:id', async (req, res)=>{
+router. put('/:id', async (req, res)=>{
     try{
         const personId = req.params.id; // Extract the id from the URL parameter
         const updatedPersonData = req.body; // Updated data for the person

@@ -140,7 +140,16 @@ const UserList = () => {
     let result = usersList;
 
     if (activeStatusFilter !== 'all') {
-      result = result.filter(user => user.status === activeStatusFilter);
+      result = result.filter(user => {
+        if (activeStatusFilter === 'active') {
+          return user.status === 0; // 0 means active
+        } else if (activeStatusFilter === 'blocked') {
+          return user.status === 1; // 1 means blocked
+        } else if (activeStatusFilter === 'pending') {
+          return user.status === 2; // 2 means pending (if applicable)
+        }
+        return true;
+      });
     }
     if (activeOrderTypeFilter !== 'all') {
       result = result.filter(user => getOrderType(user.order_type) === activeOrderTypeFilter);
@@ -286,8 +295,7 @@ const UserList = () => {
   );
 
   const handleOpenSearchModal = (userId, user_fullname) => {
-    const encodedName = encodeURIComponent(user_fullname);
-    navigate(`/add-to-cart/${userId}/${encodedName}`);
+    navigate(`/add-to-cart/${userId}/admin`);
   };
 
   const toggleStatus = async (id, currentStatus) => {

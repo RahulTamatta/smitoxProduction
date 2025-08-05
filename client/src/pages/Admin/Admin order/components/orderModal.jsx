@@ -304,9 +304,15 @@ Thank you for your business!
     window.open(whatsappLink, "_blank");
   };
 
+  const [auth] = useAuth();
+  
   const refreshOrderData = async () => {
     try {
-      const response = await axios.get(`/api/v1/auth/order/${orderId}`);
+      const response = await axios.get(`/api/v1/auth/order/${orderId}`, {
+        headers: {
+          Authorization: auth?.token
+        }
+      });
       if (response.data.success) {
         console.log('Refreshed order data:', response.data.order);
         onOrderUpdate(response.data.order);

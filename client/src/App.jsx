@@ -92,7 +92,7 @@ function App() {
         <Route path="/policy" element={<Policy />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/returnPolicy" element={<ReturnPolicy />} />
-        <Route path="/add-to-cart/:userId/:user_fullname" element={<AddToCartPage />} />
+        <Route path="/add-to-cart/:userId/admin" element={<AddToCartPage />} />
         <Route path="/preview-order/:orderId" element={<OrderPreview />} />
 
         <Route path="*" element={<Pagenotfound />} />

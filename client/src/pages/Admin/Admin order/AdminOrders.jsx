@@ -72,6 +72,9 @@ const [addProductError, setAddProductError] = useState("");
           page,
           limit: itemsPerPage,
           search, // Send search query to backend
+          sortBy, // Send sorting field
+          sortOrder, // Send sorting order
+          paymentFilter, // Send payment filter
         },
       });
       setOrders(Array.isArray(data.orders) ? data.orders : []);
@@ -108,8 +111,8 @@ const [addProductError, setAddProductError] = useState("");
   const totalPages = Math.ceil(totalOrders / itemsPerPage);
 
   useEffect(() => {
-    if (auth?.token) getOrders(orderType);
-  }, [auth?.token, orderType]);
+    if (auth?.token) getOrders(orderType, currentPage, searchTerm);
+  }, [auth?.token, orderType, sortBy, sortOrder, paymentFilter]);
 
   const handleStatusChange = async (orderId, value) => {
     try {
@@ -230,15 +233,8 @@ const [addProductError, setAddProductError] = useState("");
         throw new Error(addResponse.data.message);
       }
 
-      // Refresh order data after adding product
-  
-      // Preserve original amount in the updated order data
-      const updatedOrder = {
-        ...addResponse.data.order,
-        amount: originalAmount // Maintain the original paid amount
-      };
-  
-      // Set the fresh order data from the API response first
+      // Set the fresh order data from the API response
+      // The backend now properly populates buyer information
       setSelectedOrder(addResponse.data.order);
       message.success("Product added successfully");
       handleCloseSearchModal();
@@ -451,48 +447,6 @@ const [addProductError, setAddProductError] = useState("");
     }
   };
 
-  // Sorting and filtering functions
-  const sortOrders = (ordersToSort) => {
-    return [...ordersToSort].sort((a, b) => {
-      let aValue, bValue;
-      
-      switch (sortBy) {
-        case "total":
-          aValue = calculateTotalsad(a).total;
-          bValue = calculateTotalsad(b).total;
-          break;
-        case "createdAt":
-          aValue = new Date(a.createdAt).getTime();
-          bValue = new Date(b.createdAt).getTime();
-          break;
-        case "orderId":
-          aValue = a._id;
-          bValue = b._id;
-          break;
-        default:
-          aValue = a[sortBy];
-          bValue = b[sortBy];
-      }
-      
-      if (sortOrder === "asc") {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
-  };
-
-  const filterOrdersByPayment = (ordersToFilter) => {
-    if (paymentFilter === "all") return ordersToFilter;
-    return ordersToFilter.filter(order => {
-      const paymentMethod = order.payment?.paymentMethod?.toLowerCase();
-      if (paymentFilter === "cod") {
-        return paymentMethod === "cod" || paymentMethod === "cash on delivery";
-      }
-      return paymentMethod === paymentFilter.toLowerCase();
-    });
-  };
-
   const handleSortChange = (newSortBy) => {
     if (sortBy === newSortBy) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
@@ -500,14 +454,7 @@ const [addProductError, setAddProductError] = useState("");
       setSortBy(newSortBy);
       setSortOrder("desc");
     }
-  };
-
-  // Get processed orders (filtered and sorted)
-  const getProcessedOrders = () => {
-    let processedOrders = [...orders];
-    processedOrders = filterOrdersByPayment(processedOrders);
-    processedOrders = sortOrders(processedOrders);
-    return processedOrders;
+    setCurrentPage(1); // Reset to first page when sorting changes
   };
 
   return (
@@ -629,7 +576,7 @@ const [addProductError, setAddProductError] = useState("");
   </thead>
 
   <tbody>
-    {getProcessedOrders().map((o, index) => {
+    {orders.map((o, index) => {
       const totals = calculateTotalsad(o);
       return (
         <tr key={o._id} style={{ fontSize: '0.7rem', padding: '2px' }}>

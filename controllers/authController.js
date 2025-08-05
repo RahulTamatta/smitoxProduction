@@ -477,7 +477,16 @@ export const getOrdersController = async (req, res) => {
 // };
 export const getAllOrdersController = async (req, res) => {
   try {
-    const { status, page = 1, limit = 10, search = "" } = req.query;
+    const { 
+      status, 
+      page = 1, 
+      limit = 10, 
+      search = "", 
+      sortBy = "createdAt", 
+      sortOrder = "desc",
+      paymentFilter = "all"
+    } = req.query;
+    
     const pageNumber = Math.max(1, parseInt(page, 10)) || 1;
     const limitNumber = Math.max(1, parseInt(limit, 10)) || 10;
     const skip = (pageNumber - 1) * limitNumber;
@@ -485,6 +494,15 @@ export const getAllOrdersController = async (req, res) => {
     let query = {};
     if (status && status !== "all-orders") {
       query.status = status;
+    }
+
+    // Payment filter
+    if (paymentFilter && paymentFilter !== "all") {
+      if (paymentFilter === "cod") {
+        query["payment.paymentMethod"] = { $in: ["cod", "COD", "cash on delivery", "Cash on Delivery"] };
+      } else {
+        query["payment.paymentMethod"] = new RegExp(paymentFilter, "i");
+      }
     }
 
     const userSearchQuery = search
@@ -530,6 +548,127 @@ export const getAllOrdersController = async (req, res) => {
       }
     }
 
+    // Build sort object
+    let sortObj = {};
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
+    
+    switch (sortBy) {
+      case "createdAt":
+        sortObj.createdAt = sortDirection;
+        break;
+      case "total":
+        // For total sorting, we'll need to use aggregation pipeline
+        // This is more complex, so we'll handle it separately
+        sortObj.createdAt = sortDirection; // fallback to createdAt for now
+        break;
+      case "orderId":
+        sortObj._id = sortDirection;
+        break;
+      default:
+        sortObj.createdAt = sortDirection;
+    }
+
+    // If sorting by total, use aggregation pipeline
+    if (sortBy === "total") {
+      const pipeline = [
+        { $match: query },
+        {
+          $lookup: {
+            from: "users",
+            localField: "buyer",
+            foreignField: "_id",
+            as: "buyer"
+          }
+        },
+        { $unwind: { path: "$buyer", preserveNullAndEmptyArrays: true } },
+        {
+          $lookup: {
+            from: "products",
+            localField: "products.product",
+            foreignField: "_id",
+            as: "productDetails"
+          }
+        },
+        {
+          $addFields: {
+            calculatedTotal: {
+              $add: [
+                {
+                  $reduce: {
+                    input: "$products",
+                    initialValue: 0,
+                    in: {
+                      $add: [
+                        "$$value",
+                        { $multiply: ["$$this.price", "$$this.quantity"] }
+                      ]
+                    }
+                  }
+                },
+                { $ifNull: ["$deliveryCharges", 0] },
+                { $ifNull: ["$codCharges", 0] },
+                { $multiply: [-1, { $ifNull: ["$discount", 0] }] }
+              ]
+            }
+          }
+        },
+        { $sort: { calculatedTotal: sortDirection, createdAt: -1 } },
+        {
+          $project: {
+            _id: 1,
+            buyer: {
+              _id: 1,
+              user_fullname: 1,
+              email_id: 1,
+              mobile_no: 1,
+              address: 1,
+              city: 1,
+              state: 1,
+              landmark: 1,
+              pincode: 1,
+              gst: 1,
+              amount: 1
+            },
+            products: 1,
+            status: 1,
+            payment: 1,
+            tracking: 1,
+            deliveryCharges: 1,
+            codCharges: 1,
+            discount: 1,
+            amount: 1,
+            createdAt: 1,
+            updatedAt: 1
+          }
+        },
+        { $skip: skip },
+        { $limit: limitNumber }
+      ];
+
+      const [ordersResult, totalResult] = await Promise.all([
+        orderModel.aggregate(pipeline),
+        orderModel.aggregate([
+          { $match: query },
+          { $count: "total" }
+        ])
+      ]);
+
+      const total = totalResult.length > 0 ? totalResult[0].total : 0;
+
+      // Populate product details manually for aggregated results
+      const orders = await orderModel.populate(ordersResult, {
+        path: "products.product",
+        select: "name photo photos multipleimages gst price images"
+      });
+
+      return res.json({
+        success: true,
+        total,
+        orders,
+      });
+    }
+
+    // For non-total sorting, use regular query
     const total = await orderModel.countDocuments(query);
 
     const orders = await orderModel
@@ -542,7 +681,7 @@ export const getAllOrdersController = async (req, res) => {
         path: "products.product",
         select: "name photo photos multipleimages gst price images",
       })
-      .sort({ createdAt: -1 })
+      .sort(sortObj)
       .skip(skip)
       .limit(limitNumber);
 
@@ -648,7 +787,10 @@ export const addProductToOrderController = async (req, res) => {
         path: "products.product",
         select: "name photo photos multipleimages price images sku gst isActive stock"
       })
-      .populate("buyer", "name email");
+      .populate({
+        path: "buyer",
+        select: "user_fullname email_id mobile_no address city state landmark pincode gst amount"
+      });
 
     res.json({
       success: true,
@@ -776,7 +918,19 @@ export const updateOrderController = async (req, res) => {
     order.amountPending = newTotalAmount - order.amount;
 
     // Save the updated order
-    const updatedOrder = await order.save();
+    await order.save();
+
+    // Populate the updated order with buyer information
+    const updatedOrder = await orderModel
+      .findById(orderId)
+      .populate({
+        path: "buyer",
+        select: "user_fullname email_id mobile_no address city state landmark pincode gst amount"
+      })
+      .populate({
+        path: "products.product",
+        select: "name photo photos multipleimages price images sku gst isActive stock"
+      });
 
     res.status(200).send({
       success: true,
