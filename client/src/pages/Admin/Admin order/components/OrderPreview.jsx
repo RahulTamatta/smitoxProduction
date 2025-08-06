@@ -44,11 +44,14 @@ const OrderPreview = () => {
       );
 
       if (applicableBulk) {
-        return parseFloat(applicableBulk.selling_price_set);
+        // Convert set price to unit price by dividing by unitSet
+        return parseFloat(applicableBulk.selling_price_set) / unitSet;
       }
     }
 
-    return parseFloat(product.perPiecePrice || product.price || 0);
+    // Convert set price to unit price by dividing by unitSet
+    const setPrice = parseFloat(product.perPiecePrice || product.price || 0);
+    return setPrice / unitSet;
   };
 
   const calculateTotals = () => {

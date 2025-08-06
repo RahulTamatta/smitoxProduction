@@ -7,7 +7,7 @@ const SearchModal = ({ show, handleClose, handleAddToOrder }) => {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchResults, setSearchResults] = useState([]);
 
-  // Function to get price display - enhanced for set-based pricing
+  // Function to get price display - enhanced for unit-based pricing
   const getPriceDisplay = (product) => {
     const unitSet = product.unitSet || 1;
     const initialQuantity = unitSet * 1; // 1 set
@@ -24,21 +24,26 @@ const SearchModal = ({ show, handleClose, handleAddToOrder }) => {
       });
 
       if (applicableBulk) {
-        return `₹${parseFloat(applicableBulk.selling_price_set).toFixed(2)} per set (Bulk Applied)`;
+        const unitPrice = parseFloat(applicableBulk.selling_price_set) / unitSet;
+        return `₹${unitPrice.toFixed(2)} per unit (Bulk Applied)`;
       }
       
       // Show bulk pricing range if available but not applicable to initial quantity
       if (sortedBulkProducts.length > 0) {
         const lowestBulk = sortedBulkProducts[0];
         const highestBulk = sortedBulkProducts[sortedBulkProducts.length - 1];
-        return `₹${parseFloat(product.price || (product.perPiecePrice * unitSet) || 0).toFixed(2)} per set (Bulk: ₹${lowestBulk.selling_price_set.toFixed(2)} - ₹${highestBulk.selling_price_set.toFixed(2)})`;
+        const lowestUnitPrice = parseFloat(lowestBulk.selling_price_set) / unitSet;
+        const highestUnitPrice = parseFloat(highestBulk.selling_price_set) / unitSet;
+        const regularUnitPrice = parseFloat(product.price || (product.perPiecePrice * unitSet) || 0) / unitSet;
+        return `₹${regularUnitPrice.toFixed(2)} per unit (Bulk: ₹${lowestUnitPrice.toFixed(2)} - ₹${highestUnitPrice.toFixed(2)})`;
       }
     }
     
-    // Fallback to set price calculation
+    // Fallback to unit price calculation
     const perPiecePrice = parseFloat(product.perPiecePrice || 0);
     const setPrice = parseFloat(product.price || (perPiecePrice * unitSet) || 0);
-    return `₹${setPrice.toFixed(2)} per set`;
+    const unitPrice = setPrice / unitSet;
+    return `₹${unitPrice.toFixed(2)} per unit`;
   };
 
   const handleSearch = async (e) => {

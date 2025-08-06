@@ -102,23 +102,41 @@ const OrderModal = ({
     str += n[5] != 0 ? ((str != "") ? "and " : "") + (a[Number(n[5])] || b[n[5][0]] + " " + a[n[5][1]]) + "only" : "";
     return str;
   };
-  const getPriceForProduct = (product, quantity) => {
+  // Helper for bulk qualification, matching ProductDetails logic
+  const getApplicableBulkProduct = (product, quantity) => {
     const unitSet = product.unitSet || 1;
-    if (product.bulkProducts && product.bulkProducts.length > 0) {
-      const sortedBulkProducts = [...product.bulkProducts]
-        .filter((bp) => bp && bp.minimum)
-        .sort((a, b) => b.minimum - a.minimum);
-
-      const applicableBulk = sortedBulkProducts.find(
-        (bp) => quantity >= bp.minimum * unitSet &&
-                (!bp.maximum || quantity <= bp.maximum * unitSet)
-      );
-
-      if (applicableBulk) {
-        return parseFloat(applicableBulk.selling_price_set);
+    if (!product.bulkProducts || product.bulkProducts.length === 0) return null;
+    const sortedBulkProducts = [...product.bulkProducts]
+      .filter((bulk) => bulk && bulk.minimum)
+      .sort((a, b) => b.minimum - a.minimum);
+    for (let i = 0; i < sortedBulkProducts.length; i++) {
+      const bulk = sortedBulkProducts[i];
+      if (
+        quantity >= bulk.minimum * unitSet &&
+        (!bulk.maximum || quantity <= bulk.maximum * unitSet)
+      ) {
+        return bulk;
       }
     }
+    return null;
+  };
 
+  // Use correct set price logic
+  const getPriceForProduct = (product, quantity) => {
+    const bulk = getApplicableBulkProduct(product, quantity);
+    if (bulk) {
+      return parseFloat(bulk.selling_price_set); // set price, not per unit
+    }
+    return parseFloat(product.perPiecePrice || product.price || 0);
+  };
+
+  // Returns per-unit price for display
+  const getUnitPriceForProduct = (product, quantity) => {
+    const unitSet = product.unitSet || 1;
+    const bulk = getApplicableBulkProduct(product, quantity);
+    if (bulk) {
+      return parseFloat(bulk.selling_price_set) / unitSet;
+    }
     return parseFloat(product.perPiecePrice || product.price || 0);
   };
 
@@ -407,7 +425,7 @@ Thank you for your business!
                   <th>Product Photo</th>
                   <th>Product</th>
                   <th>Quantity</th>
-                  <th>Unit Price</th>
+                  <th>Unit Price (per piece)</th>
                   <th>Net Amount</th>
                   <th>Tax Amount</th>
                   <th>Total</th>
@@ -420,7 +438,6 @@ Thank you for your business!
                     // Enhanced product data extraction with fallbacks
                     const productData = typeof product.product === 'object' ? product.product : product;
                     const quantity = Number(product.quantity) || 0;
-                    const price = getPriceForProduct(productData, quantity);
                     const gst = Number(productData.gst) || 0;
 
                     // Enhanced product name and image extraction
@@ -431,18 +448,19 @@ Thank you for your business!
                                        (product.multipleimages && product.multipleimages[0]) ||
                                        "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNSAzNUM5MS4xIDI1IDI1IDkuMSAyNSAyNVMzOS4xIDI1IDI1IDI1WiIgZmlsbD0iI0NCQ0JDQiIvPgo8L3N2Zz4K";
 
-                    const netAmount = (price * quantity).toFixed(2);
-                    const taxAmount = ((price * quantity) * (gst / 100)).toFixed(2);
+                    const unitPrice = getUnitPriceForProduct(productData, quantity);
+                    const netAmount = (unitPrice * quantity).toFixed(2);
+                    const taxAmount = ((unitPrice * quantity) * (gst / 100)).toFixed(2);
                     const total =
                       gst !== 0
-                        ? ((price * quantity) * (1 + gst / 100)).toFixed(2)
-                        : (price * quantity).toFixed(2);
+                        ? ((unitPrice * quantity) * (1 + gst / 100)).toFixed(2)
+                        : (unitPrice * quantity).toFixed(2);
 
                     // Debug logging (remove in production)
                     console.log('Product debug:', {
                       index,
                       productName,
-                      price,
+                      unitPrice,
                       quantity,
                       gst,
                       productData,
@@ -473,15 +491,7 @@ Thank you for your business!
                             onWheel={(e) => e.currentTarget.blur()}
                           />
                         </td>
-                        <td>
-                          <Form.Control
-                            type="number"
-                            value={price}
-                            onChange={(e) => handleProductChange(index, "price", e.target.value)}
-                            onWheel={(e) => e.currentTarget.blur()}
-                            style={{ width: "100px" }}
-                          />
-                        </td>
+                        <td>₹{unitPrice.toFixed(2)}</td>
                         <td>₹{netAmount}</td>
                         <td>₹{taxAmount}</td>
                         <td>₹{total}</td>
