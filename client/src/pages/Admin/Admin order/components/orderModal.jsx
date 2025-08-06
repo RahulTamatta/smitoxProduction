@@ -123,21 +123,20 @@ const OrderModal = ({
 
   // Use correct set price logic
   const getPriceForProduct = (product, quantity) => {
-    const bulk = getApplicableBulkProduct(product, quantity);
-    if (bulk) {
-      return parseFloat(bulk.selling_price_set); // set price, not per unit
-    }
-    return parseFloat(product.perPiecePrice || product.price || 0);
-  };
-
-  // Returns per-unit price for display
-  const getUnitPriceForProduct = (product, quantity) => {
     const unitSet = product.unitSet || 1;
     const bulk = getApplicableBulkProduct(product, quantity);
     if (bulk) {
+      // Convert set price to per-unit price
       return parseFloat(bulk.selling_price_set) / unitSet;
     }
-    return parseFloat(product.perPiecePrice || product.price || 0);
+    // Convert set price to per-unit price
+    const setPrice = parseFloat(product.perPiecePrice || product.price || 0);
+    return setPrice / unitSet;
+  };
+
+  // Returns price per unit for display (matches stored order price)
+  const getOrderPricePerUnit = (orderProduct) => {
+    return parseFloat(orderProduct.price); // Price per unit from the order
   };
 
   const generatePDF = () => {
@@ -425,7 +424,7 @@ Thank you for your business!
                   <th>Product Photo</th>
                   <th>Product</th>
                   <th>Quantity</th>
-                  <th>Unit Price (per piece)</th>
+                  <th>Unit Price (per unit)</th>
                   <th>Net Amount</th>
                   <th>Tax Amount</th>
                   <th>Total</th>
@@ -448,19 +447,19 @@ Thank you for your business!
                                        (product.multipleimages && product.multipleimages[0]) ||
                                        "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNSAzNUM5MS4xIDI1IDI1IDkuMSAyNSAyNVMzOS4xIDI1IDI1IDI1WiIgZmlsbD0iI0NCQ0JDQiIvPgo8L3N2Zz4K";
 
-                    const unitPrice = getUnitPriceForProduct(productData, quantity);
-                    const netAmount = (unitPrice * quantity).toFixed(2);
-                    const taxAmount = ((unitPrice * quantity) * (gst / 100)).toFixed(2);
+                    const pricePerUnit = getOrderPricePerUnit(product);
+                    const netAmount = (pricePerUnit * quantity).toFixed(2);
+                    const taxAmount = ((pricePerUnit * quantity) * (gst / 100)).toFixed(2);
                     const total =
                       gst !== 0
-                        ? ((unitPrice * quantity) * (1 + gst / 100)).toFixed(2)
-                        : (unitPrice * quantity).toFixed(2);
+                        ? ((pricePerUnit * quantity) * (1 + gst / 100)).toFixed(2)
+                        : (pricePerUnit * quantity).toFixed(2);
 
                     // Debug logging (remove in production)
                     console.log('Product debug:', {
                       index,
                       productName,
-                      unitPrice,
+                      pricePerUnit,
                       quantity,
                       gst,
                       productData,
@@ -491,7 +490,7 @@ Thank you for your business!
                             onWheel={(e) => e.currentTarget.blur()}
                           />
                         </td>
-                        <td>₹{unitPrice.toFixed(2)}</td>
+                        <td>₹{pricePerUnit.toFixed(2)}</td>
                         <td>₹{netAmount}</td>
                         <td>₹{taxAmount}</td>
                         <td>₹{total}</td>

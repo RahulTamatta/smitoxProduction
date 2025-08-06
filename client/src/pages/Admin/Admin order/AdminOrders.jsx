@@ -197,11 +197,14 @@ const [addProductError, setAddProductError] = useState("");
       );
 
       if (applicableBulk) {
-        return parseFloat(applicableBulk.selling_price_set);
+        // Convert set price to per-unit price
+        return parseFloat(applicableBulk.selling_price_set) / unitSet;
       }
     }
 
-    return parseFloat(product.perPiecePrice || product.price || 0);
+    // Convert set price to per-unit price
+    const setPrice = parseFloat(product.perPiecePrice || product.price || 0);
+    return setPrice / unitSet;
   };
 
   const calculateTotals = () => {
@@ -283,24 +286,26 @@ const [addProductError, setAddProductError] = useState("");
     const applicableBulk = getApplicableBulkProduct(product, quantity);
     
     if (applicableBulk) {
-      // Use bulk pricing - selling_price_set is the price per set
+      // Use bulk pricing - convert set price to per-unit price
+      const setPrice = parseFloat(applicableBulk.selling_price_set);
+      const unitPrice = setPrice / unitSet; // Convert to per-unit price
       return {
-        unitPrice: parseFloat(applicableBulk.selling_price_set), // This is price per SET
-        totalPrice: quantity * parseFloat(applicableBulk.selling_price_set),
+        unitPrice: unitPrice, // This is price per UNIT
+        totalPrice: quantity * unitPrice,
         bulkApplied: applicableBulk,
-        priceType: 'bulk_set'
+        priceType: 'bulk_unit'
       };
     } else {
-      // Use regular pricing - calculate SET price from per-piece price
+      // Use regular pricing - calculate per-unit price
       const perPiecePrice = parseFloat(product.perPiecePrice || 0);
-      const setPriceFromPiece = perPiecePrice * unitSet; // Convert per-piece to per-set
-      const setPrice = parseFloat(product.price || setPriceFromPiece || 0); // Use product.price (set price) if available
+      const setPrice = parseFloat(product.price || (perPiecePrice * unitSet) || 0);
+      const unitPrice = setPrice / unitSet; // Convert to per-unit price
       
       return {
-        unitPrice: setPrice, // This is price per SET
-        totalPrice: quantity * setPrice,
+        unitPrice: unitPrice, // This is price per UNIT
+        totalPrice: quantity * unitPrice,
         bulkApplied: null,
-        priceType: 'regular_set'
+        priceType: 'regular_unit'
       };
     }
   };
@@ -316,11 +321,11 @@ const [addProductError, setAddProductError] = useState("");
         return;
       }
   
-      // Calculate proper pricing using enhanced set-based logic from product detail page
+      // Calculate proper pricing using unit-based approach
       const unitSet = product.unitSet || 1;
-      const initialQuantity = unitSet * 1; // Start with 1 set
+      const initialQuantity = unitSet; // Start with 1 set worth of units
       
-      // Calculate pricing with bulk consideration
+      // Calculate pricing with bulk consideration (quantity in units)
       const pricingResult = calculateProductPrice(product, initialQuantity);
       
       console.log('Adding product with pricing:', {
@@ -337,8 +342,8 @@ const [addProductError, setAddProductError] = useState("");
         `/api/v1/auth/order/${selectedOrder._id}/add`,
         { 
           productId: product._id, 
-          quantity: initialQuantity,
-          price: pricingResult.unitPrice, // Use calculated unit price
+          quantity: initialQuantity, // Quantity in units (1 set = unitSet units)
+          price: pricingResult.unitPrice, // Price per unit
           bulkProductDetails: pricingResult.bulkApplied // Include bulk details if applicable
         },
         {
