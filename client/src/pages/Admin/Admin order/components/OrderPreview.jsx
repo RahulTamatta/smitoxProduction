@@ -31,19 +31,41 @@ const OrderPreview = () => {
     }
   };
 
+  const getPriceForProduct = (product, quantity) => {
+    const unitSet = product.unitSet || 1;
+    if (product.bulkProducts && product.bulkProducts.length > 0) {
+      const sortedBulkProducts = [...product.bulkProducts]
+        .filter((bp) => bp && bp.minimum)
+        .sort((a, b) => b.minimum - a.minimum);
+
+      const applicableBulk = sortedBulkProducts.find(
+        (bp) => quantity >= bp.minimum * unitSet &&
+                (!bp.maximum || quantity <= bp.maximum * unitSet)
+      );
+
+      if (applicableBulk) {
+        return parseFloat(applicableBulk.selling_price_set);
+      }
+    }
+
+    return parseFloat(product.perPiecePrice || product.price || 0);
+  };
+
   const calculateTotals = () => {
     if (!order || !order.products) return { subtotal: 0, gst: 0, total: 0 };
 
-    const subtotal = order.products.reduce(
-      (acc, product) => acc + Number(product.price) * Number(product.quantity),
-      0
-    );
+    const subtotal = order.products.reduce((acc, product) => {
+      const productData = typeof product.product === 'object' ? product.product : product;
+      const unitPrice = getPriceForProduct(productData, product.quantity);
+      return acc + (unitPrice * Number(product.quantity));
+    }, 0);
 
     const gst = order.products.reduce((acc, product) => {
       const productData = typeof product.product === 'object' ? product.product : {};
+      const unitPrice = getPriceForProduct(productData, product.quantity);
       return (
         acc +
-        (Number(product.price) *
+        (unitPrice *
           Number(product.quantity) *
           (Number(productData.gst) || 0)) /
           100

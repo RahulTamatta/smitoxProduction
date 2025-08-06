@@ -66,10 +66,12 @@ export const isAdmin = async (req, res, next) => {
     }
     
     // Check if user is admin
-    if (user.role !== 1) {
+    console.log(`[Admin Middleware] User role: ${user.role}, User ID: ${user._id}`);
+    if (user.role != 1) {  // Use != instead of !== to handle both string and number
       return res.status(403).send({
         success: false,
-        message: "Unauthorized Access. Admin privileges required."
+        message: "Unauthorized Access. Admin privileges required.",
+        currentRole: user.role,
       });
     }
     

@@ -69,6 +69,10 @@ const orderSchema = new mongoose.Schema(
       company: String,
       id: String,
     },
+    placedBy: {
+      type: mongoose.ObjectId,
+      ref: "User",
+    },
   },
   { timestamps: true }
 );

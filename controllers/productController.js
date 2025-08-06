@@ -1115,7 +1115,36 @@ export const processPaymentController = async (req, res) => {
       }
     }
 
-    console.log(`[Payment] Processing payment for user: ${req.user._id} | Method: ${paymentMethod} | Amount: ${amount} | Pending: ${amountPending || 0}`);
+    // Check if this is an admin order on behalf of a user
+    const isAdminOrder = req.headers['x-admin-order'] === 'true';
+    const targetUserId = req.headers['x-order-user-id'];
+    
+    let buyerId = req.user._id;
+    let placedByAdmin = null;
+    
+    if (isAdminOrder && targetUserId) {
+      console.log(`[Admin Order Check] User role: ${req.user.role}, User ID: ${req.user._id}`);
+      if (req.user.role != 1) {  // Use != instead of !== to handle both string and number
+        return res.status(403).json({
+          success: false,
+          message: "Admin privileges required to place orders on behalf of users",
+          currentRole: req.user.role,
+        });
+      }
+      
+      if (!mongoose.Types.ObjectId.isValid(targetUserId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid target user ID",
+        });
+      }
+      
+      buyerId = targetUserId;
+      placedByAdmin = req.user._id;
+      console.log(`[Admin Order] Admin ${req.user._id} placing order for user ${targetUserId}`);
+    } else {
+      console.log(`[Payment] Processing payment for user: ${req.user._id} | Method: ${paymentMethod} | Amount: ${amount} | Pending: ${amountPending || 0}`);
+    }
 
     // Handle COD orders immediately
     if (paymentMethod === "COD") {
@@ -1202,10 +1231,11 @@ export const processPaymentController = async (req, res) => {
             transactionId: `${paymentMethod}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
             status: paymentMethod === "COD" ? false : true,
           },
-          buyer: req.user._id,
+          buyer: buyerId,
           amount: amount,
           amountPending: amountPending || 0,
           status: "Pending",
+          placedBy: placedByAdmin,
         });
 
         await order.save();

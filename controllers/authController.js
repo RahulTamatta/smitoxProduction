@@ -80,12 +80,12 @@ export const verifyOTPAndLoginController = async (req, res) => {
       }
 
       // Generate access token with 10-second expiration (for testing)
-      const token = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
+      const token = JWT.sign({ _id: user._id, role: user.role }, process.env.JWT_SECRET, {
         expiresIn: "365d", // 10 seconds
       });
       
       // Generate refresh token with 1-year expiration (for testing)
-      const refreshToken = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
+      const refreshToken = JWT.sign({ _id: user._id, role: user.role }, process.env.JWT_SECRET, {
         expiresIn: "365d", // 1 year
       });
 
@@ -208,12 +208,12 @@ export const registerController = async (req, res) => {
     await newUser.save();
  
     // Generate access token with 1-hour expiration
-    const token = JWT.sign({ _id: newUser._id }, process.env.JWT_SECRET, {
+    const token = JWT.sign({ _id: newUser._id, role: newUser.role }, process.env.JWT_SECRET, {
       expiresIn: "365d", // 1 hour
     });
 
     // Generate refresh token with 1-year expiration
-    const refreshToken = JWT.sign({ _id: newUser._id }, process.env.JWT_SECRET, {
+    const refreshToken = JWT.sign({ _id: newUser._id, role: newUser.role }, process.env.JWT_SECRET, {
       expiresIn: "365d", // 1 year
     });
  
@@ -285,13 +285,11 @@ export const loginController = async (req, res) => {
     }
 
     // Generate access token with 1-hour expiration
-    const token = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "365", // 1 hour
+    const token = JWT.sign({ _id: user._id, role: user.role }, process.env.JWT_SECRET, {
+      expiresIn: "365d",
     });
-    
-    // Generate refresh token with 1-year expiration
-    const refreshToken = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "365d", // 1 year
+    const refreshToken = JWT.sign({ _id: user._id, role: user.role }, process.env.JWT_SECRET, {
+      expiresIn: "365d",
     });
 
     // Return user details with token and refresh token
@@ -1112,13 +1110,13 @@ export const refreshTokenController = async (req, res) => {
     }
 
     // Generate a new access token with 1-hour expiration
-    const newAccessToken = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
+    const newAccessToken = JWT.sign({ _id: user._id, role: user.role }, process.env.JWT_SECRET, {
       expiresIn: "365d" // 1 hour
     });
 
     // Generate a new refresh token with 1-year expiration
     // Creating a new refresh token on each refresh adds an extra layer of security
-    const newRefreshToken = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
+    const newRefreshToken = JWT.sign({ _id: user._id, role: user.role }, process.env.JWT_SECRET, {
       expiresIn: "365d" // 1 year
     });
 

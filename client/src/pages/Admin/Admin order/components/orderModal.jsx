@@ -102,6 +102,26 @@ const OrderModal = ({
     str += n[5] != 0 ? ((str != "") ? "and " : "") + (a[Number(n[5])] || b[n[5][0]] + " " + a[n[5][1]]) + "only" : "";
     return str;
   };
+  const getPriceForProduct = (product, quantity) => {
+    const unitSet = product.unitSet || 1;
+    if (product.bulkProducts && product.bulkProducts.length > 0) {
+      const sortedBulkProducts = [...product.bulkProducts]
+        .filter((bp) => bp && bp.minimum)
+        .sort((a, b) => b.minimum - a.minimum);
+
+      const applicableBulk = sortedBulkProducts.find(
+        (bp) => quantity >= bp.minimum * unitSet &&
+                (!bp.maximum || quantity <= bp.maximum * unitSet)
+      );
+
+      if (applicableBulk) {
+        return parseFloat(applicableBulk.selling_price_set);
+      }
+    }
+
+    return parseFloat(product.perPiecePrice || product.price || 0);
+  };
+
   const generatePDF = () => {
     if (!selectedOrder) {
       alert("No order selected");
@@ -162,17 +182,18 @@ const OrderModal = ({
   
         const tableRows = products.map((product, index) => {
           const productData = product.product || {};
+          const unitPrice = getPriceForProduct(productData, product.quantity);
           return [
             (index + 1).toString(), // Serial number
             productData.name || "Unnamed Product",
             product.quantity || 0,
-            Number(product.price || 0).toFixed(2),
+            unitPrice.toFixed(2),
             `${productData.gst || 0}%`,
-            Number((product.price || 0) * (product.quantity || 0)).toFixed(2),
-            Number((product.price || 0) * (product.quantity || 0) * ((productData.gst || 0) / 100)).toFixed(2),
+            Number(unitPrice * (product.quantity || 0)).toFixed(2),
+            Number(unitPrice * (product.quantity || 0) * ((productData.gst || 0) / 100)).toFixed(2),
             ((productData.gst || 0) !== 0
-              ? (Number(product.price || 0) * Number(product.quantity || 0) * (1 + (productData.gst || 0) / 100)).toFixed(2)
-              : (Number(product.price || 0) * Number(product.quantity || 0)).toFixed(2)),
+              ? (unitPrice * Number(product.quantity || 0) * (1 + (productData.gst || 0) / 100)).toFixed(2)
+              : (unitPrice * Number(product.quantity || 0)).toFixed(2)),
           ];
         });
   
@@ -399,7 +420,7 @@ Thank you for your business!
                     // Enhanced product data extraction with fallbacks
                     const productData = typeof product.product === 'object' ? product.product : product;
                     const quantity = Number(product.quantity) || 0;
-                    const price = Number(product.price) || Number(productData.price) || Number(productData.perPiecePrice) || 0;
+                    const price = getPriceForProduct(productData, quantity);
                     const gst = Number(productData.gst) || 0;
 
                     // Enhanced product name and image extraction

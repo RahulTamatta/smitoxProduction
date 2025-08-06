@@ -99,4 +99,10 @@ router.get("/product-subcategory/:subcategoryId", productSubcategoryController);
 router.post("/process-payment", requireSignIn, processPaymentController);
 router.post("/verify-payment", requireSignIn, verifyPaymentController);
 
+// Import admin order controller
+import { createAdminOrderController } from "../controllers/adminOrderController.js";
+
+// New route for admin placing orders on behalf of users
+router.post("/admin/create-order", requireSignIn, isAdmin, createAdminOrderController);
+
 export default router;
