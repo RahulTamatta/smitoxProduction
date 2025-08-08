@@ -2,10 +2,10 @@ import axios from 'axios';
 
 // Add these from your Cloudinary dashboard
 const CLOUDINARY_UPLOAD_PRESET = "smitoxphoto";     // Your upload preset name
-const CLOUDINARY_CLOUD_NAME = "do3y11hpa";             // Your cloud name
-const CLOUDINARY_API_KEY = "119598853346493";     // Your API key from Cloudinary dashboard
-// api_key:  '119598853346493',    // Old account API key
-// api_secret: 'WR6abBlUvmedVLOiybbuUneX12k' // Old account API secret
+const CLOUDINARY_CLOUD_NAME = "daabaruau";             // Your cloud name
+const CLOUDINARY_API_KEY = "144839262481772";     // Your API key from Cloudinary dashboard
+// api_key:  '144839262481772',    // Old account API key
+// api_secret: 'w6ZBxrKfA6H4rQ2EuYWq0TSn-kA' // Old account API secret
 const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 
 export const uploadToCloudinary = async (file) => {

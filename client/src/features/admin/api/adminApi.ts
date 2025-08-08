@@ -3,21 +3,20 @@
 // ===================================
 
 import axios, { AxiosResponse } from 'axios';
-import { 
-  Product, 
-  Order, 
-  User, 
-  Category, 
-  Subcategory, 
-  Brand,
-  PaginationParams,
-  PaginatedResponse,
+import {
   ApiResponse,
-  ProductFormData,
+  Brand,
+  Category,
   CategoryFormData,
-  UserFormData,
+  CloudinaryResponse,
   DashboardStats,
-  CloudinaryResponse
+  Order,
+  PaginatedResponse,
+  PaginationParams,
+  Product,
+  Subcategory,
+  User,
+  UserFormData
 } from '../../types';
 
 // Base API configuration
@@ -309,10 +308,10 @@ export const cloudinaryApi = {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', 'smitoxphoto');
-    formData.append('cloud_name', 'do3y11hpa');
+    formData.append('cloud_name', 'daabaruau');
 
     const response = await fetch(
-      'https://api.cloudinary.com/v1_1/do3y11hpa/image/upload',
+      'https://api.cloudinary.com/v1_1/daabaruau/image/upload',
       {
         method: 'POST',
         body: formData,

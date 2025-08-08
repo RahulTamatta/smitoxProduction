@@ -1,8 +1,8 @@
 import { Modal, Select } from "antd";
+import axios from "axios";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import AdminLayout from "../../features/admin/components/layout/AdminLayout";
-import axios from "axios";
 
 const { Option } = Select;
 
@@ -22,10 +22,10 @@ const CreateCategory = () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', 'smitoxphoto');
-      formData.append('cloud_name', 'do3y11hpa');
+      formData.append('cloud_name', 'daabaruau');
 
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/do3y11hpa/image/upload`,
+        `https://api.cloudinary.com/v1_1/daabaruau/image/upload`,
         {
           method: 'POST',
           body: formData,

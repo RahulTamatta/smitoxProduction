@@ -3,10 +3,10 @@ import mongoose from 'mongoose';
 
 // Configure OLD Cloudinary account
 cloudinary.config({
-  cloud_name: 'do3y11hpa', 
+  cloud_name: 'daabaruau', 
   // Old account cloud name
-  api_key:  '119598853346493',    // Old account API key
-  api_secret: 'WR6abBlUvmedVLOiybbuUneX12k' // Old account API secret
+  api_key:  '381637723934762',    // Old account API key
+  api_secret: 'f3URVJGzLjg6Q8NeaVSnUpoR6t0' // Old account API secret
 });
 
 // MongoDB connection
@@ -50,7 +50,7 @@ async function runReverseMigration() {
     let totalUpdated = 0;
 
     // Regex to match new Cloudinary URLs (Replace 'de9injdhu' with your new Cloudinary cloud name)
-    const newUrlPattern = /res\.cloudinary\.com\/ddqfl3zo8/;
+    const newUrlPattern = /res\.cloudinary\.com\/do3y11hpa/;
 
     for (const collName of collections) {
       const collection = mongoose.connection.collection(collName);
