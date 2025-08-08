@@ -159,14 +159,18 @@ const [addProductError, setAddProductError] = useState("");
       
       if (field === 'quantity') {
         // Only update quantity - do NOT overwrite stored price
-        const newQuantity = Math.max(0, Number(value) || 0);
+        // Snap quantity to multiples of unitSet to mirror ProductDetails behavior
+        const productData = (currentProduct && typeof currentProduct.product === 'object') ? currentProduct.product : currentProduct;
+        const uSet = Number(productData.unitSet || productData.unitset || 1) || 1;
+        const inputQty = Number(value) || 0;
+        const snappedQty = uSet > 1 ? Math.max(0, Math.round(inputQty / uSet) * uSet) : Math.max(0, inputQty);
         updatedProducts[index] = {
           ...currentProduct,
-          quantity: newQuantity,
+          quantity: snappedQty,
           // Keep stored price as-is - let normalized pricing handle display
         };
         console.log(`Quantity updated for product at index ${index}:`, {
-          quantity: newQuantity,
+          quantity: snappedQty,
           storedPrice: currentProduct.price,
           normalizedUnitPrice: getOrderPricePerUnit(updatedProducts[index])
         });

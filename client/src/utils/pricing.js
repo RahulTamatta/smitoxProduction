@@ -11,7 +11,7 @@
  */
 export function getApplicableBulkProduct(product, quantity) {
   if (!product || !Array.isArray(product.bulkProducts) || product.bulkProducts.length === 0) return null;
-  const unitSet = Number(product.unitSet) || 1;
+  const unitSet = Number(product.unitSet || product.unitset || 1) || 1;
   const qty = Number(quantity) || 0;
 
   // Sort descending by minimum to select the most-specific applicable tier
@@ -35,7 +35,7 @@ export function getApplicableBulkProduct(product, quantity) {
  */
 export function getPricePerUnit(product, quantity) {
   if (!product || !Number.isFinite(quantity) || quantity <= 0) return 0;
-  const unitSet = Number(product.unitSet) || 1;
+  const unitSet = Number(product.unitSet || product.unitset || 1) || 1;
   const bulk = getApplicableBulkProduct(product, quantity);
   if (bulk && bulk.selling_price_set != null) {
     // selling_price_set is price PER SET — convert to per unit

@@ -515,6 +515,9 @@ Thank you for your business!
                           <Form.Control
                             type="number"
                             value={quantity}
+                            step={Number(productData.unitSet || productData.unitset || 1) || 1}
+                            min={0}
+                            title={`1 set = ${Number(productData.unitSet || productData.unitset || 1) || 1} units`}
                             onChange={(e) => handleProductChange(index, "quantity", e.target.value)}
                             onWheel={(e) => e.currentTarget.blur()}
                           />
