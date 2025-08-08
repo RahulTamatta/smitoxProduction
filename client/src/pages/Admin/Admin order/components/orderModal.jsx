@@ -5,6 +5,7 @@ import moment from "moment";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { useAuth } from "../../../../context/authContext";
+import { getApplicableBulkProduct, getPricePerUnit } from "../../../../utils/pricing";
 
 const OrderModal = ({
   show,
@@ -102,40 +103,52 @@ const OrderModal = ({
     str += n[5] != 0 ? ((str != "") ? "and " : "") + (a[Number(n[5])] || b[n[5][0]] + " " + a[n[5][1]]) + "only" : "";
     return str;
   };
-  // Helper for bulk qualification, matching ProductDetails logic
-  const getApplicableBulkProduct = (product, quantity) => {
-    const unitSet = product.unitSet || 1;
-    if (!product.bulkProducts || product.bulkProducts.length === 0) return null;
-    const sortedBulkProducts = [...product.bulkProducts]
-      .filter((bulk) => bulk && bulk.minimum)
-      .sort((a, b) => a.minimum - b.minimum); // ascending by minimum
-    for (const bulk of sortedBulkProducts) {
-      if (
-        quantity >= bulk.minimum * unitSet &&
-        (!bulk.maximum || quantity <= bulk.maximum * unitSet)
-      ) {
-        return bulk;
+  // Use centralized helper for bulk qualification
+
+  // Use centralized per-unit pricing
+  const getPriceForProduct = (product, quantity) => getPricePerUnit(product, quantity);
+
+  // Normalizes stored order item price into a per-unit price
+  const getOrderPricePerUnit = (orderItem) => {
+    // orderItem shape: { product: {...}, price: number, bulkProductDetails: {...}, quantity: number, ... }
+    const storedPrice = parseFloat(orderItem?.price) || 0;
+    const productData = (orderItem && typeof orderItem.product === 'object') ? orderItem.product : {};
+    const unitSetFromProduct = Number(productData.unitSet || productData.unitset || 1) || 1;
+
+    // 1) If order item includes bulkProductDetails (sent when item was added), prefer that
+    const bulk = orderItem?.bulkProductDetails;
+    if (bulk && bulk.selling_price_set != null) {
+      const setPrice = parseFloat(bulk.selling_price_set) || 0;
+      // If stored price equals setPrice (or bulk.selling_price_set exists), compute per-unit
+      if (Math.abs(storedPrice - setPrice) < 0.001) {
+        return setPrice / unitSetFromProduct;
+      }
+      // If storedPrice is zero but bulk exists, still use bulk.selling_price_set
+      if (setPrice > 0 && storedPrice === 0) {
+        return setPrice / unitSetFromProduct;
       }
     }
-    return null;
-  };
 
-  // Use correct set price logic
-  const getPriceForProduct = (product, quantity) => {
-    const unitSet = product.unitSet || 1;
-    const bulk = getApplicableBulkProduct(product, quantity);
-    if (bulk) {
-      // Convert set price to per-unit price
-      return parseFloat(bulk.selling_price_set) / unitSet;
+    // 2) If product has perPiecePrice, check whether storedPrice is actually setPrice (perPiece * unitSet)
+    const perPieceCandidate = parseFloat(productData.perPiecePrice ?? productData.price ?? 0) || 0;
+    if (unitSetFromProduct > 1 && perPieceCandidate > 0) {
+      // If storedPrice ≈ perPiece * unitSet, it means storedPrice is a set price
+      if (Math.abs(storedPrice - perPieceCandidate * unitSetFromProduct) < 0.01) {
+        return storedPrice / unitSetFromProduct;
+      }
     }
-    // Convert set price to per-unit price
-    const setPrice = parseFloat(product.perPiecePrice || product.price || 0);
-    return setPrice / unitSet;
-  };
 
-  // Returns price per unit for display (matches stored order price)
-  const getOrderPricePerUnit = (orderProduct) => {
-    return parseFloat(orderProduct.price); // Price per unit from the order
+    // 3) Heuristic: if storedPrice is much larger than typical per-piece, but we have unitSet, try dividing
+    if (unitSetFromProduct > 1 && storedPrice > 0 && perPieceCandidate > 0 && storedPrice / unitSetFromProduct <= storedPrice) {
+      // If dividing makes a reasonable per-unit, prefer that
+      const divided = storedPrice / unitSetFromProduct;
+      if (divided <= storedPrice && divided >= perPieceCandidate * 0.5) {
+        return divided;
+      }
+    }
+
+    // Default: assume storedPrice is already per-unit
+    return storedPrice;
   };
 
   const generatePDF = () => {
@@ -196,20 +209,27 @@ const OrderModal = ({
           "Total",
         ];
   
-        const tableRows = products.map((product, index) => {
-          const productData = product.product || {};
-          const unitPrice = getPriceForProduct(productData, product.quantity);
+        const tableRows = products.map((orderItem, index) => {
+          const productData = orderItem.product || {};
+          const quantity = Number(orderItem.quantity) || 0;
+          const gst = Number(productData.gst || 0);
+
+          // prefer current bulk per-unit price if quantity qualifies now
+          let unitPrice = getOrderPricePerUnit(orderItem); // fallback
+          const applicableBulk = getApplicableBulkProduct(productData, quantity);
+          if (applicableBulk && applicableBulk.selling_price_set != null) {
+            const uSet = Number(productData.unitSet || productData.unitset || 1) || 1;
+            unitPrice = (parseFloat(applicableBulk.selling_price_set) || 0) / uSet;
+          }
           return [
             (index + 1).toString(), // Serial number
             productData.name || "Unnamed Product",
-            product.quantity || 0,
+            quantity,
             unitPrice.toFixed(2),
-            `${productData.gst || 0}%`,
-            Number(unitPrice * (product.quantity || 0)).toFixed(2),
-            Number(unitPrice * (product.quantity || 0) * ((productData.gst || 0) / 100)).toFixed(2),
-            ((productData.gst || 0) !== 0
-              ? (unitPrice * Number(product.quantity || 0) * (1 + (productData.gst || 0) / 100)).toFixed(2)
-              : (unitPrice * Number(product.quantity || 0)).toFixed(2)),
+            `${gst}%`,
+            Number(unitPrice * quantity).toFixed(2),
+            Number(unitPrice * quantity * (gst / 100)).toFixed(2),
+            (gst !== 0 ? (unitPrice * quantity * (1 + gst / 100)).toFixed(2) : (unitPrice * quantity).toFixed(2)),
           ];
         });
   
@@ -423,7 +443,7 @@ Thank you for your business!
                   <th>Product Photo</th>
                   <th>Product</th>
                   <th>Quantity</th>
-                  <th>Unit Price (per unit)</th>
+                  <th>Unit Price </th>
                   <th>Net Amount</th>
                   <th>Tax Amount</th>
                   <th>Total</th>
@@ -446,7 +466,17 @@ Thank you for your business!
                                        (product.multipleimages && product.multipleimages[0]) ||
                                        "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNSAzNUM5MS4xIDI1IDI1IDkuMSAyNSAyNVMzOS4xIDI1IDI1IDI1WiIgZmlsbD0iI0NCQ0JDQiIvPgo8L3N2Zz4K";
 
-                    const pricePerUnit = getOrderPricePerUnit(product);
+                    // 1) Start from normalized stored price (safe fallback)
+                    let pricePerUnit = getOrderPricePerUnit(product);
+
+                    // 2) But if the current quantity qualifies for a bulk tier on the product, prefer the live bulk per-unit price
+                    const applicableBulk = getApplicableBulkProduct(productData, quantity);
+                    if (applicableBulk && applicableBulk.selling_price_set != null) {
+                      const uSet = Number(productData.unitSet || productData.unitset || 1) || 1;
+                      pricePerUnit = (parseFloat(applicableBulk.selling_price_set) || 0) / uSet;
+                    }
+
+                    // 3) Now compute amounts
                     const netAmount = (pricePerUnit * quantity).toFixed(2);
                     const taxAmount = ((pricePerUnit * quantity) * (gst / 100)).toFixed(2);
                     const total =
@@ -466,7 +496,7 @@ Thank you for your business!
                     });
 
                     return (
-                      <tr key={product._id || index}>
+                      <tr key={`${product._id || product.product?._id || 'noid'}-${index}`}>
                         <td>
                           <img
                             src={productImage}

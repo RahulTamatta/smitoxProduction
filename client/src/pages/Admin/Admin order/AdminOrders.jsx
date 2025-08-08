@@ -1,7 +1,8 @@
 import { message } from "antd";
 import axios from "axios";
 import moment from "moment";
-import { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { getApplicableBulkProduct, getPricePerUnit, calculateProductPrice as pricingCalculateProductPrice } from "../../../utils/pricing";
 import {
   Alert,
   Button,
@@ -157,31 +158,18 @@ const [addProductError, setAddProductError] = useState("");
       const currentProduct = updatedProducts[index];
       
       if (field === 'quantity') {
-        // Recalculate price based on new quantity and update atomically
-        const newQuantity = Number(value);
-        const productData = typeof currentProduct.product === 'object'
-          ? currentProduct.product
-          : currentProduct;
-
-        if (productData && newQuantity > 0) {
-          const pricingResult = calculateProductPrice(productData, newQuantity);
-          updatedProducts[index] = {
-            ...currentProduct,
-            quantity: newQuantity,
-            price: pricingResult.unitPrice,
-          };
-          console.log(`Price recalculated for ${productData.name}:`, {
-            quantity: newQuantity,
-            newUnitPrice: pricingResult.unitPrice,
-            bulkApplied: pricingResult.bulkApplied?.minimum || 'None',
-          });
-        } else {
-          // Fallback: just update quantity
-          updatedProducts[index] = {
-            ...currentProduct,
-            quantity: newQuantity,
-          };
-        }
+        // Only update quantity - do NOT overwrite stored price
+        const newQuantity = Math.max(0, Number(value) || 0);
+        updatedProducts[index] = {
+          ...currentProduct,
+          quantity: newQuantity,
+          // Keep stored price as-is - let normalized pricing handle display
+        };
+        console.log(`Quantity updated for product at index ${index}:`, {
+          quantity: newQuantity,
+          storedPrice: currentProduct.price,
+          normalizedUnitPrice: getOrderPricePerUnit(updatedProducts[index])
+        });
       } else {
         // Non-quantity field updates
         updatedProducts[index] = {
@@ -194,46 +182,78 @@ const [addProductError, setAddProductError] = useState("");
     });
   };
 
-  const getPriceForProduct = (product, quantity) => {
-    const unitSet = product.unitSet || 1;
-    const applicableBulk = getApplicableBulkProduct(product, quantity);
-    if (applicableBulk) {
-      return parseFloat(applicableBulk.selling_price_set) / unitSet; // per-unit
+  const getPriceForProduct = (product, quantity) => getPricePerUnit(product, quantity);
+
+  // Normalizes stored order item price into a per-unit price (same logic as OrderModal)
+  const getOrderPricePerUnit = (orderItem) => {
+    const storedPrice = parseFloat(orderItem?.price) || 0;
+    const productData = (orderItem && typeof orderItem.product === 'object') ? orderItem.product : {};
+    const unitSetFromProduct = Number(productData.unitSet || productData.unitset || 1) || 1;
+
+    // 1) If order item includes bulkProductDetails, prefer that
+    const bulk = orderItem?.bulkProductDetails;
+    if (bulk && bulk.selling_price_set != null) {
+      const setPrice = parseFloat(bulk.selling_price_set) || 0;
+      if (Math.abs(storedPrice - setPrice) < 0.001) {
+        return setPrice / unitSetFromProduct;
+      }
+      if (setPrice > 0 && storedPrice === 0) {
+        return setPrice / unitSetFromProduct;
+      }
     }
-    const setPrice = parseFloat(product.perPiecePrice || product.price || 0);
-    return setPrice / unitSet;
+
+    // 2) If product has perPiecePrice, check if storedPrice is actually setPrice
+    const perPieceCandidate = parseFloat(productData.perPiecePrice ?? productData.price ?? 0) || 0;
+    if (unitSetFromProduct > 1 && perPieceCandidate > 0) {
+      if (Math.abs(storedPrice - perPieceCandidate * unitSetFromProduct) < 0.01) {
+        return storedPrice / unitSetFromProduct;
+      }
+    }
+
+    // 3) Heuristic: if storedPrice seems like a set price, divide by unitSet
+    if (unitSetFromProduct > 1 && storedPrice > 0 && perPieceCandidate > 0 && storedPrice / unitSetFromProduct <= storedPrice) {
+      const divided = storedPrice / unitSetFromProduct;
+      if (divided <= storedPrice && divided >= perPieceCandidate * 0.5) {
+        return divided;
+      }
+    }
+
+    // Default: assume storedPrice is already per-unit
+    return storedPrice;
   };
 
   const calculateTotals = () => {
     if (!selectedOrder || !selectedOrder.products)
       return { subtotal: 0, gst: 0, total: 0 };
 
-    const subtotal = selectedOrder.products.reduce((acc, product) => {
-      const productData = typeof product.product === 'object' ? product.product : product;
-      const unitPrice = getPriceForProduct(productData, product.quantity);
-      return acc + (unitPrice * Number(product.quantity));
-    }, 0);
+    const items = selectedOrder.products || [];
+    let subtotal = 0;
+    let gst = 0;
 
-    const gst = selectedOrder.products.reduce((acc, product) => {
-      const productData = typeof product.product === 'object' ? product.product : {};
-      const unitPrice = getPriceForProduct(productData, product.quantity);
-      return (
-        acc +
-        (unitPrice *
-          Number(product.quantity) *
-          (Number(productData.gst) || 0)) /
-          100
-      );
-    }, 0);
+    for (const item of items) {
+      const p = item.product || {};
+      const q = Number(item.quantity) || 0;
 
-    const total =
-      subtotal +
-      gst +
-      (Number(selectedOrder.deliveryCharges) || 0) +
-      (Number(selectedOrder.codCharges) || 0) -
-      (Number(selectedOrder.discount) || 0);
+      // prefer current bulk price
+      let unitPrice = getOrderPricePerUnit(item);
+      const bulk = getApplicableBulkProduct(p, q);
+      if (bulk && bulk.selling_price_set != null) {
+        const uSet = Number(p.unitSet || p.unitset || 1) || 1;
+        unitPrice = (parseFloat(bulk.selling_price_set) || 0) / uSet;
+      }
 
-    return { subtotal, gst, total };
+      const net = unitPrice * q;
+      const tax = net * ((Number(p.gst) || 0) / 100);
+      subtotal += net;
+      gst += tax;
+    }
+
+    const deliveryCharges = Number(selectedOrder.deliveryCharges || 0);
+    const codCharges = Number(selectedOrder.codCharges || 0);
+    const discount = Number(selectedOrder.discount || 0);
+    const total = subtotal + gst + deliveryCharges + codCharges - discount;
+
+    return { subtotal, gst, deliveryCharges, codCharges, discount, total };
   };
 
   const handleAddClick = () => {
@@ -246,57 +266,10 @@ const [addProductError, setAddProductError] = useState("");
 
   };
 
-  // Enhanced pricing calculation function similar to ProductDetails.jsx
-  const getApplicableBulkProduct = (product, quantity) => {
-    if (!product.bulkProducts || product.bulkProducts.length === 0) return null;
+  // Using centralized pricing utils for bulk qualification
 
-    const unitSet = product.unitSet || 1;
-    const sortedBulkProducts = [...product.bulkProducts]
-      .filter((bulk) => bulk && bulk.minimum)
-      .sort((a, b) => a.minimum - b.minimum); // ascending by minimum
-
-    // Select the applicable tier based on quantity in a single pass
-    for (const bulk of sortedBulkProducts) {
-      if (
-        quantity >= bulk.minimum * unitSet &&
-        (!bulk.maximum || quantity <= bulk.maximum * unitSet)
-      ) {
-        return bulk;
-      }
-    }
-
-    return null;
-  };
-
-  // Calculate total price based on quantity and bulk pricing (SET-based pricing)
-  const calculateProductPrice = (product, quantity) => {
-    const unitSet = product.unitSet || 1;
-    const applicableBulk = getApplicableBulkProduct(product, quantity);
-    
-    if (applicableBulk) {
-      // Use bulk pricing - convert set price to per-unit price
-      const setPrice = parseFloat(applicableBulk.selling_price_set);
-      const unitPrice = setPrice / unitSet; // Convert to per-unit price
-      return {
-        unitPrice: unitPrice, // This is price per UNIT
-        totalPrice: quantity * unitPrice,
-        bulkApplied: applicableBulk,
-        priceType: 'bulk_unit'
-      };
-    } else {
-      // Use regular pricing - calculate per-unit price
-      const perPiecePrice = parseFloat(product.perPiecePrice || 0);
-      const setPrice = parseFloat(product.price || (perPiecePrice * unitSet) || 0);
-      const unitPrice = setPrice / unitSet; // Convert to per-unit price
-      
-      return {
-        unitPrice: unitPrice, // This is price per UNIT
-        totalPrice: quantity * unitPrice,
-        bulkApplied: null,
-        priceType: 'regular_unit'
-      };
-    }
-  };
+  // Calculate total price based on quantity using centralized pricing utils
+  const calculateProductPrice = (product, quantity) => pricingCalculateProductPrice(product, quantity);
 
   const handleAddToOrder = async (product) => {
     try {
