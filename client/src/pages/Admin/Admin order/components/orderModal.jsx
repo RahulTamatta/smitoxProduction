@@ -108,9 +108,8 @@ const OrderModal = ({
     if (!product.bulkProducts || product.bulkProducts.length === 0) return null;
     const sortedBulkProducts = [...product.bulkProducts]
       .filter((bulk) => bulk && bulk.minimum)
-      .sort((a, b) => b.minimum - a.minimum);
-    for (let i = 0; i < sortedBulkProducts.length; i++) {
-      const bulk = sortedBulkProducts[i];
+      .sort((a, b) => a.minimum - b.minimum); // ascending by minimum
+    for (const bulk of sortedBulkProducts) {
       if (
         quantity >= bulk.minimum * unitSet &&
         (!bulk.maximum || quantity <= bulk.maximum * unitSet)

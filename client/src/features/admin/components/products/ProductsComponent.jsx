@@ -6,7 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useProducts } from '../../hooks/products/useProducts';
 import { useWindowSize } from '../../hooks/common/useCommon';
-import { productApi } from '../../services/api/adminApi';
+import { productApi } from '../../api/adminApi';
 import { formatCurrency } from '../../utils';
 import ProductCard from './ProductCard';
 import ProductsTable from './ProductsTable';

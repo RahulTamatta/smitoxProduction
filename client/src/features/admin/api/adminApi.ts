@@ -17,7 +17,7 @@ import {
   Subcategory,
   User,
   UserFormData
-} from '../../types';
+} from '../../../types';
 
 // Base API configuration
 const API_BASE_URL = '/api/v1';

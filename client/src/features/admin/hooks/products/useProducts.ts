@@ -3,8 +3,8 @@
 // ===================================
 
 import { useState, useEffect } from 'react';
-import { productApi } from '../../services/api/adminApi';
-import { Product, PaginationParams, ApiResponse } from '../../types';
+import { productApi } from '../../api/adminApi';
+import { Product, PaginationParams, ApiResponse } from '../../../../types';
 
 // Hook for managing products state
 export function useProducts(initialParams?: PaginationParams) {

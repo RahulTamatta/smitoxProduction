@@ -3,8 +3,8 @@
 // ===================================
 
 import { useState, useEffect } from 'react';
-import { orderApi } from '../../services/api/adminApi';
-import { Order, PaginationParams, OrderStatus } from '../../types';
+import { orderApi } from '../../api/adminApi';
+import { Order, PaginationParams, OrderStatus } from '../../../../types';
 
 export interface OrderParams extends PaginationParams {
   status?: string;

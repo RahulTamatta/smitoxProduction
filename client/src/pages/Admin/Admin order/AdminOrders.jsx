@@ -156,28 +156,38 @@ const [addProductError, setAddProductError] = useState("");
       const updatedProducts = [...prevOrder.products];
       const currentProduct = updatedProducts[index];
       
-      // Update the field
-      updatedProducts[index] = {
-        ...currentProduct,
-        [field]: Number(value),
-      };
-      
-      // If quantity changed, recalculate price based on bulk pricing
       if (field === 'quantity') {
-        const productData = typeof currentProduct.product === 'object' 
-          ? currentProduct.product 
+        // Recalculate price based on new quantity and update atomically
+        const newQuantity = Number(value);
+        const productData = typeof currentProduct.product === 'object'
+          ? currentProduct.product
           : currentProduct;
-          
-        if (productData && Number(value) > 0) {
-          const pricingResult = calculateProductPrice(productData, Number(value));
-          updatedProducts[index].price = pricingResult.unitPrice;
-          
+
+        if (productData && newQuantity > 0) {
+          const pricingResult = calculateProductPrice(productData, newQuantity);
+          updatedProducts[index] = {
+            ...currentProduct,
+            quantity: newQuantity,
+            price: pricingResult.unitPrice,
+          };
           console.log(`Price recalculated for ${productData.name}:`, {
-            quantity: Number(value),
+            quantity: newQuantity,
             newUnitPrice: pricingResult.unitPrice,
-            bulkApplied: pricingResult.bulkApplied?.minimum || 'None'
+            bulkApplied: pricingResult.bulkApplied?.minimum || 'None',
           });
+        } else {
+          // Fallback: just update quantity
+          updatedProducts[index] = {
+            ...currentProduct,
+            quantity: newQuantity,
+          };
         }
+      } else {
+        // Non-quantity field updates
+        updatedProducts[index] = {
+          ...currentProduct,
+          [field]: Number(value),
+        };
       }
       
       return { ...prevOrder, products: updatedProducts };
@@ -186,23 +196,10 @@ const [addProductError, setAddProductError] = useState("");
 
   const getPriceForProduct = (product, quantity) => {
     const unitSet = product.unitSet || 1;
-    if (product.bulkProducts && product.bulkProducts.length > 0) {
-      const sortedBulkProducts = [...product.bulkProducts]
-        .filter((bp) => bp && bp.minimum)
-        .sort((a, b) => b.minimum - a.minimum);
-
-      const applicableBulk = sortedBulkProducts.find(
-        (bp) => quantity >= bp.minimum * unitSet &&
-                (!bp.maximum || quantity <= bp.maximum * unitSet)
-      );
-
-      if (applicableBulk) {
-        // Convert set price to per-unit price
-        return parseFloat(applicableBulk.selling_price_set) / unitSet;
-      }
+    const applicableBulk = getApplicableBulkProduct(product, quantity);
+    if (applicableBulk) {
+      return parseFloat(applicableBulk.selling_price_set) / unitSet; // per-unit
     }
-
-    // Convert set price to per-unit price
     const setPrice = parseFloat(product.perPiecePrice || product.price || 0);
     return setPrice / unitSet;
   };
@@ -256,19 +253,10 @@ const [addProductError, setAddProductError] = useState("");
     const unitSet = product.unitSet || 1;
     const sortedBulkProducts = [...product.bulkProducts]
       .filter((bulk) => bulk && bulk.minimum)
-      .sort((a, b) => b.minimum - a.minimum);
+      .sort((a, b) => a.minimum - b.minimum); // ascending by minimum
 
-    // Check if quantity qualifies for the highest bulk tier first
-    if (
-      sortedBulkProducts.length > 0 &&
-      quantity >= sortedBulkProducts[0].minimum * unitSet
-    ) {
-      return sortedBulkProducts[0];
-    }
-
-    // Find the appropriate bulk tier for the quantity
-    for (let i = 0; i < sortedBulkProducts.length; i++) {
-      const bulk = sortedBulkProducts[i];
+    // Select the applicable tier based on quantity in a single pass
+    for (const bulk of sortedBulkProducts) {
       if (
         quantity >= bulk.minimum * unitSet &&
         (!bulk.maximum || quantity <= bulk.maximum * unitSet)
