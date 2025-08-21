@@ -1,5 +1,4 @@
 import { message } from "antd";
-import axios from "axios";
 import moment from "moment";
 import React, { useEffect, useMemo, useState } from "react";
 import { getApplicableBulkProduct, getPricePerUnit, calculateProductPrice as pricingCalculateProductPrice } from "../../../utils/pricing";
@@ -20,6 +19,13 @@ import AdminLayout from "../../../features/admin/components/layout/AdminLayout";
 import OrderModal from "./components/orderModal";
 import SearchModal from "./components/searchModal";
 import "./AdminOrders.css";
+// New modular imports
+import { useOrders } from "../../../entities/order/hooks/useOrders";
+import { useOrderMutations } from "../../../entities/order/hooks/useOrderMutations";
+import OrdersToolbar from "../../../features/order-filters/ui/OrdersToolbar";
+import OrdersTable from "../../../entities/order/ui/OrdersTable";
+import PaginationLite from "../../../shared/ui/PaginationLite";
+import { getInvoiceUrl } from "../../../entities/order/api/order.api";
 
 const AdminOrders = () => {
   const [status] = useState([
@@ -32,12 +38,10 @@ const AdminOrders = () => {
     "Delivered",
     "Returned",
   ]);
-  const [orders, setOrders] = useState([]);
   const [auth] = useAuth();
   const [show, setShow] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderType, setOrderType] = useState("all-orders");
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const [values, setValues] = useSearch();
@@ -50,58 +54,35 @@ const [addProductError, setAddProductError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
-  const [totalOrders, setTotalOrders] = useState(0);
   
   // Sorting and filtering states
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState("desc");
   const [paymentFilter, setPaymentFilter] = useState("all");
 
+  // Data via React Query
+  const { data, isLoading: loading, error: rqError } = useOrders({
+    status: orderType,
+    page: currentPage,
+    limit: itemsPerPage,
+    search: searchTerm,
+    sortBy,
+    sortOrder,
+    paymentFilter,
+  });
+  const orders = data?.orders || [];
+  const totalOrders = data?.total || 0;
   useEffect(() => {
-    if (auth?.token) getOrders(orderType, currentPage, searchTerm);
-  }, [auth?.token, orderType, currentPage]);
-
-  const getOrders = async (type = "all", page = 1, search = "") => {
-    try {
-      setLoading(true);
-      setError(null);
-      const { data } = await axios.get(`/api/v1/auth/all-orders`, {
-        headers: {
-          Authorization: auth?.token
-        },
-        params: {
-          status: type,
-          page,
-          limit: itemsPerPage,
-          search, // Send search query to backend
-          sortBy, // Send sorting field
-          sortOrder, // Send sorting order
-          paymentFilter, // Send payment filter
-        },
-      });
-      setOrders(Array.isArray(data.orders) ? data.orders : []);
-      setTotalOrders(data.total);
-      
-      // Debug logging - remove in production
-      if (data.orders && data.orders.length > 0) {
-        console.log('Order data structure:', data.orders[0]);
-        if (data.orders[0].products && data.orders[0].products.length > 0) {
-          console.log('Product structure:', data.orders[0].products[0]);
-        }
-      }
-    } catch (error) {
-      console.log(error);
+    if (rqError) {
       setError("Error fetching orders. Please try again.");
-      message.error("Error fetching orders");
-    } finally {
-      setLoading(false);
+    } else {
+      setError(null);
     }
-  };
+  }, [rqError]);
 
   const handleSearch = (value) => {
     setSearchTerm(value);
     setCurrentPage(1);
-    getOrders(orderType, 1, value);
   };
 
   const handlePageChange = (newPage) => {
@@ -112,20 +93,12 @@ const [addProductError, setAddProductError] = useState("");
 
   const totalPages = Math.ceil(totalOrders / itemsPerPage);
 
-  useEffect(() => {
-    if (auth?.token) getOrders(orderType, currentPage, searchTerm);
-  }, [auth?.token, orderType, sortBy, sortOrder, paymentFilter]);
+  // React Query handles fetching on dependency changes
 
+  const { setStatus, saveOrder, addProduct, removeProduct, addTracking } = useOrderMutations();
   const handleStatusChange = async (orderId, value) => {
     try {
-      await axios.put(`/api/v1/auth/order-status/${orderId}`, 
-        { status: value },
-        {
-          headers: {
-            Authorization: auth?.token
-          }
-        });
-      getOrders(orderType, currentPage, searchTerm);
+      await setStatus.mutateAsync({ orderId, status: value });
       message.success("Order status updated successfully");
     } catch (error) {
       console.log(error);
@@ -281,113 +254,74 @@ const [addProductError, setAddProductError] = useState("");
         let errorMessage = "Cannot add product: ";
         if (product.isActive === "0") errorMessage += "Product is inactive";
         if (product.stock <= 0) errorMessage += "Product is out of stock";
-        
         message.error(errorMessage);
         return;
       }
-  
+
       // Calculate proper pricing using unit-based approach
       const unitSet = product.unitSet || 1;
       const initialQuantity = unitSet; // Start with 1 set worth of units
-      
+
       // Calculate pricing with bulk consideration (quantity in units)
       const pricingResult = calculateProductPrice(product, initialQuantity);
-      
-      console.log('Adding product with pricing:', {
+
+      console.log("Adding product with pricing:", {
         productName: product.name,
         quantity: initialQuantity,
         unitSet: unitSet,
         unitPrice: pricingResult.unitPrice,
         totalPrice: pricingResult.totalPrice,
-        bulkApplied: pricingResult.bulkApplied?.minimum || 'None'
+        bulkApplied: pricingResult.bulkApplied?.minimum || "None",
       });
-  
-      // Send product data with proper pricing to server
-      const addResponse = await axios.put(
-        `/api/v1/auth/order/${selectedOrder._id}/add`,
-        { 
-          productId: product._id, 
-          quantity: initialQuantity, // Quantity in units (1 set = unitSet units)
-          price: pricingResult.unitPrice, // Price per unit
-          bulkProductDetails: pricingResult.bulkApplied // Include bulk details if applicable
+
+      // Use React Query mutation
+      const res = await addProduct.mutateAsync({
+        orderId: selectedOrder._id,
+        data: {
+          productId: product._id,
+          quantity: initialQuantity, // units
+          price: pricingResult.unitPrice, // price per unit
+          bulkProductDetails: pricingResult.bulkApplied,
         },
-        {
-          headers: {
-            Authorization: auth?.token
-          }
-        }
-      );
-  
-      if (!addResponse.data.success) {
-        throw new Error(addResponse.data.message);
+      });
+
+      if (res?.success && res.order) {
+        setSelectedOrder(res.order);
       }
 
-      // Use the updated order from the response directly
-      const updatedOrder = addResponse.data.order;
-      console.log('Product added, updated order from backend:', {
-        orderId: updatedOrder._id,
-        productsCount: updatedOrder.products?.length,
-        amountPending: updatedOrder.amountPending,
-        amount: updatedOrder.amount
-      });
-      
-      // Update the selected order immediately with backend response
-      setSelectedOrder(updatedOrder);
-      
-      message.success(`Product added successfully with ${pricingResult.bulkApplied ? 'bulk' : 'regular'} pricing`);
+      message.success(
+        `Product added successfully with ${pricingResult.bulkApplied ? "bulk" : "regular"} pricing`
+      );
       handleCloseSearchModal();
-      
-      // Refresh the orders list
-      getOrders(orderType, currentPage, searchTerm);
-  
     } catch (error) {
       console.error("Add to order error:", error);
-      setAddProductError(error.response?.data?.message || "Error adding product to order");
+      setAddProductError(error?.message || "Error adding product to order");
     }
   };
 
   const handleUpdateOrder = async () => {
     try {
-      const {
-        _id,
+      const { _id, status, codCharges, deliveryCharges, discount, amount, products } = selectedOrder;
+      const payload = {
         status,
-        codCharges,
-        deliveryCharges,
-        discount,
-        amount,
-        products,
-      } = selectedOrder;
-
-      const numericCodCharges = Number(codCharges) || 0;
-      const numericDeliveryCharges = Number(deliveryCharges) || 0;
-      const numericDiscount = Number(discount) || 0;
-      const numericAmount = Number(amount) || 0;
-
-      const response = await axios.put(`/api/v1/auth/order/${_id}`, {
-        status,
-        codCharges: numericCodCharges,
-        deliveryCharges: numericDeliveryCharges,
-        discount: numericDiscount,
-        amount: numericAmount,
+        codCharges: Number(codCharges) || 0,
+        deliveryCharges: Number(deliveryCharges) || 0,
+        discount: Number(discount) || 0,
+        amount: Number(amount) || 0,
         products: products.map((p) => ({
           _id: p._id,
           quantity: Number(p.quantity) || 0,
           price: Number(p.price) || 0,
         })),
-      },
-      {
-        headers: {
-          Authorization: auth?.token
-        }
-      });
+      };
 
-      if (response.data.success) {
-        setSelectedOrder(response.data.order);
+      const res = await saveOrder.mutateAsync({ orderId: _id, payload });
+      if (res?.success) {
+        if (res.order) setSelectedOrder(res.order);
         setShow(false);
-        getOrders(orderType, currentPage, searchTerm);
         message.success("Order updated successfully");
       } else {
-        message.error(response.data.message);
+        message.error(res?.message || "Failed to update order");
       }
     } catch (error) {
       console.log("Error details:", error);
@@ -435,24 +369,20 @@ const [addProductError, setAddProductError] = useState("");
         setSelectedOrder(updatedOrder);
 
         // Use the product ObjectId for deletion
-        const productId = typeof productToRemove.product === 'object' 
-          ? productToRemove.product._id 
-          : productToRemove.product;
-          
-        const response = await axios.delete(
-          `/api/v1/auth/order/${selectedOrder._id}/remove-product/${productId}`,
-          {
-            headers: {
-              Authorization: auth?.token
-            }
-          }
-        );
+        const productId =
+          typeof productToRemove.product === "object"
+            ? productToRemove.product._id
+            : productToRemove.product;
 
-        if (response.data.success) {
-          getOrders(orderType, currentPage, searchTerm);
+        const res = await removeProduct.mutateAsync({
+          orderId: selectedOrder._id,
+          productId,
+        });
+
+        if (res?.success) {
           message.success("Product removed from order successfully");
         } else {
-          message.error(response.data.message);
+          message.error(res?.message || "Failed to remove product from order");
         }
       } catch (error) {
         console.log(error);
@@ -465,16 +395,8 @@ const [addProductError, setAddProductError] = useState("");
 
   const handleDelivered = async () => {
     try {
-      await axios.put(`/api/v1/auth/order-status/${selectedOrder._id}`, {
-        status: "Delivered",
-      },
-      {
-        headers: {
-          Authorization: auth?.token
-        }
-      });
+      await setStatus.mutateAsync({ orderId: selectedOrder._id, status: "Delivered" });
       setShow(false);
-      getOrders(orderType, currentPage, searchTerm);
       message.success("Order status updated to Delivered");
     } catch (error) {
       console.log(error);
@@ -484,16 +406,8 @@ const [addProductError, setAddProductError] = useState("");
 
   const handleReturned = async () => {
     try {
-      await axios.put(`/api/v1/auth/order-status/${selectedOrder._id}`, {
-        status: "Returned",
-      },
-      {
-        headers: {
-          Authorization: auth?.token
-        }
-      });
+      await setStatus.mutateAsync({ orderId: selectedOrder._id, status: "Returned" });
       setShow(false);
-      getOrders(orderType, currentPage, searchTerm);
       message.success("Order status updated to Returned");
     } catch (error) {
       console.log(error);
@@ -503,8 +417,7 @@ const [addProductError, setAddProductError] = useState("");
 
   const handleDownloadPDF = () => {
     try {
-      // Open PDF in new tab instead of downloading
-      window.open(`/api/v1/auth/order/${selectedOrder._id}/invoice`, '_blank');
+      window.open(getInvoiceUrl(selectedOrder._id), '_blank');
     } catch (error) {
       console.log(error);
       message.error("Error opening order invoice");
@@ -527,17 +440,8 @@ const [addProductError, setAddProductError] = useState("");
 
   const handleAddTracking = async () => {
     try {
-      await axios.put(
-        `/api/v1/auth/order/${selectedOrder._id}/tracking`,
-        trackingInfo,
-        {
-          headers: {
-            Authorization: auth?.token
-          }
-        }
-      );
+      await addTracking.mutateAsync({ orderId: selectedOrder._id, info: trackingInfo });
       message.success("Tracking information added successfully");
-      getOrders(orderType);
       handleTrackingModalClose();
     } catch (error) {
       console.log(error);
@@ -588,44 +492,15 @@ const [addProductError, setAddProductError] = useState("");
             ))}
           </Nav>
 
-          <div className="mb-4">
-            <Row>
-              <Col md={6}>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Search orders by ID, buyer name..."
-                  value={searchTerm}
-                  onChange={(e) => handleSearch(e.target.value)}
-                />
-              </Col>
-              <Col md={3}>
-                <div className="d-flex align-items-center">
-                  <span className="me-2">Sort By:</span>
-                  <Form.Select
-                    value={sortBy}
-                    onChange={(e) => handleSortChange(e.target.value)}
-                  >
-                    <option value="createdAt">Date {sortOrder === "desc" ? "(New → Old)" : "(Old → New)"}</option>
-                    <option value="total">Total Amount {sortOrder === "desc" ? "(High → Low)" : "(Low → High)"}</option>
-                  </Form.Select>
-                </div>
-              </Col>
-              <Col md={3}>
-                <div className="d-flex align-items-center">
-                  <span className="me-2">Payment:</span>
-                  <Form.Select
-                    value={paymentFilter}
-                    onChange={(e) => setPaymentFilter(e.target.value)}
-                  >
-                    <option value="all">All Payment Types</option>
-                    <option value="cod">Cash on Delivery</option>
-                    <option value="razorpay">Razorpay</option>
-                  </Form.Select>
-                </div>
-              </Col>
-            </Row>
-          </div>
+          <OrdersToolbar
+            searchTerm={searchTerm}
+            onSearch={handleSearch}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSortChange={handleSortChange}
+            paymentFilter={paymentFilter}
+            onPaymentFilterChange={(v) => setPaymentFilter(v)}
+          />
 
           {loading ? (
             <Spinner animation="border" role="status">
@@ -633,200 +508,28 @@ const [addProductError, setAddProductError] = useState("");
             </Spinner>
           ) : error ? (
             <Alert variant="danger">{error}</Alert>
-          ) : orders.length === 0 ? (
-            <Alert variant="info">No orders found</Alert>
           ) : (
             <>
-       <Table 
-  striped 
-  bordered 
-  hover 
-  style={{ width: '100%', fontSize: '1rem', borderSpacing: '0px', borderCollapse: 'collapse' }} 
-  cellSpacing="0" 
-  cellPadding="0"
->
-  <thead>
-    <tr>
-      <th style={{ fontSize: '0.8rem', padding: '4px' }}>#</th>
-<th 
-  style={{ fontSize: '0.8rem', padding: '4px', cursor: 'pointer' }}
-  onClick={() => handleSortChange('orderId')}
->
-  Order Id <span style={{ fontWeight: 'bold' }}>{sortBy === 'orderId' ? (sortOrder === 'asc' ? '↑' : '↓') : '↕'}</span>
-</th>
-      {/* <th style={{ fontSize: '0.8rem', padding: '4px' }}>Tracking Information</th> */}
-<th 
-  style={{ fontSize: '0.8rem', padding: '4px', cursor: 'pointer' }}
-  onClick={() => handleSortChange('total')}
->
-  Total <span style={{ fontWeight: 'bold' }}>{sortBy === 'total' ? (sortOrder === 'asc' ? '↑' : '↓') : '↕'}</span>
-</th>
-      <th style={{ fontSize: '0.8rem', padding: '4px' }}>Payment</th>
-      <th style={{ fontSize: '0.8rem', padding: '4px' }}>Status</th>
-<th 
-  style={{ fontSize: '0.8rem', padding: '4px', cursor: 'pointer' }}
-  onClick={() => handleSortChange('createdAt')}
->
-  Created <span style={{ fontWeight: 'bold' }}>{sortBy === 'createdAt' ? (sortOrder === 'asc' ? '↑' : '↓') : '↕'}</span>
-</th>
-      <th style={{ fontSize: '0.8rem', padding: '4px' }}>Actions</th>
-    </tr>
-  </thead>
+              <OrdersTable
+                orders={orders}
+                page={currentPage}
+                perPage={itemsPerPage}
+                total={totalOrders}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+                onSortChange={handleSortChange}
+                onView={handleShow}
+                onAddTracking={handleTrackingModalShow}
+                calcRowTotals={calculateTotalsad}
+              />
 
-  <tbody>
-    {orders.map((o, index) => {
-      const totals = calculateTotalsad(o);
-      return (
-        <tr key={o._id} style={{ fontSize: '0.7rem', padding: '2px' }}>
-          <td style={{ fontSize: '0.7rem', padding: '2px' }}>
-            {(currentPage - 1) * itemsPerPage + index + 1}
-          </td>
-          <td style={{ fontSize: '0.7rem', padding: '2px' }}>
-            <table style={{ width: '100%' }}>
-            <td style={{ fontSize: '0.7rem', padding: '2px' }}>
-  {o.buyer?.user_fullname || 'N/A'}
-</td>
-              <tr>
-      <td style={{ fontSize: '0.7rem', padding: '2px' }}>
-  <div
-    style={{
-      display: 'inline-block', // Makes the box inline
-      padding: '4px 8px', // Add some padding for better readability
-      border: '1px solid #007bff', // Blue border to match button theme
-      borderRadius: '4px', // Rounded corners
-      backgroundColor: '#e7f1ff', // Light blue background
-      fontWeight: 'bold', // Make the text bold
-      color: '#007bff', // Blue text for contrast
-      textAlign: 'center', // Center align the text
-      cursor: 'pointer', // Pointer cursor for clickable appearance
-      width: 'fit-content', // Adjust width dynamically
-      transition: 'background-color 0.2s ease', // Smooth hover effect
-    }}
-    onMouseEnter={(e) =>
-      (e.target.style.backgroundColor = '#cfe2ff') // Highlight on hover
-    }
-    onMouseLeave={(e) =>
-      (e.target.style.backgroundColor = '#e7f1ff') // Reset on mouse leave
-    }
-    onClick={() => handleShow(o)} // Opens the modal
-  >
-    {o._id.substring(0, 10)}
-  </div>
-</td>
-
-              </tr>
-              <td style={{ fontSize: '0.7rem', padding: '2px' }}>
-  {o.buyer?.mobile_no || 'N/A'}
-</td>
-            </table>
-            {o.tracking ? (
-              `${o.tracking.company}: ${o.tracking.id}`
-            ) : (
-              <Button
-                variant="primary"
-                style={{
-                  fontSize: '0.6rem',
-                  padding: '2px 4px',
-                  borderRadius: '3px',
-                  margin: '2px 0',
-                  backgroundColor: '#007bff',
-                  color: '#fff',
-                  border: 'none',
-                }}
-                onClick={() => handleTrackingModalShow(o)}
-              >
-                Add Tracking ID
-              </Button>
-            )}
-          </td>
-          <td style={{ fontSize: '0.7rem', padding: '2px' }}>{totals.total.toFixed(2)}</td>
-          <td style={{ fontSize: '0.7rem', padding: '2px' }}>{o.payment.paymentMethod}</td>
-          <td style={{ fontSize: '0.7rem', padding: '2px' }}>{o.status}</td>
-          <td style={{ fontSize: '0.7rem', padding: '2px' }}>
-            {moment(o.createdAt).format('DD-MM-YYYY')}
-          </td>
-          <td style={{ fontSize: '0.7rem', padding: '2px' }}>
-            <Button
-              variant="info"
-              style={{
-                fontSize: '0.6rem',
-                padding: '2px 4px',
-                borderRadius: '3px',
-                margin: '2px 0',
-                backgroundColor: '#17a2b8',
-                color: '#fff',
-                border: 'none',
-              }}
-              onClick={() => handleShow(o)}
-            >
-              View
-            </Button>
-          </td>
-        </tr>
-      );
-    })}
-  </tbody>
-</Table>
-
-
-              <div className="d-flex justify-content-between align-items-center mt-4">
-                <div className="d-flex gap-2">
-                  <Button
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1 || loading}
-                    variant="secondary"
-                  >
-                    Previous
-                  </Button>
-
-                  {[...Array(totalPages)].map((_, index) => {
-                    const pageNumber = index + 1;
-                    if (
-                      pageNumber === 1 ||
-                      pageNumber === totalPages ||
-                      (pageNumber >= currentPage - 1 &&
-                        pageNumber <= currentPage + 1)
-                    ) {
-                      return (
-                        <Button
-                          key={pageNumber}
-                          onClick={() => handlePageChange(pageNumber)}
-                          variant={
-                            currentPage === pageNumber ? "primary" : "light"
-                          }
-                          disabled={loading}
-                        >
-                          {pageNumber}
-                        </Button>
-                      );
-                    }
-                    if (
-                      pageNumber === currentPage - 2 ||
-                      pageNumber === currentPage + 2
-                    ) {
-                      return (
-                        <span key={pageNumber} className="px-2">
-                          ...
-                        </span>
-                      );
-                    }
-                    return null;
-                  })}
-
-                  <Button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages || loading}
-                    variant="secondary"
-                  >
-                    Next
-                  </Button>
-                </div>
-                <span className="text-muted">
-                  Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-                  {Math.min(currentPage * itemsPerPage, totalOrders)} of{" "}
-                  {totalOrders} orders
-                </span>
-              </div>
+              <PaginationLite
+                current={currentPage}
+                perPage={itemsPerPage}
+                total={totalOrders}
+                disabled={loading}
+                onChange={(p) => handlePageChange(p)}
+              />
             </>
           )}
         </div>
@@ -848,7 +551,7 @@ const [addProductError, setAddProductError] = useState("");
           handleUpdateOrder={handleUpdateOrder}
           handleDelivered={handleDelivered}
           handleReturned={handleReturned}
-          getOrders={getOrders}
+          getOrders={() => {}}
           orderType={orderType}
           onOrderUpdate={(updatedOrder) => setSelectedOrder(updatedOrder)}
           handleAddToOrder={(product) => handleAddToOrder(product).catch(error => {

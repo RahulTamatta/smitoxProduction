@@ -29,8 +29,8 @@ import { errorHandler } from "./src/core/errors/errorHandler.js";
 // Configure environment variables
 dotenv.config();
 
-// Connect to the database
-connectDB();
+// Connect to the database (wait for connection before continuing)
+await connectDB();
 
 // Create Express application
 const app = express();

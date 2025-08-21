@@ -8,6 +8,7 @@ import { SearchProvider } from "./context/search";
 import { CartProvider } from "./context/cartContext";
 import "antd/dist/reset.css";
 import { Toaster } from "react-hot-toast";
+import AppQueryProvider from "./app/providers/QueryClientProvider";
 
 // Redux imports
 import { Provider } from 'react-redux';
@@ -18,16 +19,18 @@ if ('scrollRestoration' in window.history) {
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
-  <Provider store={store}> {/* Wrap your app with Provider */}
-    <AuthProvider>
-      <SearchProvider>
-        <CartProvider>
-          <BrowserRouter>
-            <Toaster />
-            <App />
-          </BrowserRouter>
-        </CartProvider>
-      </SearchProvider>
-    </AuthProvider>
-  </Provider>
+  <AppQueryProvider>
+    <Provider store={store}> {/* Wrap your app with Provider */}
+      <AuthProvider>
+        <SearchProvider>
+          <CartProvider>
+            <BrowserRouter>
+              <Toaster />
+              <App />
+            </BrowserRouter>
+          </CartProvider>
+        </SearchProvider>
+      </AuthProvider>
+    </Provider>
+  </AppQueryProvider>
 );

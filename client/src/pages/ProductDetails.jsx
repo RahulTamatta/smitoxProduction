@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Layout from "./../components/Layout/Layout";
-import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCart } from "../context/cartContext";
 import { useAuth } from "../context/authContext";
@@ -12,34 +11,21 @@ import toast from "react-hot-toast";
 import ProductCard from "./ProductCard";
 import OptimizedImage from "../components/UI/OptimizedImage";
 import StockPopup from "../features/cart/components/StockPopup"; // Import the StockPopup component
+// New centralized API layer & utils
+import { http, attachAuth } from "../shared/api/http";
+import { getProduct as apiGetProduct, getProductsForYou as apiGetProductsForYou } from "../entities/product/api/product.api";
+import { addToCart as apiAddToCart, updateCartQty as apiUpdateCartQty, removeFromCart as apiRemoveFromCart, getProductQty as apiGetProductQty } from "../entities/cart/api/cart.api";
+import { addToWishlist as apiAddToWishlist, removeFromWishlist as apiRemoveFromWishlist, checkWishlist as apiCheckWishlist } from "../entities/wishlist/api/wishlist.api";
+import { normalizeProductForCard } from "../shared/lib/normalizeProduct";
+import { getApplicableBulkProduct as utilGetApplicableBulkProduct, calcTotalPrice as utilCalcTotalPrice } from "../entities/product/utils/bulkPricing";
+// Presentational components
+import QuantityStepper from "../features/add-to-cart/ui/QuantityStepper";
+import BulkPricingTable from "../entities/product/ui/BulkPricingTable";
+import YouTubeModal from "../features/product-media/ui/YouTubeModal";
+import ImageZoomModal from "../features/product-media/ui/ImageZoomModal";
+import ImageGallery from "../entities/product/ui/ImageGallery";
 
-function normalizeProductForCard(product) {
-  // Helper to check if a value is a valid non-empty image URL
-  const isValidImage = (val) =>
-    typeof val === "string" && val.trim() !== "" && val !== "/placeholder-image.jpg";
-
-  let photo = product?.photos;
-  if (!isValidImage(photo)) {
-    let images = product?.multipleimages;
-    if (typeof images === "string") {
-      try {
-        images = JSON.parse(images);
-      } catch {
-        images = [];
-      }
-    }
-    if (Array.isArray(images)) {
-      images = images.filter(isValidImage);
-      if (images.length > 0) {
-        photo = images[0];
-      }
-    }
-    if (!isValidImage(photo)) {
-      photo = "/placeholder-image.jpg";
-    }
-  }
-  return { ...product, photos: photo };
-}
+// normalizeProductForCard now imported from shared/lib
 
 const ProductDetails = () => {
   const params = useParams();
@@ -153,6 +139,11 @@ const ProductDetails = () => {
     }
   };
 
+  // Attach auth header centrally for http client
+  useEffect(() => {
+    attachAuth(() => auth?.user?.token);
+  }, [auth?.user?.token]);
+
   // Handle network status
   useEffect(() => {
     const handleOnline = () => {
@@ -188,16 +179,12 @@ const ProductDetails = () => {
 
     try {
       console.log(`[Product] Fetching product details for slug: ${params.slug}`);
-      const { data } = await axios.get(
-        `/api/v1/product/get-product/${params.slug}`,
-        axiosConfig
-      );
-
-      if (data.success === true) {
+      const productData = await apiGetProduct(params.slug);
+      if (productData) {
         console.log('[Product] Product fetched successfully');
         
         // Parse multipleimages if it's a JSON string
-        let processedProduct = { ...data.product };
+        let processedProduct = { ...productData };
         if (processedProduct.multipleimages && typeof processedProduct.multipleimages === 'string') {
           try {
             processedProduct.multipleimages = JSON.parse(processedProduct.multipleimages);
@@ -255,17 +242,13 @@ const ProductDetails = () => {
 
   const getProductsForYou = async () => {
     try {
-      const { data } = await axios.get(
-        `/api/v1/productForYou/products/${product.category?._id}/${product.subcategory?._id}`
+      const items = await apiGetProductsForYou(product.category?._id, product.subcategory?._id);
+      setProductsForYou(
+        (items || []).map(item => ({
+          ...item,
+          productId: normalizeProductForCard(item.productId)
+        }))
       );
-      if (data?.success) {
-        setProductsForYou(
-          (data.products || []).map(item => ({
-            ...item,
-            productId: normalizeProductForCard(item.productId)
-          }))
-        );
-      }
     } catch (error) {
       // Error handling is already commented out
     }
@@ -294,7 +277,7 @@ const ProductDetails = () => {
     try {
       console.log('[Cart] Adding product to cart');
       const initialQuantity = unitSet * 1;
-      const applicableBulk = getApplicableBulkProduct(initialQuantity);
+      const applicableBulk = utilGetApplicableBulkProduct(product, initialQuantity, unitSet);
 
       // Check stock before adding
       if (initialQuantity > product.stock) {
@@ -302,21 +285,17 @@ const ProductDetails = () => {
         return;
       }
 
-      const response = await axios.post(
-        `/api/v1/carts/users/${auth.user._id}/cart`,
-        {
-          productId: product._id,
-          quantity: initialQuantity,
-          price: applicableBulk ? parseFloat(applicableBulk.selling_price_set) : parseFloat(product.price),
-          bulkProductDetails: applicableBulk,
-        },
-        axiosConfig
-      );
+      const response = await apiAddToCart(auth.user._id, {
+        productId: product._id,
+        quantity: initialQuantity,
+        price: applicableBulk ? parseFloat(applicableBulk.selling_price_set) : parseFloat(product.price),
+        bulkProductDetails: applicableBulk,
+      });
 
-      console.log('[Cart] Add to cart response:', response.data);
+      console.log('[Cart] Add to cart response:', response);
 
-      if (response.data.status === "success") {
-        setCart(response.data.cart);
+      if (response.status === "success" || response?.cart) {
+        setCart(response.cart || response);
         setDisplayQuantity(initialQuantity);
         setSelectedBulk(applicableBulk);
         calculateTotalPrice(applicableBulk, initialQuantity);
@@ -370,7 +349,7 @@ const ProductDetails = () => {
     try {
       await updateQuantity(updatedQuantity);
       setDisplayQuantity(updatedQuantity);
-      const applicableBulk = getApplicableBulkProduct(updatedQuantity);
+      const applicableBulk = utilGetApplicableBulkProduct(product, updatedQuantity, unitSet);
       setSelectedBulk(applicableBulk);
       calculateTotalPrice(applicableBulk, updatedQuantity);
     } catch (error) {
@@ -381,44 +360,15 @@ const ProductDetails = () => {
   // Keep other functions (getApplicableBulkProduct, calculateTotalPrice, etc.)
   // ...
 
-  const getApplicableBulkProduct = (quantity) => {
-    if (!product.bulkProducts || product.bulkProducts.length === 0) return null;
-
-    const sortedBulkProducts = [...product.bulkProducts]
-      .filter((bulk) => bulk && bulk.minimum)
-      .sort((a, b) => b.minimum - a.minimum);
-
-    if (
-      sortedBulkProducts.length > 0 &&
-      quantity >= sortedBulkProducts[0].minimum * unitSet
-    ) {
-      return sortedBulkProducts[0];
-    }
-
-    for (let i = 0; i < sortedBulkProducts.length; i++) {
-      const bulk = sortedBulkProducts[i];
-      if (
-        quantity >= bulk.minimum * unitSet &&
-        (!bulk.maximum || quantity <= bulk.maximum * unitSet)
-      ) {
-        return bulk;
-      }
-    }
-
-    return null;
-  };
+  // getApplicableBulkProduct now provided by util
   
   const calculateTotalPrice = (bulk, quantity) => {
-    if (bulk) {
-      setTotalPrice(quantity * parseFloat(bulk.selling_price_set));
-    } else {
-      setTotalPrice(quantity * parseFloat(product.perPiecePrice || 0));
-    }
+    setTotalPrice(utilCalcTotalPrice(bulk, quantity, product));
   };
 
   const checkPincode = async (pincode) => {
     try {
-      const { data } = await axios.get("/api/v1/pincodes/get-pincodes");
+      const { data } = await http.get("/pincodes/get-pincodes");
       if (data.success) {
         const availablePincodes = data.pincodes.map((pin) => pin.code);
         if (availablePincodes.includes(pincode.toString())) {
@@ -438,16 +388,7 @@ const ProductDetails = () => {
     }
 
     try {
-      const response = await axios.post(
-        `/api/v1/carts/users/${auth.user._id}/cartq/${product._id}`,
-        { quantity },
-        {
-          headers: {
-            Authorization: `Bearer ${auth.user.token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      await apiUpdateCartQty(auth.user._id, product._id, quantity);
     } catch (error) {
       console.error("Quantity update error:", error);
     }
@@ -457,15 +398,7 @@ const ProductDetails = () => {
     if (!auth.user._id) return;
 
     try {
-      const response = await axios.delete(
-        `/api/v1/carts/users/${auth.user._id}/cart/${productId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${auth.user.token}`,
-          },
-        }
-      );
+      await apiRemoveFromCart(auth.user._id, productId);
     } catch (error) {
       console.error("Remove from cart failed:", error.message);
     }
@@ -475,21 +408,13 @@ const ProductDetails = () => {
     if (!auth?.user?._id || !productId) return;
 
     try {
-      const { data } = await axios.get(
-        `/api/v1/carts/users/${auth.user._id}/products/${productId}/quantity`,
-        {
-          headers: {
-            Authorization: `Bearer ${auth.user.token}`,
-          },
-        }
-      );
-
-      if (data.quantity) {
-        const quantity = data.quantity;
+      const qty = await apiGetProductQty(auth.user._id, productId);
+      if (qty) {
+        const quantity = qty;
         setDisplayQuantity(quantity);
         setShowQuantitySelector(quantity > 0);
 
-        const applicableBulk = getApplicableBulkProduct(quantity);
+        const applicableBulk = utilGetApplicableBulkProduct(product, quantity, unitSet);
         setSelectedBulk(applicableBulk);
         calculateTotalPrice(applicableBulk, quantity);
       } else {
@@ -516,14 +441,10 @@ const ProductDetails = () => {
 
     try {
       if (isInWishlist) {
-        await axios.delete(
-          `/api/v1/carts/users/${auth.user._id}/wishlist/${product._id}`
-        );
+        await apiRemoveFromWishlist(auth.user._id, product._id);
         setIsInWishlist(false);
       } else {
-        await axios.post(`/api/v1/carts/users/${auth.user._id}/wishlist`, {
-          productId: product._id,
-        });
+        await apiAddToWishlist(auth.user._id, product._id);
         setIsInWishlist(true);
       }
     } catch (error) {
@@ -535,10 +456,8 @@ const ProductDetails = () => {
     if (!auth.user) return;
 
     try {
-      const { data } = await axios.get(
-        `/api/v1/carts/users/${auth.user._id}/wishlist/check/${productId}`
-      );
-      setIsInWishlist(data.exists);
+      const exists = await apiCheckWishlist(auth.user._id, productId);
+      setIsInWishlist(!!exists);
     } catch (error) {
       console.error(error);
       setIsInWishlist(false);
@@ -685,6 +604,12 @@ const ProductDetails = () => {
     marginBottom: "15px",
   };
 
+  // Build gallery images array: main photo + additional images
+  const galleryImages = [
+    product.photos,
+    ...(Array.isArray(product.multipleimages) ? product.multipleimages : [])
+  ].filter((img) => typeof img === 'string' && img.trim());
+
   if (!product || Object.keys(product).length === 0) {
     return (
       <Layout>
@@ -706,143 +631,13 @@ const ProductDetails = () => {
         <div style={productDetailStyle}>
           {/* Product Image Gallery */}
           <div style={imageStyle}>
-            {/* Main large image display */}
-            <div 
-              onClick={() => setShowImageZoom(true)}
-              style={{ 
-                marginBottom: "10px", 
-                borderRadius: "8px",
-                overflow: "hidden",
-                boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
-                position: "relative",
-                cursor: "zoom-in",
-                paddingTop: isMobile ? "16px" : "28px" // Added padding to top for better visual spacing
-              }}
-            >
-              <div
-                style={{
-                  position: "absolute",
-                  top: "10px",
-                  right: "10px",
-                  zIndex: 2,
-                  backgroundColor: "rgba(255,255,255,0.7)",
-                  borderRadius: "50%",
-                  width: "30px",
-                  height: "30px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer"
-                }}
-              >
-                <FaExpand color="#333" size={16} />
-              </div>
-              <OptimizedImage
-                src={selectedImage === 0 ? product.photos : 
-                      (product.multipleimages && Array.isArray(product.multipleimages) && product.multipleimages.length > 0 && selectedImage <= product.multipleimages.length) ? 
-                      product.multipleimages[selectedImage - 1] : product.photos}
-                alt={product.name}
-                style={{ 
-                  borderRadius: "8px",
-                  width: "100%",
-                  height: "auto",
-                  maxHeight: isMobile ? "300px" : "500px"
-                }}
-                width={isMobile ? 300 : 500}
-                height={isMobile ? 300 : 500}
-                objectFit="contain"
-                backgroundColor="#ffffff"
-                quality={isMobile ? 75 : 85}
-                loading="eager"
-              />
-            </div>
-            
-            {/* Thumbnail gallery */}
-            {(product.multipleimages && Array.isArray(product.multipleimages) && product.multipleimages.length > 0) && (
-              <div style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "8px",
-                justifyContent: isMobile ? "center" : "flex-start"
-              }}>
-                {/* Main product image thumbnail */}
-                <div 
-                  onClick={() => setSelectedImage(0)}
-                  style={{
-                    width: isMobile ? "60px" : "80px",
-                    height: isMobile ? "60px" : "80px",
-                    border: selectedImage === 0 ? "2px solid #ffa41c" : "1px solid #ddd",
-                    borderRadius: "4px",
-                    overflow: "hidden",
-                    cursor: "pointer"
-                  }}
-                >
-                  <OptimizedImage
-                    src={product.photos}
-                    alt={`${product.name} - Main`}
-                    style={{ width: "100%", height: "100%" }}
-                    width={isMobile ? 60 : 80}
-                    height={isMobile ? 60 : 80}
-                    objectFit="cover"
-                    quality={60}
-                  />
-                </div>
-                {/* Additional images thumbnails */}
-                {product.multipleimages
-                  .map((imgUrl, index) => {
-                    // Skip if imgUrl is invalid
-                    if (!imgUrl || typeof imgUrl !== 'string' || !imgUrl.trim()) {
-                      console.warn(`Invalid image URL at index ${index}:`, imgUrl);
-                      return null;
-                    }
-                    
-                    return {
-                      imgUrl,
-                      index,
-                      key: `thumb-${index}`
-                    };
-                  })
-                  .filter(Boolean) // Remove null entries
-                  .map(({ imgUrl, index, key }) => (
-                    <div 
-                      key={key}
-                      data-thumbnail="true"
-                      onClick={() => setSelectedImage(index + 1)}
-                      style={{
-                        width: isMobile ? "60px" : "80px",
-                        height: isMobile ? "60px" : "80px",
-                        border: selectedImage === index + 1 ? "2px solid #ffa41c" : "1px solid #ddd",
-                        borderRadius: "4px",
-                        overflow: "hidden",
-                        cursor: "pointer",
-                        backgroundColor: "#f8f9fa"
-                      }}
-                    >
-                      <OptimizedImage
-                        src={imgUrl}
-                        alt={`${product.name} - ${index + 1}`}
-                        style={{ width: "100%", height: "100%" }}
-                        width={isMobile ? 60 : 80}
-                        height={isMobile ? 60 : 80}
-                        objectFit="cover"
-                        quality={60}
-                        backgroundColor="transparent"
-                        onLoad={() => {
-                          setLoadedImages(prev => new Set([...prev, imgUrl]));
-                        }}
-                        onError={(e) => {
-                          console.error(`Failed to load thumbnail image:`, imgUrl);
-                          // Hide the entire thumbnail container if image fails
-                          const container = e.target.closest('[data-thumbnail]');
-                          if (container) {
-                            container.style.display = 'none';
-                          }
-                        }}
-                      />
-                    </div>
-                  ))}
-              </div>
-            )}
+            <ImageGallery
+              main={galleryImages[Math.min(selectedImage, Math.max(galleryImages.length - 1, 0))]}
+              images={galleryImages}
+              selectedIndex={selectedImage}
+              onSelect={setSelectedImage}
+              onZoom={() => setShowImageZoom(true)}
+            />
           </div>
 
           {/* Product Info */}
@@ -882,51 +677,19 @@ const ProductDetails = () => {
                 </button>
               )}
               <div style={quantitySelectorStyle}>
-                <button 
-                  onClick={() => handleQuantityChange(false)} 
-                  style={{
-                    ...buttonStyle,
-                    minWidth: isMobile ? "36px" : "40px",
-                    height: isMobile ? "36px" : "40px",
-                    padding: "0",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center"
-                  }}
-                >
-                  <span style={{ fontSize: isMobile ? "18px" : "20px" }}>-</span>
-                </button>
-                <input
-                  type="number"
+                <QuantityStepper
                   value={displayQuantity}
-                  readOnly
-                  style={{ 
-                    ...inputStyle, 
-                    width: `${Math.max(displayQuantity.toString().length, 2) * (isMobile ? 16 : 14)}px`,
-                    minWidth: isMobile ? "40px" : "50px" 
-                  }}
-                />
-                <button
-                  onClick={() => {
+                  unit={unitSet}
+                  disabled={isAddingToCartRef.current}
+                  onDec={() => handleQuantityChange(false)}
+                  onInc={() => {
                     if (displayQuantity === 0) {
                       addToCart();
                     } else {
                       handleQuantityChange(true);
                     }
                   }}
-                  style={{
-                    ...buttonStyle,
-                    minWidth: isMobile ? "36px" : "40px",
-                    height: isMobile ? "36px" : "40px",
-                    padding: "0",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center"
-                  }}
-                  disabled={isAddingToCartRef.current}
-                >
-                  <span style={{ fontSize: isMobile ? "18px" : "20px" }}>+</span>
-                </button>
+                />
               </div>
             </div>
 
@@ -934,79 +697,13 @@ const ProductDetails = () => {
               Bulk Pricing
             </h3>
             
-            {/* Responsive Table for Bulk Pricing */}
-            {product.bulkProducts && product.bulkProducts.length > 0 ? (
-              <div style={{ overflowX: isMobile ? "auto" : "visible" }}>
-                <table style={tableStyle}>
-                  <thead>
-                    <tr>
-                      <th style={thTdStyle}>Min Qty</th>
-                      <th style={thTdStyle}>Max Qty</th>
-                      <th style={thTdStyle}>Price/set</th>
-                      <th style={thTdStyle}>Total Price</th>
-                      <th style={thTdStyle}>Select</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {product.bulkProducts.map((bulk, index) => {
-                      if (!bulk || !bulk.minimum || !bulk.selling_price_set) {
-                        return null;
-                      }
-
-                      const minQty = bulk.minimum * unitSet;
-                      const maxQty = bulk.maximum
-                        ? bulk.maximum * unitSet
-                        : "No limit";
-
-                      const autoSelectCondition =
-                        selectedBulk && selectedBulk._id === bulk._id;
-
-                      return (
-                        <tr
-                          key={index}
-                          style={{
-                            backgroundColor: autoSelectCondition
-                              ? "#e6f7ff"
-                              : "transparent",
-                          }}
-                        >
-                          <td style={thTdStyle}>{minQty}</td>
-                          <td style={thTdStyle}>{maxQty}</td>
-                          <td style={thTdStyle}>
-                            ₹{parseFloat(bulk.selling_price_set).toFixed(2)}
-                          </td>
-                          <td style={thTdStyle}>
-                            {autoSelectCondition
-                              ? `₹${totalPrice.toFixed(2)}`
-                              : "-"}
-                          </td>
-                          <td style={{...thTdStyle, textAlign: "center"}}>
-                            <input
-                              type="checkbox"
-                              checked={autoSelectCondition}
-                              readOnly
-                              disabled
-                              style={{
-                                width: isMobile ? "16px" : "20px",
-                                height: isMobile ? "16px" : "20px",
-                                backgroundColor: autoSelectCondition
-                                  ? "#000000"
-                                  : "#333333",
-                                border: "2px solid #000000",
-                                cursor: "not-allowed",
-                                accentColor: "#ffffff",
-                              }}
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p style={{ fontSize: isMobile ? "14px" : "16px" }}>No bulk pricing available for this product.</p>
-            )}
+            {/* Bulk Pricing Table */}
+            <BulkPricingTable
+              bulkProducts={product.bulkProducts}
+              unitSet={unitSet}
+              selectedBulk={selectedBulk}
+              total={totalPrice}
+            />
 
             <h3 style={{ ...headingStyle, fontSize: isMobile ? "16px" : "18px", marginTop: "20px" }}>
               Description
@@ -1118,175 +815,23 @@ const ProductDetails = () => {
       />
 
       {/* YouTube Video Popup */}
-      {showYoutubePopup && product.youtubeUrl && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          backgroundColor: "rgba(0, 0, 0, 0.8)",
-          zIndex: 1000,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          flexDirection: "column"
-        }}>
-          <div style={{
-            position: "relative",
-            width: isMobile ? "90%" : "70%",
-            maxWidth: "800px",
-            aspectRatio: "16/9"
-          }}>
-            <button
-              onClick={() => setShowYoutubePopup(false)}
-              style={{
-                position: "absolute",
-                top: "-40px",
-                right: "0",
-                backgroundColor: "transparent",
-                border: "none",
-                color: "white",
-                fontSize: "24px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}
-            >
-              <FaTimes />
-            </button>
-            <iframe
-              width="100%"
-              height="100%"
-              src={product.youtubeUrl ? 
-                (product.youtubeUrl.includes('embed/') ? 
-                  product.youtubeUrl : 
-                  product.youtubeUrl.replace('watch?v=', 'embed/')
-                ) : ''}
-              title="YouTube video player"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            ></iframe>
-          </div>
-        </div>
-      )}
+      <YouTubeModal
+        url={product.youtubeUrl ? (product.youtubeUrl.includes('embed/') ? product.youtubeUrl : product.youtubeUrl.replace('watch?v=', 'embed/')) : ''}
+        open={showYoutubePopup && !!product.youtubeUrl}
+        onClose={() => setShowYoutubePopup(false)}
+      />
 
       {/* Image Zoom Popup */}
-      {showImageZoom && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          backgroundColor: "rgba(0, 0, 0, 0.9)",
-          zIndex: 1000,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          flexDirection: "column"
-        }}>
-          <button
-            onClick={() => setShowImageZoom(false)}
-            style={{
-              position: "absolute",
-              top: "20px",
-              right: "20px",
-              backgroundColor: "transparent",
-              border: "none",
-              color: "white",
-              fontSize: "24px",
-              cursor: "pointer",
-              zIndex: 1001
-            }}
-          >
-            <FaTimes size={24} />
-          </button>
-          
-          <div style={{
-            width: "90%",
-            maxWidth: "1200px",
-            maxHeight: "90vh",
-            overflow: "hidden",
-            display: "flex",
-            justifyContent: "center"
-          }}>
-            <img
-              src={selectedImage === 0 ? product.photos : 
-                  (product.multipleimages && Array.isArray(product.multipleimages) && product.multipleimages.length > 0 && selectedImage <= product.multipleimages.length) ? 
-                  product.multipleimages[selectedImage - 1] : product.photos}
-              alt={product.name}
-              style={{
-                maxWidth: "100%",
-                maxHeight: "90vh",
-                objectFit: "contain"
-              }}
-            />
-          </div>
-          
-          {/* Thumbnail navigation in zoom view if there are multiple images */}
-          {(product.multipleimages && Array.isArray(product.multipleimages) && product.multipleimages.length > 0) && (
-            <div style={{
-              display: "flex",
-              overflowX: "auto",
-              gap: "10px",
-              padding: "15px",
-              marginTop: "15px",
-              maxWidth: "90%",
-              backgroundColor: "rgba(0,0,0,0.5)",
-              borderRadius: "8px"
-            }}>
-              {/* Main image thumbnail */}
-              <div
-                onClick={() => setSelectedImage(0)}
-                style={{
-                  width: "60px",
-                  height: "60px",
-                  border: selectedImage === 0 ? "2px solid #ffa41c" : "1px solid #555",
-                  borderRadius: "4px",
-                  overflow: "hidden",
-                  cursor: "pointer",
-                  flexShrink: 0
-                }}
-              >
-                <img
-                  src={product.photos}
-                  alt={`${product.name} - Main`}
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-              </div>
-              
-              {/* Additional images */}
-              {product.multipleimages
-                .filter(imgUrl => imgUrl && typeof imgUrl === 'string' && imgUrl.trim() && 
-                  imgUrl !== 'null' && imgUrl !== '[null]' && imgUrl !== 'undefined')
-                .map((imgUrl, index) => (
-                <div
-                  key={index}
-                  onClick={() => setSelectedImage(index + 1)}
-                  style={{
-                    width: "60px",
-                    height: "60px",
-                    border: selectedImage === index + 1 ? "2px solid #ffa41c" : "1px solid #555",
-                    borderRadius: "4px",
-                    overflow: "hidden",
-                    cursor: "pointer",
-                    flexShrink: 0
-                  }}
-                >
-                  <img
-                    src={imgUrl}
-                    alt={`${product.name} - ${index + 1}`}
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      <ImageZoomModal
+        src={selectedImage === 0 ? product.photos : (
+          product.multipleimages && Array.isArray(product.multipleimages) && product.multipleimages.length > 0 && selectedImage <= product.multipleimages.length
+        ) ? product.multipleimages[selectedImage - 1] : product.photos}
+        thumbs={[product.photos, ...(Array.isArray(product.multipleimages) ? product.multipleimages : [])]}
+        open={showImageZoom}
+        onClose={() => setShowImageZoom(false)}
+        selected={selectedImage}
+        onSelect={setSelectedImage}
+      />
     </Layout>
   );
 };
