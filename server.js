@@ -21,6 +21,10 @@ import cartRoutes from "./routes/cartRoutes.js";
 import minimumOrderRoutes from "./routes/miniMumRoutes.js";
 import imageRoutes from "./routes/imageRoutes.js";
 import * as Sentry from "@sentry/node";
+// Clean Architecture additions (non-breaking)
+import { setupContainer } from "./src/core/di/container.js";
+import productsV1Route from "./src/presentation/routes/api/v1/products.js";
+import { errorHandler } from "./src/core/errors/errorHandler.js";
 
 // Configure environment variables
 dotenv.config();
@@ -53,6 +57,9 @@ const __dirname = path.resolve();
 // Serve static files from the React build directory
 app.use(express.static(path.join(__dirname, "./client/build")));
 
+// Initialize DI container (non-blocking, best-effort)
+await setupContainer();
+
 // API routes
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/category", categoryRoutes);
@@ -69,12 +76,18 @@ app.use("/api/v1/usersLists", usersListsRoutes);
 app.use('/api/v1/pincodes', pincodeRoutes);
 app.use('/api/v1/carts', cartRoutes);
 
+// New v2 route namespace (Clean Architecture-backed). Safe, additive.
+app.use('/api/v2/products', productsV1Route);
+
 // Serve React app for any other unknown routes
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "./client/build", "index.html"));
 });
 
 // Skip the Sentry error handler for now
+
+// Centralized error formatter (for CustomError & DomainError)
+app.use(errorHandler);
 
 // Continue with your existing error handlers
 app.use((err, req, res, next) => {

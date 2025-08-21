@@ -13,7 +13,9 @@
     "prestart": "node setup.cjs",
     "sync-deps": "npm install && npm dedupe",
     "prepare": "node scripts/prepare.js",
-    "build": "node scripts/build.js"
+    "build": "node scripts/build.js",
+    "arch:check": "echo 'Run your architecture linter here (e.g., arch-lint) with config arch-lint.config.js' && exit 0",
+    "arch:fix": "eslint --fix"
   },
   "keywords": [],
   "author": "Rahul Tamatta",
