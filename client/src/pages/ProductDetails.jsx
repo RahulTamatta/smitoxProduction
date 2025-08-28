@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 
 import React, { useState, useEffect, useRef } from "react";
@@ -837,3 +838,5 @@ const ProductDetails = () => {
 };
 
 export default ProductDetails;
+=======
+>>>>>>> 4dfcbaf53792781327558b6f61c9b00ac93c8749
