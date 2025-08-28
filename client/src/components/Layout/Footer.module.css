@@ -1,0 +1,40 @@
+.footer {
+  background-color: #FF0000;
+  padding: 20px 0;
+  color: white;
+}
+
+.textCenter {
+  text-align: center;
+}
+
+.mt3 {
+  margin-top: 1rem;
+}
+
+.socialLink {
+  color: white;
+  font-size: 24px;
+  margin: 0 10px;
+  transition: color 0.2s;
+}
+
+.socialLink:hover {
+  color: #f1c40f;
+}
+
+.activeLink {
+  color: #ffffff;
+  font-weight: bold;
+}
+
+.navLink {
+  color: white;
+  text-decoration: none;
+  margin: 0 4px;
+}
+
+.navLink:not(:last-child)::after {
+  content: '|';
+  margin-left: 4px;
+}
