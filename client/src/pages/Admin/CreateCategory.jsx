@@ -23,10 +23,10 @@ const CreateCategory = () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', 'smitoxphoto');
-      formData.append('cloud_name', 'do3y11hpa');
+      formData.append('cloud_name', 'daabaruau');
 
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/do3y11hpa/image/upload`,
+        `https://api.cloudinary.com/v1_1/daabaruau/image/upload`,
         {
           method: 'POST',
           body: formData,
