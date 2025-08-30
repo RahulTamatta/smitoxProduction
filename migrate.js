@@ -9,6 +9,15 @@ cloudinary.config({
   api_secret: 'WR6abBlUvmedVLOiybbuUneX12k' // Old account API secret
 });
 
+
+// Configure OLD Cloudinary account
+cloudinary.config({
+  cloud_name: 'daabaruau', 
+  // Old account cloud name
+  api_key:  '381637723934762',    // Old account API key
+  api_secret: 'f3URVJGzLjg6Q8NeaVSnUpoR6t0' // Old account API secret
+});
+
 // MongoDB connection
 const MONGO_URI =
   'mongodb+srv://smitox:JSbWYZGtLBJGWxjO@smitox.rlcilry.mongodb.net/?retryWrites=true&w=majority&appName=smitox';

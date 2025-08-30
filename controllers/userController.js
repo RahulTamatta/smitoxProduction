@@ -494,10 +494,23 @@ export const addToCart = async (req, res) => {
     if (productIndex > -1) {
       // If the product is already in the cart, update the quantity
       cart.products[productIndex].quantity += quantity;
-      cart.products[productIndex].bulkProductDetails.push(bulkProductDetails);
+      // Ensure bulkProductDetails array exists on legacy items
+      if (!Array.isArray(cart.products[productIndex].bulkProductDetails)) {
+        cart.products[productIndex].bulkProductDetails = [];
+      }
+      // Only push when payload is provided and is an object
+      if (bulkProductDetails && typeof bulkProductDetails === 'object') {
+        cart.products[productIndex].bulkProductDetails.push(bulkProductDetails);
+      }
     } else {
       // If the product is not in the cart, add it
-      cart.products.push({ product: productId, quantity, bulkProductDetails: [bulkProductDetails] });
+      cart.products.push({
+        product: productId,
+        quantity,
+        bulkProductDetails: (bulkProductDetails && typeof bulkProductDetails === 'object')
+          ? [bulkProductDetails]
+          : []
+      });
     }
 
     await cart.save();
