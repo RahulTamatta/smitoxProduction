@@ -215,15 +215,27 @@ export const getWishlist = async (req, res) => {
 export const getCart = async (req, res) => {
   try {
     const { userId } = req.params;
-    const cart = await Cart.findOne({ user: userId }).populate('products.product');
+    // Fetch cart and user's order_type in parallel
+    const [cart, user] = await Promise.all([
+      Cart.findOne({ user: userId }).populate('products.product'),
+      User.findById(userId).select('order_type')
+    ]);
 
     if (!cart) {
-      return res.json({ status: 'success', cart: [] });
+      return res.json({ 
+        status: 'success', 
+        cart: [],
+        user: user ? { order_type: user.order_type } : null
+      });
     }
 
-    res.json({ status: 'success', cart: cart.products });
+    return res.json({ 
+      status: 'success', 
+      cart: cart.products,
+      user: user ? { order_type: user.order_type } : null
+    });
   } catch (error) {
-    res.status(500).json({ status: 'error', message: error.message });
+    return res.status(500).json({ status: 'error', message: error.message });
   }
 };
 
