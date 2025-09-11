@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
+import { useAuth } from '../../context/auth';
 
 const MinimumOrderForm = () => {
+  const [auth] = useAuth();
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('');
   const [advancePercentage, setAdvancePercentage] = useState('');
@@ -13,7 +15,15 @@ const MinimumOrderForm = () => {
 
   const fetchMinimumOrder = async () => {
     try {
-      const response = await axios.get('/api/v1/minimumOrder/getMinimumOrder');
+      if (!auth?.token) {
+        window.location.href = '/login';
+        return;
+      }
+      const response = await axios.get('/api/v1/minimumOrder/getMinimumOrder', {
+        headers: {
+          Authorization: auth.token
+        }
+      });
       if (response.data) {
         setAmount(response.data.amount);
         setCurrency(response.data.currency);
@@ -21,6 +31,10 @@ const MinimumOrderForm = () => {
       }
     } catch (error) {
       console.error('Error fetching minimum order:', error);
+      if (error.response && error.response.status === 401) {
+        // Handle unauthorized error - redirect to login
+        window.location.href = '/login';
+      }
     }
   };
 
@@ -34,7 +48,16 @@ const MinimumOrderForm = () => {
       if (currency !== '') updateData.currency = currency;
       if (advancePercentage !== '') updateData.advancePercentage = parseFloat(advancePercentage);
 
-      const response = await axios.put('/api/v1/minimumOrder/updateMinimumOrder', updateData);
+      if (!auth?.token) {
+        window.location.href = '/login';
+        return;
+      }
+      const response = await axios.put('/api/v1/minimumOrder/updateMinimumOrder', updateData, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: auth.token
+        }
+      });
       setMessage('Minimum order updated successfully!');
       console.log(response.data);
     } catch (error) {
