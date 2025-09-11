@@ -78,9 +78,6 @@ const AuthProvider = ({ children }) => {
         // Schedule next refresh
         setupTokenRefresh(res.data.token);
         
-        // Refresh user profile after token refresh to keep permissions up to date
-        try { await fetchUserProfile(); } catch (_) {}
-        
         setIsRefreshing(false);
         return res.data.token;
       } else {
@@ -94,31 +91,6 @@ const AuthProvider = ({ children }) => {
       return null;
     }
   }, [auth, isRefreshing, logout, onRefreshed, subscribeTokenRefresh]);
-
-  // Fetch latest user profile so UI (e.g., CartPage) reflects updated permissions
-  const fetchUserProfile = useCallback(async () => {
-    try {
-      if (!auth?.token) return null;
-      const res = await api.get("/api/v1/auth/profile");
-      const data = res?.data || {};
-      const user = data.user || data.updatedUser || data.profile || null;
-      if (user) {
-        const updatedAuth = { ...auth, user };
-        setAuth(updatedAuth);
-        try {
-          const ls = JSON.parse(localStorage.getItem("auth") || "{}");
-          localStorage.setItem("auth", JSON.stringify({ ...ls, ...updatedAuth }));
-        } catch (_) {
-          localStorage.setItem("auth", JSON.stringify(updatedAuth));
-        }
-        return user;
-      }
-      return null;
-    } catch (e) {
-      console.warn("[AuthContext] fetchUserProfile failed:", e);
-      return null;
-    }
-  }, [auth]);
 
   // Set up axios interceptors
   useEffect(() => {
@@ -244,8 +216,6 @@ const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (auth.token) {
       setupTokenRefresh(auth.token);
-      // Also fetch latest user profile when token becomes available/changes
-      fetchUserProfile();
     }
     return () => {
       if (refreshTimeout.current) clearTimeout(refreshTimeout.current);
@@ -254,7 +224,7 @@ const AuthProvider = ({ children }) => {
   }, [auth.token]);
 
   return (
-    <AuthContext.Provider value={[auth, setAuth, logout, refreshToken, api, fetchUserProfile]}>
+    <AuthContext.Provider value={[auth, setAuth, logout, refreshToken, api]}>
       {children}
     </AuthContext.Provider>
   );

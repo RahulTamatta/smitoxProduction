@@ -13,7 +13,7 @@ import "./cartPage.css";
 //new build
 
 const CartPage = () => {
-  const [auth, setAuth, logout, refreshToken, api, fetchUserProfile] = useAuth();
+  const [auth] = useAuth();
   const [cart, setCart] = useCart();
   const [clientToken, setClientToken] = useState("");
   const [instance, setInstance] = useState("");
@@ -87,17 +87,6 @@ const CartPage = () => {
       // Filter out items with null products to prevent errors
       const validCartItems = (data.cart || []).filter(item => item.product !== null);
       setCart(validCartItems);
-      // Sync user's order_type from backend cart response to auth context so payment options update live
-      if (data && data.user && typeof data.user.order_type !== 'undefined') {
-        try {
-          const updatedAuth = { ...auth, user: { ...(auth.user || {}), order_type: data.user.order_type } };
-          setAuth(updatedAuth);
-          const ls = JSON.parse(localStorage.getItem('auth') || '{}');
-          localStorage.setItem('auth', JSON.stringify({ ...ls, ...updatedAuth }));
-        } catch (_) {
-          // no-op
-        }
-      }
     } catch (error) {
       console.log(error);
       ////toast.error("Error fetching cart");
