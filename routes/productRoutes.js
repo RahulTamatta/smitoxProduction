@@ -20,6 +20,8 @@ import {
 import { isAdmin, requireSignIn } from "../middlewares/authMiddleware.js";
 import formidable from "express-formidable";
 import productModel from "../models/productModel.js";
+import Cart from "../models/cartModel.js";
+import Wishlist from "../models/wishlistModel.js";
 
 const router = express.Router();
 
@@ -68,6 +70,19 @@ router.put("/updateStatus/products/:id", async (req, res) => {
     }
 
     // Send success response with updated product
+    // If product is deactivated, remove it from all carts and wishlists
+    if (product && req.body.isActive === "0") {
+      try {
+        await Promise.all([
+          Cart.updateMany({}, { $pull: { products: { product: product._id } } }),
+          Wishlist.updateMany({}, { $pull: { products: { product: product._id } } }),
+        ]);
+      } catch (cleanupErr) {
+        console.error("Error cleaning up carts/wishlists for deactivated product:", cleanupErr);
+        // Continue; don't fail the request due to cleanup
+      }
+    }
+
     res.send({
       success: true,
       product,

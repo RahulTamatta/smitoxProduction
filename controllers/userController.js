@@ -204,7 +204,20 @@ export const getWishlist = async (req, res) => {
       return res.status(404).json({ status: 'error', message: 'Wishlist not found' });
     }
 
-    res.json({ status: 'success', wishlist: wishlist.products });
+    // Filter out inactive products
+    const filtered = (wishlist.products || []).filter(
+      (item) => item && item.product && item.product.isActive === "1"
+    );
+
+    // Persist cleanup if any removals detected
+    if (filtered.length !== wishlist.products.length) {
+      await Wishlist.updateOne(
+        { _id: wishlist._id },
+        { $set: { products: filtered.map(p => ({ product: p.product._id, addedAt: p.addedAt })) } }
+      );
+    }
+
+    res.json({ status: 'success', wishlist: filtered });
   } catch (error) {
     res.status(500).json({ status: 'error', message: error.message });
   }
@@ -221,7 +234,17 @@ export const getCart = async (req, res) => {
       return res.json({ status: 'success', cart: [] });
     }
 
-    res.json({ status: 'success', cart: cart.products });
+    // Remove inactive or out-of-stock products from cart
+    const validProducts = (cart.products || []).filter(
+      (item) => item && item.product && item.product.isActive === "1" && (item.product.stock || 0) > 0
+    );
+
+    if (validProducts.length !== cart.products.length) {
+      cart.products = validProducts.map(p => ({ product: p.product._id, quantity: p.quantity, bulkProductDetails: p.bulkProductDetails || [] }));
+      await cart.save();
+    }
+
+    res.json({ status: 'success', cart: validProducts });
   } catch (error) {
     res.status(500).json({ status: 'error', message: error.message });
   }
@@ -395,6 +418,12 @@ export const addToWishlist = async (req, res) => {
     const { userId } = req.params; // User ID from the request params
     const { productId } = req.body; // Product ID from the request body
 
+    // Prevent adding inactive products to wishlist
+    const prod = await Product.findById(productId).lean();
+    if (!prod || prod.isActive !== "1") {
+      return res.status(400).json({ status: 'error', message: 'Cannot add inactive or missing product to wishlist' });
+    }
+
     // Check if the wishlist already exists
     const wishlist = await Wishlist.findOne({ user: userId });
 
@@ -460,7 +489,15 @@ export const checkWishlistStatus = async (req, res) => {
     const { userId, productId } = req.params;
     const wishlist = await Wishlist.findOne({ user: userId });
 
-    const productExists = wishlist ? wishlist.products.some(item => item.product.toString() === productId) : false;
+    let productExists = false;
+    if (wishlist) {
+      const rawExists = wishlist.products.some(item => item.product.toString() === productId);
+      if (rawExists) {
+        // Also verify product is active
+        const prod = await Product.findById(productId).select('isActive').lean();
+        productExists = !!(prod && prod.isActive === "1");
+      }
+    }
 
     res.json({ status: 'success', exists: productExists });
   } catch (error) {
@@ -482,6 +519,11 @@ export const addToCart = async (req, res) => {
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ status: 'error', message: 'Product not found' });
+    }
+
+    // Block adding inactive or out-of-stock products
+    if (product.isActive !== "1" || (product.stock || 0) <= 0) {
+      return res.status(400).json({ status: 'error', message: 'Product is not available' });
     }
 
     let cart = await Cart.findOne({ user: userId });

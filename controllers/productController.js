@@ -863,6 +863,7 @@ export const realtedProductController = async (req, res) => {
         category: cid,
         _id: { $ne: pid },
         stock: { $gt: 0 }, // Only products with stock > 0
+        isActive: "1", // Only active products
       })
       .limit(3)
       .populate("category");
@@ -900,7 +901,7 @@ export const realtedProductController = async (req, res) => {
 // productCountController
 export const productCountController = async (req, res) => {
   try {
-    const total = await productModel.countDocuments({ stock: { $gt: 0 } }); // Only products with stock > 0
+    const total = await productModel.countDocuments({ stock: { $gt: 0 }, isActive: "1" }); // Only active products with stock > 0
     res.status(200).send({
       success: true,
       total,
@@ -925,6 +926,14 @@ export const getSingleProductController = async (req, res) => {
       .populate("brand");
 
     if (!product) {
+      return res.status(404).send({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    // Hide inactive products from public product detail views
+    if (product.isActive !== "1") {
       return res.status(404).send({
         success: false,
         message: "Product not found",
