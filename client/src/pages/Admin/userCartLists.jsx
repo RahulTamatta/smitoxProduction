@@ -144,7 +144,10 @@ const UserList = () => {
       result = result.filter(user => user.status === activeStatusFilter);
     }
     if (activeOrderTypeFilter !== 'all') {
-      result = result.filter(user => getOrderType(user.order_type) === activeOrderTypeFilter);
+      result = result.filter(user => {
+        const userOrderTypeLabel = getOrderTypeLabel(user.order_type);
+        return userOrderTypeLabel.toLowerCase() === activeOrderTypeFilter.toLowerCase();
+      });
     }
     if (activeRegularFilter !== 'all') {
       // Ensure we're comparing numbers
@@ -351,9 +354,16 @@ const UserList = () => {
   const updateOrderType = async (id, orderType) => {
     try {
       await axios.put(`/api/v1/usersLists/users/${id}/order-type`, { order_type: orderType });
-      setUsers(users.map(user =>
+      
+      // Update the users state
+      const updatedUsers = users.map(user =>
         user._id === id ? { ...user, order_type: orderType } : user
-      ));
+      );
+      setUsers(updatedUsers);
+      
+      // Immediately filter the updated users to reflect changes
+      filterUsers(updatedUsers);
+      
     } catch (error) {
       console.error('Error updating order type:', error);
       setError('Failed to update order type. Please try again.');

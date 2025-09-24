@@ -540,7 +540,7 @@ export const getAllOrdersController = async (req, res) => {
       })
       .populate({
         path: "products.product",
-        select: "name photos gst price",
+        select: "name photos gst price unitSet bulkProducts perPiecePrice mrp stock isActive",
       })
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -807,10 +807,17 @@ export const deleteProductFromOrderController = async (req, res) => {
       });
     }
 
-    // Check for the product in the order
-    const productIndex = order.products.findIndex(
+    // Check for the product in the order - handle both product._id and order item._id
+    let productIndex = order.products.findIndex(
       (item) => item.product.toString() === productId
     );
+
+    // If not found by product._id, try to find by order item._id
+    if (productIndex === -1) {
+      productIndex = order.products.findIndex(
+        (item) => item._id.toString() === productId
+      );
+    }
 
     if (productIndex === -1) {
       return res.status(404).send({

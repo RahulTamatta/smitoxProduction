@@ -7,7 +7,6 @@ import {
   Nav,
   Spinner,
   Alert,
-  InputGroup,
 } from "react-bootstrap";
 import axios from "axios";
 import moment from "moment";
@@ -17,7 +16,6 @@ import Layout from "../../../components/Layout/Layout";
 import { useAuth } from "../../../context/auth";
 import { useSearch } from "../../../context/search";
 import OrderModal from "./components/orderModal";
-import SearchModal from "./components/searchModal";
 
 const AdminOrders = () => {
   const [status] = useState([
@@ -34,14 +32,13 @@ const AdminOrders = () => {
   const [auth] = useAuth();
   const [show, setShow] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [orderType, setOrderType] = useState("all-orders");
+  const [orderType, setOrderType] = useState("Pending");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const [values, setValues] = useSearch();
 const [addProductError, setAddProductError] = useState("");
 
-  const [showSearchModal, setShowSearchModal] = useState(false);
   const [showTrackingModal, setShowTrackingModal] = useState(false);
   const [trackingInfo, setTrackingInfo] = useState({ company: "", id: "" });
 
@@ -135,12 +132,146 @@ const [addProductError, setAddProductError] = useState("");
 
   const handleProductChange = (index, field, value) => {
     setSelectedOrder((prevOrder) => {
+      const updatedProducts = [...prevOrder.products];
+      
+      if (field === 'customPrice') {
+        // Handle custom price change - override bulk pricing
+        updatedProducts[index] = { 
+          ...updatedProducts[index], 
+          price: value,
+          customPrice: true // Flag to indicate this is a custom price
+        };
+      } else {
+        updatedProducts[index] = { ...updatedProducts[index], [field]: value };
+      }
+      
+      return { ...prevOrder, products: updatedProducts };
+    });
+  };
+
+  // Get applicable bulk product based on quantity and unitSet
+  const getApplicableBulkProduct = (product, quantity) => {
+    const productData = product.product || {};
+    const unitSet = productData.unitSet || 1;
+    
+    if (!productData.bulkProducts || productData.bulkProducts.length === 0) return null;
+
+    const sortedBulkProducts = [...productData.bulkProducts]
+      .filter((bulk) => bulk && bulk.minimum)
+      .sort((a, b) => b.minimum - a.minimum);
+
+    if (
+      sortedBulkProducts.length > 0 &&
+      quantity >= sortedBulkProducts[0].minimum * unitSet
+    ) {
+      return sortedBulkProducts[0];
+    }
+
+    for (let i = 0; i < sortedBulkProducts.length; i++) {
+      const bulk = sortedBulkProducts[i];
+      if (
+        quantity >= bulk.minimum * unitSet &&
+        (!bulk.maximum || quantity <= bulk.maximum * unitSet)
+      ) {
+        return bulk;
+      }
+    }
+
+    return null;
+  };
+
+  // Calculate price based on bulk pricing or regular price (same logic as CartPage)
+  const calculatePrice = (product, quantity) => {
+    const productData = product.product || {};
+    if (!productData) return 0;
+    
+    // If custom price is set, use it instead of bulk pricing
+    if (product.customPrice && product.price !== undefined) {
+      return parseFloat(product.price);
+    }
+    
+    const unitSet = productData.unitSet || 1;
+  
+    if (productData.bulkProducts && productData.bulkProducts.length > 0) {
+      // Sort bulk products based on minimum quantity in descending order
+      const sortedBulkProducts = [...productData.bulkProducts]
+        .filter(bp => bp && bp.minimum)
+        .sort((a, b) => b.minimum - a.minimum);
+  
+      // If quantity is greater than the maximum quantity of the first bulk price
+      // (which is the highest one due to descending sort), use that price
+      if (
+        sortedBulkProducts.length > 0 && 
+        quantity >= (sortedBulkProducts[0].minimum * unitSet)
+      ) {
+        return parseFloat(sortedBulkProducts[0].selling_price_set);
+      }
+  
+      // Find the bulk price that applies to the current quantity
+      const applicableBulk = sortedBulkProducts.find(
+        (bp) =>
+          quantity >= (bp.minimum * unitSet) && 
+          (!bp.maximum || quantity <= (bp.maximum * unitSet))
+      );
+  
+      // Return the selling price from the applicable bulk price
+      if (applicableBulk) {
+        return parseFloat(applicableBulk.selling_price_set);
+      }
+    }
+  
+    // Fallback: return the regular price
+    return parseFloat(productData.perPiecePrice || productData.price || 0);
+  };
+
+  // Handle quantity change with unitSet increments and bulk pricing (same logic as ProductDetails/CartPage)
+  const handleQuantityChangeWithUnitSet = (index, increment, customQuantity = null) => {
+    setSelectedOrder((prevOrder) => {
       if (!prevOrder?.products) return prevOrder;
+      
+      const product = prevOrder.products[index];
+      const productData = product.product || {};
+      const unitSet = productData.unitSet || 1;
+      const currentQuantity = product.quantity || 0;
+      
+      // Handle custom quantity input or unitSet increments
+      let newQuantity;
+      if (customQuantity !== null) {
+        // Custom quantity entered manually
+        newQuantity = customQuantity;
+      } else {
+        // Same logic as ProductDetails/CartPage: quantity +/- unitSet
+        newQuantity = increment 
+          ? currentQuantity + unitSet  // Add unitSet for increment
+          : currentQuantity - unitSet; // Subtract unitSet for decrement
+      }
+      
+      // Allow quantity to go to 0 (like ProductDetails), but don't go negative
+      const updatedQuantity = Math.max(0, newQuantity);
+      
+      // If quantity becomes 0, remove the product from the order
+      if (updatedQuantity === 0) {
+        console.log(`Removing product at index ${index} (quantity became 0)`);
+        const updatedProducts = prevOrder.products.filter((_, i) => i !== index);
+        return { ...prevOrder, products: updatedProducts };
+      }
+      
+      // Calculate new price based on updated quantity (same as CartPage/ProductDetails)
+      // Reset custom price flag when quantity changes to allow bulk pricing recalculation
+      const productWithoutCustomPrice = { ...product, customPrice: false };
+      const newPrice = calculatePrice(productWithoutCustomPrice, updatedQuantity);
+      
+      console.log(`Quantity change: ${currentQuantity} -> ${updatedQuantity} (unitSet: ${unitSet}, increment: ${increment})`);
+      console.log(`Price change: ${product.price} -> ${newPrice}`);
+      
       const updatedProducts = [...prevOrder.products];
       updatedProducts[index] = {
         ...updatedProducts[index],
-        [field]: Number(value),
+        quantity: updatedQuantity,
+        price: newPrice,
+        customPrice: false, // Reset custom price flag
       };
+      
       return { ...prevOrder, products: updatedProducts };
     });
   };
@@ -149,19 +280,18 @@ const [addProductError, setAddProductError] = useState("");
     if (!selectedOrder || !selectedOrder.products)
       return { subtotal: 0, gst: 0, total: 0 };
 
-    const subtotal = selectedOrder.products.reduce(
-      (acc, product) => acc + Number(product.price) * Number(product.quantity),
-      0
-    );
+    // Use dynamic pricing calculation (same as CartPage and ProductTable)
+    const subtotal = selectedOrder.products.reduce((acc, product) => {
+      const quantity = Number(product.quantity) || 0;
+      const dynamicPrice = calculatePrice(product, quantity); // Use dynamic price
+      return acc + dynamicPrice * quantity;
+    }, 0);
 
     const gst = selectedOrder.products.reduce((acc, product) => {
-      return (
-        acc +
-        (Number(product.price) *
-          Number(product.quantity) *
-          (Number(product.gst) || 0)) /
-          100
-      );
+      const quantity = Number(product.quantity) || 0;
+      const dynamicPrice = calculatePrice(product, quantity); // Use dynamic price
+      const productGst = Number(product.product?.gst) || 0;
+      return acc + (dynamicPrice * quantity * productGst) / 100;
     }, 0);
 
     const total =
@@ -174,15 +304,6 @@ const [addProductError, setAddProductError] = useState("");
     return { subtotal, gst, total };
   };
 
-  const handleAddClick = () => {
-    setShowSearchModal(true);
-  };
-
-  const handleCloseSearchModal = () => {
-    setShowSearchModal(false);
-    // Removed setSearchKeyword and setSearchResults as they are not defined
-
-  };
 
   const handleAddToOrder = async (product) => {
     try {
@@ -225,7 +346,6 @@ const [addProductError, setAddProductError] = useState("");
       // Update local state with preserved amount
       setSelectedOrder(updatedOrder);
       message.success("Product added successfully");
-      handleCloseSearchModal();
       getOrders(orderType, currentPage, searchTerm);
   
     } catch (error) {
@@ -685,14 +805,21 @@ const [addProductError, setAddProductError] = useState("");
           status={status}
           handleInputChange={handleInputChange}
           handleProductChange={handleProductChange}
+          handleQuantityChangeWithUnitSet={handleQuantityChangeWithUnitSet}
+          getApplicableBulkProduct={getApplicableBulkProduct}
           calculateTotals={calculateTotals}
           handleDeleteProduct={handleDeleteProduct}
-          handleAddClick={handleAddClick}
           handleDownloadPDF={handleDownloadPDF}
           handleStatusChange={handleStatusChange}
           handleUpdateOrder={handleUpdateOrder}
           handleDelivered={handleDelivered}
           handleReturned={handleReturned}
+          getOrders={getOrders}
+          orderType={orderType}
+          onOrderUpdate={(updatedOrder) => {
+            setSelectedOrder(updatedOrder);
+            getOrders(orderType, currentPage, searchTerm);
+          }}
           handleAddToOrder={(product) => handleAddToOrder(product).catch(error => {
             setAddProductError(error.message);
           })}
@@ -737,11 +864,6 @@ const [addProductError, setAddProductError] = useState("");
         </Modal.Footer>
       </Modal>
 
-      <SearchModal
-        show={showSearchModal}
-        handleClose={handleCloseSearchModal}
-        handleAddToOrder={handleAddToOrder}
-      />
     </Layout>
   );
 };
