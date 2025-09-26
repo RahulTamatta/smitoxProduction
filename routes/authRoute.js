@@ -14,7 +14,7 @@ import {
 } from '../controllers/authController.js';
 import { isAdmin, requireSignIn } from '../middlewares/authMiddleware.js';
 import orderModel from '../models/orderModel.js'; // Changed to import
- // Changed to import
+import mongoose from 'mongoose';
 // import { addTrackingInfo } from "../controllers/orderController.js";
 
 //router object
@@ -54,6 +54,49 @@ router.put("/profile", requireSignIn, updateProfileController);
 
 //orders
 router.get("/orders/:user_id", getOrdersController);
+
+// single order by ID
+router.get("/order/:orderId", requireSignIn, isAdmin, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order ID format"
+      });
+    }
+
+    const order = await orderModel.findById(orderId)
+      .populate({
+        path: "buyer",
+        select: "user_fullname email_id mobile_no address city state landmark pincode gst"
+      })
+      .populate({
+        path: "products.product",
+        select: "name photos gst price unitSet bulkProducts perPiecePrice mrp stock isActive"
+      });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      order
+    });
+  } catch (error) {
+    console.error("Error fetching single order:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching order",
+      error: error.message
+    });
+  }
+});
 
 //all orders
 router.get("/all-orders", requireSignIn, isAdmin, getAllOrdersController);

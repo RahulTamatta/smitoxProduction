@@ -9,6 +9,7 @@ import ErrorModal from "./OrderDetails/ErrorModal";
 import { generateInvoicePDF } from "./InvoiceGenerator";
 import { shareOrderToWhatsApp } from "./WhatsAppShare";
 import SearchModal from "./searchModal";
+import "./OrderModal.css";
 
 const OrderModal = ({
   show,
@@ -194,45 +195,63 @@ const OrderModal = ({
         onClose={() => setAddProductError(null)}
       />
       
-      <Modal show={show} onHide={handleClose} size="lg">
+      <Modal 
+        show={show} 
+        onHide={handleClose} 
+        size="xl"
+        className="order-modal"
+        dialogClassName="modal-90w"
+      >
 
       <Modal.Header closeButton>
         <Modal.Title>Edit Order</Modal.Title>
       </Modal.Header>
-      <Modal.Body>
+      <Modal.Body className="p-0">
         {selectedOrder ? (
-          <div>
-            <OrderHeader selectedOrder={selectedOrder} />
-            <h3>Order Details:</h3>
-            <ProductTable
-              products={products}
-              handleProductChange={handleProductChange}
-              handleQuantityChangeWithUnitSet={handleQuantityChangeWithUnitSet}
-              getApplicableBulkProduct={getApplicableBulkProduct}
-              handleDeleteProduct={handleDeleteProduct}
-              handleAddClick={handleAddClickInternal}
-              calculateTotals={calculateTotals}
-              selectedOrder={selectedOrder}
-              handleInputChange={handleInputChange}
-            />
+          <div className="scrollable-content p-3">
+            <div className="order-header">
+              <OrderHeader selectedOrder={selectedOrder} />
+            </div>
+            <div className="order-details">
+              <h3 className="mb-3">Order Details:</h3>
+              <div className="table-responsive">
+                <ProductTable
+                  products={products}
+                  handleProductChange={handleProductChange}
+                  handleQuantityChangeWithUnitSet={handleQuantityChangeWithUnitSet}
+                  getApplicableBulkProduct={getApplicableBulkProduct}
+                  handleDeleteProduct={handleDeleteProduct}
+                  handleAddClick={handleAddClickInternal}
+                  calculateTotals={calculateTotals}
+                  selectedOrder={selectedOrder}
+                  handleInputChange={handleInputChange}
+                />
+              </div>
+            </div>
           </div>
         ) : (
-          <p>No order selected</p>
+          <div className="p-3">
+            <p>No order selected</p>
+          </div>
         )}
       </Modal.Body>
-      <Modal.Footer>
-        <StatusButtons
-          selectedOrder={selectedOrder}
-          handleStatusChange={handleStatusChange}
-          handleDelivered={handleDelivered}
-          handleReturned={handleReturned}
-        />
-        <ActionButtons
-          handleClose={handleClose}
-          handleUpdateOrder={handleUpdateOrder}
-          generatePDF={generatePDF}
-          shareToWhatsApp={shareToWhatsApp}
-        />
+      <Modal.Footer className="d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center">
+        <div className="status-buttons mb-2 mb-md-0">
+          <StatusButtons
+            selectedOrder={selectedOrder}
+            handleStatusChange={handleStatusChange}
+            handleDelivered={handleDelivered}
+            handleReturned={handleReturned}
+          />
+        </div>
+        <div className="action-buttons">
+          <ActionButtons
+            handleClose={handleClose}
+            handleUpdateOrder={handleUpdateOrder}
+            generatePDF={generatePDF}
+            shareToWhatsApp={shareToWhatsApp}
+          />
+        </div>
       </Modal.Footer>
 
       </Modal>

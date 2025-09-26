@@ -566,11 +566,26 @@ export const addProductToOrderController = async (req, res) => {
     const { orderId } = req.params
     const { productId, quantity, price } = req.body;
 
-    // Validate input
+    // Validate input parameters
     if (!orderId || !productId || !quantity) {
       return res.status(400).json({
         success: false,
         message: "Missing required fields"
+      });
+    }
+
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order ID format"
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid product ID format"
       });
     }
 
@@ -610,7 +625,7 @@ export const addProductToOrderController = async (req, res) => {
 
     // Check if product already exists in order
     const existingProductIndex = order.products.findIndex(
-      p => p.product.toString() === productId
+      p => p.product && p.product.toString() === productId.toString()
     );
 
     // Update or add product
@@ -624,9 +639,13 @@ export const addProductToOrderController = async (req, res) => {
       });
     }
 
-    // Recalculate total amount
+    // Recalculate total amount with error handling
     const totalAmount = order.products.reduce(
-      (total, product) => total + (product.quantity * product.price), 
+      (total, product) => {
+        const productPrice = parseFloat(product.price) || 0;
+        const productQuantity = parseInt(product.quantity) || 0;
+        return total + (productQuantity * productPrice);
+      }, 
       0
     );
     order.amount = totalAmount;
@@ -670,6 +689,28 @@ export const orderStatusController = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { status } = req.body;
+
+    // Validate orderId format
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order ID format"
+      });
+    }
+
+    // Validate status value
+    const validStatuses = [
+      "Pending", "Completed", "Cash on Delivery", "Confirmed", 
+      "Accepted", "Cancelled", "Rejected", "Dispatched", 
+      "Delivered", "Returned"
+    ];
+    
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status value"
+      });
+    }
 
     const order = await orderModel.findByIdAndUpdate(
       orderId,
@@ -739,6 +780,14 @@ export const updateOrderController = async (req, res) => {
     const { orderId } = req.params;
     const { deliveryCharges, codCharges, discount, amount, products } = req.body;
 
+    // Validate orderId format
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order ID format"
+      });
+    }
+
     const order = await orderModel.findById(orderId).populate('products.product');
 
     if (!order) {
@@ -797,6 +846,29 @@ export const deleteProductFromOrderController = async (req, res) => {
   try {
     const { orderId, productId } = req.params;
 
+    // Validate input parameters
+    if (!orderId || !productId) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required parameters: orderId and productId"
+      });
+    }
+
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order ID format"
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid product ID format"
+      });
+    }
+
     // Find the order
     const order = await orderModel.findById(orderId);
 
@@ -809,13 +881,13 @@ export const deleteProductFromOrderController = async (req, res) => {
 
     // Check for the product in the order - handle both product._id and order item._id
     let productIndex = order.products.findIndex(
-      (item) => item.product.toString() === productId
+      (item) => item.product && item.product.toString() === productId.toString()
     );
 
     // If not found by product._id, try to find by order item._id
     if (productIndex === -1) {
       productIndex = order.products.findIndex(
-        (item) => item._id.toString() === productId
+        (item) => item._id && item._id.toString() === productId.toString()
       );
     }
 
@@ -828,7 +900,7 @@ export const deleteProductFromOrderController = async (req, res) => {
 
     // Calculate price to subtract
     const productToRemove = order.products[productIndex];
-    const priceToSubtract = productToRemove.price * productToRemove.quantity;
+    const priceToSubtract = (productToRemove.price || 0) * (productToRemove.quantity || 0);
 
     // Remove the product from the array
     order.products.splice(productIndex, 1);

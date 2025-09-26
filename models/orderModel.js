@@ -37,17 +37,16 @@ const orderSchema = new mongoose.Schema(
       default: "Pending",
       enum: [
         "Pending", 
-          "Completed", 
-          "Cash on Delivery", 
-          "All", 
-          "Pending", 
-          "Confirmed", 
-          "Accepted", 
-          "Cancelled", 
-          "Rejected", 
-          "Dispatched", 
-          "Delivered", 
-          "Returned"]
+        "Completed", 
+        "Cash on Delivery", 
+        "Confirmed", 
+        "Accepted", 
+        "Cancelled", 
+        "Rejected", 
+        "Dispatched", 
+        "Delivered", 
+        "Returned"
+      ]
     },
     deliveryCharges: {
       type: Number,
