@@ -100,9 +100,8 @@ export const generateInvoicePDF = async (selectedOrder, calculateTotals, convert
     const tableColumns = [
       "Sl. No",
       "Description", 
-      "Unit Price x Qty",
+      "Qty x Unit Price",
       "Net Amount",
-      "Tax Rate",
       "Tax Amount"
     ];
 
@@ -117,9 +116,8 @@ export const generateInvoicePDF = async (selectedOrder, calculateTotals, convert
       return [
         String(index + 1),
         productData.name || "Product Name",
-        `Rs ${price.toFixed(2)} x ${quantity}`,
+        `${quantity} x Rs ${price.toFixed(2)}`,
         "Rs " + netAmount.toFixed(2),
-        gst + "%",
         "Rs " + taxAmount.toFixed(2)
       ];
     });
@@ -130,19 +128,18 @@ export const generateInvoicePDF = async (selectedOrder, calculateTotals, convert
       "TOTAL:",
       "",
       "Rs " + totals.subtotal.toFixed(2),
-      "",
       "Rs " + totals.gst.toFixed(2)
     ]);
 
-    // Compact professional table configuration
+    // Compact professional table configuration with smaller fonts
     doc.autoTable({
       head: [tableColumns],
       body: tableRows,
       startY: currentY,
       theme: 'grid',
       styles: { 
-        fontSize: 9,
-        cellPadding: { top: 1.5, right: 1.5, bottom: 1.5, left: 1.5 },
+        fontSize: 7.5,
+        cellPadding: { top: 1, right: 1, bottom: 1, left: 1 },
         lineColor: [0, 0, 0],
         lineWidth: 0.1,
         textColor: [0, 0, 0],
@@ -153,29 +150,28 @@ export const generateInvoicePDF = async (selectedOrder, calculateTotals, convert
         fillColor: [240, 240, 240],
         textColor: [0, 0, 0],
         fontStyle: 'bold',
-        fontSize: 11,
+        fontSize: 8,
         halign: 'center',
         valign: 'middle'
       },
       bodyStyles: { 
-        minCellHeight: 5,
+        minCellHeight: 4,
         valign: 'middle',
-        fontSize: 9
+        fontSize: 7.5
       },
       columnStyles: {
-        0: { cellWidth: 15, halign: 'center' },
-        1: { cellWidth: 70, halign: 'left' },
-        2: { cellWidth: 35, halign: 'center' },
-        3: { cellWidth: 30, halign: 'right' },
-        4: { cellWidth: 20, halign: 'center' },
-        5: { cellWidth: 30, halign: 'right' }
+        0: { cellWidth: 12, halign: 'center' },     // Sl. No - smaller
+        1: { cellWidth: 85, halign: 'left' },       // Description - larger for product names
+        2: { cellWidth: 35, halign: 'center' },     // Qty x Unit Price
+        3: { cellWidth: 28, halign: 'right' },      // Net Amount
+        4: { cellWidth: 28, halign: 'right' }       // Tax Amount
       },
       didParseCell: function (data) {
         // Style TOTAL row
         if (data.row.index === tableRows.length - 1) {
           data.cell.styles.fontStyle = 'bold';
           data.cell.styles.fillColor = [240, 240, 240];
-          data.cell.styles.fontSize = 10;
+          data.cell.styles.fontSize = 8;
         }
       },
       margin: { left: margin, right: margin }
@@ -195,84 +191,89 @@ export const generateInvoicePDF = async (selectedOrder, calculateTotals, convert
 
     // Create totals breakdown - positioned on right side with proper spacing
     let totalsY = finalY;
-    const totalsX = pageWidth - 80;
+    const totalsX = pageWidth - 85;  // Increased space for better alignment
+    const totalsRightX = pageWidth - 15;  // Fixed right alignment position
     
-    doc.setFontSize(8.5);
+    doc.setFontSize(7.5);
     doc.setFont("helvetica", "normal");
     
     if (subtotal > 0) {
       doc.text("Subtotal:", totalsX, totalsY);
-      doc.text("Rs " + subtotal.toFixed(2), totalsX + 35, totalsY, { align: 'right' });
+      doc.text("Rs " + subtotal.toFixed(2), totalsRightX, totalsY, { align: 'right' });
       totalsY += 4;
     }
     
     if (gstAmount > 0) {
       doc.text("GST:", totalsX, totalsY);
-      doc.text("Rs " + gstAmount.toFixed(2), totalsX + 35, totalsY, { align: 'right' });
+      doc.text("Rs " + gstAmount.toFixed(2), totalsRightX, totalsY, { align: 'right' });
       totalsY += 4;
     }
     
     if (deliveryCharges > 0) {
       doc.text("Delivery Charges:", totalsX, totalsY);
-      doc.text("Rs " + deliveryCharges.toFixed(2), totalsX + 35, totalsY, { align: 'right' });
+      doc.text("Rs " + deliveryCharges.toFixed(2), totalsRightX, totalsY, { align: 'right' });
       totalsY += 4;
     }
     
     if (codCharges > 0) {
       doc.text("COD Charges:", totalsX, totalsY);
-      doc.text("Rs " + codCharges.toFixed(2), totalsX + 35, totalsY, { align: 'right' });
+      doc.text("Rs " + codCharges.toFixed(2), totalsRightX, totalsY, { align: 'right' });
       totalsY += 4;
     }
     
     if (discount > 0) {
       doc.text("Discount:", totalsX, totalsY);
-      doc.text("- Rs " + discount.toFixed(2), totalsX + 35, totalsY, { align: 'right' });
+      doc.text("- Rs " + discount.toFixed(2), totalsRightX, totalsY, { align: 'right' });
       totalsY += 4;
     }
     
     // Total line with bold formatting
     doc.setFont("helvetica", "bold");
     doc.text("Total:", totalsX, totalsY);
-    doc.text("Rs " + totalAmount.toFixed(2), totalsX + 35, totalsY, { align: 'right' });
+    doc.text("Rs " + totalAmount.toFixed(2), totalsRightX, totalsY, { align: 'right' });
     totalsY += 4;
     
     doc.setFont("helvetica", "normal");
     
     if (amountPaid > 0) {
       doc.text("Amount Paid:", totalsX, totalsY);
-      doc.text("Rs " + amountPaid.toFixed(2), totalsX + 35, totalsY, { align: 'right' });
+      doc.text("Rs " + amountPaid.toFixed(2), totalsRightX, totalsY, { align: 'right' });
       totalsY += 4;
     }
     
     if (amountPending > 0) {
       doc.text("Amount Pending:", totalsX, totalsY);
-      doc.text("Rs " + amountPending.toFixed(2), totalsX + 35, totalsY, { align: 'right' });
+      doc.text("Rs " + amountPending.toFixed(2), totalsRightX, totalsY, { align: 'right' });
       totalsY += 4;
     }
 
     // ===== AMOUNT IN WORDS SECTION =====
-    doc.setFontSize(10);
+    doc.setFontSize(8.5);
     doc.setFont("helvetica", "bold");
     doc.text("Amount in Words:", margin, finalY);
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
     const amountInWords = convertToWords(Math.round(totalAmount));
-    doc.text(amountInWords, margin, finalY + 5);
+    doc.text(amountInWords, margin, finalY + 4);
 
-    finalY += 15;
+    finalY += 12;
 
     // ===== SIGNATURE SECTION =====
-    doc.setFontSize(9);
+    // Ensure signature section doesn't overlap with totals
+    const signatureY = Math.max(finalY, totalsY + 5);
+    doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    doc.text(`For ${buyerName.toUpperCase()}:`, pageWidth - 65, finalY);
+    doc.text(`For ${buyerName.toUpperCase()}:`, pageWidth - 60, signatureY);
     
-    // Signature box with border
-    doc.rect(pageWidth - 65, finalY + 3, 50, 20);
-    doc.setFontSize(7.5);
-    doc.text("Authorized Signatory", pageWidth - 40, finalY + 25, { align: 'center' });
+    // Signature box with border - smaller size
+    doc.rect(pageWidth - 60, signatureY + 2, 45, 18);
+    doc.setFontSize(7);
+    doc.text("Authorized Signatory", pageWidth - 37.5, signatureY + 22, { align: 'center' });
 
     // ===== PAYMENT DETAILS SECTION =====
-    finalY = pageHeight - 45;
+    // Dynamic positioning to prevent overlap
+    const minPaymentY = Math.max(signatureY + 30, finalY + 10);
+    finalY = Math.max(minPaymentY, pageHeight - 45);
     doc.setFontSize(8);
     doc.text("Whether tax is payable under reverse charge - No", margin, finalY);
     
@@ -287,39 +288,48 @@ export const generateInvoicePDF = async (selectedOrder, calculateTotals, convert
       startY: finalY + 2,
       theme: 'grid',
       styles: { 
-        fontSize: 8,
-        cellPadding: { top: 1, right: 1.5, bottom: 1, left: 1.5 },
+        fontSize: 7,
+        cellPadding: { top: 0.5, right: 1, bottom: 0.5, left: 1 },
         lineColor: [0, 0, 0],
         lineWidth: 0.1,
         textColor: [0, 0, 0]
       },
       columnStyles: {
-        0: { cellWidth: 50, halign: 'left' },
-        1: { cellWidth: 40, halign: 'left' },
-        2: { cellWidth: 30, halign: 'left' },
-        3: { cellWidth: 50, halign: 'left' }
+        0: { cellWidth: 48, halign: 'left' },
+        1: { cellWidth: 38, halign: 'left' },
+        2: { cellWidth: 28, halign: 'left' },
+        3: { cellWidth: 48, halign: 'left' }
       },
       margin: { left: margin, right: margin }
     });
 
     // ===== FOOTER NOTES SECTION =====
-    finalY = pageHeight - 18;
-    doc.setFontSize(7.5);
+    // Dynamic footer positioning based on content
+    const footerStartY = Math.max(doc.lastAutoTable.finalY + 5, pageHeight - 18);
+    doc.setFontSize(6.5);
     doc.setFont("helvetica", "normal");
     
-    // Footer disclaimers - compact style
-    const footerLines = [
-      "*SMITOX Amazon Seller Services Pvt. Ltd., ARIPL Amazon Retail India Pvt. Ltd. (only where Amazon Retail India Pvt. Ltd. fulfillment center is co-located)",
-      "Customers desirous of availing input GST credit are requested to create a Business account and purchase on Amazon.in/business from Business eligible offers",
-      "Please note that this invoice is not a demand note or bill of exchange"
-    ];
+    // // Footer disclaimers - compact style with smaller font
+    // const footerLines = [
+    //   "*SMITOX Amazon Seller Services Pvt. Ltd., ARIPL Amazon Retail India Pvt. Ltd. (only where Amazon Retail India Pvt. Ltd. fulfillment center is co-located)",
+    //   "Customers desirous of availing input GST credit are requested to create a Business account and purchase on Amazon.in/business from Business eligible offers",
+    //   "Please note that this invoice is not a demand note or bill of exchange"
+    // ];
     
-    footerLines.forEach((line, index) => {
-      doc.text(line, margin, finalY + (index * 2.5));
-    });
+    // // Check if we need to add a new page for footer
+    // if (footerStartY + (footerLines.length * 2.2) + 5 > pageHeight - 5) {
+    //   doc.addPage();
+    //   finalY = 15;
+    // } else {
+    //   finalY = footerStartY;
+    // }
+    
+    // footerLines.forEach((line, index) => {
+    //   doc.text(line, margin, finalY + (index * 2.2));
+    // });
     
     // Page number
-    doc.text("Page 1 of 1", pageWidth - margin, finalY + 7, { align: "right" });
+    doc.text("Page 1 of 1", pageWidth - margin, finalY + 6, { align: "right" });
 
     // Save PDF
     doc.save(`Invoice_${selectedOrder._id?.substring(0, 10) || "Order"}.pdf`);
