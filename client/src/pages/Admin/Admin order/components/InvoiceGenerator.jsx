@@ -42,44 +42,42 @@ export const generateInvoicePDF = async (selectedOrder, calculateTotals, convert
     const leftColX = margin;
     const rightColX = pageWidth / 2 + 5;
     
-    // Left Column - Billing Address
+    // Left Column - Sold By (Hardcoded Smitox B2B Address)
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.text("Billing Address :", leftColX, currentY);
+    doc.text("Sold By :", leftColX, currentY);
+    
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text("Smitox B2B", leftColX, currentY + 5);
+    doc.text("Mumbai", leftColX, currentY + 9);
+    
+    let addressY = currentY + 17;
+
+    // Right Column - Billing Address (Customer Address)
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("Billing Address :", rightColX, currentY);
     
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     const buyerName = selectedOrder.buyer?.user_fullname || "Customer Name";
-    doc.text(buyerName, leftColX, currentY + 5);
+    doc.text(buyerName, rightColX, currentY + 5);
     
     const address = selectedOrder.buyer?.address || "Address not provided";
     const addressLines = doc.splitTextToSize(address, 75);
-    let addressY = currentY + 9;
+    let customerAddressY = currentY + 9;
     addressLines.forEach((line, index) => {
-      doc.text(line, leftColX, addressY + (index * 4));
+      doc.text(line, rightColX, customerAddressY + (index * 4));
     });
-    addressY += Math.max(addressLines.length * 4, 12);
+    customerAddressY += Math.max(addressLines.length * 4, 12);
     
-    doc.text(`${selectedOrder.buyer?.city || ""}, ${selectedOrder.buyer?.state || ""}, ${selectedOrder.buyer?.pincode || ""}`, leftColX, addressY);
-    doc.text("IN", leftColX, addressY + 4);
-    doc.text(`State/UT Code: ${selectedOrder.buyer?.pincode?.substring(0, 2) || "40"}`, leftColX, addressY + 8);
+    doc.text(`${selectedOrder.buyer?.city || ""}, ${selectedOrder.buyer?.state || ""}, ${selectedOrder.buyer?.pincode || ""}`, rightColX, customerAddressY);
+    doc.text("IN", rightColX, customerAddressY + 4);
+    doc.text(`State/UT Code: ${selectedOrder.buyer?.pincode?.substring(0, 2) || "40"}`, rightColX, customerAddressY + 8);
 
-    // Right Column - Shipping Address
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.text("Shipping Address :", rightColX, currentY);
-    
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.text(buyerName, rightColX, currentY + 5);
-    doc.text(addressLines[0] || address.substring(0, 35), rightColX, currentY + 9);
-    doc.text(`${selectedOrder.buyer?.city || ""}, ${selectedOrder.buyer?.state || ""}, ${selectedOrder.buyer?.pincode || ""}`, rightColX, currentY + 13);
-    doc.text("IN", rightColX, currentY + 17);
-    doc.text(`State/UT Code: ${selectedOrder.buyer?.pincode?.substring(0, 2) || "40"}`, rightColX, currentY + 21);
-    doc.text(`Place of supply: ${selectedOrder.buyer?.state || "maharashtra"}`, rightColX, currentY + 25);
-    doc.text(`Place of delivery: ${selectedOrder.buyer?.state || "maharashtra"}`, rightColX, currentY + 29);
-
-    currentY += 38;
+    // Adjust currentY based on the longer address section
+    currentY = Math.max(addressY, customerAddressY + 12) + 6;
 
     // ===== ORDER & INVOICE DETAILS SECTION =====
     doc.setFontSize(9);
@@ -186,7 +184,7 @@ export const generateInvoicePDF = async (selectedOrder, calculateTotals, convert
     const codCharges = selectedOrder.codCharges || 0;
     const discount = selectedOrder.discount || 0;
     const totalAmount = subtotal + gstAmount + deliveryCharges + codCharges - discount;
-    const amountPaid = selectedOrder.amountPaid || 0;
+    const amountPaid = selectedOrder.amount || 0; // Use 'amount' field for amount paid
     const amountPending = totalAmount - amountPaid;
 
     // Create totals breakdown - positioned on right side with proper spacing
@@ -258,22 +256,10 @@ export const generateInvoicePDF = async (selectedOrder, calculateTotals, convert
 
     finalY += 12;
 
-    // ===== SIGNATURE SECTION =====
-    // Ensure signature section doesn't overlap with totals
-    const signatureY = Math.max(finalY, totalsY + 5);
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.text(`For ${buyerName.toUpperCase()}:`, pageWidth - 60, signatureY);
-    
-    // Signature box with border - smaller size
-    doc.rect(pageWidth - 60, signatureY + 2, 45, 18);
-    doc.setFontSize(7);
-    doc.text("Authorized Signatory", pageWidth - 37.5, signatureY + 22, { align: 'center' });
-
     // ===== PAYMENT DETAILS SECTION =====
-    // Dynamic positioning to prevent overlap
-    const minPaymentY = Math.max(signatureY + 30, finalY + 10);
-    finalY = Math.max(minPaymentY, pageHeight - 45);
+    // Dynamic positioning to prevent overlap with totals
+    const minPaymentY = Math.max(totalsY + 10, finalY + 5);
+    finalY = Math.max(minPaymentY, pageHeight - 60);
     doc.setFontSize(8);
     doc.text("Whether tax is payable under reverse charge - No", margin, finalY);
     
@@ -303,33 +289,33 @@ export const generateInvoicePDF = async (selectedOrder, calculateTotals, convert
       margin: { left: margin, right: margin }
     });
 
-    // ===== FOOTER NOTES SECTION =====
+    // ===== DISCLAIMER SECTION =====
     // Dynamic footer positioning based on content
-    const footerStartY = Math.max(doc.lastAutoTable.finalY + 5, pageHeight - 18);
-    doc.setFontSize(6.5);
+    const disclaimerStartY = Math.max(doc.lastAutoTable.finalY + 8, pageHeight - 25);
+    doc.setFontSize(6);
     doc.setFont("helvetica", "normal");
     
-    // // Footer disclaimers - compact style with smaller font
-    // const footerLines = [
-    //   "*SMITOX Amazon Seller Services Pvt. Ltd., ARIPL Amazon Retail India Pvt. Ltd. (only where Amazon Retail India Pvt. Ltd. fulfillment center is co-located)",
-    //   "Customers desirous of availing input GST credit are requested to create a Business account and purchase on Amazon.in/business from Business eligible offers",
-    //   "Please note that this invoice is not a demand note or bill of exchange"
-    // ];
+    // Disclaimer points in very small font
+    const disclaimerLines = [
+      "Check Bill 2-3 Times Before Making Payment.Once Payment Received It Will Not Refundable.There Is No Any Warranty Or Guarantee On Any Products.Don't Ask For Replacement Or Warranty",
+
     
-    // // Check if we need to add a new page for footer
-    // if (footerStartY + (footerLines.length * 2.2) + 5 > pageHeight - 5) {
-    //   doc.addPage();
-    //   finalY = 15;
-    // } else {
-    //   finalY = footerStartY;
-    // }
+    ];
     
-    // footerLines.forEach((line, index) => {
-    //   doc.text(line, margin, finalY + (index * 2.2));
-    // });
+    // Check if we need to add a new page for disclaimers
+    let disclaimerY = disclaimerStartY;
+    if (disclaimerStartY + (disclaimerLines.length * 3) + 8 > pageHeight - 5) {
+      doc.addPage();
+      disclaimerY = 15;
+    }
+    
+    disclaimerLines.forEach((line, index) => {
+      doc.text(line, margin, disclaimerY + (index * 3));
+    });
     
     // Page number
-    doc.text("Page 1 of 1", pageWidth - margin, finalY + 6, { align: "right" });
+    const pageNumberY = Math.min(disclaimerY + (disclaimerLines.length * 3) + 5, pageHeight - 5);
+    doc.text("Page 1 of 1", pageWidth - margin, pageNumberY, { align: "right" });
 
     // Save PDF
     doc.save(`Invoice_${selectedOrder._id?.substring(0, 10) || "Order"}.pdf`);
