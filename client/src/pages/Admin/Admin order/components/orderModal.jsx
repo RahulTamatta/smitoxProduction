@@ -19,7 +19,6 @@ const OrderModal = ({
   handleInputChange,
   handleProductChange,
   handleQuantityChangeWithUnitSet,
-  getApplicableBulkProduct,
   calculateTotals,
   handleDeleteProduct,
   handleAddClick,
@@ -219,7 +218,6 @@ const OrderModal = ({
                   products={products}
                   handleProductChange={handleProductChange}
                   handleQuantityChangeWithUnitSet={handleQuantityChangeWithUnitSet}
-                  getApplicableBulkProduct={getApplicableBulkProduct}
                   handleDeleteProduct={handleDeleteProduct}
                   handleAddClick={handleAddClickInternal}
                   calculateTotals={calculateTotals}

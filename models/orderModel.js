@@ -13,9 +13,42 @@ const orderSchema = new mongoose.Schema(
           ref: "Product",
         },
         quantity: Number,
-        price: {  // Made optional with default value
+        price: {  // Unit price at time of order (snapshot)
           type: Number,
-          default: 0  // Add default value to prevent NaN errors
+          default: 0
+        },
+        // Snapshot data - stored at time of order placement
+        unitPrice: {  // Price per unit (same as price, for clarity)
+          type: Number,
+          default: 0
+        },
+        netAmount: {  // unitPrice * quantity (before tax)
+          type: Number,
+          default: 0
+        },
+        taxAmount: {  // GST amount
+          type: Number,
+          default: 0
+        },
+        totalAmount: {  // netAmount + taxAmount
+          type: Number,
+          default: 0
+        },
+        gst: {  // GST percentage at time of order
+          type: Number,
+          default: 0
+        },
+        productName: {  // Product name snapshot
+          type: String,
+          default: ""
+        },
+        productImage: {  // Product image snapshot
+          type: String,
+          default: ""
+        },
+        unitSet: {  // Unit set snapshot
+          type: Number,
+          default: 1
         }
       },
     ],

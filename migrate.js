@@ -2,20 +2,20 @@ import { v2 as cloudinary } from 'cloudinary';
 import mongoose from 'mongoose';
 
 // Configure OLD Cloudinary account
-cloudinary.config({
-  cloud_name: 'do3y11hpa', 
-  // Old account cloud name
-  api_key:  '119598853346493',    // Old account API key
-  api_secret: 'WR6abBlUvmedVLOiybbuUneX12k' // Old account API secret
-});
+// cloudinary.config({
+//   cloud_name: 'do3y11hpa', 
+//   // Old account cloud name
+//   api_key:  '119598853346493',    // Old account API key
+//   api_secret: 'WR6abBlUvmedVLOiybbuUneX12k' // Old account API secret
+// });
 
 
 // Configure OLD Cloudinary account
 cloudinary.config({
-  cloud_name: 'daabaruau', 
+  cloud_name: 'dp3nfw7nc', 
   // Old account cloud name
-  api_key:  '381637723934762',    // Old account API key
-  api_secret: 'f3URVJGzLjg6Q8NeaVSnUpoR6t0' // Old account API secret
+  api_key:  '931387325789757',    // Old account API key
+  api_secret: 'he0in0pTFmt2oxntMul2KNwHEHg' // Old account API secret
 });
 
 // MongoDB connection
@@ -59,7 +59,7 @@ async function runReverseMigration() {
     let totalUpdated = 0;
 
     // Regex to match new Cloudinary URLs (Replace 'de9injdhu' with your new Cloudinary cloud name)
-    const newUrlPattern = /res\.cloudinary\.com\/ddqfl3zo8/;
+    const newUrlPattern = /res\.cloudinary\.com\/daabaruau/;
 
     for (const collName of collections) {
       const collection = mongoose.connection.collection(collName);
@@ -67,18 +67,51 @@ async function runReverseMigration() {
 
       // Find documents where the "photos" field contains a new Cloudinary URL.
       const cursor = collection.find({
-        photos: { $regex: newUrlPattern }
+        $or: [
+          { photos: { $regex: newUrlPattern } },
+          { multipleimages: { $elemMatch: { $regex: newUrlPattern } } }
+        ]
       });
 
       while (await cursor.hasNext()) {
         const doc = await cursor.next();
-        const newUrl = doc.photos;
-        console.log(`Transferring image for document ${doc._id} in ${collName}: ${newUrl}`);
-        // Pass the collection name as the folder to transfer into a corresponding folder in the old Cloudinary account
-        const oldUrl = await transferImage(newUrl, collName);
-        await collection.updateOne({ _id: doc._id }, { $set: { photos: oldUrl } });
-        console.log(`Updated document ${doc._id} in ${collName}: ${newUrl} -> ${oldUrl}`);
-        updateCount++;
+        let updateFields = {};
+
+        // Handle single photo field
+        if (doc.photos && newUrlPattern.test(doc.photos)) {
+          console.log(`Transferring single image for document ${doc._id} in ${collName}: ${doc.photos}`);
+          const oldUrl = await transferImage(doc.photos, collName);
+          updateFields.photos = oldUrl;
+          console.log(`Updated single image ${doc._id} in ${collName}: ${doc.photos} -> ${oldUrl}`);
+        }
+
+        // Handle multiple images array
+        if (doc.multipleimages && Array.isArray(doc.multipleimages)) {
+          const updatedMultipleImages = [];
+          let hasUpdates = false;
+
+          for (const imageUrl of doc.multipleimages) {
+            if (imageUrl && newUrlPattern.test(imageUrl)) {
+              console.log(`Transferring multiple image for document ${doc._id} in ${collName}: ${imageUrl}`);
+              const oldUrl = await transferImage(imageUrl, collName);
+              updatedMultipleImages.push(oldUrl);
+              console.log(`Updated multiple image ${doc._id} in ${collName}: ${imageUrl} -> ${oldUrl}`);
+              hasUpdates = true;
+            } else {
+              updatedMultipleImages.push(imageUrl);
+            }
+          }
+
+          if (hasUpdates) {
+            updateFields.multipleimages = updatedMultipleImages;
+          }
+        }
+
+        // Update document if there are changes
+        if (Object.keys(updateFields).length > 0) {
+          await collection.updateOne({ _id: doc._id }, { $set: updateFields });
+          updateCount++;
+        }
       }
 
       console.log(`Collection "${collName}" updated ${updateCount} document(s).`);

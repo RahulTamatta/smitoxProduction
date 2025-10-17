@@ -10,6 +10,7 @@ import slugify from "slugify";
 import dotenv from "dotenv";
 import { uploadToImageKit } from "../utils/imageKitService.js"; // Changed from imageService.js to imageKitService.js
 import cloudinary from "cloudinary"; // Import Cloudinary
+import { enrichOrderProducts } from "../helpers/orderSnapshotHelper.js";
 dotenv.config();
 
 // Configure Cloudinary
@@ -1200,12 +1201,12 @@ export const processPaymentController = async (req, res) => {
           });
         }
 
+        // Enrich products with snapshot data
+        const enrichedProducts = await enrichOrderProducts(products);
+        console.log(`[Payment] Products enriched with snapshot data | Count: ${enrichedProducts.length}`);
+
         const order = new orderModel({
-          products: products.map((item) => ({
-            product: item.product,
-            quantity: item.quantity,
-            price: item.price,
-          })),
+          products: enrichedProducts,
           payment: {
             paymentMethod,
             transactionId: `${paymentMethod}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -1536,13 +1537,13 @@ export const verifyPaymentController = async (req, res) => {
       session.startTransaction();
       console.log(`[Verification] Transaction started`);
 
+      // Enrich products with snapshot data
+      const enrichedProducts = await enrichOrderProducts(products);
+      console.log(`[Verification] Products enriched with snapshot data | Count: ${enrichedProducts.length}`);
+
       // Create order
       const order = new orderModel({
-        products: products.map((item) => ({
-          product: item.product,
-          quantity: item.quantity,
-          price: item.price,
-        })),
+        products: enrichedProducts,
         payment: {
           paymentMethod: "Razorpay",
           transactionId: razorpay_order_id,
