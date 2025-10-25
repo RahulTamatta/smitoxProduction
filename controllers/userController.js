@@ -127,11 +127,11 @@ export const updateUserRegular = async (req, res) => {
     const { id } = req.params;
     const { regular } = req.body;
 
-    // Validate regular value matches enum
-    if (![0, 1, 2].includes(regular)) {
+    // Validate regular value matches enum (0 = Non-regular, 1 = Regular)
+    if (![0, 1].includes(regular)) {
       return res.status(400).json({
         status: 'error',
-        message: 'Invalid regular value. Must be 0, 1, or 2'
+        message: 'Invalid regular value. Must be 0 or 1'
       });
     }
 

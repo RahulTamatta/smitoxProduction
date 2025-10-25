@@ -179,6 +179,11 @@ const userSchema = new mongoose.Schema(
       enum: [0, 1, 2], // 0 = COD, 1 = Prepared, 2 = Advance
       default: 0,
     },
+    regular: {
+      type: Number,
+      enum: [0, 1], // 0 = Non-regular, 1 = Regular
+      default: 0,
+    },
     return_status: {
       type: Number,
       enum: [0, 1, 2, 3, 4], // 0 = No Return, 1 = Applied, 2 = Confirmed, 3 = Cancelled, 4 = Completed

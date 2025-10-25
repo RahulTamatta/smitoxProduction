@@ -9,13 +9,15 @@ import mongoose from 'mongoose';
 //   api_secret: 'WR6abBlUvmedVLOiybbuUneX12k' // Old account API secret
 // });
 
+// Gmail used:rahultamatta6573000@gmail.com
+
 
 // Configure OLD Cloudinary account
 cloudinary.config({
-  cloud_name: 'dp3nfw7nc', 
+  cloud_name: 'dnsqrn1mr', 
   // Old account cloud name
-  api_key:  '931387325789757',    // Old account API key
-  api_secret: 'he0in0pTFmt2oxntMul2KNwHEHg' // Old account API secret
+  api_key:  '491129143355427',    // Old account API key
+  api_secret: 'qL-f_FEhYdVQmepzRoUi6IwhDKk' // Old account API secret
 });
 
 // MongoDB connection
@@ -59,7 +61,7 @@ async function runReverseMigration() {
     let totalUpdated = 0;
 
     // Regex to match new Cloudinary URLs (Replace 'de9injdhu' with your new Cloudinary cloud name)
-    const newUrlPattern = /res\.cloudinary\.com\/daabaruau/;
+    const newUrlPattern = /res\.cloudinary\.com\/dp3nfw7nc/;
 
     for (const collName of collections) {
       const collection = mongoose.connection.collection(collName);
