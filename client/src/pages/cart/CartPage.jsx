@@ -13,7 +13,7 @@ import "./cartPage.css";
 //new build
 
 const CartPage = () => {
-  const [auth] = useAuth();
+  const [auth, , , refreshToken] = useAuth();
   const [cart, setCart] = useCart();
   const [clientToken, setClientToken] = useState("");
   const [instance, setInstance] = useState("");
@@ -80,6 +80,27 @@ const CartPage = () => {
       // getToken();
     }
   }, [auth?.token, auth?.user?._id]);
+
+  // Refresh auth once on mount to fetch latest user info (e.g., updated order_type)
+  useEffect(() => {
+    // Only attempt if we have a refresh function
+    if (typeof refreshToken === "function") {
+      refreshToken().catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep payment method aligned with user's order_type and settings
+  useEffect(() => {
+    const ot = typeof auth?.user?.order_type === 'string' ? parseInt(auth.user.order_type) : auth?.user?.order_type;
+    // Determine preferred default based on order type
+    let desired = paymentMethod;
+    if (ot === 2 && advancePercentage > 0) desired = "Advance";
+    else if (ot === 0 || ot === undefined || ot === null) desired = "COD";
+    else desired = "Razorpay";
+
+    if (desired !== paymentMethod) setPaymentMethod(desired);
+  }, [auth?.user?.order_type, advancePercentage]);
 
   const getCart = async () => {
     try {
@@ -737,12 +758,12 @@ const CartPage = () => {
               <option value="Razorpay">Razorpay</option>
               
               {/* Show COD only for order_type 0 (COD users) or undefined/null order_type */}
-              {(!auth?.user?.order_type || auth?.user?.order_type === 0) && (
+              {(!auth?.user?.order_type || (typeof auth?.user?.order_type === 'number' && auth?.user?.order_type === 0) || (typeof auth?.user?.order_type === 'string' && auth?.user?.order_type === '0')) && (
                 <option value="COD">COD</option>
               )}
               
               {/* Show Advance only for order_type 2 (Advance users) and when advance percentage is available */}
-              {auth?.user?.order_type === 2 && advancePercentage > 0 && (
+              {((typeof auth?.user?.order_type === 'number' && auth?.user?.order_type === 2) || (typeof auth?.user?.order_type === 'string' && auth?.user?.order_type === '2')) && advancePercentage > 0 && (
                 <option value="Advance">Advance Payment ({advancePercentage}%)</option>
               )}
             </select>

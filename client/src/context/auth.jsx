@@ -65,7 +65,9 @@ const AuthProvider = ({ children }) => {
         const updatedAuth = { 
           ...auth, 
           token: res.data.token,
-          refreshToken: res.data.refreshToken || auth.refreshToken
+          refreshToken: res.data.refreshToken || auth.refreshToken,
+          // Update user payload if server returned fresh user data (e.g., updated order_type)
+          user: res.data.user ? { ...(auth.user || {}), ...res.data.user } : auth.user
         };
         
         setAuth(updatedAuth);

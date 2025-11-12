@@ -1029,7 +1029,8 @@ export const refreshTokenController = async (req, res) => {
         email_id: user.email_id,
         mobile_no: user.mobile_no,
         role: user.role,
-        status: user.status
+        status: user.status,
+        order_type: user.order_type
       }
     });
   } catch (error) {
