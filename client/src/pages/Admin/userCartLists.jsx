@@ -630,6 +630,17 @@ const UserList = () => {
           </div>
         </div>
 
+        <div style={styles.filterSection}>
+          <h3 style={{ ...styles.headerText, fontSize: '1.1rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+            Order Type Filter:
+          </h3>
+          <div style={styles.filterButtons}>
+            <TabButton label="All" isActive={activeOrderTypeFilter === 'all'} onClick={() => setActiveOrderTypeFilter('all')} />
+            <TabButton label="COD" isActive={activeOrderTypeFilter === 'cod'} onClick={() => setActiveOrderTypeFilter('cod')} />
+            <TabButton label="Advance" isActive={activeOrderTypeFilter === 'advance'} onClick={() => setActiveOrderTypeFilter('advance')} />
+          </div>
+        </div>
+
         {renderSearchSection()}
 
         <div style={styles.tableContainer}>
