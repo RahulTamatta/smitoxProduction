@@ -44,9 +44,9 @@ const UserList = () => {
 
   // --- Fix: Always fetch users when currentPage or debouncedSearchTerm changes ---
   useEffect(() => {
-    fetchUsers(currentPage, debouncedSearchTerm);
+    fetchUsers(currentPage, debouncedSearchTerm, activeOrderTypeFilter);
     // eslint-disable-next-line
-  }, [currentPage, debouncedSearchTerm]);
+  }, [currentPage, debouncedSearchTerm, activeOrderTypeFilter]);
 
   // --- Fix: When searchTerm changes, reset to page 1 and update URL ---
   useEffect(() => {
@@ -68,11 +68,25 @@ const UserList = () => {
     // eslint-disable-next-line
   }, [currentPage]);
 
-  // --- Fix: When currentPage changes, fetch users for that page and current search ---
+  // Reset to first page whenever order type filter changes
   useEffect(() => {
-    fetchUsers(currentPage, debouncedSearchTerm);
-    // eslint-disable-next-line
-  }, [currentPage, debouncedSearchTerm]);
+    setCurrentPage(1);
+  }, [activeOrderTypeFilter]);
+
+  // Ensure current page never exceeds total pages (e.g., when filters shrink results)
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil((totalUsers || 0) / usersPerPage));
+    if (totalUsers === 0) {
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+      }
+      return;
+    }
+
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalUsers, currentPage, usersPerPage]);
 
   // --- Fix: When users or filters change, filter users ---
   useEffect(() => {
@@ -106,7 +120,14 @@ const UserList = () => {
     setSearchTerm(value);
     // Call backend for every character typed (including single char)
     try {
-      const { data } = await axios.get(`/users?search=${encodeURIComponent(value)}`);
+      const { data } = await axios.get(`/api/v1/usersLists/users`, {
+        params: {
+          page: 1,
+          limit: usersPerPage,
+          search: value,
+          orderType: activeOrderTypeFilter,
+        }
+      });
       setFilteredUsers((data.list || []).map(user => user)); // Ensure filteredUsers is an array
       setTotalUsers(data.total || 0);
     } catch (error) {
@@ -114,7 +135,7 @@ const UserList = () => {
     }
   };
 
-  const fetchUsers = async (page = currentPage, search = searchTerm) => {
+  const fetchUsers = async (page = currentPage, search = searchTerm, orderType = activeOrderTypeFilter) => {
     setIsLoading(true);
     setError(null);
     try {
@@ -123,6 +144,7 @@ const UserList = () => {
           page,
           limit: usersPerPage,
           search, // Pass the search term as-is
+          orderType,
         },
       });
       const usersList = response.data.list || [];

@@ -8,7 +8,7 @@ import Wishlist from '../models/wishlistModel.js';
 // Get all users with populated products, wishlist, and cart
 export const getUsers = async (req, res) => {
   try {
-    let { page = 1, limit = 20, search = '' } = req.query;
+    let { page = 1, limit = 20, search = '', orderType = 'all' } = req.query;
 
     // Ensure page and limit are positive integers
     page = Math.max(1, parseInt(page, 10));
@@ -43,6 +43,20 @@ export const getUsers = async (req, res) => {
             { address: { $regex: search, $options: 'i' } }
           ]
         };
+      }
+    }
+
+    const orderTypeMap = {
+      cod: 0,
+      prepared: 1,
+      advance: 2,
+    };
+
+    const normalizedOrderType = typeof orderType === 'string' ? orderType.toLowerCase() : orderType;
+    if (normalizedOrderType && normalizedOrderType !== 'all') {
+      const mappedValue = orderTypeMap[normalizedOrderType];
+      if (typeof mappedValue === 'number') {
+        searchQuery.order_type = mappedValue;
       }
     }
 
