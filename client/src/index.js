@@ -16,6 +16,9 @@ if ('scrollRestoration' in window.history) {
   window.history.scrollRestoration = 'auto';
 }
 
+// Force light theme for admin design tokens for now
+document.documentElement.setAttribute('data-theme', 'light');
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <Provider store={store}> {/* Wrap your app with Provider */}

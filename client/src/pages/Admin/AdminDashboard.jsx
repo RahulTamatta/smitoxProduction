@@ -6,16 +6,32 @@ const AdminDashboard = () => {
   const [auth] = useAuth();
   return (
     <Layout>
-      <div className="container-fluid m-3 p-3 dashboard">
+      <AdminMenu />
+      <div className="container-fluid dashboard">
         <div className="row">
-          <div className="col-md-3">
-            <AdminMenu />
-          </div>
-          <div className="col-md-9">
-            <div className="card w-75 p-3">
-              <h3> Admin Name : {auth?.user?.user_fullname}</h3>
-              <h3> Admin Email : {auth?.user?.email_id}</h3>
-              {/* <h3> Admin Contact : {auth?.user?.mobile_no}</h3> */}
+          <div className="col-md-12">
+            <div className="admin-page-header">
+              <div>
+                <h1 className="admin-page-title">Dashboard Overview</h1>
+                <p className="admin-page-subtitle">
+                  Admin panel for managing products, users and orders.
+                </p>
+              </div>
+            </div>
+
+            <div className="admin-kpi-grid">
+              <div className="admin-card">
+                <div className="admin-kpi-title">Admin Name</div>
+                <div className="admin-kpi-value">
+                  {auth?.user?.user_fullname || "-"}
+                </div>
+              </div>
+              <div className="admin-card">
+                <div className="admin-kpi-title">Admin Email</div>
+                <div className="admin-kpi-value">
+                  {auth?.user?.email_id || "-"}
+                </div>
+              </div>
             </div>
           </div>
         </div>

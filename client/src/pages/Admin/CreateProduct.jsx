@@ -322,12 +322,10 @@ const CreateProduct = () => {
 
   return (
     <Layout title={"Dashboard - Create Product"}>
-      <div className="container-fluid m-3 p-3 dashboard">
+      <AdminMenu />
+      <div className="container-fluid dashboard">
         <div className="row">
-          <div className="col-md-3">
-            <AdminMenu />
-          </div>
-          <div className="col-md-9">
+          <div className="col-md-12">
             <h1>Create Product</h1>
             <div className="m-1 w-75">
               {/* Category dropdown */}
@@ -416,142 +414,160 @@ const CreateProduct = () => {
               </div>
 
               <div className="mb-3">
-  <label className="btn btn-outline-secondary col-md-12">
-    {photo ? photo.name : "Upload Main Photo"}
-    <input
-      type="file"
-      name="photo"
-      accept="image/*"
-      onChange={(e) => setPhoto(e.target.files[0])}
-      hidden
-    />
-  </label>
-  <div className="mb-3">
-    {photo ? (
-      <div className="text-center">
-        <img
-          src={URL.createObjectURL(photo)}
-          alt="product_photo"
-          height="200"
-          className="img img-responsive"
-        />
-      </div>
-    ) : photos ? (
-      <div className="text-center">
-        <img
-          src={photos}
-          alt="product_photo"
-          height="200"
-          className="img img-responsive"
-        />
-      </div>
-    ) : null}
-  </div>
-</div>
+                <label className="btn btn-outline-secondary col-md-12">
+                  {photo ? photo.name : "Upload Main Photo"}
+                  <input
+                    type="file"
+                    name="photo"
+                    accept="image/*"
+                    onChange={(e) => setPhoto(e.target.files[0])}
+                    hidden
+                  />
+                </label>
+                <div className="mb-3">
+                  {photo ? (
+                    <div className="text-center">
+                      <img
+                        src={URL.createObjectURL(photo)}
+                        alt="product_photo"
+                        height="200"
+                        className="img img-responsive"
+                      />
+                    </div>
+                  ) : photos ? (
+                    <div className="text-center">
+                      <img
+                        src={photos}
+                        alt="product_photo"
+                        height="200"
+                        className="img img-responsive"
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              </div>
 
-{/* Multiple Images Upload */}
-<div className="mb-3">
-  <label className="btn btn-outline-secondary col-md-12">
-    Upload Additional Images
-    <input
-      type="file"
-      name="images"
-      accept="image/*"
-      multiple="multiple"
-      onChange={(e) => {
-        const selectedFiles = Array.from(e.target.files);
-        console.log(`Selected ${selectedFiles.length} files`);
-        setImages(prevImages => [...prevImages, ...selectedFiles]);
-      }}
-      hidden
-    />
-  </label>
-  <small className="d-block mt-2 text-muted">
-    You can select multiple images at once. These will be displayed in the product gallery.
-  </small>
-  
-  {/* Preview for newly selected images */}
-  {images && images.length > 0 && (
-    <div className="mt-3">
-      <h6>New Additional Images:</h6>
-      <div className="d-flex flex-wrap gap-2">
-        {images.map((img, index) => (
-          <div key={index} className="position-relative" style={{ width: '100px', height: '100px' }}>
-            <img
-              src={URL.createObjectURL(img)}
-              alt={`Product image ${index + 1}`}
-              style={{ width: '100px', height: '100px', objectFit: 'cover' }}
-              className="border rounded"
-            />
-            <button
-              type="button"
-              className="btn btn-sm btn-danger position-absolute"
-              style={{ top: '0', right: '0', padding: '0 5px' }}
-              onClick={() => {
-                const newImages = [...images];
-                newImages.splice(index, 1);
-                setImages(newImages);
-              }}
-            >
-              ×
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  )}
-  
-  {/* Display existing multipleimages if any */}
-  {multipleimages && multipleimages.length > 0 && (
-    <div className="mt-3">
-      <h6>Existing Additional Images:</h6>
-      <div className="d-flex flex-wrap gap-2">
-        {multipleimages.map((imgUrl, index) => (
-          <div key={index} className="position-relative" style={{ width: '100px', height: '100px' }}>
-            <img
-              src={imgUrl}
-              alt={`Product image ${index + 1}`}
-              style={{ width: '100px', height: '100px', objectFit: 'cover' }}
-              className="border rounded"
-            />
-            <button
-              type="button"
-              className="btn btn-sm btn-danger position-absolute"
-              style={{ top: '0', right: '0', padding: '0 5px' }}
-              onClick={() => {
-                const updatedImages = multipleimages.filter((_, i) => i !== index);
-                setMultipleImages(updatedImages);
-              }}
-            >
-              ×
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  )}
-</div>
-{/* Custom Order */}
-<div className="mb-3">
-  <label htmlFor="customOrder" className="form-label">
-    Custom Order
-  </label>
-  <input
-    id="customOrder"
-    type="number"
-    name="custom_order"
-    placeholder="Enter custom order position (optional)"
-    className="form-control"
-    value={customOrder}
-    onChange={(e) => setCustomOrder(e.target.value)}
-  />
-  <small className="text-muted">
-    Optional: Specify a specific position for this product in the product list. 
-    If left blank, it will be automatically assigned the next available position.
-  </small>
-</div>
+              {/* Multiple Images Upload */}
+              <div className="mb-3">
+                <label className="btn btn-outline-secondary col-md-12">
+                  Upload Additional Images
+                  <input
+                    type="file"
+                    name="images"
+                    accept="image/*"
+                    multiple="multiple"
+                    onChange={(e) => {
+                      const selectedFiles = Array.from(e.target.files);
+                      console.log(`Selected ${selectedFiles.length} files`);
+                      setImages((prevImages) => [...prevImages, ...selectedFiles]);
+                    }}
+                    hidden
+                  />
+                </label>
+                <small className="d-block mt-2 text-muted">
+                  You can select multiple images at once. These will be displayed in the product gallery.
+                </small>
 
+                {/* Preview for newly selected images */}
+                {images && images.length > 0 && (
+                  <div className="mt-3">
+                    <h6>New Additional Images:</h6>
+                    <div className="d-flex flex-wrap gap-2">
+                      {images.map((img, index) => (
+                        <div
+                          key={index}
+                          className="position-relative"
+                          style={{ width: "100px", height: "100px" }}
+                        >
+                          <img
+                            src={URL.createObjectURL(img)}
+                            alt={`Product image ${index + 1}`}
+                            style={{
+                              width: "100px",
+                              height: "100px",
+                              objectFit: "cover",
+                            }}
+                            className="border rounded"
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-danger position-absolute"
+                            style={{ top: "0", right: "0", padding: "0 5px" }}
+                            onClick={() => {
+                              const newImages = [...images];
+                              newImages.splice(index, 1);
+                              setImages(newImages);
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
+                {/* Display existing multipleimages if any */}
+                {multipleimages && multipleimages.length > 0 && (
+                  <div className="mt-3">
+                    <h6>Existing Additional Images:</h6>
+                    <div className="d-flex flex-wrap gap-2">
+                      {multipleimages.map((imgUrl, index) => (
+                        <div
+                          key={index}
+                          className="position-relative"
+                          style={{ width: "100px", height: "100px" }}
+                        >
+                          <img
+                            src={imgUrl}
+                            alt={`Product image ${index + 1}`}
+                            style={{
+                              width: "100px",
+                              height: "100px",
+                              objectFit: "cover",
+                            }}
+                            className="border rounded"
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-danger position-absolute"
+                            style={{ top: "0", right: "0", padding: "0 5px" }}
+                            onClick={() => {
+                              const updatedImages = multipleimages.filter(
+                                (_, i) => i !== index
+                              );
+                              setMultipleImages(updatedImages);
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Custom Order */}
+              <div className="mb-3">
+                <label htmlFor="customOrder" className="form-label">
+                  Custom Order
+                </label>
+                <input
+                  id="customOrder"
+                  type="number"
+                  name="custom_order"
+                  placeholder="Enter custom order position (optional)"
+                  className="form-control"
+                  value={customOrder}
+                  onChange={(e) => setCustomOrder(e.target.value)}
+                />
+                <small className="text-muted">
+                  Optional: Specify a specific position for this product in the
+                  product list. If left blank, it will be automatically
+                  assigned the next available position.
+                </small>
+              </div>
 
               <div className="mb-3">
                 <label htmlFor="productName" className="form-label">
@@ -858,8 +874,8 @@ const CreateProduct = () => {
                             value={product.discount_mrp}
                             onChange={(e) => handleChange(index, e)}
                           />
-                           <small>
-                            {(product.discount_mrp)*(unitSet)} {"Discount"}
+                          <small>
+                            {product.discount_mrp * unitSet} Discount
                           </small>
                         </td>
                         <td>
@@ -871,8 +887,8 @@ const CreateProduct = () => {
                             onChange={(e) => handleChange(index, e)}
                             readOnly
                           />
-                                 <small>
-                            {(product.selling_price_set)*(unitSet)} {"Discount"}
+                          <small>
+                            {product.selling_price_set * unitSet} Discount
                           </small>
                         </td>
                         <td>

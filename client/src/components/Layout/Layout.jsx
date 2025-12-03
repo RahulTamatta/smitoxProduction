@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { Toaster } from "react-hot-toast";
 import Footer from "./Footer";
@@ -8,6 +9,8 @@ import "./Layout.css";
 const Layout = ({ children, title, description, keywords, author }) => {
   const [headerHeight, setHeaderHeight] = useState(80);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith("/dashboard/admin");
 
   useEffect(() => {
     const handleResize = () => {
@@ -44,15 +47,17 @@ const Layout = ({ children, title, description, keywords, author }) => {
     borderBottom: "1px solid #e9ecef"
   };
 
+  const effectiveHeaderHeight = isAdminRoute ? 0 : headerHeight;
+
   const mainContentStyles = {
     flex: 1,
-    marginTop: `${headerHeight}px`, // Dynamic margin based on header height
-    padding: isMobile ? "0" : "2rem 1rem", // Remove padding on mobile to eliminate white space
+    marginTop: `${effectiveHeaderHeight}px`, // Dynamic margin based on header height (0 on admin routes)
+    padding: isAdminRoute ? "0" : (isMobile ? "0" : "2rem 1rem"), // No extra padding on admin shell
     display: "flex",
     flexDirection: "column",
     width: "100%",
     maxWidth: "100%",
-    minHeight: `calc(100vh - ${headerHeight}px)`, // Ensure content fills remaining space
+    minHeight: `calc(100vh - ${effectiveHeaderHeight}px)`, // Ensure content fills remaining space
     backgroundColor: isMobile ? "#f8f9fa" : "#ffffff", // Use lighter background on mobile
     boxSizing: "border-box",
     position: "relative",
@@ -61,7 +66,7 @@ const Layout = ({ children, title, description, keywords, author }) => {
 
   const toasterContainerStyles = {
     position: "fixed",
-    top: `${headerHeight + 10}px`, // Position below header with some spacing
+    top: `${effectiveHeaderHeight + 10}px`, // Position below header (or top of screen on admin routes)
     right: "10px",
     zIndex: 1060 // Above header
   };
@@ -77,10 +82,12 @@ const Layout = ({ children, title, description, keywords, author }) => {
         <title>{title}</title>
       </Helmet>
 
-      {/* Header - Fixed position */}
-      <div style={headerContainerStyles}>
-        <Header />
-      </div>
+      {/* Header - Fixed position (hidden on admin routes) */}
+      {!isAdminRoute && (
+        <div style={headerContainerStyles}>
+          <Header />
+        </div>
+      )}
 
       {/* Toaster Container */}
       <div style={toasterContainerStyles}>

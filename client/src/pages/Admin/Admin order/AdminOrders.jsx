@@ -478,6 +478,26 @@ const [addProductError, setAddProductError] = useState("");
     setTrackingInfo({ ...trackingInfo, [e.target.name]: e.target.value });
   };
 
+  const getStatusPillClass = (status) => {
+    switch (status) {
+      case "Completed":
+      case "Delivered":
+      case "Accepted":
+      case "Confirmed":
+        return "status-pill status-pill--success";
+      case "Pending":
+        return "status-pill status-pill--warning";
+      case "Cancelled":
+      case "Rejected":
+      case "Returned":
+        return "status-pill status-pill--danger";
+      case "Cash on Delivery":
+      case "Dispatched":
+      default:
+        return "status-pill status-pill--info";
+    }
+  };
+
   const handleAddTracking = async () => {
     try {
       await axios.put(
@@ -500,20 +520,22 @@ const [addProductError, setAddProductError] = useState("");
 
   return (
     <Layout title={"All Orders Data"}>
-      <div className="row dashboard">
-        <div className="col-md-3">
-          <AdminMenu />
-        </div>
-        <div className="col-md-9">
-          <Nav variant="pills" className="mb-3">
+      <AdminMenu />
+      <div className="container-fluid dashboard">
+        <div className="row">
+          <div className="col-md-12">
+          <div className="admin-page-header">
+            <div>
+              <h1 className="admin-page-title">Orders</h1>
+              <p className="admin-page-subtitle">View and manage all customer orders.</p>
+            </div>
+          </div>
+
+          <Nav variant="pills" className="mb-3 admin-order-nav">
             <Nav.Item>
               <Nav.Link
                 active={orderType === "all-orders"}
                 onClick={() => setOrderType("all-orders")}
-                style={{
-                  backgroundColor: orderType === "all-orders" ? "blue" : "red",
-                  color: orderType === "all-orders" ? "white" : "red",
-                }}
               >
                 All orders
               </Nav.Link>
@@ -523,10 +545,6 @@ const [addProductError, setAddProductError] = useState("");
                 <Nav.Link
                   active={orderType === s}
                   onClick={() => setOrderType(s)}
-                  style={{
-                    backgroundColor: orderType === s ? "blue" : "red",
-                    color: orderType === s ? "white" : "red",
-                  }}
                 >
                   {s} orders
                 </Nav.Link>
@@ -535,14 +553,16 @@ const [addProductError, setAddProductError] = useState("");
           </Nav>
 
           <div className="mb-4">
-  <input
-    type="text"
-    className="form-control w-25"
-    placeholder="Search orders by ID, buyer name..."
-    value={searchTerm}
-    onChange={(e) => handleSearch(e.target.value)}
-  />
-</div>
+            <div className="admin-search-input">
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Search orders by ID, buyer name..."
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+              />
+            </div>
+          </div>
 
           {loading ? (
             <Spinner animation="border" role="status">
@@ -554,24 +574,24 @@ const [addProductError, setAddProductError] = useState("");
             <Alert variant="info">No orders found</Alert>
           ) : (
             <>
+       <div className="admin-table-wrapper table-responsive">
        <Table 
   striped 
-  bordered 
   hover 
-  style={{ width: '100%', fontSize: '1rem', borderSpacing: '0px', borderCollapse: 'collapse' }} 
+  className="admin-table"
   cellSpacing="0" 
   cellPadding="0"
 >
   <thead>
     <tr>
-      <th style={{ fontSize: '0.8rem', padding: '4px' }}>#</th>
-      <th style={{ fontSize: '0.8rem', padding: '4px' }}>Order Id</th>
+      <th>#</th>
+      <th>Order Id</th>
       {/* <th style={{ fontSize: '0.8rem', padding: '4px' }}>Tracking Information</th> */}
-      <th style={{ fontSize: '0.8rem', padding: '4px' }}>Total</th>
-      <th style={{ fontSize: '0.8rem', padding: '4px' }}>Payment</th>
-      <th style={{ fontSize: '0.8rem', padding: '4px' }}>Status</th>
-      <th style={{ fontSize: '0.8rem', padding: '4px' }}>Created</th>
-      <th style={{ fontSize: '0.8rem', padding: '4px' }}>Actions</th>
+      <th className="numeric">Total</th>
+      <th>Payment</th>
+      <th>Status</th>
+      <th>Created</th>
+      <th>Actions</th>
     </tr>
   </thead>
 
@@ -579,17 +599,17 @@ const [addProductError, setAddProductError] = useState("");
     {orders.map((o, index) => {
       const totals = calculateTotalsad(o);
       return (
-        <tr key={o._id} style={{ fontSize: '0.7rem', padding: '2px' }}>
-          <td style={{ fontSize: '0.7rem', padding: '2px' }}>
+        <tr key={o._id}>
+          <td>
             {(currentPage - 1) * itemsPerPage + index + 1}
           </td>
-          <td style={{ fontSize: '0.7rem', padding: '2px' }}>
+          <td>
             <table style={{ width: '100%' }}>
-            <td style={{ fontSize: '0.7rem', padding: '2px' }}>
+            <td>
   {o.buyer?.user_fullname || 'N/A'}
 </td>
               <tr>
-      <td style={{ fontSize: '0.7rem', padding: '2px' }}>
+      <td>
   <div
     style={{
       display: 'inline-block', // Makes the box inline
@@ -617,7 +637,7 @@ const [addProductError, setAddProductError] = useState("");
 </td>
 
               </tr>
-              <td style={{ fontSize: '0.7rem', padding: '2px' }}>
+              <td>
   {o.buyer?.mobile_no || 'N/A'}
 </td>
             </table>
@@ -671,8 +691,13 @@ const [addProductError, setAddProductError] = useState("");
 </Table>
 
 
-              <div className="d-flex justify-content-between align-items-center mt-4">
-                <div className="d-flex gap-2">
+              <nav aria-label="Pagination" className="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-3">
+                <span className="text-muted">
+                  Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+                  {Math.min(currentPage * itemsPerPage, totalOrders)} of{" "}
+                  {totalOrders} orders
+                </span>
+                <div className="d-flex gap-2 flex-wrap justify-content-center">
                   <Button
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1 || loading}
@@ -683,36 +708,18 @@ const [addProductError, setAddProductError] = useState("");
 
                   {[...Array(totalPages)].map((_, index) => {
                     const pageNumber = index + 1;
-                    if (
-                      pageNumber === 1 ||
-                      pageNumber === totalPages ||
-                      (pageNumber >= currentPage - 1 &&
-                        pageNumber <= currentPage + 1)
-                    ) {
-                      return (
-                        <Button
-                          key={pageNumber}
-                          onClick={() => handlePageChange(pageNumber)}
-                          variant={
-                            currentPage === pageNumber ? "primary" : "light"
-                          }
-                          disabled={loading}
-                        >
-                          {pageNumber}
-                        </Button>
-                      );
-                    }
-                    if (
-                      pageNumber === currentPage - 2 ||
-                      pageNumber === currentPage + 2
-                    ) {
-                      return (
-                        <span key={pageNumber} className="px-2">
-                          ...
-                        </span>
-                      );
-                    }
-                    return null;
+                    return (
+                      <Button
+                        key={pageNumber}
+                        onClick={() => handlePageChange(pageNumber)}
+                        variant={
+                          currentPage === pageNumber ? "primary" : "light"
+                        }
+                        disabled={loading}
+                      >
+                        {pageNumber}
+                      </Button>
+                    );
                   })}
 
                   <Button
@@ -723,15 +730,12 @@ const [addProductError, setAddProductError] = useState("");
                     Next
                   </Button>
                 </div>
-                <span className="text-muted">
-                  Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-                  {Math.min(currentPage * itemsPerPage, totalOrders)} of{" "}
-                  {totalOrders} orders
-                </span>
+              </nav>
               </div>
             </>
           )}
         </div>
+      </div>
       </div>
 
       {selectedOrder && (

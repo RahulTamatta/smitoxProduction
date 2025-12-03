@@ -415,100 +415,81 @@ const Products = () => {
           )}
   
           {/* Pagination */}
-      {/* Pagination */}
-<div style={{ 
-  marginTop: '16px',
-  display: 'flex',
-  flexDirection: window.innerWidth < 640 ? 'column' : 'row',
-  gap: '16px',
-  justifyContent: 'space-between',
-  alignItems: 'center'
-}}>
-  <span style={{ marginBottom: window.innerWidth < 640 ? '8px' : '0' }}>
-    Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
-    {Math.min(currentPage * itemsPerPage, totalProducts)} of{' '}
-    {totalProducts} products
-  </span>
-  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-    <button
-      onClick={() => handlePageChange(currentPage - 1)}
-      disabled={currentPage === 1}
-      style={{
-        backgroundColor: 'white',
-        border: '1px solid #e5e7eb',
-        padding: '8px 16px',
-        borderRadius: '4px',
-        opacity: currentPage === 1 ? 0.5 : 1,
-        cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
-      }}
-    >
-      Previous
-    </button>
+          {totalPages > 1 && (
+            <nav aria-label="Pagination" style={{ 
+              marginTop: '16px',
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: '16px',
+              justifyContent: 'space-between',
+              alignItems: isMobile ? 'stretch' : 'center'
+            }}>
+              <span style={{ 
+                marginBottom: isMobile ? '8px' : '0',
+                fontSize: isMobile ? '0.875rem' : '1rem'
+              }}>
+                Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
+                {Math.min(currentPage * itemsPerPage, totalProducts)} of{' '}
+                {totalProducts} products
+              </span>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: isMobile ? 'center' : 'flex-end' }}>
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  style={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e5e7eb',
+                    padding: isMobile ? '6px 12px' : '8px 16px',
+                    borderRadius: '4px',
+                    opacity: currentPage === 1 ? 0.5 : 1,
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    fontSize: isMobile ? '0.875rem' : '1rem',
+                    minHeight: '36px'
+                  }}
+                >
+                  {isMobile ? '←' : 'Previous'}
+                </button>
 
-    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-      if (
-        page <= 5 || 
-        page >= totalPages - 4 || 
-        (page >= currentPage - 2 && page <= currentPage + 2)
-      ) {
-        return (
-          <button
-            key={page}
-            onClick={() => handlePageChange(page)}
-            disabled={page === currentPage}
-            style={{
-              backgroundColor: page === currentPage ? '#3b82f6' : 'white',
-              color: page === currentPage ? 'white' : 'black',
-              border: '1px solid #e5e7eb',
-              padding: '8px 12px',
-              borderRadius: '4px',
-              cursor: page === currentPage ? 'default' : 'pointer',
-              minWidth: '32px',
-              display: 
-                (totalPages > 10 && page === 6 && currentPage < 7) || 
-                (totalPages > 10 && page === totalPages - 5 && currentPage > totalPages - 6)
-                ? 'none' 
-                : 'inline-block'
-            }}
-          >
-            {page}
-          </button>
-        );
-      } else if (
-        (page === 6 && currentPage < 7) || 
-        (page === totalPages - 5 && currentPage > totalPages - 6)
-      ) {
-        return (
-          <span 
-            key={`ellipsis-${page}`} 
-            style={{ 
-              padding: '8px 12px',
-              color: '#6b7280'
-            }}
-          >
-            ...
-          </span>
-        );
-      }
-      return null;
-    })}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    style={{
+                      backgroundColor: page === currentPage ? '#3b82f6' : 'white',
+                      color: page === currentPage ? 'white' : 'black',
+                      border: '1px solid #e5e7eb',
+                      padding: isMobile ? '6px 10px' : '8px 12px',
+                      borderRadius: '4px',
+                      cursor: page === currentPage ? 'default' : 'pointer',
+                      minWidth: '36px',
+                      minHeight: '36px',
+                      fontSize: isMobile ? '0.875rem' : '1rem',
+                      fontWeight: page === currentPage ? '600' : '400'
+                    }}
+                  >
+                    {page}
+                  </button>
+                ))}
 
-    <button
-      onClick={() => handlePageChange(currentPage + 1)}
-      disabled={currentPage === totalPages}
-      style={{
-        backgroundColor: 'white',
-        border: '1px solid #e5e7eb',
-        padding: '8px 16px',
-        borderRadius: '4px',
-        opacity: currentPage === totalPages ? 0.5 : 1,
-        cursor: currentPage === totalPages ? 'not-allowed' : 'pointer'
-      }}
-    >
-      Next
-    </button>
-  </div>
-</div>
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  style={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e5e7eb',
+                    padding: isMobile ? '6px 12px' : '8px 16px',
+                    borderRadius: '4px',
+                    opacity: currentPage === totalPages ? 0.5 : 1,
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    fontSize: isMobile ? '0.875rem' : '1rem',
+                    minHeight: '36px'
+                  }}
+                >
+                  {isMobile ? '→' : 'Next'}
+                </button>
+              </div>
+            </nav>
+          )}
         </div>
       </div>
     </Layout>

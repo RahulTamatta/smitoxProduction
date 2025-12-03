@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Card, Col, Form, Modal, Row, ToggleButton } from "react-bootstrap";
+import { Button, Card, Col, Form, Modal, Row, Table, ToggleButton } from "react-bootstrap";
 import toast from "react-hot-toast";
 import AdminMenu from "../../components/Layout/AdminMenu";
 import Layout from "../../components/Layout/Layout";
@@ -194,12 +194,10 @@ const SubcategoryList = () => {
 
   return (
     <Layout title="Dashboard - Subcategories">
-      <div className="container-fluid m-3 p-3 dashboard">
+      <AdminMenu />
+      <div className="container-fluid dashboard">
         <div className="row">
-          <div className="col-md-3">
-            <AdminMenu />
-          </div>
-          <div className="col-md-9">
+          <div className="col-md-12">
             <h1>Manage Subcategories</h1>
 
             {/* Create Subcategory */}
@@ -266,26 +264,46 @@ const SubcategoryList = () => {
             </div>
 
             {/* Subcategory List */}
-            <div>
+            <div className="mt-5">
               <h3>Subcategory List</h3>
               {loading ? (
                 <p>Loading...</p>
               ) : (
-                <Row>
-                  {subcategories.map((subcategory) => (
-                    <Col key={subcategory._id} xs={12} sm={6} md={4} lg={3} className="mb-4">
-                      <Card>
-                        <Card.Img
-                          variant="top"
-                          src={subcategory.photos || "placeholder-image-url.jpg"}
-                          style={{ height: "200px", objectFit: "cover" }}
-                        />
-                        <Card.Body>
-                          <Card.Title>{subcategory.name}</Card.Title>
-                          <Card.Text>
-                            Parent: {categories.find((c) => c._id === subcategory.category)?.name || "N/A"}
-                          </Card.Text>
-                          <div className="d-flex justify-content-between align-items-center">
+                <div className="admin-table-wrapper">
+                  <Table striped bordered hover className="admin-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: "100px" }}>Image</th>
+                        <th>Name</th>
+                        <th>Parent Category</th>
+                        <th style={{ width: "120px" }}>Status</th>
+                        <th style={{ width: "150px" }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {subcategories.map((subcategory) => (
+                        <tr key={subcategory._id}>
+                          <td style={{ textAlign: "center" }}>
+                            <img
+                              src={subcategory.photos || "placeholder-image-url.jpg"}
+                              alt={subcategory.name}
+                              style={{ height: "60px", width: "60px", objectFit: "cover", borderRadius: "4px" }}
+                            />
+                          </td>
+                          <td>{subcategory.name}</td>
+                          <td>{categories.find((c) => c._id === subcategory.category)?.name || "N/A"}</td>
+                          <td style={{ textAlign: "center" }}>
+                            <ToggleButton
+                              type="checkbox"
+                              variant={subcategory.isActive ? "outline-success" : "outline-danger"}
+                              checked={subcategory.isActive}
+                              onChange={() => toggleSubcategoryStatus(subcategory._id, subcategory.isActive)}
+                              size="sm"
+                            >
+                              {subcategory.isActive ? "Active" : "Inactive"}
+                            </ToggleButton>
+                          </td>
+                          <td style={{ textAlign: "center" }}>
                             <Button
                               variant="primary"
                               size="sm"
@@ -297,6 +315,7 @@ const SubcategoryList = () => {
                                 setEditIsActive(subcategory.isActive);
                                 setShowEditModal(true);
                               }}
+                              className="me-2"
                             >
                               Edit
                             </Button>
@@ -307,21 +326,12 @@ const SubcategoryList = () => {
                             >
                               Delete
                             </Button>
-                          </div>
-                          <ToggleButton
-                            className="mt-2"
-                            type="checkbox"
-                            variant={subcategory.isActive ? "outline-success" : "outline-danger"}
-                            checked={subcategory.isActive}
-                            onChange={() => toggleSubcategoryStatus(subcategory._id, subcategory.isActive)}
-                          >
-                            {subcategory.isActive ? "Active" : "Inactive"}
-                          </ToggleButton>
-                        </Card.Body>
-                      </Card>
-                    </Col>
-                  ))}
-                </Row>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
               )}
             </div>
 

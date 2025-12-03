@@ -1,11 +1,9 @@
-import { Modal, Select } from "antd";
+import { Modal } from "antd";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import AdminMenu from "../../components/Layout/AdminMenu";
 import Layout from "../../components/Layout/Layout";
 import { api } from "../../context/auth";
-
-const { Option } = Select;
 
 const CreateCategory = () => {
   const [categories, setCategories] = useState([]);
@@ -180,12 +178,10 @@ const CreateCategory = () => {
 
   return (
     <Layout title={"Dashboard - Create Category"}>
-      <div className="container-fluid m-3 p-3 dashboard">
+      <AdminMenu />
+      <div className="container-fluid dashboard">
         <div className="row">
-          <div className="col-md-3">
-            <AdminMenu />
-          </div>
-          <div className="col-md-9">
+          <div className="col-md-12">
             <h1>Manage Category</h1>
             <div className="p-3 w-50">
               <div className="mb-3">

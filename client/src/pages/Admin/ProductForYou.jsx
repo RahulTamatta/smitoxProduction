@@ -22,14 +22,21 @@ const ProductForYou = () => {
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
+  // Form/filter state
   const [formData, setFormData] = useState({
     categoryId: "",
     subcategoryId: "",
     productId: "",
   });
+  // Left panel: products available to add
+  const [selectedProductIds, setSelectedProductIds] = useState([]);
+  // Right panel: products already in "Product For You" list
+  const [selectedForYouIds, setSelectedForYouIds] = useState([]);
   const [auth] = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isBulkAdding, setIsBulkAdding] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   useEffect(() => {
     fetchBanners();
@@ -54,6 +61,60 @@ const ProductForYou = () => {
       setBanners([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Toggle selection for left-panel product list
+  const toggleProductSelection = (productId) => {
+    setSelectedProductIds((prev) =>
+      prev.includes(productId)
+        ? prev.filter((id) => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  // Right panel selection helpers
+  const toggleForYouSelection = (id) => {
+    setSelectedForYouIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllForYou = (visibleIds) => {
+    // If all visible are already selected, clear them; otherwise select all visible
+    const allSelected = visibleIds.every((id) => selectedForYouIds.includes(id));
+    if (allSelected) {
+      setSelectedForYouIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+    } else {
+      const merged = new Set([...selectedForYouIds, ...visibleIds]);
+      setSelectedForYouIds(Array.from(merged));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedForYouIds.length) return;
+
+    try {
+      setIsBulkDeleting(true);
+      await axios.post(
+        "/api/v1/productForYou/bulk-delete",
+        { ids: selectedForYouIds },
+        {
+          headers: {
+            Authorization: `Bearer ${auth.user.token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      setBanners((prev) =>
+        prev.filter((banner) => !selectedForYouIds.includes(banner._id))
+      );
+      setSelectedForYouIds([]);
+    } catch (error) {
+      console.error("Error bulk deleting products for you:", error);
+    } finally {
+      setIsBulkDeleting(false);
     }
   };
 
@@ -129,35 +190,73 @@ const ProductForYou = () => {
       );
       setSubcategories(filteredSubcategories);
       setFormData((prev) => ({ ...prev, subcategoryId: "", productId: "" }));
+      setSelectedProductIds([]);
       await fetchProductsByCategoryOrSubcategory(value, null);
     } else if (name === "subcategoryId") {
       await fetchProductsByCategoryOrSubcategory(formData.categoryId, value);
       setFormData((prev) => ({ ...prev, productId: "" }));
+      setSelectedProductIds([]);
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Add a single product to "Product For You" using existing endpoint
+  const addSingleProductForYou = async (productId) => {
+    if (!formData.categoryId || !formData.subcategoryId || !productId) return;
+
     const data = new FormData();
-    for (const key in formData) {
-      data.append(key, formData[key]);
+    data.append("categoryId", formData.categoryId);
+    data.append("subcategoryId", formData.subcategoryId);
+    data.append("productId", productId);
+
+    try {
+      await axios.post("/api/v1/productForYou/createProductForYou", data, {
+        headers: {
+          Authorization: `Bearer ${auth.user.token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      await fetchBanners();
+    } catch (error) {
+      console.error("Error adding product for you:", error);
+    }
+  };
+
+  // Bulk add selected products via new bulk-create API
+  const handleBulkAdd = async (e) => {
+    if (e) e.preventDefault();
+
+    if (
+      !formData.categoryId ||
+      !formData.subcategoryId ||
+      !selectedProductIds.length
+    ) {
+      return;
     }
 
     try {
-      const response = await axios.post("/api/v1/productForYou/createProductForYou", data, {
-        headers: {
-          'Authorization': `Bearer ${auth.user.token}`,
-          'Content-Type': 'multipart/form-data'
+      setIsBulkAdding(true);
+      await axios.post(
+        "/api/v1/productForYou/bulk-create",
+        {
+          categoryId: formData.categoryId,
+          subcategoryId: formData.subcategoryId,
+          productIds: selectedProductIds,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${auth.user.token}`,
+            "Content-Type": "application/json",
+          },
         }
-      });
-      //toast.success("Product added successfully");
-      
-      // Refresh the banners list from the server
+      );
+
       await fetchBanners();
-      resetForm();
+      setSelectedProductIds([]);
     } catch (error) {
-      console.error("Error submitting banner:", error);
-      ////toast.error("Failed to submit banner");
+      console.error("Error bulk adding products for you:", error);
+    } finally {
+      setIsBulkAdding(false);
     }
   };
 
@@ -183,15 +282,15 @@ const ProductForYou = () => {
   const resetForm = () => {
     setFormData({ categoryId: "", subcategoryId: "", productId: "" });
     setFilteredProducts([]);
+    setSelectedProductIds([]);
   };
 
   return (
     <Layout title={"All Orders Data"}>
-      <div className="row dashboard">
-        <div className="col-md-3">
-          <AdminMenu />
-        </div>
-        <div className="col-md-9">
+      <AdminMenu />
+      <div className="container-fluid dashboard">
+        <div className="row">
+          <div className="col-md-12">
           <Container fluid className="site-width">
             <Row>
               <Col xs={12} className="align-self-center">
@@ -211,8 +310,9 @@ const ProductForYou = () => {
             </Row>
 
             <Row>
+              {/* Left: filters and product source list */}
               <Col xs={12} md={4} className="mt-3">
-                <Form onSubmit={handleSubmit}>
+                <Form onSubmit={handleBulkAdd}>
                   <Form.Group>
                     <Form.Label>Category Name</Form.Label>
                     <Form.Control
@@ -247,31 +347,144 @@ const ProductForYou = () => {
                       ))}
                     </Form.Control>
                   </Form.Group>
-                  <Form.Group>
-                    <Form.Label>Product</Form.Label>
-                    <Form.Control
-                      as="select"
-                      name="productId"
-                      value={formData.productId}
-                      onChange={handleInputChange}
-                      required
+                  <Form.Group className="mt-3">
+                    <Form.Label>Available Products</Form.Label>
+                    <div
+                      style={{
+                        maxHeight: "320px",
+                        overflowY: "auto",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "4px",
+                        padding: "8px",
+                        backgroundColor: "#ffffff",
+                      }}
                     >
-                      <option value="">Select a product</option>
-                      {filteredProducts.map((product) => (
-                        <option key={product._id} value={product._id}>
-                          {product.name}
-                        </option>
-                      ))}
-                    </Form.Control>
+                      {loading && !filteredProducts.length ? (
+                        <div className="text-center py-3">
+                          <Spinner animation="border" size="sm" />
+                        </div>
+                      ) : filteredProducts.length === 0 ? (
+                        <div className="text-muted small">
+                          Select a category and subcategory to see products.
+                        </div>
+                      ) : (
+                        filteredProducts.map((product) => {
+                          const isSelected = selectedProductIds.includes(product._id);
+                          return (
+                            <div
+                              key={product._id}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: "8px",
+                                padding: "6px 4px",
+                                borderBottom: "1px solid #f1f5f9",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px",
+                                  minWidth: 0,
+                                  flex: 1,
+                                }}
+                              >
+                                {product.multipleimages &&
+                                product.multipleimages.length > 0 ? (
+                                  <Image
+                                    src={product.multipleimages[0]}
+                                    alt={product.name}
+                                    rounded
+                                    style={{
+                                      width: 32,
+                                      height: 32,
+                                      objectFit: "cover",
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                ) : null}
+                                <div
+                                  style={{
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  <div style={{ fontSize: "0.9rem", fontWeight: 500 }}>
+                                    {product.name}
+                                  </div>
+                                  {product.perPiecePrice && (
+                                    <div
+                                      style={{
+                                        fontSize: "0.8rem",
+                                        color: "#6b7280",
+                                      }}
+                                    >
+                                      ₹{product.perPiecePrice}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "6px",
+                                }}
+                              >
+                                <Form.Check
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleProductSelection(product._id)}
+                                />
+                                <Button
+                                  variant="outline-primary"
+                                  size="sm"
+                                  onClick={() => addSingleProductForYou(product._id)}
+                                >
+                                  Choose
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
                   </Form.Group>
-                  <Button variant="primary" type="submit">
-                    Add Product For You
+                  <Button
+                    variant="primary"
+                    type="submit"
+                    className="mt-3"
+                    disabled={isBulkAdding || !selectedProductIds.length}
+                  >
+                    {isBulkAdding ? "Adding..." : "Add Selected Products"}
                   </Button>
                 </Form>
               </Col>
+              {/* Right: current "Product For You" list */}
               <Col xs={12} md={8} className="mt-3">
                 <div className="card">
                   <div className="card-body">
+                    <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                      <h5 className="mb-0">Current Product For You List</h5>
+                      <div className="d-flex align-items-center gap-2 flex-wrap">
+                        <span className="text-muted small">
+                          Selected: {selectedForYouIds.length}
+                        </span>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          disabled={isBulkDeleting || !selectedForYouIds.length}
+                          onClick={handleBulkDelete}
+                        >
+                          {isBulkDeleting
+                            ? "Deleting..."
+                            : "Delete Selected"}
+                        </Button>
+                      </div>
+                    </div>
                     {loading ? (
                       <div className="text-center">
                         <Spinner animation="border" role="status">
@@ -285,6 +498,36 @@ const ProductForYou = () => {
                         <Table striped bordered hover>
                           <thead>
                             <tr>
+                              <th>
+                                <Form.Check
+                                  type="checkbox"
+                                  onChange={() =>
+                                    toggleSelectAllForYou(
+                                      banners
+                                        .filter(
+                                          (banner) =>
+                                            !formData.subcategoryId ||
+                                            banner.subcategoryId?._id ===
+                                              formData.subcategoryId
+                                        )
+                                        .map((b) => b._id)
+                                    )
+                                  }
+                                  checked={
+                                    banners.length > 0 &&
+                                    banners
+                                      .filter(
+                                        (banner) =>
+                                          !formData.subcategoryId ||
+                                          banner.subcategoryId?._id ===
+                                            formData.subcategoryId
+                                      )
+                                      .every((b) =>
+                                        selectedForYouIds.includes(b._id)
+                                      )
+                                  }
+                                />
+                              </th>
                               <th>Sr.No</th>
                               <th>Image</th>
                               <th>Category</th>
@@ -302,6 +545,17 @@ const ProductForYou = () => {
                               )
                               .map((banner, index) => (
                                 <tr key={banner._id}>
+                                  <td>
+                                    <Form.Check
+                                      type="checkbox"
+                                      checked={selectedForYouIds.includes(
+                                        banner._id
+                                      )}
+                                      onChange={() =>
+                                        toggleForYouSelection(banner._id)
+                                      }
+                                    />
+                                  </td>
                                   <td>{index + 1}</td>
                                   <td>
                                     {banner.productId?._id ? (
@@ -354,6 +608,7 @@ const ProductForYou = () => {
               </Col>
             </Row>
           </Container>
+          </div>
         </div>
       </div>
     </Layout>

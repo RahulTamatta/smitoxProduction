@@ -5,7 +5,8 @@
 }
 
 /* font-family */
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Poppins:wght@300;400&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&family=Poppins:wght@300;400&display=swap");
+@import url("./styles/admin-theme.css");
 
 /* font-family: 'Poppins', sans-serif; */
 /* font-family: 'Playfair Display', serif; */
@@ -137,20 +138,6 @@
   background-color: #434343;
   color: white;
 }
-/* ================
-====dashboard
-=================== */
-
-.dashboard {
-  margin-top: 100px !important;
-}
-
-.dashboard-menu h4 {
-  background-color: #434343 !important;
-  color: white;
-  padding: 20px 0px;
-}
-
 /* register page */
 .register {
   display: flex;

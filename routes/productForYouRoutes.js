@@ -2,12 +2,16 @@ import express from "express";
 import { isAdmin, requireSignIn } from "../middlewares/authMiddleware.js";
 import {
   createProductForYouController,
-  getProductsForYouController,getAllProductsForYouController,
+  getProductsForYouController,
+  getAllProductsForYouController,
   getBannersController,
   getProductPhoto,
-  updateBannerController,singleProductController,
+  updateBannerController,
+  singleProductController,
   deleteProductController,
-  adminGetProductsForYouController
+  adminGetProductsForYouController,
+  bulkCreateProductForYouController,
+  bulkDeleteProductController
 } from "../controllers/productForYouController.js"; // Updated import based on your controllers
 import formidable from "express-formidable";
 
@@ -20,6 +24,14 @@ router.post(
   // isAdmin,
   formidable(),
   createProductForYouController
+);
+
+// Bulk create multiple "Product For You" entries
+router.post(
+  "/bulk-create",
+  // requireSignIn,
+  // isAdmin,
+  bulkCreateProductForYouController
 );
 
 router.get('/get-all', getAllProductsForYouController);
@@ -51,6 +63,14 @@ router.delete(
   // requireSignIn,
   // isAdmin,
   deleteProductController
+);
+
+// Bulk delete multiple "Product for You" entries
+router.post(
+  "/bulk-delete",
+  // requireSignIn,
+  // isAdmin,
+  bulkDeleteProductController
 );
 
 export default router;

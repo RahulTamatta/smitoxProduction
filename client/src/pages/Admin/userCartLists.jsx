@@ -572,15 +572,13 @@ const UserList = () => {
               <button
                 key={index}
                 onClick={() => handlePageChange(page)}
+                className={currentPage === page ? 'active' : ''}
                 style={currentPage === page ? activeButtonStyle : pageButtonStyle}
               >
                 {page}
               </button>
             ) : (
-              <span key={index} style={{ 
-                margin: '0 0.25rem',
-                fontSize: isMobile ? '0.85rem' : '1rem'
-              }}>
+              <span key={index}>
                 {page}
               </span>
             )
@@ -994,20 +992,21 @@ const UserList = () => {
 
   return (
     <Layout title="User List">
-      <div style={styles.responsiveContainer}>
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: isMobile ? 'column' : 'row',
-          gap: '1rem' 
-        }}>
-          <div style={{ 
-            flex: isMobile ? 'none' : '0 0 250px',
-            marginBottom: isMobile ? '1rem' : '0'
-          }}>
-            <AdminMenu />
-          </div>
-          <div style={{ flex: '1', minWidth: '0' }}>
-            {renderContent()}
+      <AdminMenu />
+      <div className="container-fluid dashboard">
+        <div className="row">
+          <div className="col-md-12">
+            <div style={styles.responsiveContainer}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: isMobile ? "column" : "row",
+                  gap: "1rem",
+                }}
+              >
+                <div style={{ flex: "1", minWidth: "0" }}>{renderContent()}</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -197,6 +197,53 @@ export const createProductForYouController = async (req, res) => {
   }
 };
 
+// Bulk create multiple "Product For You" entries in one request
+export const bulkCreateProductForYouController = async (req, res) => {
+  try {
+    const { categoryId, subcategoryId, productIds } = req.body;
+
+    if (!categoryId) {
+      return res.status(400).send({ success: false, message: "Category is required" });
+    }
+    if (!subcategoryId) {
+      return res.status(400).send({ success: false, message: "Subcategory is required" });
+    }
+    if (!Array.isArray(productIds) || productIds.length === 0) {
+      return res.status(400).send({ success: false, message: "At least one productId is required" });
+    }
+
+    // Optional: filter out invalid ObjectIds
+    const validProductIds = productIds.filter(
+      (id) => id && mongoose.Types.ObjectId.isValid(id)
+    );
+
+    if (validProductIds.length === 0) {
+      return res.status(400).send({ success: false, message: "No valid productIds provided" });
+    }
+
+    const docsToInsert = validProductIds.map((pid) => ({
+      categoryId,
+      subcategoryId,
+      productId: pid,
+    }));
+
+    const created = await productForYouModel.insertMany(docsToInsert);
+
+    res.status(201).send({
+      success: true,
+      message: "Products added to Product For You list successfully",
+      count: created.length,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({
+      success: false,
+      message: "Error in bulk creating products for you",
+      error: error.message,
+    });
+  }
+};
+
 export const updateBannerController = async (req, res) => {
   try {
     const { categoryId, subcategoryId, productId } = req.fields;
@@ -340,6 +387,44 @@ export const deleteProductController = async (req, res) => {
       success: false,
       message: "Error while deleting banner",
       error,
+    });
+  }
+};
+
+// Bulk delete multiple "Product For You" entries
+export const bulkDeleteProductController = async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).send({
+        success: false,
+        message: "No ids provided for bulk delete",
+      });
+    }
+
+    const validIds = ids.filter((id) => id && mongoose.Types.ObjectId.isValid(id));
+
+    if (validIds.length === 0) {
+      return res.status(400).send({
+        success: false,
+        message: "No valid ids provided for bulk delete",
+      });
+    }
+
+    const result = await productForYouModel.deleteMany({ _id: { $in: validIds } });
+
+    res.status(200).send({
+      success: true,
+      message: "Selected products deleted successfully from Product For You list",
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({
+      success: false,
+      message: "Error while performing bulk delete",
+      error: error.message,
     });
   }
 };
