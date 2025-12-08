@@ -667,14 +667,19 @@ export const getProductController = async (req, res) => {
 const getResourceBytes = (publicId) => {
   return new Promise((resolve) => {
     if (!process.env.CLOUDINARY_CLOUD_NAME) {
-      console.warn('Cloudinary configuration missing - skipping bandwidth calculation');
       return resolve(0);
     }
 
+    // Set a timeout to prevent hanging
+    const timeout = setTimeout(() => {
+      resolve(0);
+    }, 2000); // 2 second timeout
+
     cloudinary.api.resource(publicId, (error, result) => {
+      clearTimeout(timeout);
       if (error) {
-        console.error(`Error fetching resource for ${publicId}:`, error);
-        return resolve(0); // resolve with 0 if there's an error
+        // Silently fail - don't log errors
+        return resolve(0);
       }
       resolve(result.bytes || 0);
     });

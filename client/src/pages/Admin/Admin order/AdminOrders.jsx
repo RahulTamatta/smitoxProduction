@@ -500,7 +500,12 @@ const [addProductError, setAddProductError] = useState("");
 
   const handleAddTracking = async () => {
     try {
-      await axios.put(
+      if (!trackingInfo.company.trim() || !trackingInfo.id.trim()) {
+        message.error("Please enter both tracking company and tracking ID");
+        return;
+      }
+
+      const response = await axios.put(
         `/api/v1/auth/order/${selectedOrder._id}/tracking`,
         trackingInfo,
         {
@@ -509,12 +514,18 @@ const [addProductError, setAddProductError] = useState("");
           }
         }
       );
-      message.success("Tracking information added successfully");
-      getOrders(orderType);
-      handleTrackingModalClose();
+
+      if (response.data.success) {
+        message.success("Tracking information added successfully");
+        setTrackingInfo({ company: "", id: "" });
+        handleTrackingModalClose();
+        getOrders(orderType, currentPage, searchTerm);
+      } else {
+        message.error(response.data.message || "Error adding tracking information");
+      }
     } catch (error) {
-      console.log(error);
-      message.error("Error adding tracking information");
+      console.log("Error adding tracking:", error);
+      message.error(error.response?.data?.message || "Error adding tracking information");
     }
   };
 
@@ -522,8 +533,7 @@ const [addProductError, setAddProductError] = useState("");
     <Layout title={"All Orders Data"}>
       <AdminMenu />
       <div className="container-fluid dashboard">
-        <div className="row">
-          <div className="col-md-12">
+        <div className="orders-container">
           <div className="admin-page-header">
             <div>
               <h1 className="admin-page-title">Orders</h1>
@@ -531,37 +541,36 @@ const [addProductError, setAddProductError] = useState("");
             </div>
           </div>
 
-          <Nav variant="pills" className="mb-3 admin-order-nav">
-            <Nav.Item>
-              <Nav.Link
-                active={orderType === "all-orders"}
-                onClick={() => setOrderType("all-orders")}
-              >
-                All orders
-              </Nav.Link>
-            </Nav.Item>
+          <div className="status-filters">
+            <button
+              className={`filter-btn ${orderType === "all-orders" ? "active" : ""}`}
+              onClick={() => setOrderType("all-orders")}
+            >
+              All orders
+            </button>
             {status.map((s, index) => (
-              <Nav.Item key={index}>
-                <Nav.Link
-                  active={orderType === s}
-                  onClick={() => setOrderType(s)}
-                >
-                  {s} orders
-                </Nav.Link>
-              </Nav.Item>
+              <button
+                key={index}
+                className={`filter-btn ${orderType === s ? "active" : ""}`}
+                onClick={() => setOrderType(s)}
+              >
+                {s} orders
+              </button>
             ))}
-          </Nav>
+          </div>
 
-          <div className="mb-4">
-            <div className="admin-search-input">
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Search orders by ID, buyer name..."
-                value={searchTerm}
-                onChange={(e) => handleSearch(e.target.value)}
-              />
-            </div>
+          <div className="search-wrapper">
+            <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Search orders by ID, buyer name..."
+              value={searchTerm}
+              onChange={(e) => handleSearch(e.target.value)}
+            />
           </div>
 
           {loading ? (
@@ -585,9 +594,8 @@ const [addProductError, setAddProductError] = useState("");
   <thead>
     <tr>
       <th>#</th>
-      <th>Order Id</th>
-      {/* <th style={{ fontSize: '0.8rem', padding: '4px' }}>Tracking Information</th> */}
-      <th className="numeric">Total</th>
+      <th>Order Info</th>
+      <th>Total</th>
       <th>Payment</th>
       <th>Status</th>
       <th>Created</th>
@@ -603,139 +611,139 @@ const [addProductError, setAddProductError] = useState("");
           <td>
             {(currentPage - 1) * itemsPerPage + index + 1}
           </td>
-          <td>
-            <table style={{ width: '100%' }}>
-            <td>
-  {o.buyer?.user_fullname || 'N/A'}
-</td>
-              <tr>
-      <td>
-  <div
-    style={{
-      display: 'inline-block', // Makes the box inline
-      padding: '4px 8px', // Add some padding for better readability
-      border: '1px solid #007bff', // Blue border to match button theme
-      borderRadius: '4px', // Rounded corners
-      backgroundColor: '#e7f1ff', // Light blue background
-      fontWeight: 'bold', // Make the text bold
-      color: '#007bff', // Blue text for contrast
-      textAlign: 'center', // Center align the text
-      cursor: 'pointer', // Pointer cursor for clickable appearance
-      width: 'fit-content', // Adjust width dynamically
-      transition: 'background-color 0.2s ease', // Smooth hover effect
-    }}
-    onMouseEnter={(e) =>
-      (e.target.style.backgroundColor = '#cfe2ff') // Highlight on hover
-    }
-    onMouseLeave={(e) =>
-      (e.target.style.backgroundColor = '#e7f1ff') // Reset on mouse leave
-    }
-    onClick={() => handleShow(o)} // Opens the modal
-  >
-    {o._id.substring(0, 10)}
-  </div>
-</td>
-
-              </tr>
-              <td>
-  {o.buyer?.mobile_no || 'N/A'}
-</td>
-            </table>
-            {o.tracking ? (
-              `${o.tracking.company}: ${o.tracking.id}`
-            ) : (
-              <Button
-                variant="primary"
-                style={{
-                  fontSize: '0.6rem',
-                  padding: '2px 4px',
-                  borderRadius: '3px',
-                  margin: '2px 0',
-                  backgroundColor: '#007bff',
-                  color: '#fff',
-                  border: 'none',
-                }}
-                onClick={() => handleTrackingModalShow(o)}
-              >
-                Add Tracking ID
-              </Button>
-            )}
+          <td className="order-info-cell">
+            <div className="buyer-name">{o.buyer?.user_fullname || 'N/A'}</div>
+            <div className="buyer-phone">{o.buyer?.mobile_no || 'N/A'}</div>
+            <div className="order-id-badge" onClick={() => handleShow(o)}>
+              {o._id.substring(0, 10)}
+            </div>
+            {(() => {
+              const trackingId = o?.shipment?.trackingId ?? o?.tracking?.id ?? o?.trackingId ?? "";
+              const hasTracking = Boolean(trackingId && String(trackingId).trim().length);
+              return hasTracking ? (
+                <div className="mt-1 text-xs text-slate-600">
+                  <span className="uppercase tracking-wide font-semibold">Tracking ID:</span>
+                  <span className="ml-1 font-mono break-all">{trackingId}</span>
+                </div>
+              ) : null;
+            })()}
           </td>
-          <td style={{ fontSize: '0.7rem', padding: '2px' }}>{totals.total.toFixed(2)}</td>
-          <td style={{ fontSize: '0.7rem', padding: '2px' }}>{o.payment.paymentMethod}</td>
-          <td style={{ fontSize: '0.7rem', padding: '2px' }}>{o.status}</td>
-          <td style={{ fontSize: '0.7rem', padding: '2px' }}>
+          <td className="total-cell">Rs {totals.total.toFixed(2)}</td>
+          <td className="payment-cell">{o.payment?.paymentMethod || 'COD'}</td>
+          <td className="status-cell">
+            <span className={`status-badge status-${o.status.toLowerCase()}`}>
+              {o.status}
+            </span>
+          </td>
+          <td className="date-cell">
             {moment(o.createdAt).format('DD-MM-YYYY')}
           </td>
-          <td style={{ fontSize: '0.7rem', padding: '2px' }}>
-            <Button
-              variant="info"
-              style={{
-                fontSize: '0.6rem',
-                padding: '2px 4px',
-                borderRadius: '3px',
-                margin: '2px 0',
-                backgroundColor: '#17a2b8',
-                color: '#fff',
-                border: 'none',
-              }}
-              onClick={() => handleShow(o)}
-            >
-              View
-            </Button>
+          <td className="action-cell">
+            <div className="action-buttons-stack">
+              <Button
+                className="view-btn"
+                onClick={() => handleShow(o)}
+              >
+                View
+              </Button>
+              {(() => {
+                const trackingId = o?.shipment?.trackingId ?? o?.tracking?.id ?? o?.trackingId ?? "";
+                const hasTracking = Boolean(trackingId && String(trackingId).trim().length);
+                return !hasTracking ? (
+                  <Button
+                    className="track-btn"
+                    onClick={() => handleTrackingModalShow(o)}
+                    aria-label="Add tracking"
+                  >
+                    + Track
+                  </Button>
+                ) : null;
+              })()}
+            </div>
           </td>
         </tr>
       );
     })}
   </tbody>
 </Table>
+       </div>
 
-
-              <nav aria-label="Pagination" className="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-3">
-                <span className="text-muted">
+              <div className="pagination-wrapper">
+                <span className="pagination-info">
                   Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
                   {Math.min(currentPage * itemsPerPage, totalOrders)} of{" "}
                   {totalOrders} orders
                 </span>
-                <div className="d-flex gap-2 flex-wrap justify-content-center">
-                  <Button
+                <div className="pagination-controls">
+                  <button
+                    className="pagination-btn"
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1 || loading}
-                    variant="secondary"
                   >
                     Previous
-                  </Button>
+                  </button>
 
-                  {[...Array(totalPages)].map((_, index) => {
-                    const pageNumber = index + 1;
-                    return (
-                      <Button
-                        key={pageNumber}
-                        onClick={() => handlePageChange(pageNumber)}
-                        variant={
-                          currentPage === pageNumber ? "primary" : "light"
-                        }
-                        disabled={loading}
-                      >
-                        {pageNumber}
-                      </Button>
-                    );
-                  })}
+                  {(() => {
+                    const pages = [];
+                    const firstPages = 4;
+                    const lastPages = 4;
+                    const totalPagesToShow = firstPages + lastPages;
 
-                  <Button
+                    if (totalPages <= totalPagesToShow) {
+                      // Show all pages if total is less than or equal to 8
+                      for (let i = 1; i <= totalPages; i++) {
+                        pages.push(i);
+                      }
+                    } else {
+                      // Show first 4 pages
+                      for (let i = 1; i <= firstPages; i++) {
+                        pages.push(i);
+                      }
+
+                      // Add dots if there's a gap
+                      if (firstPages < totalPages - lastPages) {
+                        pages.push("...");
+                      }
+
+                      // Show last 4 pages
+                      for (let i = totalPages - lastPages + 1; i <= totalPages; i++) {
+                        pages.push(i);
+                      }
+                    }
+
+                    return pages.map((pageNumber, index) => {
+                      if (pageNumber === "...") {
+                        return (
+                          <span key={`dots-${index}`} className="pagination-dots">
+                            ...
+                          </span>
+                        );
+                      }
+                      return (
+                        <button
+                          key={pageNumber}
+                          className={`pagination-btn ${currentPage === pageNumber ? "active" : ""}`}
+                          onClick={() => handlePageChange(pageNumber)}
+                          disabled={loading}
+                        >
+                          {pageNumber}
+                        </button>
+                      );
+                    });
+                  })()}
+
+                  <button
+                    className="pagination-btn"
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages || loading}
-                    variant="secondary"
                   >
                     Next
-                  </Button>
+                  </button>
                 </div>
-              </nav>
               </div>
             </>
           )}
         </div>
-      </div>
       </div>
 
       {selectedOrder && (
@@ -766,30 +774,37 @@ const [addProductError, setAddProductError] = useState("");
         />
       )}
 
-      <Modal show={showTrackingModal} onHide={handleTrackingModalClose}>
+      <Modal 
+        show={showTrackingModal} 
+        onHide={handleTrackingModalClose}
+        className="tracking-modal"
+        size="sm"
+        centered
+      >
         <Modal.Header closeButton>
           <Modal.Title>Add Tracking Information</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form>
-            <Form.Group>
+            <Form.Group className="mb-3">
               <Form.Label>Tracking Company</Form.Label>
               <Form.Control
                 type="text"
                 name="company"
                 value={trackingInfo.company}
                 onChange={handleTrackingInfoChange}
-                placeholder="Enter tracking company name"
+                placeholder="e.g., FedEx, DHL, Courier"
+                autoFocus
               />
             </Form.Group>
-            <Form.Group>
+            <Form.Group className="mb-0">
               <Form.Label>Tracking ID</Form.Label>
               <Form.Control
                 type="text"
                 name="id"
                 value={trackingInfo.id}
                 onChange={handleTrackingInfoChange}
-                placeholder="Enter tracking ID"
+                placeholder="e.g., 1234567890"
               />
             </Form.Group>
           </Form>

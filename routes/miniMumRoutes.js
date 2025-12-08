@@ -5,7 +5,8 @@ import {
   createMinimumOrder,
   updateMinimumOrder
 } from "../controllers/minimumOrderController.js";
-import { isAdmin, requireSignIn } from "./../middlewares/authMiddleware.js";
+import { requireSignIn } from "./../middlewares/authMiddleware.js";
+import { requireCapability } from "../middlewares/rbacMiddleware.js";
 
 const router = express.Router();
 
@@ -13,7 +14,7 @@ const router = express.Router();
 router.get('/getMinimumOrder', getMinimumOrder);
 
 // Protected routes (require authentication and admin role)
-router.post('/createMinimumOrder', requireSignIn, isAdmin, createMinimumOrder);
-router.put('/updateMinimumOrder', requireSignIn, isAdmin, updateMinimumOrder);
+router.post('/createMinimumOrder', requireSignIn, requireCapability("settings:write"), createMinimumOrder);
+router.put('/updateMinimumOrder', requireSignIn, requireCapability("settings:write"), updateMinimumOrder);
 
 export default router;

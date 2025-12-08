@@ -12,7 +12,7 @@ import {
   deleteProductFromOrderController,addTrackingInfo,
   refreshTokenController // Import the refresh token controller
 } from '../controllers/authController.js';
-import { isAdmin, requireSignIn } from '../middlewares/authMiddleware.js';
+import { requireSignIn, requireCapability, auditLog } from '../middlewares/rbacMiddleware.js';
 import orderModel from '../models/orderModel.js'; // Changed to import
 import mongoose from 'mongoose';
 // import { addTrackingInfo } from "../controllers/orderController.js";
@@ -38,14 +38,15 @@ router.post("/forgot-password", forgotPasswordController);
 
 //test routes
 // router.get("/test", requireSignIn, isAdmin, testController);
-router.put("/order/:orderId/tracking", requireSignIn, isAdmin, addTrackingInfo);
+router.put("/order/:orderId/tracking", requireSignIn, requireCapability("orders:write"), addTrackingInfo);
 
 //protected User route auth
 router.get("/user-auth", requireSignIn, (req, res) => {
   res.status(200).send({ ok: true });
 });
-//protected Admin route auth
-router.get("/admin-auth", requireSignIn, isAdmin, (req, res) => {
+//protected Admin/Seller route auth
+// Any authenticated user passes; actual pages are gated by capabilities
+router.get("/admin-auth", requireSignIn, (req, res) => {
   res.status(200).send({ ok: true });
 });
 
@@ -56,7 +57,7 @@ router.put("/profile", requireSignIn, updateProfileController);
 router.get("/orders/:user_id", getOrdersController);
 
 // single order by ID
-router.get("/order/:orderId", requireSignIn, isAdmin, async (req, res) => {
+router.get("/order/:orderId", requireSignIn, requireCapability("orders:read"), async (req, res) => {
   try {
     const { orderId } = req.params;
     
@@ -99,15 +100,15 @@ router.get("/order/:orderId", requireSignIn, isAdmin, async (req, res) => {
 });
 
 //all orders
-router.get("/all-orders", requireSignIn, isAdmin, getAllOrdersController);
-router.put('/order/:orderId/add', requireSignIn,isAdmin, addProductToOrderController);
+router.get("/all-orders", requireSignIn, requireCapability("orders:read"), getAllOrdersController);
+router.put('/order/:orderId/add', requireSignIn, requireCapability("orders:write"), addProductToOrderController);
 // order status update
-router.put("/order-status/:orderId", orderStatusController);
+router.put("/order-status/:orderId", requireSignIn, requireCapability("orders:status"), orderStatusController);
 
 // update order
-router.put("/order/:orderId", requireSignIn, isAdmin, updateOrderController);
+router.put("/order/:orderId", requireSignIn, requireCapability("orders:write"), updateOrderController);
 
-// remove product from order
-router.delete("/order/:orderId/remove-product/:productId", requireSignIn, isAdmin, deleteProductFromOrderController);
+// remove product from order (editing order items)
+router.delete("/order/:orderId/remove-product/:productId", requireSignIn, requireCapability("orders:write"), deleteProductFromOrderController);
 
 export default router;

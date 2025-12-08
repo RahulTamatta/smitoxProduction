@@ -6,6 +6,8 @@ import JWT from "jsonwebtoken";
 import axios from "axios";
 import Pincode from '../models/pincodeModel.js';
 import mongoose from 'mongoose';
+import { generateToken } from "../helpers/tokenHelper.js";
+import { NUMBER_TO_ROLE } from "../config/rbac-policy.js";
 // send OTP
 export const sendOTPController = async (req, res) => {
   try {
@@ -79,12 +81,24 @@ export const verifyOTPAndLoginController = async (req, res) => {
         });
       }
 
-      // Generate access token with 10-second expiration (for testing)
-      const token = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
-        expiresIn: "365d", // 10 seconds
-      });
+      // Update last login timestamp
+      try {
+        user.lastLogin = new Date();
+        await user.save();
+      } catch (e) {
+        console.error("Failed to update lastLogin:", e.message);
+      }
+
+      // Prepare user data for token generation
+      const userForToken = {
+        ...user.toObject(),
+        roleString: user.roleString || NUMBER_TO_ROLE[user.role] || "user"
+      };
+
+      // Generate RBAC-aware token with capabilities
+      const token = generateToken(userForToken);
       
-      // Generate refresh token with 1-year expiration (for testing)
+      // Generate refresh token with 1-year expiration
       const refreshToken = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
         expiresIn: "365d", // 1 year
       });
@@ -99,6 +113,7 @@ export const verifyOTPAndLoginController = async (req, res) => {
           mobile_no: user.mobile_no,
           address: user.address,
           role: user.role,
+          roleString: user.roleString || NUMBER_TO_ROLE[user.role] || "user", // Include roleString for RBAC
           pincode: user.pincode,
           city:user.city,
           landmark:user.landmark,
@@ -207,10 +222,8 @@ export const registerController = async (req, res) => {
     // Save the new user
     await newUser.save();
  
-    // Generate access token with 1-hour expiration
-    const token = JWT.sign({ _id: newUser._id }, process.env.JWT_SECRET, {
-      expiresIn: "365d", // 1 hour
-    });
+    // Generate RBAC-aware token with capabilities
+    const token = generateToken(newUser);
 
     // Generate refresh token with 1-year expiration
     const refreshToken = JWT.sign({ _id: newUser._id }, process.env.JWT_SECRET, {
@@ -227,6 +240,8 @@ export const registerController = async (req, res) => {
         email_id: newUser.email_id,
         mobile_no: newUser.mobile_no,
         address: newUser.address,
+        role: newUser.role,
+        roleString: newUser.roleString || "user",
         pincode: newUser.pincode,
         city: newUser.city,
         landmark: newUser.landmark,
@@ -284,10 +299,22 @@ export const loginController = async (req, res) => {
       });
     }
 
-    // Generate access token with 1-hour expiration
-    const token = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "365", // 1 hour
-    });
+    // Update last login timestamp
+    try {
+      user.lastLogin = new Date();
+      await user.save();
+    } catch (e) {
+      console.error("Failed to update lastLogin:", e.message);
+    }
+
+    // Prepare user data for token generation
+    const userForToken = {
+      ...user.toObject(),
+      roleString: user.roleString || NUMBER_TO_ROLE[user.role] || "user"
+    };
+
+    // Generate RBAC-aware token with capabilities
+    const token = generateToken(userForToken);
     
     // Generate refresh token with 1-year expiration
     const refreshToken = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
@@ -307,7 +334,10 @@ export const loginController = async (req, res) => {
         mobile_no: user.mobile_no,
         address: user.address,
         role: user.role,
+        roleString: user.roleString || NUMBER_TO_ROLE[user.role] || "user",
         pincode: user.pincode,
+        city: user.city,
+        landmark: user.landmark,
         order_type: user.order_type,
       },
     });
@@ -1001,10 +1031,14 @@ export const refreshTokenController = async (req, res) => {
       });
     }
 
-    // Generate a new access token with 1-hour expiration
-    const newAccessToken = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "365d" // 1 hour
-    });
+    // Prepare user data for token generation
+    const userForToken = {
+      ...user.toObject(),
+      roleString: user.roleString || NUMBER_TO_ROLE[user.role] || "user"
+    };
+
+    // Generate RBAC-aware access token with capabilities
+    const newAccessToken = generateToken(userForToken);
 
     // Generate a new refresh token with 1-year expiration
     // Creating a new refresh token on each refresh adds an extra layer of security

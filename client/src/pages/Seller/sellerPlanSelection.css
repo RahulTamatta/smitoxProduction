@@ -1,0 +1,255 @@
+.seller-plan-selection {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100vh;
+  padding: 40px 0;
+}
+
+.plan-card {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.plan-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.plan-card.selected {
+  border-color: #3399cc;
+  background: linear-gradient(135deg, #f0f8ff 0%, #ffffff 100%);
+  box-shadow: 0 8px 25px rgba(51, 153, 204, 0.3);
+}
+
+.plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 10px;
+}
+
+.plan-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.plan-price {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-bottom: 15px;
+}
+
+.plan-price .currency {
+  font-size: 18px;
+  color: #666;
+}
+
+.plan-price .amount {
+  font-size: 48px;
+  font-weight: 700;
+  color: #3399cc;
+}
+
+.plan-price .period {
+  font-size: 14px;
+  color: #999;
+  margin-left: 5px;
+}
+
+.plan-description {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.plan-features {
+  margin-bottom: 20px;
+  flex-grow: 1;
+}
+
+.plan-features h5 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 10px;
+}
+
+.features-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.features-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 8px;
+}
+
+.feature-icon {
+  color: #27ae60;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.plan-limits {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 13px;
+}
+
+.limit-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 0;
+  color: #555;
+}
+
+.limit-item strong {
+  color: #1a1a1a;
+}
+
+.plan-selection-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+.plan-selection-indicator input[type="radio"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.plan-selection-indicator span {
+  font-size: 14px;
+  color: #666;
+  cursor: pointer;
+}
+
+.selected-plan-summary {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-left: 5px solid #3399cc;
+}
+
+.selected-plan-summary h4 {
+  color: #1a1a1a;
+  margin-bottom: 15px;
+  font-weight: 700;
+}
+
+.selected-plan-summary p {
+  color: #666;
+  margin-bottom: 20px;
+  font-size: 16px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.action-buttons .btn {
+  flex: 1;
+  min-width: 200px;
+  padding: 12px 24px;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.action-buttons .btn-primary {
+  background: linear-gradient(135deg, #3399cc 0%, #2980b9 100%);
+  border: none;
+}
+
+.action-buttons .btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(51, 153, 204, 0.4);
+}
+
+.action-buttons .btn-secondary {
+  background: #f0f0f0;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.action-buttons .btn-secondary:hover:not(:disabled) {
+  background: #e0e0e0;
+}
+
+.action-buttons .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .seller-plan-selection {
+    padding: 20px 0;
+  }
+
+  .plan-card {
+    padding: 20px;
+  }
+
+  .plan-name {
+    font-size: 20px;
+  }
+
+  .plan-price .amount {
+    font-size: 36px;
+  }
+
+  .selected-plan-summary {
+    padding: 20px;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .action-buttons .btn {
+    min-width: auto;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .plan-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .plan-price {
+    margin-bottom: 10px;
+  }
+
+  .plan-price .amount {
+    font-size: 28px;
+  }
+}

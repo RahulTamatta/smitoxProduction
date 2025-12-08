@@ -1,5 +1,6 @@
 import express from "express";
-import { isAdmin, requireSignIn } from "./../middlewares/authMiddleware.js";
+import { requireSignIn } from "./../middlewares/authMiddleware.js";
+import { requireCapability, auditLog } from "../middlewares/rbacMiddleware.js";
 import {
   createPincodeController,
   updatePincodeController,
@@ -15,7 +16,7 @@ const router = express.Router();
 router.post(
   "/create-pincode",
   requireSignIn,
-  isAdmin,
+  requireCapability("settings:write"),
   createPincodeController
 );
 
@@ -23,7 +24,7 @@ router.post(
 router.put(
   "/update-pincode/:id",
   requireSignIn,
-  isAdmin,
+  requireCapability("settings:write"),
   updatePincodeController
 );
 
@@ -39,7 +40,8 @@ router.get("/single-pincode/:id", getSinglePincodeController);
 router.delete(
   "/delete-pincode/:id",
   requireSignIn,
-  isAdmin,
+  requireCapability("settings:write"),
+  auditLog("delete", "pincode", "high"),
   deletePincodeController
 );
 

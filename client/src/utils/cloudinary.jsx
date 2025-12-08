@@ -1,11 +1,8 @@
 import axios from 'axios';
 
-// Add these from your Cloudinary dashboard
+// Use upload preset (unsigned upload) - no API key needed on client
 const CLOUDINARY_UPLOAD_PRESET = "smitoxphoto";     // Your upload preset name
 const CLOUDINARY_CLOUD_NAME = "daabaruau";             // Your cloud name
-const CLOUDINARY_API_KEY = "119598853346493";     // Your API key from Cloudinary dashboard
-// api_key:  '119598853346493',    // Old account API key
-// api_secret: 'WR6abBlUvmedVLOiybbuUneX12k' // Old account API secret
 const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 
 export const uploadToCloudinary = async (file) => {
@@ -13,9 +10,8 @@ export const uploadToCloudinary = async (file) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-    formData.append("cloud_name", CLOUDINARY_CLOUD_NAME);
-    formData.append("api_key", CLOUDINARY_API_KEY);
-
+    // NOTE: Do NOT include api_key or api_secret in client-side code
+    // Use unsigned upload with upload_preset instead
 
     const { data } = await axios.post(CLOUDINARY_URL, formData, {
       headers: {

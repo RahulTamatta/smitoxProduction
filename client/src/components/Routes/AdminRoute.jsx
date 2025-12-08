@@ -4,23 +4,29 @@ import { Outlet } from "react-router-dom";
 import axios from "axios";
 import Spinner from "../Spinner";
 
-export default function PrivateRoute() {
+// Guard for admin area; relies on backend /admin-auth check
+export default function AdminRoute() {
   const [ok, setOk] = useState(false);
-  const [auth, setAuth] = useAuth();
+  const [auth] = useAuth();
 
   useEffect(() => {
     const authCheck = async () => {
       try {
+        if (!auth?.token) {
+          window.location.href = "/adminlogin";
+          return;
+        }
+
         const res = await axios.get("/api/v1/auth/admin-auth", {
           headers: {
-            Authorization: auth?.token
-          }
+            Authorization: auth.token,
+          },
         });
+
         if (res.data.ok) {
           setOk(true);
         } else {
           setOk(false);
-          // If unauthorized, clear auth and redirect to login
           localStorage.removeItem("auth");
           window.location.href = "/adminlogin";
         }
@@ -31,13 +37,8 @@ export default function PrivateRoute() {
         window.location.href = "/adminlogin";
       }
     };
-    
-    if (auth?.token) {
-      authCheck();
-    } else {
-      // If no token, redirect to login
-      window.location.href = "/adminlogin";
-    }
+
+    authCheck();
   }, [auth?.token]);
 
   return ok ? <Outlet /> : <Spinner path="" />;

@@ -258,9 +258,39 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    // New RBAC fields
+    roleString: {
+      type: String,
+      enum: ["user", "admin", "seller", "super_admin"],
+      default: "user",
+    },
+    permissions: {
+      grantedCapabilities: [String],
+      deniedCapabilities: [String],
+      canModerateSellers: {
+        type: Boolean,
+        default: false,
+      },
+    },
+    sellerProfileId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SellerProfile",
+      default: null,
+    },
+    // For admin activity analytics
+    lastLogin: {
+      type: Date,
+      default: null,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
   { timestamps: true }
 );
-
+// Useful indexes for analytics
+userSchema.index({ roleString: 1, isActive: 1 });
+userSchema.index({ lastLogin: -1 });
 
 export default mongoose.model("User", userSchema);

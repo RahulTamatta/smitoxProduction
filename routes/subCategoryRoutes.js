@@ -1,5 +1,6 @@
 import express from "express";
-import { isAdmin, requireSignIn } from "../middlewares/authMiddleware.js";
+import { requireSignIn } from "../middlewares/authMiddleware.js";
+import { requireCapability, auditLog } from "../middlewares/rbacMiddleware.js";
 import {
   createSubcategoryController,
   getSingleSubcategoryController,
@@ -13,7 +14,7 @@ const router = express.Router();
 router.patch(
   "/toggle-subcategory/:id",
   requireSignIn,
-  isAdmin,
+  requireCapability("categories:write"),
   toggleSubcategoryStatusController
 );
 
@@ -21,7 +22,7 @@ router.patch(
 router.post(
   "/create-subcategory",
   requireSignIn,
-  isAdmin,
+  requireCapability("categories:write"),
   createSubcategoryController
 );
 
@@ -32,7 +33,7 @@ router.get("/singleSubcategory/:id", getSingleSubcategoryController);
 router.put(
   "/update-subcategory/:id",
   requireSignIn,
-  isAdmin,
+  requireCapability("categories:write"),
   updateSubcategoryController
 );
 
@@ -40,7 +41,8 @@ router.put(
 router.delete(
   "/delete-subcategory/:id",
   requireSignIn,
-  isAdmin,
+  requireCapability("categories:delete"),
+  auditLog("delete", "subcategory", "high"),
   deleteSubcategoryController
 );
 

@@ -6,6 +6,12 @@ import { fileURLToPath } from 'url'; // To convert import.meta.url to a pathname
 import { dirname } from 'path'; // To get the directory name from a file path
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoute.js";
+import sellerApplicationRoutes from "./routes/sellerApplicationRoutes.js";
+import sellerApplicationRoutesV2 from "./routes/sellerApplicationRoutesV2.js";
+import subscriptionPlanRoutes from "./routes/subscriptionPlanRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
+import adminAnalyticsRoutes from "./routes/adminAnalyticsRoutes.js";
+import paymentWebhookRoutes from "./routes/paymentWebhookRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
 import subCategoryRoutes from "./routes/subCategoryRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
@@ -21,6 +27,9 @@ import cartRoutes from "./routes/cartRoutes.js";
 import minimumOrderRoutes from "./routes/miniMumRoutes.js";
 import imageRoutes from "./routes/imageRoutes.js";
 import * as Sentry from "@sentry/node";
+import { startPlanExpiryJob } from "./jobs/planExpiryJob.js";
+import { startPlanExpiryJob as startScheduledPlanExpiryJob } from "./jobs/schedulePlanExpiryJob.js";
+import { checkPlanExpiry } from "./jobs/planExpiryCheckJob.js";
 
 // Configure environment variables
 dotenv.config();
@@ -46,6 +55,9 @@ app.use(cors()); // Enable Cross-Origin Resource Sharing
 app.use(express.json()); // Parse incoming JSON requests
 app.use(morgan("dev")); // HTTP request logger
 
+// Plan Expiry Check Middleware - Check on every seller request
+app.use("/api/v1/sellers", checkPlanExpiry);
+
 // Determine the directory path using import.meta.url
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.resolve();
@@ -68,6 +80,20 @@ app.use("/api/v1/brand", brandRoutes); // Use brand routes
 app.use("/api/v1/usersLists", usersListsRoutes);
 app.use('/api/v1/pincodes', pincodeRoutes);
 app.use('/api/v1/carts', cartRoutes);
+
+// RBAC - Seller Applications & Subscription Plans (V1 - Legacy)
+app.use('/api/v1/sellers/applications', sellerApplicationRoutes);
+app.use('/api/v1/subscription-plans', subscriptionPlanRoutes);
+app.use('/api/v1/payments', paymentRoutes);
+
+// Seller Onboarding V2 - New Flow
+app.use('/api/v1/sellers', sellerApplicationRoutesV2);
+
+// Payment Webhooks
+app.use('/api/v1/webhooks/payments', paymentWebhookRoutes);
+
+// Admin Analytics
+app.use('/api/v1/admin/analytics', adminAnalyticsRoutes);
 
 // Serve React app for any other unknown routes
 app.get("*", (req, res) => {
@@ -104,5 +130,16 @@ const PORT = process.env.PORT || 8080;
 // Start the server
 const server = app.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`.cyan);
+  
+  // Start Plan Expiry CRON Jobs
+  try {
+    startPlanExpiryJob();
+    console.log("✅ Plan Expiry CRON Job started successfully".green);
+    
+    startScheduledPlanExpiryJob();
+    console.log("✅ Scheduled Plan Expiry CRON Job started successfully".green);
+  } catch (error) {
+    console.error("❌ Failed to start Plan Expiry CRON Job:", error.message);
+  }
 });
 server.timeout = 300000; // 5 minute timeout

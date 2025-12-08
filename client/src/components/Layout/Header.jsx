@@ -94,6 +94,12 @@ const Header = () => {
     sessionStorage.removeItem('homepageScrollPosition');
   };
 
+  const isAdminLike =
+    auth?.user?.role === 1 ||
+    auth?.user?.role === 3 ||
+    auth?.user?.roleString === "admin" ||
+    auth?.user?.roleString === "super_admin";
+
   // Styles
   const logoStyles = {
     height: isMobile ? "45px" : "60px",
@@ -208,37 +214,45 @@ const Header = () => {
                   </NavLink>
                 </li>
               ) : (
-                <li className="nav-item dropdown">
-                  <NavLink
-                    className="nav-link dropdown-toggle"
-                    href="#"
-                    role="button"
-                    data-bs-toggle="dropdown"
-                    style={{ border: "none", color: "white" }}
-                  >
-                    <UserOutlined style={{ marginRight: "5px", color: "white" }} />
-                    {auth?.user?.user_fullname}
-                  </NavLink>
-                  <ul className="dropdown-menu" style={{ zIndex: 1050 }}>
-                    <li>
-                      <NavLink
-                        to={`/dashboard/${auth?.user?.role === 1 ? "admin" : "user"}`}
-                        className="dropdown-item"
-                      >
-                        Dashboard
-                      </NavLink>
-                    </li>
-                    <li>
-                      <NavLink
-                        onClick={handleLogout}
-                        to="/login"
-                        className="dropdown-item"
-                      >
-                        Logout
-                      </NavLink>
-                    </li>
-                  </ul>
-                </li>
+                <>
+                  <li className="nav-item">
+                    <NavLink to="/seller-wizard" className="nav-link d-flex align-items-center">
+                      <span style={{ marginRight: "5px", color: "white" }}>📦</span>
+                      Become a Seller
+                    </NavLink>
+                  </li>
+                  <li className="nav-item dropdown">
+                    <NavLink
+                      className="nav-link dropdown-toggle"
+                      href="#"
+                      role="button"
+                      data-bs-toggle="dropdown"
+                      style={{ border: "none", color: "white" }}
+                    >
+                      <UserOutlined style={{ marginRight: "5px", color: "white" }} />
+                      {auth?.user?.user_fullname}
+                    </NavLink>
+                    <ul className="dropdown-menu" style={{ zIndex: 1050 }}>
+                      <li>
+                        <NavLink
+                          to={`/dashboard/${isAdminLike ? "admin" : "user"}`}
+                          className="dropdown-item"
+                        >
+                          Dashboard
+                        </NavLink>
+                      </li>
+                      <li>
+                        <NavLink
+                          onClick={handleLogout}
+                          to="/login"
+                          className="dropdown-item"
+                        >
+                          Logout
+                        </NavLink>
+                      </li>
+                    </ul>
+                  </li>
+                </>
               )}
               <li className="nav-item">
                 <NavLink to="/wishlist" className="nav-link d-flex align-items-center">
@@ -284,38 +298,45 @@ const Header = () => {
                   </NavLink>
                 </li>
               ) : (
-                <li className="nav-item dropdown">
-                  <NavLink
-                    className="nav-link dropdown-toggle p-1"
-                    href="#"
-                    role="button"
-                    data-bs-toggle="dropdown"
-                    style={{ border: "none", color: "white", padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
-                  >
-                    <UserOutlined style={{ color: "white", fontSize: "16px" }} />
-                  </NavLink>
-                  <ul className="dropdown-menu" style={{ zIndex: 1050 }}>
-                    <li>
-                      <NavLink
-                        to={`/dashboard/${auth?.user?.role === 1 ? "admin" : "user"}`}
-                        className="dropdown-item"
-                        style={{ fontSize: "0.8rem" }}
-                      >
-                        Dashboard
-                      </NavLink>
-                    </li>
-                    <li>
-                      <NavLink
-                        onClick={handleLogout}
-                        to="/login"
-                        className="dropdown-item"
-                        style={{ fontSize: "0.8rem" }}
-                      >
-                        Logout
-                      </NavLink>
-                    </li>
-                  </ul>
-                </li>
+                <>
+                  <li className="nav-item">
+                    <NavLink to="/seller-wizard" className="nav-link p-1" style={{ color: "white", padding: "0.25rem 0.5rem" }}>
+                      <span style={{ color: "white", fontSize: "16px" }}>📦</span>
+                    </NavLink>
+                  </li>
+                  <li className="nav-item dropdown">
+                    <NavLink
+                      className="nav-link dropdown-toggle p-1"
+                      href="#"
+                      role="button"
+                      data-bs-toggle="dropdown"
+                      style={{ border: "none", color: "white", padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
+                    >
+                      <UserOutlined style={{ color: "white", fontSize: "16px" }} />
+                    </NavLink>
+                    <ul className="dropdown-menu" style={{ zIndex: 1050 }}>
+                      <li>
+                        <NavLink
+                          to={`/dashboard/${isAdminLike ? "admin" : "user"}`}
+                          className="dropdown-item"
+                          style={{ fontSize: "0.8rem" }}
+                        >
+                          Dashboard
+                        </NavLink>
+                      </li>
+                      <li>
+                        <NavLink
+                          onClick={handleLogout}
+                          to="/login"
+                          className="dropdown-item"
+                          style={{ fontSize: "0.8rem" }}
+                        >
+                          Logout
+                        </NavLink>
+                      </li>
+                    </ul>
+                  </li>
+                </>
               )}
 
               <li className="nav-item">

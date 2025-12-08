@@ -1,5 +1,6 @@
 import express from "express";
-import { isAdmin, requireSignIn } from "../middlewares/authMiddleware.js";
+import { requireSignIn } from "../middlewares/authMiddleware.js";
+import { requireCapability, auditLog } from "../middlewares/rbacMiddleware.js";
 import {
   createBannerController,getBannerProductsController,
   getBannersController,updateBannerController,
@@ -18,7 +19,7 @@ const router = express.Router();
 router.post(
   "/create-banner",
   requireSignIn,
-  isAdmin,
+  requireCapability("banners:write"),
 
   createBannerController,
 
@@ -28,7 +29,7 @@ router.post(
 router.put(
   "/update-banner/:id",
   requireSignIn,
-  isAdmin,
+  requireCapability("banners:write"),
 
   updateBannerController
 );
@@ -43,7 +44,8 @@ router.get("/single-banner/:id", bannerImageController);
 router.delete(
   "/delete-banner/:id",
   requireSignIn,
-  isAdmin,
+  requireCapability("banners:delete"),
+  auditLog("delete", "banner", "high"),
   deleteBannerController
 );
 router.get("/banner-product/:categoryId/:subcategoryId", getBannerProductsController);

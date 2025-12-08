@@ -17,7 +17,8 @@ import {
   processPaymentController, // Add this new controller
   // braintreeTokenController, // Keep this for UPI token generation
 } from "../controllers/productController.js";
-import { isAdmin, requireSignIn } from "../middlewares/authMiddleware.js";
+import { requireSignIn } from "../middlewares/authMiddleware.js";
+import { requireCapability, auditLog } from "../middlewares/rbacMiddleware.js";
 import formidable from "express-formidable";
 import productModel from "../models/productModel.js";
 import Cart from "../models/cartModel.js";
@@ -29,7 +30,7 @@ const router = express.Router();
 router.post(
   "/create-product",
   requireSignIn,
-  isAdmin,
+  requireCapability("products:write"),
   formidable(),
   createProductController
 );
@@ -39,7 +40,7 @@ router.post(
 router.put(
   "/update-product/:pid",
   requireSignIn,
-  isAdmin,
+  requireCapability("products:write"),
   formidable(),
   updateProductController
 );
@@ -100,7 +101,13 @@ router.put("/updateStatus/products/:id", async (req, res) => {
 
 router.get("/get-product/:slug", getSingleProductController);
 router.get("/product-photo/:pid", productPhotoController);
-router.delete("/delete-product/:pid", deleteProductController);
+router.delete(
+  "/delete-product/:pid",
+  requireSignIn,
+  requireCapability("products:delete"),
+  auditLog("delete", "product", "high"),
+  deleteProductController
+);
 router.post("/product-filters", productFiltersController);
 router.get("/product-count", productCountController);
 router.get("/product-list/:page", productListController);

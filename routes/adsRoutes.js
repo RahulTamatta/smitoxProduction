@@ -1,5 +1,6 @@
 import express from "express";
-import { isAdmin, requireSignIn } from "../middlewares/authMiddleware.js";
+import { requireSignIn } from "../middlewares/authMiddleware.js";
+import { requireCapability } from "../middlewares/rbacMiddleware.js";
 import {
   createAdsBanner,
   getAdsBanners,
@@ -13,7 +14,7 @@ const router = express.Router();
 router.post(
   "/create-adsbanner",
   requireSignIn,
-  isAdmin,
+  requireCapability("banners:write"),
   formidable(),
   createAdsBanner
 );

@@ -28,6 +28,10 @@ import Categories from "./pages/Categories";
 import CategoryProduct from "./pages/CategoryProduct";
 import CartPage from "./pages/cart/CartPage.jsx";
 import AdminOrders from "./pages/Admin/Admin order/AdminOrders.jsx";
+import SubscriptionPlans from "./pages/Admin/SubscriptionPlans";
+import SubscriptionManagement from "./pages/Admin/SubscriptionManagement";
+import SellerAnalytics from "./pages/Admin/SellerAnalytics";
+import SellerPlanSelection from "./pages/Seller/SellerPlanSelection";
 import PincodeList from "./pages/Admin/PinCode.jsx";
 import Terms from "./pages/TermsofUse";
 import ReturnPolicy from "./pages/returnPolicy.jsx";
@@ -35,6 +39,15 @@ import BannerManagement from "./pages/Admin/bannerManagement";
 import ProductForYou from "./pages/Admin/ProductForYou.jsx";
 import WishlistPage from "./pages/wishlists.jsx";
 import AddToCartPage from "./pages/Admin/userCart.jsx";
+
+// Seller Onboarding V2 Components
+import SellerWizardV2 from "./pages/Seller/SellerWizardV2";
+import ApplicationStatus from "./pages/Seller/ApplicationStatus";
+import SellerDashboard from "./pages/Seller/SellerDashboard";
+import SellerApplications from "./pages/Admin/SellerApplications";
+
+// Checkout Component
+import CheckoutPage from "./pages/Checkout/CheckoutPage";
 
 import AdminLogin from "./pages/Auth/AdminLog.jsx";
 // Import Redux provider and store
@@ -78,12 +91,35 @@ function App() {
           <Route path="admin/orders" element={<AdminOrders />} />
           <Route path="admin/pincodes" element={<PincodeList />} />
           <Route path="admin/productforyou" element={<ProductForYou />} />
+          <Route path="admin/subscription-plans" element={<SubscriptionPlans />} />
+          <Route path="admin/subscription-management" element={<SubscriptionManagement />} />
+          <Route path="admin/analytics" element={<SellerAnalytics />} />
+          <Route path="admin/sellers/applications" element={<SellerApplications />} />
         </Route>
       
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPasssword />} />
         <Route path="/login" element={<Login />} />
         <Route path="/adminlogin" element={<AdminLogin />} />
+        <Route path="/become-seller" element={<SellerPlanSelection />} />
+        <Route path="/seller-wizard" element={<PrivateRoute />}>
+          <Route index element={<SellerWizardV2 />} />
+        </Route>
+        
+        {/* Checkout Route */}
+        <Route path="/checkout" element={<CheckoutPage />} />
+        
+        {/* Seller Onboarding V2 Routes */}
+        <Route path="/seller/apply" element={<PrivateRoute />}>
+          <Route index element={<SellerWizardV2 />} />
+        </Route>
+        <Route path="/seller/status" element={<PrivateRoute />}>
+          <Route index element={<ApplicationStatus />} />
+        </Route>
+        <Route path="/seller/dashboard" element={<PrivateRoute />}>
+          <Route index element={<SellerDashboard />} />
+        </Route>
+        
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/wishlist" element={<WishlistPage />} />
