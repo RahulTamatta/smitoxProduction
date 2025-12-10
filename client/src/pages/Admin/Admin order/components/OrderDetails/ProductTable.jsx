@@ -23,11 +23,9 @@ const ProductTable = ({
         <thead>
           <tr>
             <th>Images</th>
-            <th>Product </th>
-            <th>Quantity</th>
+            <th style={{ minWidth: "260px", width: "40%" }}>Product</th>
             <th>Unit Price</th>
-            <th>Net Amount</th>
-            <th>Tax Amount</th>
+            <th>Net & Tax</th>
             <th>Total</th>
             <th>Delete</th>
           </tr>
@@ -67,70 +65,68 @@ const ProductTable = ({
                     className="img-fluid"
                   />
                 </td>
-                <td>
+                <td style={{ minWidth: "260px", maxWidth: "480px" }}>
                   <div>
-                    <strong>{product.productName || productData.name || "Unnamed Product"}</strong>
-                  </div>
-                </td>
-                <td>
-                  <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                    <Button
-                      variant="outline-secondary"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleQuantityChangeWithUnitSet(index, false);
-                      }}
-                      disabled={quantity <= 0}
-                      title="Decrease quantity"
-                    >
-                      -
-                    </Button>
-                    <Form.Control
-                      type="number"
-                      value={quantity}
-                      onChange={(e) => {
-                        const newQuantity = parseInt(e.target.value) || 0;
-                        if (newQuantity >= 0) {
-                          handleQuantityChangeWithUnitSet(index, null, newQuantity);
-                        }
-                      }}
-                      onWheel={(e) => e.target.blur()}
-                      onKeyDown={(e) => {
-                        // Allow: backspace, delete, tab, escape, enter, home, end, left, right, down, up
-                        if ([46, 8, 9, 27, 13, 110, 190].indexOf(e.keyCode) !== -1 ||
-                            // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+Z
+                    <div className="product-name">
+                      <strong>{product.productName || productData.name || "Unnamed Product"}</strong>
+                    </div>
+                    <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                      <Button
+                        variant="outline-secondary"
+                        size="sm"
+                        style={{ minWidth: 28, height: 28, lineHeight: "26px", padding: 0 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleQuantityChangeWithUnitSet(index, false);
+                        }}
+                        disabled={quantity <= 0}
+                        title="Decrease quantity"
+                      >
+                        -
+                      </Button>
+                      <Form.Control
+                        type="number"
+                        value={quantity}
+                        onChange={(e) => {
+                          const newQuantity = parseInt(e.target.value) || 0;
+                          if (newQuantity >= 0) {
+                            handleQuantityChangeWithUnitSet(index, null, newQuantity);
+                          }
+                        }}
+                        onWheel={(e) => e.target.blur()}
+                        onKeyDown={(e) => {
+                          if (
+                            [46, 8, 9, 27, 13, 110, 190].indexOf(e.keyCode) !== -1 ||
                             (e.keyCode === 65 && e.ctrlKey === true) ||
                             (e.keyCode === 67 && e.ctrlKey === true) ||
                             (e.keyCode === 86 && e.ctrlKey === true) ||
                             (e.keyCode === 88 && e.ctrlKey === true) ||
                             (e.keyCode === 90 && e.ctrlKey === true) ||
-                            // Allow: home, end, left, right, down, up
-                            (e.keyCode >= 35 && e.keyCode <= 40)) {
-                          return;
-                        }
-                        // Ensure that it is a number and stop the keypress
-                        if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
-                          e.preventDefault();
-                        }
-                      }}
-                      min="0"
-                      style={{ width: "70px", textAlign: "center" }}
-                      title="Enter quantity"
-                    />
-                    <Button
-                      variant="outline-secondary"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleQuantityChangeWithUnitSet(index, true);
-                      }}
-                    >
-                      +
-                    </Button>
-                    <small className="text-muted">
-                      (Unit: {product.unitSet || productData.unitSet || 1})
-                    </small>
+                            (e.keyCode >= 35 && e.keyCode <= 40)
+                          ) {
+                            return;
+                          }
+                          if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        min="0"
+                        style={{ width: 70, textAlign: "center", fontSize: 13, height: 28, padding: "2px 6px" }}
+                        title="Enter quantity"
+                      />
+                      <Button
+                        variant="outline-secondary"
+                        size="sm"
+                        style={{ minWidth: 28, height: 28, lineHeight: "26px", padding: 0 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleQuantityChangeWithUnitSet(index, true);
+                        }}
+                      >
+                        +
+                      </Button>
+                      <small className="text-muted">(Unit: {product.unitSet || productData.unitSet || 1})</small>
+                    </div>
                   </div>
                 </td>
                 <td>
@@ -173,8 +169,14 @@ const ProductTable = ({
                     />
                   </div>
                 </td>
-                <td>₹{netAmount}</td>
-                <td>₹{taxAmount}</td>
+                <td>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                    <span>₹{netAmount}</span>
+                    <small className="text-muted">net</small>
+                    <span>₹{taxAmount}</span>
+                    <small className="text-muted">tax</small>
+                  </div>
+                </td>
                 <td>₹{total}</td>
                 <td>
                   <Button
@@ -190,11 +192,11 @@ const ProductTable = ({
           })
         ) : (
           <tr>
-            <td colSpan="8">No products in this order</td>
+            <td colSpan="6">No products in this order</td>
           </tr>
         )}
         <tr>
-          <td colSpan="7">
+          <td colSpan="6">
             <Button onClick={handleAddClick}>Add Product</Button>
           </td>
         </tr>
@@ -210,7 +212,7 @@ const ProductTable = ({
           <td>₹{calculateTotals().gst.toFixed(2)}</td>
         </tr>
         <tr>
-          <td colSpan="4"></td>
+          <td colSpan="3"></td>
           <td>Delivery Charges:</td>
           <td>
             <Form.Control
@@ -223,7 +225,7 @@ const ProductTable = ({
           <td>₹{Number(selectedOrder.deliveryCharges || 0).toFixed(2)}</td>
         </tr>
         <tr>
-          <td colSpan="4"></td>
+          <td colSpan="3"></td>
           <td>COD Charges:</td>
           <td>
             <Form.Control
@@ -236,7 +238,7 @@ const ProductTable = ({
           <td>₹{Number(selectedOrder.codCharges || 0).toFixed(2)}</td>
         </tr>
         <tr>
-          <td colSpan="4"></td>
+          <td colSpan="3"></td>
           <td>Discount:</td>
           <td>
             <Form.Control
@@ -258,7 +260,7 @@ const ProductTable = ({
           </td>
         </tr>
         <tr>
-          <td colSpan="4"></td>
+          <td colSpan="3"></td>
           <td>Amount Paid:</td>
           <td>
             <Form.Control
