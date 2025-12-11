@@ -7,11 +7,18 @@ import Spinner from "../Spinner";
 // Guard for admin area; relies on backend /admin-auth check
 export default function AdminRoute() {
   const [ok, setOk] = useState(false);
-  const [auth] = useAuth();
+  const contextValue = useAuth();
+  const auth = contextValue[0];
+  const authLoading = contextValue[5]; // Get authLoading from context
 
   useEffect(() => {
     const authCheck = async () => {
       try {
+        // Wait for auth to load from localStorage
+        if (authLoading) {
+          return;
+        }
+
         if (!auth?.token) {
           window.location.href = "/adminlogin";
           return;
@@ -39,7 +46,12 @@ export default function AdminRoute() {
     };
 
     authCheck();
-  }, [auth?.token]);
+  }, [auth?.token, authLoading]);
+
+  // Show spinner while auth is loading
+  if (authLoading) {
+    return <Spinner path="" />;
+  }
 
   return ok ? <Outlet /> : <Spinner path="" />;
 }

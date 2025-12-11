@@ -85,7 +85,7 @@ const ProductTable = ({
                         -
                       </Button>
                       <Form.Control
-                        type="number"
+                        type="text"
                         value={quantity}
                         onChange={(e) => {
                           const newQuantity = parseInt(e.target.value) || 0;
@@ -110,9 +110,8 @@ const ProductTable = ({
                             e.preventDefault();
                           }
                         }}
-                        min="0"
-                        style={{ width: 70, textAlign: "center", fontSize: 13, height: 28, padding: "2px 6px" }}
-                        title="Enter quantity"
+                        style={{ width: 90, textAlign: "center", fontSize: 13, height: 28, padding: "2px 6px" }}
+                        title="Enter quantity (supports any number of digits)"
                       />
                       <Button
                         variant="outline-secondary"
@@ -133,7 +132,7 @@ const ProductTable = ({
                   <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                     <span style={{ fontSize: "14px", fontWeight: "bold" }}>₹</span>
                     <Form.Control
-                      type="number"
+                      type="text"
                       value={unitPrice.toFixed(2)}
                       onChange={(e) => {
                         const newPrice = parseFloat(e.target.value) || 0;
@@ -162,10 +161,8 @@ const ProductTable = ({
                           e.preventDefault();
                         }
                       }}
-                      min="0"
-                      step="0.01"
-                      style={{ width: "80px", textAlign: "center", fontSize: "14px" }}
-                      title="Unit price - editable"
+                      style={{ width: "110px", textAlign: "center", fontSize: "14px" }}
+                      title="Unit price - supports any number of digits"
                     />
                   </div>
                 </td>
@@ -183,6 +180,7 @@ const ProductTable = ({
                     variant="danger"
                     size="sm"
                     onClick={() => handleDeleteProduct(index)}
+                    style={{ padding: "4px 8px", fontSize: "12px", minWidth: "60px" }}
                   >
                     Delete
                   </Button>

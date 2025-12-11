@@ -39,7 +39,7 @@ const SearchModal = ({ show, handleClose, handleAddToOrder }) => {
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg">
+    <Modal show={show} onHide={handleClose} size="lg" style={{ zIndex: 1060 }}>
       <Modal.Header closeButton>
         <Modal.Title>Search Products</Modal.Title>
       </Modal.Header>
@@ -81,7 +81,10 @@ const SearchModal = ({ show, handleClose, handleAddToOrder }) => {
               <Button 
                 variant="success" 
                 size="sm" 
-                onClick={() => handleAddToOrder(product)}
+                onClick={() => {
+                  handleAddToOrder(product);
+                  handleClose();
+                }}
               >
                 Add to Order
               </Button>

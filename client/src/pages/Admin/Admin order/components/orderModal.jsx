@@ -205,15 +205,15 @@ return (
         onHide={handleClose} 
         size="xl"
         dialogClassName="custom-modal-width"
-        style={{ zIndex: 1050 }}
+        style={{ zIndex: 1040 }}
       >
      <style>{`
 /* ---------- Modal shape & layout ---------- */
 /* 1.5 : 2 ratio -> 3 / 4 (width : height) */
 .custom-modal-width .modal-content {
   aspect-ratio: 3 / 4;
-  width: 100%;
-  max-width: 920px;       /* caps width on large screens */
+  width: 95%;
+  max-width: 95vw;       /* 95% of screen width */
   max-height: 92vh;
   display: flex;
   flex-direction: column;

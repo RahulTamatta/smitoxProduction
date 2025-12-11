@@ -13,6 +13,7 @@ const AuthProvider = ({ children }) => {
     refreshToken: "",
     sessionId: ""
   }); // Make sure refreshToken is always tracked
+  const [authLoading, setAuthLoading] = useState(true); // Track if auth is being loaded from localStorage
   const refreshTimeout = useRef(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshSubscribers, setRefreshSubscribers] = useState([]);
@@ -200,7 +201,6 @@ const AuthProvider = ({ children }) => {
       try {
         const parseData = JSON.parse(data);
         setAuth({
-          ...auth,
           user: parseData.user,
           token: parseData.token,
           refreshToken: parseData.refreshToken,
@@ -211,6 +211,8 @@ const AuthProvider = ({ children }) => {
         localStorage.removeItem("auth");
       }
     }
+    // Mark auth loading as complete
+    setAuthLoading(false);
     //eslint-disable-next-line
   }, []);
 
@@ -226,7 +228,7 @@ const AuthProvider = ({ children }) => {
   }, [auth.token]);
 
   return (
-    <AuthContext.Provider value={[auth, setAuth, logout, refreshToken, api]}>
+    <AuthContext.Provider value={[auth, setAuth, logout, refreshToken, api, authLoading]}>
       {children}
     </AuthContext.Provider>
   );
