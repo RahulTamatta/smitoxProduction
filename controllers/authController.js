@@ -1,13 +1,13 @@
-import userModel from "../models/userModel.js";
-import orderModel from "../models/orderModel.js";
-import productModel from "../models/productModel.js";
-import { comparePassword, hashPassword } from "./../helpers/authHelper.js";
-import JWT from "jsonwebtoken";
 import axios from "axios";
-import Pincode from '../models/pincodeModel.js';
+import JWT from "jsonwebtoken";
 import mongoose from 'mongoose';
-import { generateToken } from "../helpers/tokenHelper.js";
 import { NUMBER_TO_ROLE } from "../config/rbac-policy.js";
+import { generateToken } from "../helpers/tokenHelper.js";
+import orderModel from "../models/orderModel.js";
+import Pincode from '../models/pincodeModel.js';
+import productModel from "../models/productModel.js";
+import userModel from "../models/userModel.js";
+import { hashPassword } from "./../helpers/authHelper.js";
 // send OTP
 export const sendOTPController = async (req, res) => {
   try {

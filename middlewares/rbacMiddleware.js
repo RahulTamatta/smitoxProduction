@@ -1,16 +1,13 @@
 import JWT from "jsonwebtoken";
-import userModel from "../models/userModel.js";
-import auditLogModel from "../models/auditLogModel.js";
 import {
-  computeCapabilities,
-  getCapabilities,
-  hasCapability,
-  hasAnyCapability,
-  hasAllCapabilities,
-  ROLE_CAPABILITIES,
-  ROLES,
-  NUMBER_TO_ROLE,
+    computeCapabilities,
+    hasAnyCapability,
+    NUMBER_TO_ROLE,
+    ROLE_CAPABILITIES,
+    ROLES
 } from "../config/rbac-policy.js";
+import auditLogModel from "../models/auditLogModel.js";
+import userModel from "../models/userModel.js";
 
 /**
  * Enhanced authentication middleware with user enrichment
@@ -25,7 +22,10 @@ export const requireSignIn = async (req, res, next) => {
       });
     }
 
-    const decode = JWT.verify(authHeader, process.env.JWT_SECRET);
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.slice("Bearer ".length)
+      : authHeader;
+    const decode = JWT.verify(token, process.env.JWT_SECRET);
 
     if (decode.exp && Date.now() >= decode.exp * 1000) {
       return res.status(401).send({
