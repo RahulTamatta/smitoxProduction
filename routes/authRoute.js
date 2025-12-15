@@ -1,20 +1,25 @@
 import express from 'express';
-import {
-  registerController,
-  loginController,
-  addProductToOrderController,
-  forgotPasswordController,
-  updateProfileController,
-  updateOrderController,
-  getOrdersController,
-  getAllOrdersController,sendOTPController,verifyOTPAndLoginController,
-  orderStatusController,
-  deleteProductFromOrderController,addTrackingInfo,
-  refreshTokenController // Import the refresh token controller
-} from '../controllers/authController.js';
-import { requireSignIn, requireCapability, auditLog } from '../middlewares/rbacMiddleware.js';
-import orderModel from '../models/orderModel.js'; // Changed to import
 import mongoose from 'mongoose';
+import {
+    addProductToOrderController,
+    addTrackingInfo,
+    deleteProductFromOrderController,
+    forgotPasswordController,
+    getAllOrdersController,
+    getOrdersController,
+    getProfileController,
+    loginController,
+    orderStatusController,
+    refreshTokenController // Import the refresh token controller
+    ,
+    registerController,
+    sendOTPController,
+    updateOrderController,
+    updateProfileController,
+    verifyOTPAndLoginController
+} from '../controllers/authController.js';
+import { requireCapability, requireSignIn } from '../middlewares/rbacMiddleware.js';
+import orderModel from '../models/orderModel.js'; // Changed to import
 // import { addTrackingInfo } from "../controllers/orderController.js";
 
 //router object
@@ -52,6 +57,7 @@ router.get("/admin-auth", requireSignIn, (req, res) => {
 
 //update profile
 router.put("/profile", requireSignIn, updateProfileController);
+router.get("/profile", requireSignIn, getProfileController);
 
 //orders
 router.get("/orders/:user_id", getOrdersController);

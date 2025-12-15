@@ -46,6 +46,34 @@ export const sendOTPController = async (req, res) => {
   }
 };
 
+export const getProfileController = async (req, res) => {
+  try {
+    const user = await userModel
+      .findById(req.user._id)
+      .select("-password")
+      .maxTimeMS(5000);
+
+    if (!user) {
+      return res.status(404).send({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).send({
+      success: true,
+      user,
+    });
+  } catch (error) {
+    console.error("Error fetching profile:", error);
+    return res.status(500).send({
+      success: false,
+      message: "Error fetching profile",
+      error: error.message,
+    });
+  }
+};
+
 // verify OTP and login
 export const verifyOTPAndLoginController = async (req, res) => {
   try {
