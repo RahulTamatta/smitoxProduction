@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
+import { useEffect, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/auth';
 import { useCart } from '../../../context/cart';
-import axios from 'axios';
-import toast from 'react-hot-toast';
 
 export const useCartOperations = (product) => {
   const navigate = useNavigate();
@@ -67,7 +67,7 @@ export const useCartOperations = (product) => {
 
     return null;
   };
-  
+
   const calculateTotalPrice = (bulk, quantity) => {
     if (bulk) {
       setTotalPrice(quantity * parseFloat(bulk.selling_price_set));
@@ -130,9 +130,9 @@ export const useCartOperations = (product) => {
       }
     } catch (error) {
       console.error('[Cart] Error adding to cart:', error);
-      
+
       let errorMessage = "Failed to add product to cart";
-      
+
       if (!navigator.onLine) {
         errorMessage = "No internet connection. Please check your network.";
       } else if (error.code === 'ECONNABORTED') {
@@ -140,7 +140,7 @@ export const useCartOperations = (product) => {
       } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       }
-      
+
       toast.error(errorMessage);
     } finally {
       isAddingToCartRef.current = false;
@@ -194,7 +194,7 @@ export const useCartOperations = (product) => {
         { quantity },
         {
           headers: {
-            Authorization: `Bearer ${auth.user.token}`,
+            Authorization: `Bearer ${auth.token}`,
             "Content-Type": "application/json",
           },
         }
@@ -213,7 +213,7 @@ export const useCartOperations = (product) => {
         {
           method: "DELETE",
           headers: {
-            Authorization: `Bearer ${auth.user.token}`,
+            Authorization: `Bearer ${auth.token}`,
           },
         }
       );
@@ -230,7 +230,7 @@ export const useCartOperations = (product) => {
         `/api/v1/carts/users/${auth.user._id}/products/${productId}/quantity`,
         {
           headers: {
-            Authorization: `Bearer ${auth.user.token}`,
+            Authorization: `Bearer ${auth.token}`,
           },
         }
       );

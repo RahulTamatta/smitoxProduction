@@ -1,16 +1,15 @@
+import cloudinary from "cloudinary"; // Import Cloudinary
+import crypto from "crypto";
+import dotenv from "dotenv";
+import fs from "fs";
 import mongoose from "mongoose";
-import productModel from "../models/productModel.js";
-import subcategoryModel from "../models/subcategoryModel.js";
+import Razorpay from "razorpay";
+import slugify from "slugify";
+import { enrichOrderProducts } from "../helpers/orderSnapshotHelper.js";
 import categoryModel from "../models/categoryModel.js";
 import orderModel from "../models/orderModel.js";
-import Razorpay from "razorpay";
-import crypto from "crypto";
-import fs from "fs";
-import slugify from "slugify";
-import dotenv from "dotenv";
-import { uploadToImageKit } from "../utils/imageKitService.js"; // Changed from imageService.js to imageKitService.js
-import cloudinary from "cloudinary"; // Import Cloudinary
-import { enrichOrderProducts } from "../helpers/orderSnapshotHelper.js";
+import productModel from "../models/productModel.js";
+import subcategoryModel from "../models/subcategoryModel.js";
 dotenv.config();
 
 // Configure Cloudinary
@@ -198,15 +197,15 @@ export const createProductController = async (req, res) => {
           typeof multipleimages === "string"
             ? JSON.parse(multipleimages)
             : Array.isArray(multipleimages)
-            ? multipleimages
-            : [multipleimages];
+              ? multipleimages
+              : [multipleimages];
       } catch (error) {
         console.warn("Error parsing multiple images:", error);
         parsedMultipleImages = Array.isArray(multipleimages)
           ? multipleimages
           : multipleimages
-          ? [multipleimages]
-          : [];
+            ? [multipleimages]
+            : [];
       }
     }
 
@@ -252,8 +251,8 @@ export const createProductController = async (req, res) => {
         parsedFkTags = Array.isArray(fk_tags)
           ? fk_tags
           : fk_tags
-          ? [fk_tags]
-          : [];
+            ? [fk_tags]
+            : [];
       }
     }
 
@@ -449,8 +448,8 @@ export const updateProductController = async (req, res) => {
       multipleimages: Array.isArray(multipleimages)
         ? multipleimages
         : multipleimages
-        ? [multipleimages]
-        : [],
+          ? [multipleimages]
+          : [],
     };
 
     // Handle FK tags
@@ -542,15 +541,15 @@ export const updateProductController = async (req, res) => {
           typeof multipleimages === "string"
             ? JSON.parse(multipleimages)
             : Array.isArray(multipleimages)
-            ? multipleimages
-            : [multipleimages];
+              ? multipleimages
+              : [multipleimages];
       } catch (error) {
         console.warn("Error parsing multiple images:", error);
         parsedMultipleImages = Array.isArray(multipleimages)
           ? multipleimages
           : multipleimages
-          ? [multipleimages]
-          : [];
+            ? [multipleimages]
+            : [];
       }
     }
     const finalMultipleImages = [...parsedMultipleImages, ...imageUrls];
@@ -701,7 +700,7 @@ export const productListController = async (req, res) => {
     };
 
     // Sorting logic: primary by custom_order, secondary by createdAt
-    const sortQuery = { 
+    const sortQuery = {
       custom_order: 1,
       createdAt: -1
     };
@@ -744,7 +743,7 @@ export const productListController = async (req, res) => {
     // Wait for all Cloudinary API calls to get file sizes
     const bytesArray = await Promise.all(bandwidthPromises);
     const totalBytes = bytesArray.reduce((sum, current) => sum + current, 0);
-    
+
     // Enhanced response with pagination metadata
     res.status(200).send({
       success: true,
@@ -801,45 +800,53 @@ export const searchProductController = async (req, res) => {
       })
       .select("_id")
       .lean();
-    const subcategoryIds = subcategories.map((s) => s._id);
+    const subcategoryIds = subcategories.map((c) => c._id);
+
+    // Build the search conditions
+    const searchConditions = [
+      { name: { $regex: safeKeyword, $options: "i" } },
+      { description: { $regex: safeKeyword, $options: "i" } },
+      { tag: { $regex: safeKeyword, $options: "i" } },
+      { sku: { $regex: safeKeyword, $options: "i" } },
+      { slug: { $regex: safeKeyword, $options: "i" } },
+      { category: { $in: categoryIds } },
+      { subcategory: { $in: subcategoryIds } },
+    ];
+
+    // Add validation-specific search fields
+    if (isObjectId) {
+      searchConditions.push({ category: keyword });
+      searchConditions.push({ subcategory: keyword });
+      searchConditions.push({ brand: keyword });
+    }
+
+    if (isNumber) {
+      searchConditions.push({ perPiecePrice: keywordNumber });
+    }
+
+    // Combine with filters for stock and active status
+    const query = {
+      $and: [
+        { $or: searchConditions },
+        { stock: { $gt: 0 } }, // Exclude out-of-stock
+        { isActive: "1" },      // Exclude inactive products
+      ]
+    };
 
     const results = await productModel
-      .find({
-        $and: [
-          {
-            $or: [
-              { name: { $regex: safeKeyword, $options: "i" } },
-              { description: { $regex: safeKeyword, $options: "i" } },
-              { tag: { $regex: safeKeyword, $options: "i" } },
-              { sku: { $regex: safeKeyword, $options: "i" } },
-              { slug: { $regex: safeKeyword, $options: "i" } },
-              ...(isObjectId
-                ? [
-                    { category: keyword },
-                    { subcategory: keyword },
-                    { brand: keyword },
-                  ]
-                : []),
-              ...(isNumber ? [{ perPiecePrice: keywordNumber }] : []),
-              { category: { $in: categoryIds } },
-              { subcategory: { $in: subcategoryIds } },
-            ],
-          },
-          { stock: { $gt: 0 } }, // Exclude out-of-stock
-          { isActive: "1" }, // Exclude inactive products
-        ],
-      })
+      .find(query)
       .populate("category", "name")
       .populate("subcategory", "name")
-      .populate("brand", "name");
+      .populate("brand", "name")
+      .sort({ createdAt: -1 });
 
     const resultsWithPhotos = results.map((product) => {
       const productObj = product.toObject();
       if (productObj.photos) {
         productObj.photoUrl = cloudinary.url(productObj.photos, {
-          transformation: [{ 
-            width: 200, 
-            height: 200, 
+          transformation: [{
+            width: 200,
+            height: 200,
             crop: "fill",
             quality: "30", // Lower quality for search results
             fetch_format: "auto"
@@ -878,9 +885,9 @@ export const realtedProductController = async (req, res) => {
       const productObj = product.toObject();
       if (productObj.photos) {
         productObj.photoUrl = cloudinary.url(productObj.photos, {
-          transformation: [{ 
-            width: 200, 
-            height: 200, 
+          transformation: [{
+            width: 200,
+            height: 200,
             crop: "fill",
             quality: "30", // Lower quality
             fetch_format: "auto"
@@ -950,9 +957,9 @@ export const getSingleProductController = async (req, res) => {
     const productObj = product.toObject();
     if (productObj.photos) {
       productObj.photoUrl = cloudinary.url(productObj.photos, {
-        transformation: [{ 
-          width: 400, 
-          height: 400, 
+        transformation: [{
+          width: 400,
+          height: 400,
           crop: "fill",
           quality: "50" // Slightly higher quality for product detail page
         }],
@@ -1027,11 +1034,11 @@ const razorpay = new Razorpay({
 export const processPaymentController = async (req, res) => {
   try {
     console.log(`[Payment] Request initiated | IP: ${req.ip} | Method: ${req.method}`);
-    
+
     // Add request compression support
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Connection', 'keep-alive');
-    
+
     // Sanitize the logging of sensitive data
     const sanitizedBody = { ...req.body };
     if (sanitizedBody.products) {
@@ -1084,7 +1091,7 @@ export const processPaymentController = async (req, res) => {
           requestId: `req-${Date.now()}`
         });
       }
-      
+
       if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
         console.error(`[Payment] Validation failed | Invalid quantity at index ${index}: ${item.quantity}`);
         return res.status(400).json({
@@ -1135,7 +1142,7 @@ export const processPaymentController = async (req, res) => {
     // Handle COD orders immediately
     if (paymentMethod === "COD") {
       console.log(`[Payment] Processing ${paymentMethod} order`);
-      
+
       try {
         // Wrap stock validation in a timeout to prevent hanging
         const stockValidationPromise = new Promise(async (resolve, reject) => {
@@ -1151,7 +1158,7 @@ export const processPaymentController = async (req, res) => {
                   reason: "Product not found"
                 });
               }
-              
+
               if (product.stock < item.quantity) {
                 console.error(`[Payment] Insufficient stock | Product: ${product.name} | Available: ${product.stock} | Requested: ${item.quantity}`);
                 return reject({
@@ -1170,7 +1177,7 @@ export const processPaymentController = async (req, res) => {
             });
           }
         });
-        
+
         // Set a timeout for stock validation
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(() => {
@@ -1181,7 +1188,7 @@ export const processPaymentController = async (req, res) => {
             });
           }, 30000); // 30-second timeout
         });
-        
+
         try {
           await Promise.race([stockValidationPromise, timeoutPromise]);
         } catch (validationError) {
@@ -1194,7 +1201,7 @@ export const processPaymentController = async (req, res) => {
         }
 
         const totalOrderAmount = amountPending || amount;
-        
+
         // Ensure we have a valid total order amount
         if (isNaN(totalOrderAmount) || totalOrderAmount <= 0) {
           console.error(`[Payment] Invalid total order amount: ${totalOrderAmount}`);
@@ -1237,11 +1244,11 @@ export const processPaymentController = async (req, res) => {
                   { $inc: { stock: -item.quantity } }, // Decrease stock
                   { new: true }
                 );
-                
+
                 if (!updatedProduct) {
                   throw new Error(`Failed to update stock for product: ${item.product}`);
                 }
-                
+
                 console.log(`[Payment] Stock updated | Product: ${item.product} | New stock: ${updatedProduct.stock}`);
               })
             );
@@ -1250,13 +1257,13 @@ export const processPaymentController = async (req, res) => {
             reject(error);
           }
         });
-        
+
         const stockUpdateTimeoutPromise = new Promise((_, reject) => {
           setTimeout(() => {
             reject(new Error("Timeout while updating product stock"));
           }, 30000); // 30-second timeout
         });
-        
+
         try {
           await Promise.race([updateStockPromise, stockUpdateTimeoutPromise]);
         } catch (stockError) {
@@ -1268,7 +1275,7 @@ export const processPaymentController = async (req, res) => {
           } catch (rollbackError) {
             console.error(`[Payment] Failed to roll back order | Error: ${rollbackError.message}`);
           }
-          
+
           return res.status(500).json({
             success: false,
             message: `Failed to update product stock: ${stockError.message}`,
@@ -1295,7 +1302,7 @@ export const processPaymentController = async (req, res) => {
 
     // Online payment via Razorpay
     console.log(`[Payment] Initiating Razorpay payment | Amount: ${amount}`);
-    
+
     // Validate product stock before creating Razorpay order with timeout handling
     const stockValidationPromise = new Promise(async (resolve, reject) => {
       try {
@@ -1309,7 +1316,7 @@ export const processPaymentController = async (req, res) => {
               reason: "Product not found"
             });
           }
-          
+
           if (product.stock < item.quantity) {
             console.error(`[Payment] Insufficient stock | Product: ${product.name} | Available: ${product.stock} | Requested: ${item.quantity}`);
             return reject({
@@ -1328,7 +1335,7 @@ export const processPaymentController = async (req, res) => {
         });
       }
     });
-    
+
     const stockValidationTimeoutPromise = new Promise((_, reject) => {
       setTimeout(() => {
         reject({
@@ -1338,7 +1345,7 @@ export const processPaymentController = async (req, res) => {
         });
       }, 30000); // 30-second timeout
     });
-    
+
     try {
       await Promise.race([stockValidationPromise, stockValidationTimeoutPromise]);
     } catch (validationError) {
@@ -1349,7 +1356,7 @@ export const processPaymentController = async (req, res) => {
         requestId: `req-${Date.now()}`
       });
     }
-    
+
     try {
       const razorpayOrderData = {
         amount: Math.round(amount * 100),
@@ -1372,9 +1379,9 @@ export const processPaymentController = async (req, res) => {
           reject(new Error("Razorpay API request timed out"));
         }, 30000); // 30-second timeout
       });
-      
+
       const razorpayOrder = await Promise.race([razorpayPromise, razorpayTimeoutPromise]);
-      console.log(`[Payment] Razorpay order created | Order ID: ${razorpayOrder.id} | Amount: ${razorpayOrder.amount/100}`);
+      console.log(`[Payment] Razorpay order created | Order ID: ${razorpayOrder.id} | Amount: ${razorpayOrder.amount / 100}`);
 
       res.json({
         success: true,
@@ -1408,7 +1415,7 @@ export const verifyPaymentController = async (req, res) => {
   try {
     console.log(`[Verification] Payment verification initiated | IP: ${req.ip}`);
     console.log(`[Verification] Request body: ${JSON.stringify(req.body, null, 2)}`);
-    
+
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
     // Validation
@@ -1419,7 +1426,7 @@ export const verifyPaymentController = async (req, res) => {
         message: "Missing Razorpay order ID",
       });
     }
-    
+
     if (!razorpay_payment_id) {
       console.error(`[Verification] Missing payment ID`);
       return res.status(400).json({
@@ -1427,7 +1434,7 @@ export const verifyPaymentController = async (req, res) => {
         message: "Missing Razorpay payment ID",
       });
     }
-    
+
     if (!razorpay_signature) {
       console.error(`[Verification] Missing payment signature`);
       return res.status(400).json({
@@ -1437,7 +1444,7 @@ export const verifyPaymentController = async (req, res) => {
     }
 
     console.log(`[Verification] Verifying payment signature | Order ID: ${razorpay_order_id} | Payment ID: ${razorpay_payment_id}`);
-    
+
     // Verify signature
     try {
       const body = razorpay_order_id + "|" + razorpay_payment_id;
@@ -1453,7 +1460,7 @@ export const verifyPaymentController = async (req, res) => {
           message: "Invalid payment signature. This could be a fraudulent request.",
         });
       }
-      
+
       console.log(`[Verification] Payment signature verified successfully`);
     } catch (signatureError) {
       console.error(`[Verification] Signature verification failed | Error: ${signatureError.message}`);
@@ -1469,8 +1476,8 @@ export const verifyPaymentController = async (req, res) => {
     try {
       console.log(`[Verification] Fetching Razorpay order | Order ID: ${razorpay_order_id}`);
       razorpayOrder = await razorpay.orders.fetch(razorpay_order_id);
-      console.log(`[Verification] Razorpay order fetched | Status: ${razorpayOrder.status} | Amount: ${razorpayOrder.amount/100}`);
-      
+      console.log(`[Verification] Razorpay order fetched | Status: ${razorpayOrder.status} | Amount: ${razorpayOrder.amount / 100}`);
+
       // Verify payment status
       if (razorpayOrder.status !== 'paid') {
         console.error(`[Verification] Order not paid | Status: ${razorpayOrder.status}`);
@@ -1493,8 +1500,8 @@ export const verifyPaymentController = async (req, res) => {
     try {
       console.log(`[Verification] Fetching payment details | Payment ID: ${razorpay_payment_id}`);
       paymentDetails = await razorpay.payments.fetch(razorpay_payment_id);
-      console.log(`[Verification] Payment details fetched | Status: ${paymentDetails.status} | Amount: ${paymentDetails.amount/100}`);
-      
+      console.log(`[Verification] Payment details fetched | Status: ${paymentDetails.status} | Amount: ${paymentDetails.amount / 100}`);
+
       // Verify payment status
       if (paymentDetails.status !== 'captured') {
         console.error(`[Verification] Payment not captured | Status: ${paymentDetails.status}`);
@@ -1503,7 +1510,7 @@ export const verifyPaymentController = async (req, res) => {
           message: `Payment not captured. Payment status: ${paymentDetails.status}`,
         });
       }
-      
+
       // Verify payment amount matches order amount
       if (paymentDetails.amount !== razorpayOrder.amount) {
         console.error(`[Verification] Amount mismatch | Order amount: ${razorpayOrder.amount} | Paid amount: ${paymentDetails.amount}`);
@@ -1571,11 +1578,11 @@ export const verifyPaymentController = async (req, res) => {
           { $inc: { stock: -item.quantity } },
           { new: true, session }
         );
-        
+
         if (!updatedProduct) {
           throw new Error(`Product with ID ${item.product} not found`);
         }
-        
+
         console.log(`[Verification] Stock updated | Product: ${updatedProduct.name} | New stock: ${updatedProduct.stock}`);
       }
 
@@ -1591,7 +1598,7 @@ export const verifyPaymentController = async (req, res) => {
       });
     } catch (transactionError) {
       console.error(`[Verification] Transaction failed | Error: ${transactionError.message}`);
-      
+
       // Abort transaction if it exists and is active
       if (session) {
         try {
@@ -1602,7 +1609,7 @@ export const verifyPaymentController = async (req, res) => {
           console.error(`[Verification] Failed to abort transaction | Error: ${abortError.message}`);
         }
       }
-      
+
       res.status(500).json({
         success: false,
         message: "Failed to process verified payment",
@@ -1625,7 +1632,7 @@ export const getPaymentStatusController = async (req, res) => {
   try {
     const { orderId } = req.params;
     console.log(`[Status] Fetching payment status | Order ID: ${orderId}`);
-    
+
     if (!orderId) {
       console.error(`[Status] Missing order ID`);
       return res.status(400).json({
@@ -1678,7 +1685,7 @@ export const getPaymentStatusController = async (req, res) => {
       console.log(`[Status] Fetching Razorpay payment | Payment ID: ${order.payment.razorpayPaymentId}`);
       const payment = await razorpay.payments.fetch(order.payment.razorpayPaymentId);
       console.log(`[Status] Razorpay payment status: ${payment.status} | Order ID: ${orderId}`);
-      
+
       res.json({
         success: true,
         status: payment.status,
@@ -1687,7 +1694,7 @@ export const getPaymentStatusController = async (req, res) => {
       });
     } catch (razorpayError) {
       console.error(`[Status] Failed to fetch Razorpay payment | Error: ${razorpayError.message}`);
-      
+
       // Still return order info even if Razorpay fetch fails
       res.json({
         success: true,
@@ -1769,8 +1776,8 @@ export const productCategoryController = async (req, res) => {
         filterQuery.stock = 0; // Products with stock exactly 0
         break;
       case "all":
-         // No additional isActive or stock filters applied when filter is 'all'
-         break;
+        // No additional isActive or stock filters applied when filter is 'all'
+        break;
       default:
         // Optional: Handle unexpected filter values, maybe return an error or default to 'active'
         console.warn(`Unsupported filter value received in productCategoryController: ${filter}. Defaulting to active.`);
@@ -1816,8 +1823,8 @@ export const productCategoryController = async (req, res) => {
             }]
           });
         } catch (cloudinaryError) {
-            console.error("Error generating Cloudinary URL:", cloudinaryError);
-            productObj.photoUrl = null; // Set to null or a placeholder if URL generation fails
+          console.error("Error generating Cloudinary URL:", cloudinaryError);
+          productObj.photoUrl = null; // Set to null or a placeholder if URL generation fails
         }
         // Optionally remove the original photos field if only the URL is needed client-side
         // delete productObj.photos;
@@ -1895,12 +1902,12 @@ export const productSubcategoryController = async (req, res) => {
         filterQuery.isActive = { $in: [false, "0"] };
         break;
       case "outOfStock":
-         filterQuery.isActive = { $in: [true, "1"] }; // Consider only active products
+        filterQuery.isActive = { $in: [true, "1"] }; // Consider only active products
         filterQuery.stock = 0;
         break;
-       case "all":
-         // No additional isActive or stock filters applied
-         break;
+      case "all":
+        // No additional isActive or stock filters applied
+        break;
       default:
         console.warn(`Unsupported filter value received in productSubcategoryController: ${filter}. Defaulting to active.`);
         filterQuery.isActive = { $in: [true, "1"] };
@@ -1910,8 +1917,8 @@ export const productSubcategoryController = async (req, res) => {
 
     // --- Sorting Logic ---
     const sortQuery = {
-        custom_order: 1, // Primary sort by custom_order
-        createdAt: -1   // Secondary sort by creation date
+      custom_order: 1, // Primary sort by custom_order
+      createdAt: -1   // Secondary sort by creation date
     };
 
     // --- Database Queries ---
@@ -1934,20 +1941,20 @@ export const productSubcategoryController = async (req, res) => {
     const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject();
       if (productObj.photos) {
-         try {
-            productObj.photoUrl = cloudinary.url(productObj.photos, { // Assuming 'photos' is the public ID
-                transformation: [{
-                    quality: "auto:low",
-                    fetch_format: "auto"
-                }]
-            });
-         } catch (cloudinaryError) {
-             console.error("Error generating Cloudinary URL:", cloudinaryError);
-             productObj.photoUrl = null;
-         }
+        try {
+          productObj.photoUrl = cloudinary.url(productObj.photos, { // Assuming 'photos' is the public ID
+            transformation: [{
+              quality: "auto:low",
+              fetch_format: "auto"
+            }]
+          });
+        } catch (cloudinaryError) {
+          console.error("Error generating Cloudinary URL:", cloudinaryError);
+          productObj.photoUrl = null;
+        }
         // delete productObj.photos; // Optional: remove original field
       } else {
-          productObj.photoUrl = null;
+        productObj.photoUrl = null;
       }
       return productObj;
     });

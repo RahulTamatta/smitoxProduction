@@ -21,10 +21,10 @@ import mongoose from 'mongoose';
 // });
 //new cloud
 cloudinary.config({
-  cloud_name: 'dr69youky', 
+  cloud_name: 'dnjtpihzs',
   // Old account cloud name
-  api_key:  '475678754991166',    // Old account API key
-  api_secret: '2YElzpaX1rIjISc-HhRXB2m-X2A' // Old account API secret
+  api_key: '142139447655559',    // Old account API key
+  api_secret: 't1LmC0isn4XuWKTd_l0UDCeDv-w' // Old account API secret
 });
 
 // MongoDB connection
@@ -68,7 +68,7 @@ async function runReverseMigration() {
     let totalUpdated = 0;
 
     // Regex to match new Cloudinary URLs (Replace 'de9injdhu' with your new Cloudinary cloud name)
-    const newUrlPattern = /res\.cloudinary\.com\/dnsqrn1mr/;
+    const newUrlPattern = /res\.cloudinary\.com\/dr69youky/;
 
     for (const collName of collections) {
       const collection = mongoose.connection.collection(collName);

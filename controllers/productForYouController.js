@@ -1,8 +1,7 @@
+import mongoose from 'mongoose';
 import productForYouModel from "../models/productForYouModel.js";
 import productModel from "../models/productModel.js";
-import productForYou from "../models/productForYouModel.js";
 import subcategoryModel from "../models/subcategoryModel.js";
-import mongoose from 'mongoose';
 
 export const adminGetProductsForYouController = async (req, res) => {
   try {
@@ -86,7 +85,9 @@ export const getProductsForYouController = async (req, res) => {
     });
 
     // Shuffle the products array
-    productsWithBase64Photos = productsWithBase64Photos.sort(() => Math.random() - 0.5);
+    productsWithBase64Photos = productsWithBase64Photos
+      .filter((p) => p.productId && p.productId.isActive === "1") // Only show active products
+      .sort(() => Math.random() - 0.5);
 
     res.status(200).send({
       success: true,
@@ -120,9 +121,8 @@ export const getAllProductsForYouController = async (req, res) => {
         productObj.productId.photos &&
         productObj.productId.photos.data
       ) {
-        productObj.productId.photoUrl = `data:${
-          productObj.productId.photos.contentType
-        };base64,${productObj.productId.photos.data.toString("base64")}`;
+        productObj.productId.photoUrl = `data:${productObj.productId.photos.contentType
+          };base64,${productObj.productId.photos.data.toString("base64")}`;
         delete productObj.productId.photos;
       }
 
@@ -332,15 +332,15 @@ export const getBannersController = async (req, res) => {
 
     // Fetch all subcategories related to these categories
     const subcategoriesByCategory = {};
-    
+
     if (categoryIds.length > 0) {
       // Use the imported subcategoryModel to fetch data
-      
+
       // Fetch subcategories for all categories in one query
       const relatedSubcategories = await subcategoryModel.find({
         category: { $in: categoryIds }
       }).select('name category');
-      
+
       // Organize subcategories by category
       for (const subcategory of relatedSubcategories) {
         const categoryId = subcategory.category.toString();
@@ -354,8 +354,10 @@ export const getBannersController = async (req, res) => {
       }
     }
 
-    // Shuffle the banners array for random display
-    const shuffledBanners = [...banners].sort(() => Math.random() - 0.5);
+    // Shuffle the banners array for random display and filter active ones
+    const shuffledBanners = [...banners]
+      .filter((b) => b.productId && b.productId.isActive === "1")
+      .sort(() => Math.random() - 0.5);
 
     res.status(200).send({
       success: true,
