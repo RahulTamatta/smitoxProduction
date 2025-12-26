@@ -1,22 +1,23 @@
 import express from "express";
 import formidable from "express-formidable";
 import {
-  saveDraftApplication,
-  submitApplication,
+  approveApplication,
+  getApplicationById,
+  getAvailablePlans,
   getMyApplication,
   getSellerApplications,
-  getApplicationById,
-  approveApplication,
   rejectApplication,
-  retryPayment,
   renewPlan,
+  retryPayment,
+  saveDraftApplication,
+  submitApplication,
   upgradePlan,
-  getAvailablePlans,
+  verifyPayment,
 } from "../controllers/sellerApplicationControllerV2.js";
 import {
-  requireSignIn,
-  requireCapability,
   auditLog,
+  requireCapability,
+  requireSignIn,
 } from "../middlewares/rbacMiddleware.js";
 
 const router = express.Router();
@@ -44,6 +45,13 @@ router.post(
   requireSignIn,
   auditLog("retry_payment", "seller_application", "medium"),
   retryPayment
+);
+
+router.post(
+  "/verify-payment",
+  requireSignIn,
+  auditLog("verify_payment", "seller_application", "high"),
+  verifyPayment
 );
 
 // RENEWAL & UPGRADE ENDPOINTS

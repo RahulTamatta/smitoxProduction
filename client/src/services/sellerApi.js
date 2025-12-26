@@ -89,7 +89,7 @@ export const getActiveSubscriptionPlans = async () => {
 export const retryPayment = async (applicationId, token) => {
   try {
     const response = await axios.post(
-      `${API_BASE}/sellers/applications/${applicationId}/retry-payment`,
+      `${API_BASE}/sellers/${applicationId}/retry-payment`,
       {},
       {
         headers: { Authorization: token },

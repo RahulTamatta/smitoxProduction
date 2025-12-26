@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from "react";
+import { AlertCircle, Check, ChevronLeft, ChevronRight, Loader } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/auth";
 import Layout from "../../components/Layout/Layout";
-import { ChevronRight, ChevronLeft, Check, AlertCircle, Loader } from "lucide-react";
+import { useAuth } from "../../context/auth";
 import {
-  saveDraftApplication,
-  submitApplication,
   getActiveSubscriptionPlans,
   getMyApplication,
+  retryPayment,
+  saveDraftApplication,
+  submitApplication,
 } from "../../services/sellerApi";
 import "./sellerWizard.css";
 
@@ -20,6 +21,8 @@ const SellerWizardV2 = () => {
   const [success, setSuccess] = useState("");
   const [plans, setPlans] = useState([]);
   const [applicationId, setApplicationId] = useState(null);
+  const [applicationStatus, setApplicationStatus] = useState("");
+  const [applicationDetails, setApplicationDetails] = useState(null); // Store full app details
   const [isLocked, setIsLocked] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -59,6 +62,18 @@ const SellerWizardV2 = () => {
 
   // Fetch plans and check existing application
   useEffect(() => {
+    // Load Razorpay Script
+    const loadRazorpayScript = (src) => {
+      return new Promise((resolve) => {
+        const script = document.createElement("script");
+        script.src = src;
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+      });
+    };
+    loadRazorpayScript("https://checkout.razorpay.com/v1/checkout.js");
+
     const fetchInitialData = async () => {
       try {
         setLoading(true);
@@ -76,6 +91,26 @@ const SellerWizardV2 = () => {
             if (appRes.success && appRes.application) {
               const app = appRes.application;
               setApplicationId(app._id);
+              setApplicationStatus(app.status);
+              setApplicationDetails(app);
+
+              // Pre-fill formData from existing application to show correct plan/details
+              setFormData(prev => ({
+                ...prev,
+                selectedPlanId: app.selectedPlan?._id || app.selectedPlanId || "",
+                firstName: app.firstName || "",
+                lastName: app.lastName || "",
+                email: app.email || "",
+                phone: app.phone || "",
+                addressLine1: app.addressLine1 || "",
+                addressLine2: app.addressLine2 || "",
+                city: app.city || "",
+                state: app.state || "",
+                pincode: app.pincode || "",
+                country: app.country || "India",
+                businessName: app.businessName || "",
+                // ... map other fields if needed, but selectedPlanId is crucial for payment step
+              }));
 
               // If application is submitted/under_review/approved_pending_payment, lock plan
               if (
@@ -86,12 +121,9 @@ const SellerWizardV2 = () => {
                 setIsLocked(true);
               }
 
-              // If rejected, allow reapply
+              // If rejected, allow reapply (formData is already pre-filled above)
               if (app.status === "rejected") {
-                setFormData((prev) => ({
-                  ...prev,
-                  selectedPlanId: app.selectedPlan?._id || "",
-                }));
+                // Logic to handle rejected state if specific actions needed
               }
             }
           } catch (err) {
@@ -121,6 +153,18 @@ const SellerWizardV2 = () => {
     }));
     setCurrentStep(1);
   };
+
+  // ... (rest of code)
+
+  // ... inside handlePayment and renderPaymentStep ...
+  // I need to update renderPaymentStep below.
+  // This tool call handles the state init and useEffect updates.
+  // I will skip the rest of the file update here to be safe and do render in next tool.
+  // But wait, the StartLine/EndLine logic must align. 
+  // I am replacing from line 22 to 100 approx.
+  // I'll cover the whole useEffect block.
+
+
 
   // Handle form input change with validation
   const handleInputChange = (e) => {
@@ -275,9 +319,8 @@ const SellerWizardV2 = () => {
         {plans.map((plan) => (
           <div
             key={plan._id}
-            className={`plan-card ${
-              formData.selectedPlanId === plan._id ? "selected" : ""
-            } ${isLocked ? "disabled" : ""}`}
+            className={`plan-card ${formData.selectedPlanId === plan._id ? "selected" : ""
+              } ${isLocked ? "disabled" : ""}`}
             onClick={() => !isLocked && handlePlanSelect(plan._id)}
           >
             <div className="plan-header">
@@ -314,9 +357,8 @@ const SellerWizardV2 = () => {
             </ul>
 
             <button
-              className={`btn btn-primary w-100 ${
-                formData.selectedPlanId === plan._id ? "selected" : ""
-              }`}
+              className={`btn btn-primary w-100 ${formData.selectedPlanId === plan._id ? "selected" : ""
+                }`}
               disabled={isLocked}
             >
               {formData.selectedPlanId === plan._id ? "Selected" : "Select Plan"}
@@ -548,20 +590,20 @@ const SellerWizardV2 = () => {
           pattern={pattern}
           title={
             fieldName === "phone" ? "Please enter a valid 10-digit phone number" :
-            fieldName === "pincode" ? "Please enter a valid 6-digit pincode" :
-            fieldName === "accountNumber" ? "Please enter only numbers" :
-            fieldName === "ifscCode" ? "Please enter a valid 11-character IFSC code" :
-            fieldName === "gstNumber" ? "Please enter a valid 15-character GST number" :
-            fieldName === "panNumber" ? "Please enter a valid 10-character PAN number" :
-            ""
+              fieldName === "pincode" ? "Please enter a valid 6-digit pincode" :
+                fieldName === "accountNumber" ? "Please enter only numbers" :
+                  fieldName === "ifscCode" ? "Please enter a valid 11-character IFSC code" :
+                    fieldName === "gstNumber" ? "Please enter a valid 15-character GST number" :
+                      fieldName === "panNumber" ? "Please enter a valid 10-character PAN number" :
+                        ""
           }
           maxLength={
             fieldName === "phone" ? 10 :
-            fieldName === "pincode" ? 6 :
-            fieldName === "ifscCode" ? 11 :
-            fieldName === "gstNumber" ? 15 :
-            fieldName === "panNumber" ? 10 :
-            undefined
+              fieldName === "pincode" ? 6 :
+                fieldName === "ifscCode" ? 11 :
+                  fieldName === "gstNumber" ? 15 :
+                    fieldName === "panNumber" ? 10 :
+                      undefined
           }
         />
       </>
@@ -583,6 +625,145 @@ const SellerWizardV2 = () => {
     </div>
   );
 
+  const handlePayment = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      // Get updated payment order
+      const response = await retryPayment(applicationId, auth?.token);
+
+      if (response.success && response.checkoutInfo) {
+        const { orderId, amount, currency, key } = response.checkoutInfo;
+
+        const options = {
+          key: key,
+          amount: amount,
+          currency: currency,
+          name: "Smitox Seller Subscription",
+          description: "Subscription Payment",
+          order_id: orderId,
+          handler: async function (response) {
+            try {
+              setLoading(true);
+              // Verify Payment
+              // We use direct axios call as verifyPayment might not be in serviceApi yet or we can add it there.
+              // Assuming relative path works with proxy setup or use full path.
+              // Note: You need to import axios if not imported.
+              // Let's assume axios is available or use fetch?
+              // The file imports: import React... no axios.
+              // I need to add import axios from 'axios'. I will do that in a separate step or here if I can view imports.
+              // I can't import axios here easily without editing top of file.
+              // I will use fetch for verify or assume axios is globally configured? No.
+              // I'll add axios import in a separate tool call.
+              const verifyRes = await fetch("/api/v1/seller/verify-payment", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": auth?.token
+                },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature
+                })
+              });
+
+              const verifyData = await verifyRes.json();
+
+              if (verifyRes.ok && verifyData.success) {
+                setSuccess("Payment successful! Redirecting to dashboard...");
+                setTimeout(() => {
+                  navigate("/dashboard/seller");
+                }, 2000);
+              } else {
+                throw new Error(verifyData.message || "Payment verification failed");
+              }
+            } catch (err) {
+              console.error(err);
+              setError("Payment verification failed. Please contact support.");
+              setLoading(false);
+            }
+          },
+          prefill: {
+            name: formData.firstName + " " + formData.lastName,
+            email: formData.email,
+            contact: formData.phone,
+          },
+          theme: {
+            color: "#3399cc",
+          },
+        };
+
+        const razorpay = new window.Razorpay(options);
+        razorpay.open();
+        razorpay.on('payment.failed', function (response) {
+          setError("Payment failed: " + response.error.description);
+          setLoading(false);
+        });
+
+      } else {
+        throw new Error("Failed to initiate payment");
+      }
+    } catch (err) {
+      setError(err.message || "Payment initiation failed");
+      setLoading(false);
+    }
+  };
+
+  // Payment Step View
+  const renderPaymentStep = () => {
+    // Determine Price to Show
+    let displayPrice = 0;
+    let displayName = "Seller Subscription";
+
+    if (applicationDetails) {
+      // Priority 1: Existing Payment Record Amount
+      if (applicationDetails.payment && applicationDetails.payment.amount) {
+        displayPrice = applicationDetails.payment.amount;
+      }
+      // Priority 2: Snapshot Price
+      else if (applicationDetails.selectedPlanSnapshot && applicationDetails.selectedPlanSnapshot.price) {
+        displayPrice = applicationDetails.selectedPlanSnapshot.price;
+        displayName = applicationDetails.selectedPlanSnapshot.name;
+      }
+    }
+
+    // Fallback: Check plans list
+    if (displayPrice === 0 && formData.selectedPlanId) {
+      const found = plans.find(p => p._id === formData.selectedPlanId);
+      if (found) {
+        displayPrice = found.price;
+        displayName = found.name;
+      }
+    }
+
+    return (
+      <div className="wizard-step text-center">
+        <h2 className="step-title">Complete Your Payment</h2>
+        <p className="step-subtitle">Your application has been approved. Please complete the payment to activate your seller account.</p>
+
+        <div className="payment-card card shadow-sm p-4 mx-auto" style={{ maxWidth: '500px' }}>
+          <div className="mb-4">
+            <h3>{displayName}</h3>
+            <p className="text-muted">Subscription Fee</p>
+            <h2 className="text-primary">
+              ₹{displayPrice}
+            </h2>
+          </div>
+
+          <button
+            className="btn btn-primary btn-lg w-100"
+            onClick={handlePayment}
+            disabled={loading}
+          >
+            {loading ? "Processing..." : "Pay Now"}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   if (loading && currentStep === 0) {
     return (
       <Layout>
@@ -595,6 +776,16 @@ const SellerWizardV2 = () => {
       </Layout>
     );
   }
+
+  // Determine if we should show payment step
+  // If application exists and is approved_pending_payment
+  const showPayment = applicationId && isLocked && plans.find(p => p._id === formData.selectedPlanId) && !plans.find(p => p._id === formData.selectedPlanId)?.isFree;
+  // Wait, isLocked is set for 'approved_pending_payment' in useEffect.
+  // So if isLocked is true, we check status.
+  // But status isn't stored in state directly except implicity.
+  // I need to store status or check it.
+  // I'll check useEffect again... it sets isLocked but doesn't store status in a state variable for render?
+  // Ah, it doesn't store 'status' in state. I should add `applicationStatus` state.
 
   return (
     <Layout>
@@ -616,71 +807,79 @@ const SellerWizardV2 = () => {
             </div>
           )}
 
-          {currentStep === 0 ? renderPlanSelection() : renderFormStep()}
+          {applicationStatus === "approved_pending_payment" ? (
+            renderPaymentStep()
+          ) : currentStep === 0 ? (
+            renderPlanSelection()
+          ) : (
+            renderFormStep()
+          )}
 
-          <div className="wizard-actions">
-            {currentStep > 0 && (
-              <button
-                className="btn btn-secondary"
-                onClick={() => setCurrentStep(currentStep - 1)}
-                disabled={loading}
-              >
-                <ChevronLeft size={18} />
-                Back
-              </button>
-            )}
-
-            {currentStep > 0 && currentStep < 6 && (
-              <>
+          {applicationStatus !== "approved_pending_payment" && (
+            <div className="wizard-actions">
+              {currentStep > 0 && (
                 <button
-                  className="btn btn-outline"
-                  onClick={handleSaveDraft}
+                  className="btn btn-secondary"
+                  onClick={() => setCurrentStep(currentStep - 1)}
                   disabled={loading}
                 >
-                  Save Draft
+                  <ChevronLeft size={18} />
+                  Back
                 </button>
-                <button
-                  className="btn btn-primary"
-                  onClick={() => setCurrentStep(currentStep + 1)}
-                  disabled={loading}
-                >
-                  Next
-                  <ChevronRight size={18} />
-                </button>
-              </>
-            )}
+              )}
 
-            {currentStep === 6 && (
-              <>
-                <button
-                  className="btn btn-outline"
-                  onClick={handleSaveDraft}
-                  disabled={loading}
-                >
-                  Save Draft
-                </button>
-                <button
-                  className="btn btn-success"
-                  onClick={handleSubmit}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader size={18} className="spinner-small" />
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <Check size={18} />
-                      Submit Application
-                    </>
-                  )}
-                </button>
-              </>
-            )}
-          </div>
+              {currentStep > 0 && currentStep < 6 && (
+                <>
+                  <button
+                    className="btn btn-outline"
+                    onClick={handleSaveDraft}
+                    disabled={loading}
+                  >
+                    Save Draft
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => setCurrentStep(currentStep + 1)}
+                    disabled={loading}
+                  >
+                    Next
+                    <ChevronRight size={18} />
+                  </button>
+                </>
+              )}
 
-          {isLocked && (
+              {currentStep === 6 && (
+                <>
+                  <button
+                    className="btn btn-outline"
+                    onClick={handleSaveDraft}
+                    disabled={loading}
+                  >
+                    Save Draft
+                  </button>
+                  <button
+                    className="btn btn-success"
+                    onClick={handleSubmit}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader size={18} className="spinner-small" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <Check size={18} />
+                        Submit Application
+                      </>
+                    )}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
+          {isLocked && applicationStatus !== "approved_pending_payment" && (
             <div className="alert alert-info mt-4">
               <AlertCircle size={20} />
               <span>

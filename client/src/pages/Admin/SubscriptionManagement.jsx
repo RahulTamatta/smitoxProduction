@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
-import { useAuth } from "../../context/auth";
-import Layout from "../../components/Layout/Layout";
-import AdminMenu from "../../components/Layout/AdminMenu";
-import toast from "react-hot-toast";
 import axios from "axios";
+import { Check, CheckCircle, Clock, Edit2, Eye, Plus, Search, Trash2, X, XCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import { useSearchParams } from "react-router-dom";
+import AdminMenu from "../../components/Layout/AdminMenu";
+import Layout from "../../components/Layout/Layout";
+import { useAuth } from "../../context/auth";
 import { getSubscriptionsAnalytics } from "../../services/analyticsApi";
 import { hasCap } from "../../utils/rbacHelper";
-import { Edit2, Trash2, Plus, Check, X, Search, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import "./subscriptionManagement.css";
 
 const SubscriptionManagement = () => {
@@ -161,7 +161,7 @@ const SubscriptionManagement = () => {
       setLoading(true);
       console.log("Auth token:", auth?.token);
       console.log("Fetching from:", `/api/v1/sellers`);
-      
+
       const response = await axios.get(
         `/api/v1/sellers`,
         {
@@ -170,11 +170,11 @@ const SubscriptionManagement = () => {
           },
         }
       );
-      
+
       console.log("Applications response status:", response.status);
       console.log("Applications response data:", response.data);
       console.log("Applications response full:", response);
-      
+
       if (response.data.success) {
         console.log("Setting applications:", response.data.applications);
         setApplications(response.data.applications || []);
@@ -755,17 +755,20 @@ const SubscriptionManagement = () => {
                                 <strong>
                                   {app.firstName} {app.lastName}
                                 </strong>
+                                <div style={{ fontSize: "0.85em", color: "#888", marginTop: "2px" }}>
+                                  User: {app.userId?.user_fullname || "N/A"}
+                                </div>
                               </td>
                               <td>{app.email}</td>
                               <td>
                                 <span className="plan-badge">
                                   {app.selectedPlanSnapshot
                                     ? app.selectedPlanSnapshot.name
-                                    : (app.selectedPlanId 
-                                        ? (typeof app.selectedPlanId === 'object' 
-                                            ? app.selectedPlanId.name 
-                                            : app.selectedPlanId)
-                                        : "No Plan")}
+                                    : (app.selectedPlanId
+                                      ? (typeof app.selectedPlanId === 'object'
+                                        ? app.selectedPlanId.name
+                                        : app.selectedPlanId)
+                                      : "No Plan")}
                                 </span>
                               </td>
                               <td>
@@ -808,7 +811,7 @@ const SubscriptionManagement = () => {
                                 {new Date(app.createdAt).toLocaleDateString()}
                               </td>
                               <td className="actions-cell">
-                                <button 
+                                <button
                                   className="btn btn-sm btn-outline"
                                   onClick={() => {
                                     setSelectedApplication(app);
@@ -1027,7 +1030,7 @@ const SubscriptionManagement = () => {
                 <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                   <div className="modal-header">
                     <h2>Seller Application Details</h2>
-                    <button 
+                    <button
                       className="modal-close"
                       onClick={() => setShowApplicationModal(false)}
                     >
@@ -1147,8 +1150,8 @@ const SubscriptionManagement = () => {
                         <div className="detail-item">
                           <label>Selected Plan</label>
                           <p>
-                            {typeof selectedApplication.selectedPlanId === 'object' 
-                              ? selectedApplication.selectedPlanId?.name 
+                            {typeof selectedApplication.selectedPlanId === 'object'
+                              ? selectedApplication.selectedPlanId?.name
                               : "N/A"}
                           </p>
                         </div>
@@ -1200,7 +1203,7 @@ const SubscriptionManagement = () => {
                   </div>
 
                   <div className="modal-footer">
-                    <button 
+                    <button
                       className="btn btn-secondary"
                       onClick={() => setShowApplicationModal(false)}
                     >
@@ -1208,7 +1211,7 @@ const SubscriptionManagement = () => {
                     </button>
                     {selectedApplication.status === "submitted" && (
                       <>
-                        <button 
+                        <button
                           className="btn btn-success"
                           onClick={() => {
                             console.log("Approve clicked for:", selectedApplication._id);
@@ -1218,7 +1221,7 @@ const SubscriptionManagement = () => {
                         >
                           {loading ? "Processing..." : "Approve"}
                         </button>
-                        <button 
+                        <button
                           className="btn btn-danger"
                           onClick={() => {
                             console.log("Reject clicked for:", selectedApplication._id);

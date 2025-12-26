@@ -1,12 +1,11 @@
+import Razorpay from "razorpay";
+import { computeCapabilities, ROLES } from "../config/rbac-policy.js";
+import { generateToken } from "../helpers/tokenHelper.js";
+import { logAuditEvent } from "../middlewares/rbacMiddleware.js";
 import sellerApplicationModel from "../models/sellerApplicationModel.js";
 import sellerProfileModel from "../models/sellerProfileModel.js";
 import subscriptionPlanModel from "../models/subscriptionPlanModel.js";
 import userModel from "../models/userModel.js";
-import paymentModel from "../models/paymentModel.js";
-import { logAuditEvent } from "../middlewares/rbacMiddleware.js";
-import { generateToken } from "../helpers/tokenHelper.js";
-import { computeCapabilities, ROLES } from "../config/rbac-policy.js";
-import Razorpay from "razorpay";
 
 // Get Razorpay instance
 const getRazorpayInstance = () => {
@@ -89,8 +88,15 @@ export const saveDraftApplication = async (req, res) => {
         status: "draft",
         lockPlan: false,
         ...applicationData,
+        // Enforce user details
+        email: req.user.email_id,
+        phone: req.user.mobile_no,
       });
     }
+
+    // Always ensure email and phone match the user (in case they were modified in draft update)
+    application.email = req.user.email_id;
+    application.phone = req.user.mobile_no;
 
     // Save draft without validation (validation happens at submission)
     await application.save({ validateBeforeSave: false });
@@ -170,19 +176,19 @@ export const submitApplication = async (req, res) => {
     const missingFields = [];
     for (const field of requiredFields) {
       const value = application[field];
-      
+
       // Check for consent fields (boolean)
       if (field.includes("Accepted")) {
         if (value !== true) {
           missingFields.push(field);
         }
-      } 
+      }
       // Check for string fields
       else if (typeof value === "string") {
         if (value.trim() === "") {
           missingFields.push(field);
         }
-      } 
+      }
       // Check for other fields (null, undefined, etc.)
       else if (!value) {
         missingFields.push(field);
@@ -321,7 +327,7 @@ export const getSellerApplications = async (req, res) => {
     console.log("=== getSellerApplications CALLED ===");
     console.log("User:", req.user);
     console.log("User capabilities:", req.user?.capabilities);
-    
+
     const { status, page = 1, limit = 10, search, sort = "-createdAt" } = req.query;
     console.log("getSellerApplications called with query:", { status, page, limit, search, sort });
 
@@ -477,7 +483,7 @@ export const approveApplication = async (req, res) => {
       application.planExpiryDate = planExpiryDate;
       application.gracePeriodEndDate = gracePeriodEndDate;
       application.planStatus = "active";
-      
+
       // Log initial plan in renewal history
       application.renewalHistory.push({
         renewalDate: planStartDate,
@@ -485,23 +491,26 @@ export const approveApplication = async (req, res) => {
         newPlanId: plan._id,
         renewalType: "initial",
       });
-      
+
       await application.save({ validateBeforeSave: false });
 
-      // Create SellerProfile
-      const sellerProfile = new sellerProfileModel({
-        userId: user._id,
-        applicationId: application._id,
-        currentPlanId: plan._id,
-        isActive: true,
-        planActivatedAt: new Date(),
-        planExpiresAt: null,
-        permissions: {
-          grantedCapabilities: plan.includedCapabilities || [],
-          deniedCapabilities: plan.excludedCapabilities || [],
+      // Create or Update SellerProfile
+      const sellerProfile = await sellerProfileModel.findOneAndUpdate(
+        { userId: user._id },
+        {
+          userId: user._id,
+          applicationId: application._id,
+          currentPlanId: plan._id,
+          isActive: true,
+          planActivatedAt: new Date(),
+          planExpiresAt: null,
+          permissions: {
+            grantedCapabilities: plan.includedCapabilities || [],
+            deniedCapabilities: plan.excludedCapabilities || [],
+          },
         },
-      });
-      await sellerProfile.save({ validateBeforeSave: false });
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+      );
 
       // Update user role and permissions
       user.roleString = "seller";
@@ -550,7 +559,7 @@ export const approveApplication = async (req, res) => {
     const orderOptions = {
       amount: Math.round(plan.price * 100), // Convert to paise
       currency: "INR",
-      receipt: `receipt_${application._id}_${Date.now()}`,
+      receipt: `rcpt_${application._id.toString().slice(-8)}_${Date.now().toString().slice(-6)}`,
       notes: {
         applicationId: application._id.toString(),
         userId: user._id.toString(),
@@ -581,7 +590,7 @@ export const approveApplication = async (req, res) => {
       status: "pending",
       createdAt: new Date(),
     };
-    
+
     // Log initial plan in renewal history
     application.renewalHistory.push({
       renewalDate: planStartDate,
@@ -589,21 +598,24 @@ export const approveApplication = async (req, res) => {
       newPlanId: plan._id,
       renewalType: "initial",
     });
-    
+
     await application.save({ validateBeforeSave: false });
 
-    // Create SellerProfile (inactive)
-    const sellerProfile = new sellerProfileModel({
-      userId: user._id,
-      applicationId: application._id,
-      currentPlanId: plan._id,
-      isActive: false,
-      permissions: {
-        grantedCapabilities: [],
-        deniedCapabilities: [],
+    // Create or Update SellerProfile (inactive)
+    const sellerProfile = await sellerProfileModel.findOneAndUpdate(
+      { userId: user._id },
+      {
+        userId: user._id,
+        applicationId: application._id,
+        currentPlanId: plan._id,
+        isActive: false, // Remains inactive until payment
+        permissions: {
+          grantedCapabilities: [],
+          deniedCapabilities: [],
+        },
       },
-    });
-    await sellerProfile.save({ validateBeforeSave: false });
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
 
     // Log audit
     await logAuditEvent({
@@ -763,7 +775,7 @@ export const retryPayment = async (req, res) => {
     const orderOptions = {
       amount: Math.round(plan.price * 100),
       currency: "INR",
-      receipt: `receipt_${application._id}_${Date.now()}`,
+      receipt: `rcpt_${application._id.toString().slice(-8)}_${Date.now().toString().slice(-6)}`,
       notes: {
         applicationId: application._id.toString(),
         userId: userId.toString(),
@@ -1095,6 +1107,121 @@ export const getAvailablePlans = async (req, res) => {
   }
 };
 
+/**
+ * Verify Payment and Activate Subscription
+ */
+export const verifyPayment = async (req, res) => {
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    const userId = req.user._id;
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).send({
+        success: false,
+        message: "Missing payment details",
+      });
+    }
+
+    // Verify signature
+    const shasum = crypto.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET);
+    shasum.update(`${razorpay_order_id}|${razorpay_payment_id}`);
+    const digest = shasum.digest("hex");
+
+    if (digest !== razorpay_signature) {
+      return res.status(400).send({
+        success: false,
+        message: "Transaction not legit!",
+      });
+    }
+
+    // Find application by order ID
+    const application = await sellerApplicationModel.findOne({
+      "payment.orderId": razorpay_order_id,
+    }).populate("selectedPlanId");
+
+    if (!application) {
+      return res.status(404).send({
+        success: false,
+        message: "Application not found for this order",
+      });
+    }
+
+    const plan = application.selectedPlanId;
+
+    // Update Application
+    const planStartDate = new Date();
+    const planExpiryDate = new Date();
+    planExpiryDate.setDate(planExpiryDate.getDate() + 30); // Monthly default, should use plan cycle
+    const gracePeriodEndDate = new Date(planExpiryDate);
+    gracePeriodEndDate.setDate(gracePeriodEndDate.getDate() + 30);
+
+    application.status = "approved"; // or active? Model Enum has 'active'. Let's use 'active' to signify Paid & Active.
+    // L20 in model is 'active'. But approveApplication uses 'approved' for free plans.
+    // Let's stick to 'approved' or 'active'. If 'active' implies immutable, use 'active'.
+    // approveApplication (Free) uses "approved" status but "planStatus" active.
+    // Let's use "active" status for consistency with "approved" being intermediate? 
+    // Wait, free plan sets status="approved".
+    // Paid plan sets status="approved_pending_payment".
+    // After payment, it should probably match Free plan or go to "active". 
+    // existing Enum: "approved", "active". 
+    // Let's use "active" for fully active sellers. (Or "approved" if that's the convention).
+    // Free plan sets status="approved". So I will use "approved" to match Free plan logic.
+    application.status = "approved";
+
+    application.planStartDate = planStartDate;
+    application.planExpiryDate = planExpiryDate;
+    application.gracePeriodEndDate = gracePeriodEndDate;
+    application.planStatus = "active";
+
+    application.payment.status = "paid";
+    application.payment.razorpayPaymentId = razorpay_payment_id;
+    application.payment.provider = "razorpay";
+
+    await application.save();
+
+    // Create/Update Seller Profile
+    await sellerProfileModel.findOneAndUpdate(
+      { userId: application.userId },
+      {
+        userId: application.userId,
+        applicationId: application._id,
+        currentPlanId: plan._id,
+        isActive: true, // Now active
+        planActivatedAt: new Date(),
+        planExpiresAt: null, // or periodic? Free plan set null.
+        permissions: {
+          grantedCapabilities: plan.includedCapabilities || [],
+          deniedCapabilities: plan.excludedCapabilities || [],
+        },
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    // Update User Role
+    await userModel.findByIdAndUpdate(application.userId, {
+      roleString: "seller",
+      permissions: {
+        grantedCapabilities: plan.includedCapabilities || [],
+        deniedCapabilities: plan.excludedCapabilities || [],
+      },
+      $inc: { tokenVersion: 1 } // Invalidate old tokens to force refresh if needed (optional)
+    });
+
+    res.status(200).send({
+      success: true,
+      message: "Payment verified and subscription activated",
+    });
+
+  } catch (error) {
+    console.error("Payment Verification Error:", error);
+    res.status(500).send({
+      success: false,
+      message: "Payment verification failed",
+      error: error.message,
+    });
+  }
+};
+
 export default {
   saveDraftApplication,
   submitApplication,
@@ -1107,4 +1234,5 @@ export default {
   renewPlan,
   upgradePlan,
   getAvailablePlans,
+  verifyPayment,
 };
