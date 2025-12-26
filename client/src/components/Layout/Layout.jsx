@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { Toaster } from "react-hot-toast";
+import { useLocation } from "react-router-dom";
 import Footer from "./Footer";
 import Header from "./Header";
 import "./Layout.css";
@@ -10,7 +10,7 @@ const Layout = ({ children, title, description, keywords, author }) => {
   const [headerHeight, setHeaderHeight] = useState(80);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const location = useLocation();
-  const isAdminRoute = location.pathname.startsWith("/dashboard/admin");
+  const isAdminRoute = location.pathname.toLowerCase().startsWith("/dashboard/admin");
 
   useEffect(() => {
     const handleResize = () => {
@@ -41,7 +41,7 @@ const Layout = ({ children, title, description, keywords, author }) => {
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 1050, // Higher z-index for better layering
+    zIndex: 1000, // Lowered from 1050 to prevent modal overlap (Modals are usually 1050+)
     backgroundColor: "#fff",
     boxShadow: "0 2px 8px rgba(0,0,0,0.15)", // More prominent shadow
     borderBottom: "1px solid #e9ecef"
@@ -113,7 +113,7 @@ const Layout = ({ children, title, description, keywords, author }) => {
                 background: '#ef4444'
               }
             }
-          }} 
+          }}
         />
       </div>
 

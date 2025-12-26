@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { useAuth } from '../context/auth';
 import { Heart } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import OptimizedImage from '../components/OptimizedImage';
+import useWishlist from '../hooks/useWishlist';
 
-const ProductCard = ({ product, onClick }) => {  
+const ProductCard = ({ product, onClick }) => {
   const navigate = useNavigate();
-  const [auth] = useAuth();
-  const [isInWishlist, setIsInWishlist] = useState(false);
   const [screenWidth, setScreenWidth] = useState(window.innerWidth);
   const [imageLoaded, setImageLoaded] = useState(false);
+
+  // Use new wishlist hook
+  const { isInWishlist, toggleWishlist } = useWishlist();
+  const inWishlist = isInWishlist(product?._id);
 
   useEffect(() => {
     const handleResize = () => setScreenWidth(window.innerWidth);
@@ -19,59 +19,25 @@ const ProductCard = ({ product, onClick }) => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  useEffect(() => {
-    if (auth?.user?._id && product?._id) {
-      checkWishlistStatus();
-    }
-  }, [auth?.user?._id, product?._id]);
-
-  const checkWishlistStatus = async () => {
-    try {
-      const { data } = await axios.get(
-        `/api/v1/carts/users/${auth.user._id}/wishlist/check/${product._id}`
-      );
-      setIsInWishlist(data.exists);
-    } catch (error) {
-      console.error("Error checking wishlist status:", error);
-    }
-  };
-
-  const toggleWishlist = async (e) => {
+  const handleToggleWishlist = async (e) => {
     e.stopPropagation();
 
-    if (!auth.user) {
-      return;
-    }
+    if (!product) return;
 
-    try {
-      if (isInWishlist) {
-        await axios.delete(
-          `/api/v1/carts/users/${auth.user._id}/wishlist/${product._id}`
-        );
-        setIsInWishlist(false);
-        //toast.success("Removed from wishlist");
-      } else {
-        await axios.post(`/api/v1/carts/users/${auth.user._id}/wishlist`, {
-          productId: product._id,
-        });
-        setIsInWishlist(true);
-        //toast.success("Added to wishlist");
-      }
-    } catch (error) {
-      console.error("Error toggling wishlist:", error);
-    }
+    // Optimistic update - instant UI change
+    await toggleWishlist(product);
   };
 
   const handleProductClick = () => {
     // Save current scroll position before navigating
     localStorage.setItem('homePageScrollPosition', window.scrollY.toString());
-    
+
     // Navigate to product details with scroll position state
-    navigate(`/product/${product.slug}`, { 
-      state: { 
+    navigate(`/product/${product.slug}`, {
+      state: {
         fromHomePage: true,
-        scrollPosition: window.scrollY 
-      } 
+        scrollPosition: window.scrollY
+      }
     });
   };
 
@@ -115,8 +81,8 @@ const ProductCard = ({ product, onClick }) => {
     <div className="col-md-10 col-sm-10 col-12 mb-3">
       <div
         className="card product-card h-100"
-        style={{ 
-          cursor: "pointer", 
+        style={{
+          cursor: "pointer",
           position: "relative",
           borderRadius: "8px",
           overflow: "hidden",
@@ -125,13 +91,13 @@ const ProductCard = ({ product, onClick }) => {
         onClick={handleProductClick}
       >
         {/* Image container with fixed aspect ratio */}
-        <div style={{ 
+        <div style={{
           position: "relative",
           paddingTop: "75%", // 4:3 aspect ratio
           width: "100%",
           overflow: "hidden"
         }}>
-          
+
           <OptimizedImage
             src={product.photos || '/placeholder-image.jpg'}
             alt={product.name}
@@ -152,7 +118,7 @@ const ProductCard = ({ product, onClick }) => {
             }}
           />
         </div>
-        
+
         <div className="p-3 d-flex flex-column" style={{ height: "auto" }}>
           <h5
             style={{
@@ -171,10 +137,7 @@ const ProductCard = ({ product, onClick }) => {
           >
             {product.name}
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleWishlist(e);
-              }}
+              onClick={handleToggleWishlist}
               style={{
                 position: "absolute",
                 right: "10px",
@@ -189,42 +152,46 @@ const ProductCard = ({ product, onClick }) => {
             >
               <Heart
                 size={24}
-                fill={isInWishlist ? "#e47911" : "none"}
-                color={isInWishlist ? "#e47911" : "#000000"}
+                fill={inWishlist ? "#d32f2f" : "none"}
+                color={inWishlist ? "#d32f2f" : "#000000"}
               />
             </button>
           </h5>
         </div>
-        
+
         <div className="mt-auto p-3 pt-0">
-          <h5
-            style={{
-              fontSize: fontSizes.price,
-              fontWeight: "700",
-              color: "#333",
-              margin: 0
-            }}
-          >
-            {product.perPiecePrice?.toLocaleString("en-US", {
-              style: "currency",
-              currency: "INR",
-            }) || "Price not available"}
-          </h5>
-          {product.mrp && (
-            <h6
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
+            <span
               style={{
-                fontSize: fontSizes.mrp,
-                textDecoration: "line-through",
-                color: "red",
-                margin: "4px 0 0 0"
+                fontSize: fontSizes.price,
+                fontWeight: "800",
+                color: "#d32f2f", // Red matching header theme
+                margin: 0
               }}
             >
-              {product.mrp.toLocaleString("en-US", {
+              {product.perPiecePrice?.toLocaleString("en-IN", {
                 style: "currency",
                 currency: "INR",
-              })}
-            </h6>
-          )}
+                maximumFractionDigits: 0
+              }) || "Price not available"}
+            </span>
+            {product.mrp && (
+              <span
+                style={{
+                  fontSize: fontSizes.mrp,
+                  textDecoration: "line-through",
+                  color: "#6b7280", // Gray for crossed price
+                  fontWeight: "500"
+                }}
+              >
+                {product.mrp.toLocaleString("en-IN", {
+                  style: "currency",
+                  currency: "INR",
+                  maximumFractionDigits: 0
+                })}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>

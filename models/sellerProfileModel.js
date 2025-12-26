@@ -163,6 +163,36 @@ const sellerProfileSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // Subscription Status Tracking (Source of Truth)
+    subscriptionStatus: {
+      type: String,
+      enum: ['active', 'expiring_soon', 'expired', 'grace_period', 'suspended'],
+      default: 'active'
+    },
+    lastStatusChange: {
+      type: Date,
+      default: Date.now
+    },
+    statusHistory: [{
+      status: String,
+      changedAt: Date,
+      reason: String
+    }],
+    paymentAttempts: [{
+      attemptDate: Date,
+      amount: Number,
+      status: String, // success, failed, pending
+      failureReason: String,
+      paymentId: String
+    }],
+    gracePeriodStartDate: {
+      type: Date,
+      default: null
+    },
+    gracePeriodEndDate: {
+      type: Date,
+      default: null
+    },
     // Seller Permissions (fine-grained)
     permissions: {
       canRefundOrders: {

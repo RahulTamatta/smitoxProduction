@@ -256,7 +256,7 @@ const CartSearchModal = ({ show, handleClose, userId }) => {
     };
 
     return (
-        <Modal show={show} onHide={handleClose} size="lg">
+        <Modal show={show} onHide={handleClose} size="lg" style={{ zIndex: 10000 }}>
             <Modal.Header closeButton>
                 <Modal.Title>Add Products to Cart</Modal.Title>
             </Modal.Header>

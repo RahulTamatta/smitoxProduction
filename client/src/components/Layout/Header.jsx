@@ -1,53 +1,20 @@
 import { HeartOutlined, HomeOutlined, LoginOutlined, ShoppingCartOutlined, UserOutlined } from '@ant-design/icons';
 import { Badge } from "antd";
-import axios from "axios";
 import { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import logo from "../../../src/assets/images/logo.png";
 import { useAuth } from "../../context/auth";
+import useCartStore from "../../store/cart.store";
+import useWishlistStore from "../../store/wishlist.store";
 import SearchInput from "../Form/SearchInput";
 
 const Header = () => {
   const [auth, setAuth] = useAuth();
-  const [cartCount, setCartCount] = useState(0);
-  const [wishlistCount, setWishlistCount] = useState(0);
-  const [dataFetched, setDataFetched] = useState(false);
+  const cartCount = useCartStore(state => state.cart.length);
+  const wishlistCount = useWishlistStore(state => state.wishlist.length);
+  const syncCart = useCartStore(state => state.syncCart);
+  const syncWishlist = useWishlistStore(state => state.syncWishlist);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-
-  const fetchCounts = async () => {
-    try {
-      if (auth?.user) {
-        const cartResponse = await axios.get(`/api/v1/carts/users/${auth.user._id}/cart`);
-        const wishlistResponse = await axios.get(`/api/v1/carts/users/${auth.user._id}/wishlist`);
-        setCartCount(cartResponse.data.cart.length);
-        setWishlistCount(wishlistResponse.data.wishlist.length);
-      }
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    }
-  };
-
-  const fetchCartCount = async () => {
-    try {
-      if (auth?.user) {
-        const { data } = await axios.get(`/api/v1/carts/users/${auth.user._id}/cart`);
-        setCartCount(data.cart.length);
-      }
-    } catch (error) {
-      console.error("Error fetching cart count:", error);
-    }
-  };
-
-  const fetchWishlistCount = async () => {
-    try {
-      if (auth?.user) {
-        const { data } = await axios.get(`/api/v1/carts/users/${auth.user._id}/wishlist`);
-        setWishlistCount(data.wishlist.length);
-      }
-    } catch (error) {
-      console.error("Error fetching wishlist count:", error);
-    }
-  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -56,28 +23,18 @@ const Header = () => {
 
     window.addEventListener("resize", handleResize);
 
-    if (auth?.user) {
-      fetchCartCount();
-      fetchWishlistCount();
-
-      const cartInterval = setInterval(fetchCartCount, 5000);
-      const wishlistInterval = setInterval(fetchWishlistCount, 5000);
-
-      return () => {
-        window.removeEventListener("resize", handleResize);
-        clearInterval(cartInterval);
-        clearInterval(wishlistInterval);
-      };
+    if (auth?.user?._id) {
+      // Periodic sync can be handled by stores if needed, 
+      // but manual intervals in components are usually bad.
+      // We sync once on mount/auth change.
+      syncCart();
+      syncWishlist();
     }
 
     return () => window.removeEventListener("resize", handleResize);
-  }, [auth?.user]);
+  }, [auth?.user?._id, syncCart, syncWishlist]);
 
-  const handleToggle = (section) => {
-    if (section === "cart" || section === "wishlist") {
-      fetchCounts();
-    }
-  };
+
 
   const handleLogout = () => {
     setAuth({
@@ -86,8 +43,9 @@ const Header = () => {
       token: "",
     });
     localStorage.removeItem("auth");
-    setCartCount(0);
-    setWishlistCount(0);
+    // Clear Zustand stores on logout
+    useCartStore.getState().clearCart();
+    useWishlistStore.getState().clearWishlist();
   };
 
   const handleHomeClick = () => {
@@ -254,22 +212,26 @@ const Header = () => {
                   </li>
                 </>
               )}
-              <li className="nav-item">
-                <NavLink to="/wishlist" className="nav-link d-flex align-items-center">
-                  <Badge count={wishlistCount} showZero offset={[10, -5]}>
-                    <HeartOutlined style={{ marginRight: "5px", color: "white", fontSize: "15px" }} />
-                  </Badge>
-                  Wishlist
-                </NavLink>
-              </li>
-              <li className="nav-item">
-                <NavLink to="/cart" className="nav-link d-flex align-items-center">
-                  <Badge count={cartCount} showZero offset={[10, -5]}>
-                    <ShoppingCartOutlined style={{ marginRight: "5px", color: "white", fontSize: "15px" }} />
-                  </Badge>
-                  Cart
-                </NavLink>
-              </li>
+              {auth?.user && (
+                <>
+                  <li className="nav-item">
+                    <NavLink to="/wishlist" className="nav-link d-flex align-items-center">
+                      <Badge count={wishlistCount} showZero offset={[10, -5]}>
+                        <HeartOutlined style={{ marginRight: "5px", color: "white", fontSize: "15px" }} />
+                      </Badge>
+                      Wishlist
+                    </NavLink>
+                  </li>
+                  <li className="nav-item">
+                    <NavLink to="/cart" className="nav-link d-flex align-items-center">
+                      <Badge count={cartCount} showZero offset={[10, -5]}>
+                        <ShoppingCartOutlined style={{ marginRight: "5px", color: "white", fontSize: "15px" }} />
+                      </Badge>
+                      Cart
+                    </NavLink>
+                  </li>
+                </>
+              )}
             </ul>
           </div>
 
@@ -339,20 +301,24 @@ const Header = () => {
                 </>
               )}
 
-              <li className="nav-item">
-                <NavLink to="/wishlist" className="nav-link p-1" style={{ color: "white", padding: "0.25rem 0.5rem" }}>
-                  <Badge count={wishlistCount} showZero offset={[8, -3]} size="small">
-                    <HeartOutlined style={{ color: "white", fontSize: "16px" }} />
-                  </Badge>
-                </NavLink>
-              </li>
-              <li className="nav-item">
-                <NavLink to="/cart" className="nav-link p-1" style={{ color: "white", padding: "0.25rem 0.5rem" }}>
-                  <Badge count={cartCount} showZero offset={[8, -3]} size="small">
-                    <ShoppingCartOutlined style={{ color: "white", fontSize: "16px" }} />
-                  </Badge>
-                </NavLink>
-              </li>
+              {auth?.user && (
+                <>
+                  <li className="nav-item">
+                    <NavLink to="/wishlist" className="nav-link p-1" style={{ color: "white", padding: "0.25rem 0.5rem" }}>
+                      <Badge count={wishlistCount} showZero offset={[8, -3]} size="small">
+                        <HeartOutlined style={{ color: "white", fontSize: "16px" }} />
+                      </Badge>
+                    </NavLink>
+                  </li>
+                  <li className="nav-item">
+                    <NavLink to="/cart" className="nav-link p-1" style={{ color: "white", padding: "0.25rem 0.5rem" }}>
+                      <Badge count={cartCount} showZero offset={[8, -3]} size="small">
+                        <ShoppingCartOutlined style={{ color: "white", fontSize: "16px" }} />
+                      </Badge>
+                    </NavLink>
+                  </li>
+                </>
+              )}
             </ul>
           </div>
         </div>

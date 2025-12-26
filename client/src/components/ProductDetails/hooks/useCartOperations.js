@@ -199,6 +199,14 @@ export const useCartOperations = (product) => {
           },
         }
       );
+
+      // Update global cart state
+      setCart(cart.map(item =>
+        item.product._id === product._id
+          ? { ...item, quantity: quantity }
+          : item
+      ));
+
     } catch (error) {
       console.error("Quantity update error:", error);
     }
@@ -211,12 +219,15 @@ export const useCartOperations = (product) => {
       const response = await axios.delete(
         `/api/v1/carts/users/${auth.user._id}/cart/${productId}`,
         {
-          method: "DELETE",
           headers: {
             Authorization: `Bearer ${auth.token}`,
           },
         }
       );
+
+      // Update global cart state
+      setCart(cart.filter(item => item.product._id !== productId));
+
     } catch (error) {
       console.error("Remove from cart failed:", error.message);
     }

@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
+import { useEffect, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../../../context/auth';
-import axios from 'axios';
-import toast from 'react-hot-toast';
 
 export const useProductData = () => {
   const params = useParams();
@@ -30,7 +30,7 @@ export const useProductData = () => {
       prevSlugRef.current = params?.slug;
       window.scrollTo(0, 0);
     }
-    
+
     if (params?.slug) {
       if (auth?.user?.pincode) {
         checkPincode(auth.user.pincode);
@@ -40,8 +40,13 @@ export const useProductData = () => {
   }, [params?.slug, auth?.user?.pincode]);
 
   useEffect(() => {
-    if (product.category?._id && product.subcategory?._id) {
-      getProductsForYou();
+    // Robustly check for category/subcategory IDs whether they are objects or strings
+    const categoryId = product.category?._id || (typeof product.category === 'string' ? product.category : null);
+    const subcategoryId = product.subcategory?._id || (typeof product.subcategory === 'string' ? product.subcategory : null);
+
+    // Subcategory is optional but category is required
+    if (categoryId) {
+      getProductsForYou(categoryId, subcategoryId);
     }
   }, [product.category, product.subcategory]);
 
@@ -86,7 +91,7 @@ export const useProductData = () => {
 
       if (data.success === true) {
         console.log('[Product] Product fetched successfully');
-        
+
         // Parse multipleimages if it's a JSON string
         let processedProduct = { ...data.product };
         if (processedProduct.multipleimages && typeof processedProduct.multipleimages === 'string') {
@@ -97,7 +102,7 @@ export const useProductData = () => {
             processedProduct.multipleimages = [];
           }
         }
-        
+
         // Ensure multipleimages is an array and filter out invalid URLs
         if (Array.isArray(processedProduct.multipleimages)) {
           processedProduct.multipleimages = processedProduct.multipleimages.filter(img => {
@@ -115,14 +120,14 @@ export const useProductData = () => {
         } else {
           processedProduct.multipleimages = [];
         }
-        
+
         console.log('[Product] Processed multipleimages:', processedProduct.multipleimages);
         setProduct(processedProduct);
         setRetryAttempts(0);
       }
     } catch (error) {
       console.error('[Product] Error fetching product:', error);
-      
+
       const isNetworkError = error.message && (
         error.message.includes('network') ||
         error.message.includes('timeout') ||
@@ -139,11 +144,13 @@ export const useProductData = () => {
     }
   };
 
-  const getProductsForYou = async () => {
+  const getProductsForYou = async (categoryId, subcategoryId) => {
     try {
-      const { data } = await axios.get(
-        `/api/v1/productForYou/products/${product.category?._id}/${product.subcategory?._id}`
-      );
+      const url = subcategoryId
+        ? `/api/v1/productForYou/products/${categoryId}/${subcategoryId}`
+        : `/api/v1/productForYou/products/${categoryId}`;
+
+      const { data } = await axios.get(url);
       if (data?.success) {
         setProductsForYou(
           (data.products || []).map(item => ({

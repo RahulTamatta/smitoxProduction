@@ -242,6 +242,15 @@ const sellerApplicationSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // Immutability tracking (becomes immutable after activation)
+    isImmutable: {
+      type: Boolean,
+      default: false
+    },
+    activatedAt: {
+      type: Date,
+      default: null
+    }
   },
   { timestamps: true }
 );

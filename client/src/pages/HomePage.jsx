@@ -1,4 +1,3 @@
-import axios from "axios";
 import { Suspense, useEffect, useState } from "react";
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
@@ -6,11 +5,12 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
-import { useCart } from "../context/cart";
+import ProductFilters from '../components/ProductFilters';
+import { useBanners, useCategories, useProducts, useProductsForYou } from '../hooks/useProducts';
 import "../styles/Homepage.css";
 import Layout from "./../components/Layout/Layout";
-import ProductCard from "./ProductCard"; // Import the new ProductCard component
-import WhatsAppButton from './whatsapp'; // Adjust the import path as needed
+import ProductCard from "./ProductCard";
+import WhatsAppButton from './whatsapp';
 
 
 
@@ -55,27 +55,23 @@ const sliderSettings = {
 
 const HomePage = () => {
   const navigate = useNavigate();
-  const [cart, setCart] = useCart();
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [checked, setChecked] = useState([]);
-  const [radio, setRadio] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [banners, setBanners] = useState([]);
-  const [user, setUser] = useState(null);
-  const [isBlocked, setIsBlocked] = useState(false);
-  const [productsForYou, setProductsForYou] = useState([]);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const [hasMore, setHasMore] = useState(true); // Add this new state
   const location = useLocation();
-  useEffect(() => {
-    getAllCategory();
-    getTotal();
-    getBanners();
-    getAllProductsForYou();
-  }, []);
+
+  // State
+  const [page, setPage] = useState(1);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [filters, setFilters] = useState({});
+  const [sortBy, setSortBy] = useState('');
+
+  // React Query hooks
+  const { data: productsData, isLoading: productsLoading } = useProducts({ page, filters, sortBy });
+  const { data: categories = [] } = useCategories();
+  const { data: productsForYou = [] } = useProductsForYou();
+  const { data: banners = [] } = useBanners();
+
+  const products = productsData?.products || [];
+  const total = productsData?.total || 0;
+  const hasMore = products.length > 0 && products.length === 12;
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth <= 768);
@@ -92,114 +88,21 @@ const HomePage = () => {
     padding: '0px 0px 0px 0px',
     display: isMobile ? 'block' : 'none',
   };
-  const getAllCategory = async () => {
-    try {
-      const { data } = await axios.get("/api/v1/category/get-category");
-      if (data?.success) {
-        setCategories(data?.category);
-      }
-    } catch (error) {
-      console.log(error);
-    }
+
+  // Filter and sort handlers
+  const handleFilterChange = (newFilters) => {
+    setFilters(newFilters);
+    setPage(1); // Reset to first page when filters change
   };
 
-  const getAllProducts = async () => {
-    try {
-      setLoading(true);
-      const { data } = await axios.get(`/api/v1/product/product-list/${page}`);
-      setLoading(false);
-      setProducts(data.products);
-    } catch (error) {
-      setLoading(false);
-      console.log(error);
-    }
+  const handleSortChange = (newSort) => {
+    setSortBy(newSort);
+    setPage(1); // Reset to first page when sort changes
   };
 
-  const getTotal = async () => {
-    try {
-      const { data } = await axios.get("/api/v1/product/product-count");
-      setTotal(data?.total);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const getAllProductsForYou = async () => {
-    try {
-      const { data } = await axios.get("/api/v1/productForYou/get-all");
-      if (data?.success) {
-        setProductsForYou(data.productsForYou || []);
-      }
-    } catch (error) {
-      console.log(error);
-      //toast.error("Failed to fetch products for you");
-    }
-  };
-
-  const loadMore = async () => {
-    try {
-      if (loading) return; // Prevent multiple simultaneous calls
-
-      setLoading(true);
-      const nextPage = page + 1;
-
-      const { data } = await axios.get(`/api/v1/product/product-list/${nextPage}`, {
-        params: { limit: 12 } // Ensure consistent page size
-      });
-
-      if (data.products.length === 0) {
-        setHasMore(false);
-      } else {
-        setProducts([...products, ...data.products]);
-        setPage(nextPage); // Update page after successful data fetch
-      }
-
-      setLoading(false);
-    } catch (error) {
-      console.log(error);
-      setLoading(false);
-    }
-  };
-
-  const handleFilter = (value, id) => {
-    let all = [...checked];
-    if (value) {
-      all.push(id);
-    } else {
-      all = all.filter((c) => c !== id);
-    }
-    setChecked(all);
-  };
-
-  useEffect(() => {
-    if (!checked.length || !radio.length) getAllProducts();
-  }, [checked.length, radio.length]);
-
-  useEffect(() => {
-    if (checked.length || radio.length) filterProduct();
-  }, [checked, radio]);
-
-  const filterProduct = async () => {
-    try {
-      const { data } = await axios.post("/api/v1/product/product-filters", {
-        checked,
-        radio,
-      });
-      setProducts(data?.products);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const getBanners = async () => {
-    try {
-      const { data } = await axios.get("/api/v1/bannerManagement/get-banners");
-      if (data?.success) {
-        setBanners(data.banners);
-      }
-    } catch (error) {
-      console.log(error);
-      //toast.error("Failed to fetch banners");
+  const loadMore = () => {
+    if (!productsLoading && hasMore) {
+      setPage(prev => prev + 1);
     }
   };
 
@@ -359,12 +262,16 @@ const HomePage = () => {
     };
   }, [location.pathname]);
 
-  if (isBlocked) {
+  if (productsLoading && page === 1) {
     return (
-      <Layout title="Account Blocked">
-        <div className="container">
-          <h1>Your account has been blocked</h1>
-          <p>Please contact support for more information.</p>
+      <Layout title="All Products - Best offers">
+        <div className="container mt-4" style={{ paddingTop: "100px" }}>
+          <div className="text-center">
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <p className="mt-2">Loading products...</p>
+          </div>
         </div>
       </Layout>
     );
@@ -512,40 +419,59 @@ const HomePage = () => {
 
       {/* All Products Section */}
       <div className="container mt-4">
-        <h2 className="text-center mb-4" style={{ fontSize: isMobile ? '1.5rem' : '2rem' }}>
-          Trending Products
-        </h2>
+        <div className="row mb-4">
+          <div className="col-12">
+            <h2 className="text-center mb-4" style={{ fontSize: isMobile ? '1.5rem' : '2rem' }}>
+              Trending Products
+            </h2>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="row mb-4">
+          <div className="col-12">
+            <ProductFilters
+              categories={categories}
+              onFilterChange={handleFilterChange}
+              currentFilters={filters}
+              currentSort={sortBy}
+              onSortChange={handleSortChange}
+            />
+          </div>
+        </div>
+
+        {/* Products Grid */}
         <div className="row g-1">
-  {products.map((p) => (
-    <div
-      key={p._id}
-      className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3"
-      style={{ padding: '2px' }} // Minimal padding
-    >
-      <ProductCard
-        product={p}
-        photoUrl={p.photoUrl}
-      />
-    </div>
-  ))}
-</div>
+          {products.map((p) => (
+            <div
+              key={p._id}
+              className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3"
+              style={{ padding: '2px' }} // Minimal padding
+            >
+              <ProductCard
+                product={p}
+                photoUrl={p.photoUrl}
+              />
+            </div>
+          ))}
+        </div>
 
         {/* Pagination and Load More */}
         <div className="text-center mt-4 mb-5">
           {/* Pagination indicator */}
           {products.length > 0 && (
             <div className="mb-3">
-              <span className="text-muted">
-                Page {page} of {Math.ceil(total / 12)} • Showing {products.length} of {total} products
+              <span className="text-muted" style={{ fontWeight: '500' }}>
+                Showing {products.length} of {total} products
               </span>
             </div>
           )}
 
-          {hasMore && products.length < total && (
+          {hasMore && (
             <button
               className="btn btn-primary"
-              onClick={loadMore} // Directly call loadMore
-              disabled={loading}
+              onClick={loadMore}
+              disabled={productsLoading}
               style={{
                 backgroundColor: '#e53935',
                 border: 'none',
@@ -556,7 +482,7 @@ const HomePage = () => {
                 boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
               }}
             >
-              {loading ? (
+              {productsLoading ? (
                 <>
                   <span className="spinner-border spinner-border-sm me-2"></span>
                   Loading...

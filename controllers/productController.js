@@ -687,23 +687,83 @@ const getResourceBytes = (publicId) => {
 
 export const productListController = async (req, res) => {
   try {
-    const perPage = parseInt(req.query.limit) || 10;
+    const perPage = parseInt(req.query.limit) || 12;
     const page = parseInt(req.params.page) || 1;
-    const isActiveFilter = req.query.isActive || "1";
-    const stocks = req.query.stock || "1";
+    const { category, minPrice, maxPrice, sortBy, search } = req.query;
     const skip = (page - 1) * perPage;
 
     // Build the filter query
     const filterQuery = {
-      ...(isActiveFilter === "1" && { isActive: "1" }),
-      ...(stocks === "1" && { stock: { $gt: 0 } }),
+      isActive: "1",
+      stock: { $gt: 0 },
     };
 
-    // Sorting logic: primary by custom_order, secondary by createdAt
-    const sortQuery = {
-      custom_order: 1,
-      createdAt: -1
-    };
+    if (search) {
+      filterQuery.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } }
+      ];
+    }
+
+    // Handle category filtering - support both ObjectId and slug/name
+    if (category) {
+      // Check if it's a valid ObjectId (24 hex characters)
+      if (mongoose.Types.ObjectId.isValid(category) && category.length === 24) {
+        filterQuery.category = category;
+      } else {
+        // Treat as slug or name and look up category
+        const categoryDoc = await categoryModel.findOne({
+          $or: [
+            { slug: category.toLowerCase() },
+            { name: { $regex: new RegExp(`^${category}$`, 'i') } }
+          ]
+        });
+
+        if (categoryDoc) {
+          filterQuery.category = categoryDoc._id;
+        } else {
+          // Category not found - return empty results
+          return res.status(200).send({
+            success: true,
+            total: 0,
+            products: [],
+            pagination: {
+              currentPage: page,
+              perPage,
+              totalPages: 0,
+              hasNextPage: false,
+              hasPrevPage: false
+            },
+            bandwidthUsedBytes: 0
+          });
+        }
+      }
+    }
+
+    if (minPrice || maxPrice) {
+      filterQuery.perPiecePrice = {};
+      if (minPrice) filterQuery.perPiecePrice.$gte = parseFloat(minPrice);
+      if (maxPrice) filterQuery.perPiecePrice.$lte = parseFloat(maxPrice);
+    }
+
+    // Sorting logic
+    let sortQuery = { custom_order: 1, createdAt: -1 }; // Default: Popular
+    if (sortBy) {
+      switch (sortBy) {
+        case 'price_asc':
+          sortQuery = { perPiecePrice: 1, createdAt: -1 };
+          break;
+        case 'price_desc':
+          sortQuery = { perPiecePrice: -1, createdAt: -1 };
+          break;
+        case 'newest':
+          sortQuery = { createdAt: -1 };
+          break;
+        case 'popular':
+          sortQuery = { custom_order: 1, createdAt: -1 };
+          break;
+      }
+    }
 
     // Get total count of products matching the filter
     const total = await productModel.countDocuments(filterQuery);
@@ -1749,49 +1809,42 @@ export const productCategoryController = async (req, res) => {
     }
 
     // --- Pagination Parameters ---
-    const page = Math.max(parseInt(req.query.page, 10) || 1, 1); // Ensure page is at least 1
-    const limit = Math.max(parseInt(req.query.limit, 10) || 20, 1); // Ensure limit is at least 1
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.max(parseInt(req.query.limit, 10) || 12, 1);
+    const { minPrice, maxPrice, sortBy } = req.query;
     const skip = (page - 1) * limit;
-
-    // --- Filter Parameter ---
-    const filter = req.query.filter?.trim().toLowerCase() || "active"; // Default to 'active' if no filter specified
 
     // --- Build Filter Query ---
     const filterQuery = {
-      category: category._id, // Always filter by the category ID
+      category: category._id,
+      isActive: "1",
+      stock: { $gt: 0 },
     };
 
-    // Apply filters based on the 'filter' query parameter
-    switch (filter) {
-      case "active":
-        filterQuery.isActive = { $in: [true, "1"] }; // Products that are active (boolean true or string "1")
-        filterQuery.stock = { $gt: 0 }; // And have stock greater than 0
-        break;
-      case "inactive":
-        filterQuery.isActive = { $in: [false, "0"] }; // Products that are inactive (boolean false or string "0")
-        // No stock condition applied for inactive items by default
-        break;
-      case "outOfStock":
-        filterQuery.isActive = { $in: [true, "1"] }; // Consider only active products
-        filterQuery.stock = 0; // Products with stock exactly 0
-        break;
-      case "all":
-        // No additional isActive or stock filters applied when filter is 'all'
-        break;
-      default:
-        // Optional: Handle unexpected filter values, maybe return an error or default to 'active'
-        console.warn(`Unsupported filter value received in productCategoryController: ${filter}. Defaulting to active.`);
-        filterQuery.isActive = { $in: [true, "1"] };
-        filterQuery.stock = { $gt: 0 };
-        break;
+    if (minPrice || maxPrice) {
+      filterQuery.perPiecePrice = {};
+      if (minPrice) filterQuery.perPiecePrice.$gte = parseFloat(minPrice);
+      if (maxPrice) filterQuery.perPiecePrice.$lte = parseFloat(maxPrice);
     }
 
     // --- Sorting Logic ---
-    // Primary sort by custom_order (ascending), secondary by createdAt (descending)
-    const sortQuery = {
-      custom_order: 1,
-      createdAt: -1
-    };
+    let sortQuery = { custom_order: 1, createdAt: -1 };
+    if (sortBy) {
+      switch (sortBy) {
+        case 'price_asc':
+          sortQuery = { perPiecePrice: 1, createdAt: -1 };
+          break;
+        case 'price_desc':
+          sortQuery = { perPiecePrice: -1, createdAt: -1 };
+          break;
+        case 'newest':
+          sortQuery = { createdAt: -1 };
+          break;
+        case 'popular':
+          sortQuery = { custom_order: 1, createdAt: -1 };
+          break;
+      }
+    }
 
     // --- Database Queries ---
     // Get total count of products matching the filter
@@ -1864,62 +1917,41 @@ export const productSubcategoryController = async (req, res) => {
 
     // --- Pagination Parameters ---
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
-    const limit = Math.max(parseInt(req.query.limit, 10) || 20, 1);
+    const limit = Math.max(parseInt(req.query.limit, 10) || 12, 1);
+    const { minPrice, maxPrice, sortBy } = req.query;
     const skip = (page - 1) * limit;
-
-    // --- Filter Parameter ---
-    const filter = req.query.filter?.trim().toLowerCase() || "active"; // Default to 'active'
-
-    // --- Validate Subcategory ID ---
-    if (!mongoose.Types.ObjectId.isValid(subcategoryId)) {
-      return res.status(400).send({
-        success: false,
-        message: "Invalid subcategory ID",
-      });
-    }
-
-    // Fetch the subcategory details
-    const subcategory = await subcategoryModel.findById(subcategoryId).populate('category', 'name'); // Also populate parent category name
-    if (!subcategory) {
-      return res.status(404).send({
-        success: false,
-        message: "Subcategory not found",
-      });
-    }
 
     // --- Build Filter Query ---
     const filterQuery = {
-      subcategory: subcategoryId, // Always filter by the subcategory ID
+      subcategory: subcategoryId,
+      isActive: "1",
+      stock: { $gt: 0 },
     };
 
-    // Apply filters based on the 'filter' query parameter
-    switch (filter) {
-      case "active":
-        filterQuery.isActive = { $in: [true, "1"] };
-        filterQuery.stock = { $gt: 0 };
-        break;
-      case "inactive":
-        filterQuery.isActive = { $in: [false, "0"] };
-        break;
-      case "outOfStock":
-        filterQuery.isActive = { $in: [true, "1"] }; // Consider only active products
-        filterQuery.stock = 0;
-        break;
-      case "all":
-        // No additional isActive or stock filters applied
-        break;
-      default:
-        console.warn(`Unsupported filter value received in productSubcategoryController: ${filter}. Defaulting to active.`);
-        filterQuery.isActive = { $in: [true, "1"] };
-        filterQuery.stock = { $gt: 0 };
-        break;
+    if (minPrice || maxPrice) {
+      filterQuery.perPiecePrice = {};
+      if (minPrice) filterQuery.perPiecePrice.$gte = parseFloat(minPrice);
+      if (maxPrice) filterQuery.perPiecePrice.$lte = parseFloat(maxPrice);
     }
 
     // --- Sorting Logic ---
-    const sortQuery = {
-      custom_order: 1, // Primary sort by custom_order
-      createdAt: -1   // Secondary sort by creation date
-    };
+    let sortQuery = { custom_order: 1, createdAt: -1 };
+    if (sortBy) {
+      switch (sortBy) {
+        case 'price_asc':
+          sortQuery = { perPiecePrice: 1, createdAt: -1 };
+          break;
+        case 'price_desc':
+          sortQuery = { perPiecePrice: -1, createdAt: -1 };
+          break;
+        case 'newest':
+          sortQuery = { createdAt: -1 };
+          break;
+        case 'popular':
+          sortQuery = { custom_order: 1, createdAt: -1 };
+          break;
+      }
+    }
 
     // --- Database Queries ---
     // Get total count of products matching the filter
