@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Button, Form, InputGroup, ListGroup, Modal } from 'react-bootstrap';
 import { useAuth } from '../../context/auth';
 
-const CartSearchModal = ({ show, handleClose, userId }) => {
+const CartSearchModal = ({ show, handleClose, userId, onItemAdded }) => {
     const [auth] = useAuth();
     const [searchKeyword, setSearchKeyword] = useState('');
     const [searchResults, setSearchResults] = useState([]);
@@ -119,6 +119,7 @@ const CartSearchModal = ({ show, handleClose, userId }) => {
                 });
 
                 //toast.success('Product removed from cart');
+                if (onItemAdded) onItemAdded();
             } catch (error) {
                 console.error('Error removing product:', error);
                 //toast.error('Failed to remove product');
@@ -145,6 +146,7 @@ const CartSearchModal = ({ show, handleClose, userId }) => {
                 ...prev,
                 [product._id]: newTotalPrice
             }));
+            if (onItemAdded) onItemAdded();
 
         } catch (error) {
             console.error('Error updating quantity:', error);
@@ -189,6 +191,7 @@ const CartSearchModal = ({ show, handleClose, userId }) => {
                     [product._id]: initialTotalPrice
                 }));
                 //toast.success("Item added to cart");
+                if (onItemAdded) onItemAdded();
             }
         } catch (error) {
             console.error(error);
@@ -234,8 +237,8 @@ const CartSearchModal = ({ show, handleClose, userId }) => {
         padding: "8px 16px",
         fontSize: "14px",
         cursor: "pointer",
-        backgroundColor: "#ffa41c",
-        color: "#000000",
+        backgroundColor: "#d32f2f",
+        color: "white",
         border: "none",
         borderRadius: "20px",
         transition: "background-color 0.3s",
@@ -281,9 +284,14 @@ const CartSearchModal = ({ show, handleClose, userId }) => {
                             className="d-flex justify-content-between align-items-center"
                         >
                             <img
-                                src={`/api/v1/product/product-photo/${product._id}`}
+                                src={product.photos || `/api/v1/product/product-photo/${product._id}`}
                                 alt={product.name}
-                                width="50"
+                                style={{
+                                    width: "50px",
+                                    height: "50px",
+                                    objectFit: "cover",
+                                    borderRadius: "4px"
+                                }}
                                 className="me-2"
                             />
                             <div className="flex-grow-1">

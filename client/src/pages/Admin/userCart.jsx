@@ -231,6 +231,7 @@ const AddToCartPages = () => {
           show={showSearchModal}
           handleClose={() => setShowSearchModal(false)}
           userId={selectedUserId}
+          onItemAdded={() => getCart(userId)}
         />
 
         {/* Main Content */}
