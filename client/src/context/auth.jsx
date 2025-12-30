@@ -1,5 +1,5 @@
-import { useState, useRef,useEffect, useContext, createContext, useCallback } from "react";
 import axios from "axios";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 const AuthContext = createContext();
 
@@ -7,18 +7,35 @@ const AuthContext = createContext();
 const api = axios.create();
 
 const AuthProvider = ({ children }) => {
-  const [auth, setAuth] = useState({
-    user: null,
-    token: "",
-    refreshToken: "",
-    sessionId: ""
-  }); // Make sure refreshToken is always tracked
-  const [authLoading, setAuthLoading] = useState(true); // Track if auth is being loaded from localStorage
+  const [auth, setAuth] = useState(() => {
+    const data = localStorage.getItem("auth");
+    if (data) {
+      try {
+        const parseData = JSON.parse(data);
+        return {
+          user: parseData.user,
+          token: parseData.token,
+          refreshToken: parseData.refreshToken,
+          sessionId: parseData.sessionId || ""
+        };
+      } catch (error) {
+        console.error("Error parsing auth data from localStorage", error);
+        localStorage.removeItem("auth");
+      }
+    }
+    return {
+      user: null,
+      token: "",
+      refreshToken: "",
+      sessionId: ""
+    };
+  });
+  const [authLoading, setAuthLoading] = useState(false); // No longer loading asynchronously
   const refreshTimeout = useRef(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshSubscribers, setRefreshSubscribers] = useState([]);
 
-  // Logout function (defined early so it can be used in other functions)
+  // Logout function
   const logout = useCallback(() => {
     setAuth({ user: null, token: "", refreshToken: "", sessionId: "" });
     localStorage.removeItem("auth");
@@ -53,44 +70,50 @@ const AuthProvider = ({ children }) => {
       }
 
       setIsRefreshing(true);
-      
+
       if (!auth.refreshToken) {
-        throw new Error("No refresh token available");
+        console.warn("[Auth] No refresh token available, skipping refresh");
+        setIsRefreshing(false);
+        return null;
       }
 
-      const res = await axios.post("/api/v1/auth/refresh-token", { 
-        refreshToken: auth.refreshToken 
+      const res = await axios.post("/api/v1/auth/refresh-token", {
+        refreshToken: auth.refreshToken
       });
-      
+
       if (res.data.success && res.data.token) {
-        const updatedAuth = { 
-          ...auth, 
+        const updatedAuth = {
+          ...auth,
           token: res.data.token,
           refreshToken: res.data.refreshToken || auth.refreshToken,
           // Update user payload if server returned fresh user data (e.g., updated order_type)
           user: res.data.user ? { ...(auth.user || {}), ...res.data.user } : auth.user
         };
-        
+
         setAuth(updatedAuth);
         localStorage.setItem("auth", JSON.stringify(updatedAuth));
         api.defaults.headers.common["Authorization"] = res.data.token;
-        
+
         // Notify all subscribers about new token
         onRefreshed(res.data.token);
-        
+
         // Schedule next refresh
         setupTokenRefresh(res.data.token);
-        
+
         setIsRefreshing(false);
         return res.data.token;
       } else {
-        // If refresh failed
-        throw new Error("Token refresh failed");
+        // If refresh failed with a response but not success
+        throw new Error("Token refresh server error");
       }
     } catch (error) {
       console.error("Token refresh error:", error);
       setIsRefreshing(false);
-      logout();
+      // Only logout if it was a real attempt that failed (e.g. 401/403 from server)
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        console.warn("[Auth] Session expired or invalid, logging out");
+        logout();
+      }
       return null;
     }
   }, [auth, isRefreshing, logout, onRefreshed, subscribeTokenRefresh]);
@@ -113,15 +136,15 @@ const AuthProvider = ({ children }) => {
       (response) => response,
       async (error) => {
         const originalRequest = error.config;
-        
+
         // If error is 401 and we haven't tried to refresh yet
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
-          
+
           try {
             // Try to refresh the token
             const newToken = await refreshToken();
-            
+
             if (newToken) {
               // Update the failed request with new token and retry
               originalRequest.headers.Authorization = newToken;
@@ -133,7 +156,7 @@ const AuthProvider = ({ children }) => {
             logout();
           }
         }
-        
+
         return Promise.reject(error);
       }
     );
@@ -176,7 +199,7 @@ const AuthProvider = ({ children }) => {
       const decoded = decodeJwt(token);
       const expiry = decoded.exp ? decoded.exp * 1000 : null;
       const now = Date.now();
-      
+
       // Refresh 5 minutes before expiry to be safe
       if (expiry && expiry > now) {
         // For very short expiry (like 10s), refresh 2s before expiry
@@ -194,27 +217,14 @@ const AuthProvider = ({ children }) => {
     }
   }, [decodeJwt, refreshTimeout, refreshToken]);
 
-  // Load auth from localStorage on mount
+  // No longer needed: Load auth from localStorage on mount (done in useState initializer)
+  // MARKED FOR REMOVAL:
+  /*
   useEffect(() => {
     const data = localStorage.getItem("auth");
-    if (data) {
-      try {
-        const parseData = JSON.parse(data);
-        setAuth({
-          user: parseData.user,
-          token: parseData.token,
-          refreshToken: parseData.refreshToken,
-          sessionId: parseData.sessionId || ""
-        });
-      } catch (error) {
-        console.error("Error parsing auth data", error);
-        localStorage.removeItem("auth");
-      }
-    }
-    // Mark auth loading as complete
-    setAuthLoading(false);
-    //eslint-disable-next-line
+    ...
   }, []);
+  */
 
   // Setup refresh timer when token changes
   useEffect(() => {
@@ -237,4 +247,5 @@ const AuthProvider = ({ children }) => {
 // Custom hook
 const useAuth = () => useContext(AuthContext);
 
-export { useAuth, AuthProvider, api };
+export { api, AuthProvider, useAuth };
+
