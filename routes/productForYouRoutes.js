@@ -1,20 +1,20 @@
 import express from "express";
-import { requireSignIn } from "../middlewares/authMiddleware.js";
-import { requireCapability, auditLog } from "../middlewares/rbacMiddleware.js";
+import formidable from "express-formidable";
 import {
+  adminGetProductsForYouController,
+  bulkCreateProductForYouController,
+  bulkDeleteProductController,
   createProductForYouController,
-  getProductsForYouController,
+  deleteProductController,
   getAllProductsForYouController,
   getBannersController,
   getProductPhoto,
-  updateBannerController,
+  getProductsForYouController,
   singleProductController,
-  deleteProductController,
-  adminGetProductsForYouController,
-  bulkCreateProductForYouController,
-  bulkDeleteProductController
+  updateBannerController
 } from "../controllers/productForYouController.js"; // Updated import based on your controllers
-import formidable from "express-formidable";
+import { requireSignIn } from "../middlewares/authMiddleware.js";
+import { auditLog, requireCapability } from "../middlewares/rbacMiddleware.js";
 
 const router = express.Router();
 
@@ -59,7 +59,7 @@ router.get("/product-photo/:pid", getProductPhoto);
 router.get("/get-products", getBannersController);
 
 // Get products by category and subcategory
-router.get("/products/:categoryId/:subcategoryId", getProductsForYouController);
+router.get("/products/:categoryId/:subcategoryId?", getProductsForYouController);
 
 ;
 

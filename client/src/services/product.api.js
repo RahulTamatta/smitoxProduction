@@ -20,6 +20,7 @@ export const fetchProducts = async ({ page = 1, limit = 12, filters = {}, sortBy
 
     if (sortBy) params.append('sortBy', sortBy);
     if (filters.category) params.append('category', filters.category);
+    if (filters.subcategory) params.append('subcategory', filters.subcategory);
     if (filters.minPrice) params.append('minPrice', filters.minPrice);
     if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
     if (filters.search) params.append('search', filters.search);

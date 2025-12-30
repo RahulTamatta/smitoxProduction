@@ -689,7 +689,7 @@ export const productListController = async (req, res) => {
   try {
     const perPage = parseInt(req.query.limit) || 12;
     const page = parseInt(req.params.page) || 1;
-    const { category, minPrice, maxPrice, sortBy, search } = req.query;
+    const { category, subcategory, minPrice, maxPrice, sortBy, search } = req.query;
     const skip = (page - 1) * perPage;
 
     // Build the filter query
@@ -739,6 +739,26 @@ export const productListController = async (req, res) => {
         }
       }
     }
+
+    // Handle subcategory filtering
+    if (subcategory) {
+      if (mongoose.Types.ObjectId.isValid(subcategory) && subcategory.length === 24) {
+        filterQuery.subcategory = new mongoose.Types.ObjectId(subcategory);
+      } else {
+        // Support lookup by subcategory slug too
+        const subDoc = await subcategoryModel.findOne({
+          $or: [
+            { slug: subcategory.toLowerCase() },
+            { name: { $regex: new RegExp(`^${subcategory}$`, 'i') } }
+          ]
+        });
+        if (subDoc) {
+          filterQuery.subcategory = subDoc._id;
+        }
+      }
+    }
+
+    console.log('DEBUG: filterQuery', JSON.stringify(filterQuery, null, 2));
 
     if (minPrice || maxPrice) {
       filterQuery.perPiecePrice = {};

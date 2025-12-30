@@ -50,49 +50,58 @@ export const getProductsForYouController = async (req, res) => {
   try {
     const { categoryId, subcategoryId } = req.params;
 
-    if (
-      !mongoose.Types.ObjectId.isValid(categoryId) ||
-      !mongoose.Types.ObjectId.isValid(subcategoryId)
-    ) {
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
       return res
         .status(400)
-        .send({ success: false, message: "Invalid category or subcategory ID" });
+        .send({ success: false, message: "Invalid category ID" });
     }
 
-    const products = await productForYouModel
-      .find({})
-      .populate("categoryId", "name")
-      .populate("subcategoryId", "name")
-      .populate("productId", "name photos price slug perPiecePrice")
-      .select("categoryId subcategoryId productId")
+    // Build filter for ProductForYou collection
+    const filter = { categoryId };
+    if (subcategoryId && mongoose.Types.ObjectId.isValid(subcategoryId)) {
+      filter.subcategoryId = subcategoryId;
+    }
+
+    // Try to fetch from ProductForYou collection first
+    let pfyItems = await productForYouModel
+      .find(filter)
+      .populate("productId", "name photos price slug perPiecePrice isActive")
+      .select("productId")
       .sort({ createdAt: -1 });
 
-    let productsWithBase64Photos = products.map((productForYou) => {
-      const productObj = productForYou.toObject();
+    let products = [];
 
-      if (
-        productObj.productId &&
-        productObj.productId.photos &&
-        productObj.productId.photos.data
-      ) {
-        productObj.productId.photoUrl = `data:${productObj.productId.photos.contentType};base64,${productObj.productId.photos.data.toString(
-          "base64"
-        )}`;
-        delete productObj.productId.photos;
-      }
+    if (pfyItems.length > 0) {
+      // Map and filter active products
+      products = pfyItems
+        .filter(item => item.productId && item.productId.isActive === "1")
+        .map(item => item.productId.toObject());
+    }
 
-      return productObj;
-    });
+    // Fallback: If no items in PFY, fetch directly from Product collection
+    if (products.length < 4) {
+      const remainingCount = 8 - products.length;
+      const existingIds = products.map(p => p._id);
 
-    // Shuffle the products array
-    productsWithBase64Photos = productsWithBase64Photos
-      .filter((p) => p.productId && p.productId.isActive === "1") // Only show active products
-      .sort(() => Math.random() - 0.5);
+      const fallbackProducts = await productModel
+        .find({
+          category: categoryId,
+          isActive: "1",
+          _id: { $nin: existingIds }
+        })
+        .select("name photos price slug perPiecePrice isActive")
+        .limit(remainingCount);
+
+      products = [...products, ...fallbackProducts.map(p => p.toObject())];
+    }
+
+    // Shuffle the final list for variety
+    products = products.sort(() => Math.random() - 0.5);
 
     res.status(200).send({
       success: true,
       message: "Products fetched successfully",
-      products: productsWithBase64Photos,
+      products: products.map(p => ({ productId: p })) // Keep structure compatible with frontend mapping
     });
   } catch (error) {
     console.error(error);

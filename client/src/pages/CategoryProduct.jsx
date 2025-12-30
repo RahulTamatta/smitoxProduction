@@ -24,29 +24,38 @@ const CategoryProduct = () => {
 
   // Handle Category/Subcategory identification
   useEffect(() => {
-    if (params.slug) {
-      // 1. Try to match params.slug with a Category Slug
-      const cat = allCategories.find(c => c.slug === params.slug);
-      if (cat) {
-        setCurrentCategory(cat);
-        setCurrentSubcategory(null);
-        setIsSubcategoryView(false);
-        setFilters(prev => ({ ...prev, category: cat._id, subcategory: undefined })); // Clear subcategory filter
-        return;
+    if (!params.slug || allCategories.length === 0) return;
+
+    // 1. Try to match params.slug with a Category ID first (high priority)
+    let cat = allCategories.find(c => c._id === params.slug);
+
+    // 2. If no ID match, try Slug
+    if (!cat) {
+      cat = allCategories.find(c => c.slug === params.slug);
+    }
+
+    if (cat) {
+      setCurrentCategory(cat);
+      setCurrentSubcategory(null);
+      setIsSubcategoryView(false);
+      setFilters({ category: cat._id, subcategory: undefined });
+      return;
+    }
+
+    // 3. Try to match params.slug with a Subcategory (ID first)
+    if (allSubcategories.length > 0) {
+      let sub = allSubcategories.find(s => s._id === params.slug);
+      if (!sub) {
+        sub = allSubcategories.find(s => s.slug === params.slug);
       }
 
-      // 2. Try to match params.slug with a Subcategory (ID or Slug)
-      // Note: HomePage passes subcategory ID in URL for banners
-      if (allSubcategories.length > 0) {
-        const sub = allSubcategories.find(s => s._id === params.slug || s.slug === params.slug);
-        if (sub) {
-          setCurrentSubcategory(sub);
-          // Find parent category for context if needed, but for now just set view
-          const parentCat = allCategories.find(c => c._id === sub.category);
-          setCurrentCategory(parentCat || null);
-          setIsSubcategoryView(true);
-          setFilters(prev => ({ ...prev, subcategory: sub._id, category: undefined })); // Filter by subcategory
-        }
+      if (sub) {
+        setCurrentSubcategory(sub);
+        const parentCat = allCategories.find(c => c._id === sub.category);
+        setCurrentCategory(parentCat || null);
+        setIsSubcategoryView(true);
+        setFilters({ subcategory: sub._id, category: undefined });
+        return;
       }
     }
   }, [params.slug, allCategories, allSubcategories]);
@@ -90,21 +99,35 @@ const CategoryProduct = () => {
     <Layout title={`${isSubcategoryView ? currentSubcategory?.name : currentCategory?.name || 'Category'} - Smitox`}>
       <div style={{ backgroundColor: '#f8f9fa', minHeight: '100vh', paddingBottom: '50px' }}>
         {/* Banner/Header */}
+        {/* Banner/Header */}
         <div
           className="category-header"
           style={{
-            background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
-            padding: '40px 20px',
-            color: 'white',
-            textAlign: 'center',
-            marginBottom: '20px'
+            backgroundColor: '#fff',
+            padding: '30px 40px',
+            borderBottom: '1px solid #e5e7eb',
+            marginBottom: '20px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '10px'
           }}
         >
-          <h1 style={{ fontSize: '2rem', fontWeight: '700', margin: 0 }}>
+          <h1 style={{
+            fontSize: '2rem',
+            fontWeight: '700',
+            margin: 0,
+            color: '#111827'
+          }}>
             {isSubcategoryView ? currentSubcategory?.name : currentCategory?.name || 'Loading...'}
           </h1>
-          <p style={{ opacity: 0.9, marginTop: '10px' }}>
-            {total} Products found
+          <p style={{
+            margin: 0,
+            color: '#6b7280',
+            fontSize: '0.95rem'
+          }}>
+            {total} Products found • Updated today
           </p>
         </div>
 
@@ -205,8 +228,8 @@ const CategoryProduct = () => {
                 categories={allCategories}
                 onFilterChange={handleFilterChange}
                 onSortChange={handleSortChange}
-                activeFilters={filters}
-                activeSort={sortBy}
+                currentFilters={filters}
+                currentSort={sortBy}
               />
             </div>
 
