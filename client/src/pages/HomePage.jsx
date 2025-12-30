@@ -344,10 +344,9 @@ const HomePage = () => {
                 paddingTop: isMobile ? '56.25%' : '35%', // 16:9 aspect ratio for mobile, wider for desktop
                 width: '100%',
               }}>
-                <LazyLoadImage
+                <img
                   src={banner.photos}
                   alt={banner.bannerName}
-                  effect="blur"
                   style={{
                     position: 'absolute',
                     top: 0,

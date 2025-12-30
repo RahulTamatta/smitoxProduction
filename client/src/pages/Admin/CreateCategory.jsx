@@ -21,10 +21,10 @@ const CreateCategory = () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', 'smitoxphoto');
-      formData.append('cloud_name', 'daabaruau');
+      formData.append('cloud_name', 'dnjtpihzs');
 
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/daabaruau/image/upload`,
+        `https://api.cloudinary.com/v1_1/dnjtpihzs/image/upload`,
         {
           method: 'POST',
           body: formData,
@@ -49,7 +49,7 @@ const CreateCategory = () => {
     e.preventDefault();
     try {
       toast.loading("Creating category...");
-      
+
       let photoUrl = "";
       if (photos) {
         photoUrl = await uploadToCloudinary(photos);
@@ -65,9 +65,9 @@ const CreateCategory = () => {
         return;
       }
 
-      const { data } = await api.post("/api/v1/category/create-category", { 
-        name, 
-        photos: photoUrl 
+      const { data } = await api.post("/api/v1/category/create-category", {
+        name,
+        photos: photoUrl
       });
 
       if (data?.success) {
@@ -215,10 +215,21 @@ const CreateCategory = () => {
                   </div>
                 )}
               </div>
-              <div className="mb-3">
+              <div className="mb-3 d-flex gap-3">
                 <button className="btn btn-primary" onClick={handleSubmit}>
                   Submit
                 </button>
+                <a
+                  href="/dashboard/admin/create-sub-category"
+                  className="btn btn-outline-primary"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    // Assuming you have a router, or use standard navigation
+                    window.location.href = '/dashboard/admin/create-sub-category';
+                  }}
+                >
+                  Manage Subcategories
+                </a>
               </div>
             </div>
             <div className="w-75">

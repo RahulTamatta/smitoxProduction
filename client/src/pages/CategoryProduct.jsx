@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
+import { LazyLoadImage } from 'react-lazy-load-image-component';
 import { useNavigate, useParams } from "react-router-dom";
 import Layout from "../components/Layout/Layout";
 import ProductFilters from '../components/ProductFilters';
-import { useCategories, useProducts } from '../hooks/useProducts';
+import { useCategories, useInfiniteProducts, useSubcategories } from '../hooks/useProducts';
 import ProductCard from "./ProductCard";
 import WhatsAppButton from './whatsapp';
 
@@ -11,54 +12,82 @@ const CategoryProduct = () => {
   const navigate = useNavigate();
 
   // State
-  const [page, setPage] = useState(1);
   const [filters, setFilters] = useState({});
   const [sortBy, setSortBy] = useState('');
   const [currentCategory, setCurrentCategory] = useState(null);
+  const [currentSubcategory, setCurrentSubcategory] = useState(null);
+  const [isSubcategoryView, setIsSubcategoryView] = useState(false);
 
   // Hooks
   const { data: allCategories = [] } = useCategories();
+  const { data: allSubcategories = [] } = useSubcategories();
 
-  // Find current category by slug
+  // Handle Category/Subcategory identification
   useEffect(() => {
-    if (params.slug && allCategories.length > 0) {
+    if (params.slug) {
+      // 1. Try to match params.slug with a Category Slug
       const cat = allCategories.find(c => c.slug === params.slug);
       if (cat) {
         setCurrentCategory(cat);
-        setFilters(prev => ({ ...prev, category: cat._id }));
+        setCurrentSubcategory(null);
+        setIsSubcategoryView(false);
+        setFilters(prev => ({ ...prev, category: cat._id, subcategory: undefined })); // Clear subcategory filter
+        return;
+      }
+
+      // 2. Try to match params.slug with a Subcategory (ID or Slug)
+      // Note: HomePage passes subcategory ID in URL for banners
+      if (allSubcategories.length > 0) {
+        const sub = allSubcategories.find(s => s._id === params.slug || s.slug === params.slug);
+        if (sub) {
+          setCurrentSubcategory(sub);
+          // Find parent category for context if needed, but for now just set view
+          const parentCat = allCategories.find(c => c._id === sub.category);
+          setCurrentCategory(parentCat || null);
+          setIsSubcategoryView(true);
+          setFilters(prev => ({ ...prev, subcategory: sub._id, category: undefined })); // Filter by subcategory
+        }
       }
     }
-  }, [params.slug, allCategories]);
+  }, [params.slug, allCategories, allSubcategories]);
 
-  // Fetch products
-  const { data: productsData, isLoading: loading } = useProducts({
-    page,
+  // Fetch products (Infinite)
+  const {
+    data: productsData,
+    isLoading: loading,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage
+  } = useInfiniteProducts({
+    limit: 12,
     filters,
     sortBy
   });
 
-  const products = productsData?.products || [];
-  const total = productsData?.total || 0;
-  const hasMore = productsData?.pagination?.hasNextPage || false;
+  const products = productsData?.pages?.flatMap(page => page.products) || [];
+  const total = productsData?.pages?.[0]?.total || 0;
+
+  // Get related subcategories for the current category
+  const displayedSubcategories = currentCategory
+    ? allSubcategories.filter(s => s.category === currentCategory._id)
+    : [];
 
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);
-    setPage(1);
   };
 
   const handleSortChange = (newSort) => {
     setSortBy(newSort);
-    setPage(1);
   };
 
   const loadMore = () => {
-    if (!loading && hasMore) {
-      setPage(prev => prev + 1);
+    if (!isFetchingNextPage && hasNextPage) {
+      fetchNextPage();
     }
   };
 
   return (
-    <Layout title={`${currentCategory?.name || 'Category'} - Smitox`}>
+    <Layout title={`${isSubcategoryView ? currentSubcategory?.name : currentCategory?.name || 'Category'} - Smitox`}>
       <div style={{ backgroundColor: '#f8f9fa', minHeight: '100vh', paddingBottom: '50px' }}>
         {/* Banner/Header */}
         <div
@@ -72,12 +101,101 @@ const CategoryProduct = () => {
           }}
         >
           <h1 style={{ fontSize: '2rem', fontWeight: '700', margin: 0 }}>
-            {currentCategory?.name || 'Loading Category...'}
+            {isSubcategoryView ? currentSubcategory?.name : currentCategory?.name || 'Loading...'}
           </h1>
           <p style={{ opacity: 0.9, marginTop: '10px' }}>
             {total} Products found
           </p>
         </div>
+
+        {/* Subcategory List (Show if has subcategories) */}
+        {displayedSubcategories.length > 0 && (
+          <div className="container-fluid px-md-4 mb-4">
+            <div style={{
+              backgroundColor: 'white',
+              padding: '15px',
+              borderRadius: '10px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+            }}>
+              <h5 className="mb-3" style={{ color: '#444', fontWeight: '600' }}>Explore Subcategories</h5>
+              <div style={{
+                display: 'flex',
+                gap: '15px',
+                overflowX: 'auto',
+                paddingBottom: '5px'
+              }}>
+                {/* 'All' Option */}
+                <div
+                  onClick={() => currentCategory && navigate(`/category/${currentCategory.slug}`)}
+                  style={{
+                    cursor: 'pointer',
+                    minWidth: '100px',
+                    textAlign: 'center',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center'
+                  }}
+                >
+                  <div style={{
+                    width: '70px',
+                    height: '70px',
+                    borderRadius: '50%',
+                    overflow: 'hidden',
+                    marginBottom: '8px',
+                    border: isSubcategoryView ? '1px solid #eee' : '2px solid #2563eb', // Highlight if active
+                    backgroundColor: '#f0f0f0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#555' }}>All</span>
+                  </div>
+                  <span style={{
+                    fontSize: '13px',
+                    color: isSubcategoryView ? '#555' : '#2563eb',
+                    fontWeight: isSubcategoryView ? '500' : '700'
+                  }}>All</span>
+                </div>
+
+                {displayedSubcategories.map(sub => (
+                  <div
+                    key={sub._id}
+                    onClick={() => navigate(`/category/${sub._id}`)}
+                    style={{
+                      cursor: 'pointer',
+                      minWidth: '100px',
+                      textAlign: 'center',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <div style={{
+                      width: '70px',
+                      height: '70px',
+                      borderRadius: '50%',
+                      overflow: 'hidden',
+                      marginBottom: '8px',
+                      border: (currentSubcategory?._id === sub._id) ? '2px solid #2563eb' : '1px solid #eee'
+                    }}>
+                      <LazyLoadImage
+                        src={sub.photos || 'https://via.placeholder.com/70'}
+                        alt={sub.name}
+                        effect="blur"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </div>
+                    <span style={{
+                      fontSize: '13px',
+                      color: (currentSubcategory?._id === sub._id) ? '#2563eb' : '#555',
+                      fontWeight: (currentSubcategory?._id === sub._id) ? '700' : '500'
+                    }}>{sub.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="container-fluid px-md-4">
           <div className="row">
@@ -94,7 +212,7 @@ const CategoryProduct = () => {
 
             {/* Products Grid */}
             <div className="col-12">
-              {loading && page === 1 ? (
+              {loading && !productsData ? (
                 <div className="text-center py-5">
                   <div className="spinner-border text-primary" role="status">
                     <span className="visually-hidden">Loading...</span>
@@ -117,11 +235,11 @@ const CategoryProduct = () => {
                         Showing {products.length} of {total} products
                       </span>
                     </div>
-                    {hasMore && (
+                    {hasNextPage && (
                       <button
                         className="btn btn-primary"
                         onClick={loadMore}
-                        disabled={loading}
+                        disabled={isFetchingNextPage}
                         style={{
                           backgroundColor: '#2563eb',
                           border: 'none',
@@ -130,7 +248,7 @@ const CategoryProduct = () => {
                           fontWeight: '600'
                         }}
                       >
-                        {loading ? 'Loading...' : 'Load More'}
+                        {isFetchingNextPage ? 'Loading...' : 'Load More'}
                       </button>
                     )}
                   </div>
@@ -150,8 +268,13 @@ const CategoryProduct = () => {
                     <button
                       className="btn btn-outline-primary mt-3"
                       onClick={() => {
-                        setFilters({ category: currentCategory?._id });
-                        setSortBy('');
+                        // Reset to main category if stuck in empty subcategory or just clear all
+                        if (currentCategory && isSubcategoryView) {
+                          navigate(`/category/${currentCategory.slug}`);
+                        } else {
+                          setFilters({ category: currentCategory?._id });
+                          setSortBy('');
+                        }
                       }}
                     >
                       Clear All Filters

@@ -48,10 +48,10 @@ const CreateProduct = () => {
   const [fk_tags, setFkTags] = useState([]); // Added to match controller
   const [sku, setSku] = useState(""); // Added to match controller
   const [customOrder, setCustomOrder] = useState("");
-  const [photos, setPhotos] = useState(""); 
+  const [photos, setPhotos] = useState("");
   const [multipleimages, setMultipleImages] = useState([]);
 
-  
+
   useEffect(() => {
     getAllCategories();
     getSubcategories();
@@ -175,20 +175,20 @@ const CreateProduct = () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', 'smitoxphoto');
-      formData.append('cloud_name', 'daabaruau');
-  
+      formData.append('cloud_name', 'dnjtpihzs');
+
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/daabaruau/image/upload`,
+        `https://api.cloudinary.com/v1_1/dnjtpihzs/image/upload`,
         {
           method: 'POST',
           body: formData,
         }
       );
-  
+
       if (!response.ok) {
         throw new Error(`Upload failed: ${response.status}`);
       }
-  
+
       const data = await response.json();
       console.log('Upload successful, URL:', data.secure_url);
       return data.secure_url;
@@ -197,45 +197,45 @@ const CreateProduct = () => {
       throw error;
     }
   };
-  
+
   // Modify the handleCreate function to handle image uploads
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
       toast.loading("Creating product...");
       const productData = new FormData();
-  
+
       // Upload main photo if it exists
       let mainPhotoUrl = "";
       if (photo) {
         mainPhotoUrl = await uploadToCloudinary(photo);
         productData.append("photos", mainPhotoUrl);
       }
-  
+
       // Handle multiple images upload
       let allImageUrls = [...(multipleimages || [])];
-      
+
       // Process multiple images if any are selected
       if (images && images.length > 0) {
         console.log(`Uploading ${images.length} additional images...`);
         const imageUploadPromises = [];
-        
+
         // Create a separate promise for each image upload
         for (const imageFile of images) {
           imageUploadPromises.push(uploadToCloudinary(imageFile));
         }
-        
+
         // Wait for all uploads to complete and collect URLs
         const newImageUrls = await Promise.all(imageUploadPromises);
         console.log(`Successfully uploaded ${newImageUrls.length} images`);
-        
+
         // Add new image URLs to the existing ones
         allImageUrls = [...allImageUrls, ...newImageUrls];
       }
-      
+
       // Add the image URLs as a JSON string
       productData.append("multipleimages", JSON.stringify(allImageUrls));
-  
+
       // Add all other form fields
       const formFields = {
         name, description, price, quantity, category, subcategory, brand,
@@ -248,29 +248,30 @@ const CreateProduct = () => {
           maximum: parseFloat(p.maximum) || 0,
           discount_mrp: parseFloat(p.discount_mrp) || 0,
           selling_price_set: parseFloat(p.selling_price_set) || 0
-          
+
         }))),
-        custom_order: customOrder || "" 
+        custom_order: customOrder || ""
       };
-  
+
       Object.entries(formFields).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           productData.append(key, value);
         }
       });
-  
+
       // All uploads have already been completed
-  
+
       const { data } = await axios.post(
         "/api/v1/product/create-product",
         productData,
         {
-          headers: { 'Content-Type': 'multipart/form-data' ,
+          headers: {
+            'Content-Type': 'multipart/form-data',
             'Authorization': auth?.token
           }
         }
       );
-  
+
       if (data?.success) {
         toast.dismiss();
         toast.success("Product Created Successfully");
@@ -285,7 +286,7 @@ const CreateProduct = () => {
       console.error('Create error:', error);
     }
   };
-  
+
   // Add this function after your state declarations
   const generateUniqueSkU = () => {
     // Get current timestamp

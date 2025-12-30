@@ -7,6 +7,7 @@ import {
     fetchProducts,
     fetchProductsByCategory,
     fetchProductsForYou,
+    fetchSubcategories,
 } from '../services/product.api';
 
 /**
@@ -110,5 +111,17 @@ export const useBanners = () => {
         queryFn: fetchBanners,
         staleTime: 15 * 60 * 1000, // 15 minutes
         cacheTime: 30 * 60 * 1000, // 30 minutes
+    });
+};
+
+/**
+ * Hook for fetching subcategories
+ */
+export const useSubcategories = () => {
+    return useQuery({
+        queryKey: ['subcategories'],
+        queryFn: fetchSubcategories,
+        staleTime: 30 * 60 * 1000, // 30 minutes
+        cacheTime: 60 * 60 * 1000, // 1 hour
     });
 };

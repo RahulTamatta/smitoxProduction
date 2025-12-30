@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Use upload preset (unsigned upload) - no API key needed on client
 const CLOUDINARY_UPLOAD_PRESET = "smitoxphoto";     // Your upload preset name
-const CLOUDINARY_CLOUD_NAME = "daabaruau";             // Your cloud name
+const CLOUDINARY_CLOUD_NAME = "dnjtpihzs";             // Your cloud name
 const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 
 export const uploadToCloudinary = async (file) => {
@@ -27,11 +27,11 @@ export const uploadToCloudinary = async (file) => {
 };
 
 export const uploadMultipleToCloudinary = async (files) => {
-    try {
-      const uploadPromises = files.map(file => uploadToCloudinary(file));
-      return await Promise.all(uploadPromises);
-    } catch (error) {
-      console.error("Multiple uploads error:", error);
-      throw new Error("Multiple images upload failed");
-    }
-  };
+  try {
+    const uploadPromises = files.map(file => uploadToCloudinary(file));
+    return await Promise.all(uploadPromises);
+  } catch (error) {
+    console.error("Multiple uploads error:", error);
+    throw new Error("Multiple images upload failed");
+  }
+};

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Card, Col, Form, Modal, Row, Table, ToggleButton } from "react-bootstrap";
+import { Button, Form, Modal, Table, ToggleButton } from "react-bootstrap";
 import toast from "react-hot-toast";
 import AdminMenu from "../../components/Layout/AdminMenu";
 import Layout from "../../components/Layout/Layout";
@@ -29,10 +29,10 @@ const SubcategoryList = () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', 'smitoxphoto');
-      formData.append('cloud_name', 'daabaruau');
+      formData.append('cloud_name', 'dnjtpihzs');
 
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/daabaruau/image/upload`,
+        `https://api.cloudinary.com/v1_1/dnjtpihzs/image/upload`,
         {
           method: 'POST',
           body: formData,
@@ -135,7 +135,7 @@ const SubcategoryList = () => {
           isActive: editIsActive,
         }
       );
-      
+
       if (data?.success) {
         toast.dismiss();
         toast.success(`${editName} updated successfully.`);

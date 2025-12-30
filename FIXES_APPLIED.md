@@ -171,7 +171,7 @@ export const uploadToCloudinary = async (file) => {
 ```javascript
 // Use upload preset (unsigned upload) - no API key needed on client
 const CLOUDINARY_UPLOAD_PRESET = "smitoxphoto";
-const CLOUDINARY_CLOUD_NAME = "daabaruau";
+const CLOUDINARY_CLOUD_NAME = "dnjtpihzs";
 const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 
 export const uploadToCloudinary = async (file) => {

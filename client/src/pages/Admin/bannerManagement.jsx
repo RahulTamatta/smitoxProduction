@@ -30,7 +30,7 @@ const BannerManagement = () => {
     setError(null);
     try {
       const response = await axios.get('/api/v1/bannerManagement/get-banners');
-      
+
       setBanners(response.data.banners || []);
     } catch (error) {
       console.error('Error fetching banners:', error);
@@ -94,10 +94,10 @@ const BannerManagement = () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', 'smitoxphoto'); // Use your upload preset
-      formData.append('cloud_name', 'daabaruau'); // Use your cloud name
+      formData.append('cloud_name', 'dnjtpihzs'); // Use your cloud name
 
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/daabaruau/image/upload`,
+        `https://api.cloudinary.com/v1_1/dnjtpihzs/image/upload`,
         {
           method: 'POST',
           body: formData,
@@ -224,40 +224,40 @@ const BannerManagement = () => {
                       </tr>
                     </thead>
                     <tbody>
-      {banners.map((banner, index) => (
-        <tr key={banner._id}>
-          <td>{index + 1}</td>
-          <td>{banner.bannerName}</td>
-          <td>{banner.categoryId?.name}</td>
-          <td>{banner.subcategoryId?.name}</td>
-          <td>
-            <img 
-              src={banner.photos} 
-              alt={banner.bannerName} 
-              width="50" 
-              className="img-thumbnail"
-            />
-          </td>
-          <td>
-            <Button 
-              variant="primary" 
-              size="sm" 
-              onClick={() => handleEdit(banner)} 
-              className="mr-2"
-            >
-              <Pencil size={18} />
-            </Button>
-            <Button 
-              variant="danger" 
-              size="sm" 
-              onClick={() => handleDelete(banner._id)}
-            >
-              <Trash size={18} />
-            </Button>
-          </td>
-        </tr>
-      ))}
-    </tbody>
+                      {banners.map((banner, index) => (
+                        <tr key={banner._id}>
+                          <td>{index + 1}</td>
+                          <td>{banner.bannerName}</td>
+                          <td>{banner.categoryId?.name}</td>
+                          <td>{banner.subcategoryId?.name}</td>
+                          <td>
+                            <img
+                              src={banner.photos}
+                              alt={banner.bannerName}
+                              width="50"
+                              className="img-thumbnail"
+                            />
+                          </td>
+                          <td>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => handleEdit(banner)}
+                              className="mr-2"
+                            >
+                              <Pencil size={18} />
+                            </Button>
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={() => handleDelete(banner._id)}
+                            >
+                              <Trash size={18} />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
                   </Table>
                 </div>
               ) : (

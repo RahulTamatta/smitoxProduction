@@ -62,10 +62,10 @@ const UpdateProduct = () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', 'smitoxphoto');
-      formData.append('cloud_name', 'daabaruau');
+      formData.append('cloud_name', 'dnjtpihzs');
 
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/daabaruau/image/upload`,
+        `https://api.cloudinary.com/v1_1/dnjtpihzs/image/upload`,
         {
           method: 'POST',
           body: formData,
@@ -104,7 +104,7 @@ const UpdateProduct = () => {
 
       // Handle multiple images upload
       let allImageUrls = [];
-      
+
       // If there are existing multiple images, use them as the starting point
       if (multipleimages && Array.isArray(multipleimages)) {
         allImageUrls = [...multipleimages];
@@ -117,25 +117,25 @@ const UpdateProduct = () => {
           allImageUrls = [];
         }
       }
-      
+
       // Process new images if any are selected
       if (images && images.length > 0) {
         console.log(`Uploading ${images.length} additional images...`);
         const imageUploadPromises = [];
-        
+
         // Create a separate promise for each image upload
         for (const imageFile of images) {
           imageUploadPromises.push(uploadToCloudinary(imageFile));
         }
-        
+
         // Wait for all uploads to complete and collect URLs
         const newImageUrls = await Promise.all(imageUploadPromises);
         console.log(`Successfully uploaded ${newImageUrls.length} images`);
-        
+
         // Add new image URLs to the existing ones
         allImageUrls = [...allImageUrls, ...newImageUrls];
       }
-      
+
       // Add the image URLs as a JSON string
       productData.append("multipleimages", JSON.stringify(allImageUrls));
 
@@ -163,8 +163,8 @@ const UpdateProduct = () => {
         sku,
         fk_tags: fk_tags
           ? JSON.stringify(
-              fk_tags.split(",").map((tag) => tag.trim()).filter(Boolean)
-            )
+            fk_tags.split(",").map((tag) => tag.trim()).filter(Boolean)
+          )
           : "",
         bulkProducts: JSON.stringify(
           bulkProducts.map((p) => ({
@@ -188,7 +188,7 @@ const UpdateProduct = () => {
         `/api/v1/product/update-product/${id}`,
         productData,
         {
-          headers: { "Content-Type": "multipart/form-data" ,         'Authorization': auth?.token},
+          headers: { "Content-Type": "multipart/form-data", 'Authorization': auth?.token },
         }
       );
 
@@ -245,7 +245,7 @@ const UpdateProduct = () => {
         if (product.multipleimages) {
           console.log('Processing multipleimages:', product.multipleimages);
           let processedImages = [];
-          
+
           // If multipleimages is a string (JSON), try to parse it
           if (typeof product.multipleimages === 'string') {
             try {
@@ -254,7 +254,7 @@ const UpdateProduct = () => {
               console.error('Error parsing multipleimages string:', e);
               processedImages = [];
             }
-          } 
+          }
           // If multipleimages is already an array, use it directly
           else if (Array.isArray(product.multipleimages)) {
             processedImages = product.multipleimages.map(img => {
@@ -270,7 +270,7 @@ const UpdateProduct = () => {
               return img;
             });
           }
-          
+
           console.log('Processed multipleimages:', processedImages);
           setMultipleImages(processedImages);
         } else {
@@ -394,11 +394,11 @@ const UpdateProduct = () => {
   const handlePerPiecePriceChange = (e) => {
     const newPerPiecePrice = e.target.value;
     setPerPiecePrice(newPerPiecePrice);
-    
+
     // Calculate new set price
     const newSetPrice = (parseFloat(newPerPiecePrice) * parseFloat(unitSet)).toFixed(2);
     setPrice(newSetPrice);
-    
+
     // Update selling price for all bulk products
     const updatedBulkProducts = bulkProducts.map(product => {
       const discountAmount = parseFloat(product.discount_mrp) || 0;
@@ -407,7 +407,7 @@ const UpdateProduct = () => {
         selling_price_set: (parseFloat(newPerPiecePrice) - discountAmount).toFixed(2)
       };
     });
-    
+
     setBulkProducts(updatedBulkProducts);
   };
 
@@ -573,7 +573,7 @@ const UpdateProduct = () => {
                 <small className="d-block mt-2 text-muted">
                   You can select multiple images at once. These will be displayed in the product gallery.
                 </small>
-                
+
                 {/* Preview for newly selected images */}
                 {images && images.length > 0 && (
                   <div className="mt-3">
@@ -604,7 +604,7 @@ const UpdateProduct = () => {
                     </div>
                   </div>
                 )}
-                
+
                 {/* Display existing multipleimages */}
                 {multipleimages && multipleimages.length > 0 && (
                   <div className="mt-3">

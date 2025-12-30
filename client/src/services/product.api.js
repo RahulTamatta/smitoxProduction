@@ -94,3 +94,11 @@ export const fetchBanners = async () => {
     const { data } = await api.get('/bannerManagement/get-banners');
     return data.banners || [];
 };
+
+/**
+ * Fetch all subcategories
+ */
+export const fetchSubcategories = async () => {
+    const { data } = await api.get('/subcategory/get-subcategories');
+    return data.subcategories || [];
+};
