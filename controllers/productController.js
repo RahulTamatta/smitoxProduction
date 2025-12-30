@@ -1995,7 +1995,7 @@ export const productSubcategoryController = async (req, res) => {
     res.status(200).send({
       success: true,
       message: "Products fetched successfully by subcategory",
-      subcategory, // Send subcategory details
+      subcategoryId, // Send subcategory ID
       products: productsWithPhotos,
       total,
       count: products.length,

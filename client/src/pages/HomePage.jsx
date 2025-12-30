@@ -6,7 +6,7 @@ import Slider from "react-slick";
 import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
 import ProductFilters from '../components/ProductFilters';
-import { useBanners, useCategories, useProducts, useProductsForYou } from '../hooks/useProducts';
+import { useBanners, useCategories, useInfiniteProducts, useProductsForYou } from '../hooks/useProducts';
 import "../styles/Homepage.css";
 import Layout from "./../components/Layout/Layout";
 import ProductCard from "./ProductCard";
@@ -58,20 +58,33 @@ const HomePage = () => {
   const location = useLocation();
 
   // State
-  const [page, setPage] = useState(1);
+  // Page state is handled by useInfiniteQuery now, but we keep this if needed for other logic or remove if unused. 
+  // Actually useInfiniteQuery handles page param internally via getNextPageParam.
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [filters, setFilters] = useState({});
   const [sortBy, setSortBy] = useState('');
 
   // React Query hooks
-  const { data: productsData, isLoading: productsLoading } = useProducts({ page, filters, sortBy });
+  // const { data: productsData, isLoading: productsLoading } = useProducts({ page, filters, sortBy });
+  const {
+    data: productsData,
+    isLoading: productsLoading,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage
+  } = useInfiniteProducts({ limit: 12, filters, sortBy });
+
   const { data: categories = [] } = useCategories();
   const { data: productsForYou = [] } = useProductsForYou();
   const { data: banners = [] } = useBanners();
 
-  const products = productsData?.products || [];
-  const total = productsData?.total || 0;
-  const hasMore = products.length > 0 && products.length === 12;
+  // Flatten the pages to get all products
+  const products = productsData?.pages?.flatMap(page => page.products) || [];
+  const total = productsData?.pages?.[0]?.total || 0; // Get total from the first page
+
+  // hasMore logic is now handled by hasNextPage from react-query
+  // const hasMore = products.length > 0 && products.length === 12;
+
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth <= 768);
@@ -92,17 +105,17 @@ const HomePage = () => {
   // Filter and sort handlers
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);
-    setPage(1); // Reset to first page when filters change
+    // setPage(1); // No longer needed, useInfiniteQuery handles reset on key change
   };
 
   const handleSortChange = (newSort) => {
     setSortBy(newSort);
-    setPage(1); // Reset to first page when sort changes
+    // setPage(1); // No longer needed
   };
 
   const loadMore = () => {
-    if (!productsLoading && hasMore) {
-      setPage(prev => prev + 1);
+    if (!isFetchingNextPage && hasNextPage) {
+      fetchNextPage();
     }
   };
 
@@ -262,7 +275,7 @@ const HomePage = () => {
     };
   }, [location.pathname]);
 
-  if (productsLoading && page === 1) {
+  if (productsLoading && !productsData) {
     return (
       <Layout title="All Products - Best offers">
         <div className="container mt-4" style={{ paddingTop: "100px" }}>
@@ -299,7 +312,6 @@ const HomePage = () => {
       )} */}
 
       {/* Banner Section */}
-      {/* Banner Section */}
       <div
         className="banner-container"
         style={{
@@ -332,9 +344,10 @@ const HomePage = () => {
                 paddingTop: isMobile ? '56.25%' : '35%', // 16:9 aspect ratio for mobile, wider for desktop
                 width: '100%',
               }}>
-                <img
+                <LazyLoadImage
                   src={banner.photos}
                   alt={banner.bannerName}
+                  effect="blur"
                   style={{
                     position: 'absolute',
                     top: 0,
@@ -467,11 +480,11 @@ const HomePage = () => {
             </div>
           )}
 
-          {hasMore && (
+          {hasNextPage && (
             <button
               className="btn btn-primary"
               onClick={loadMore}
-              disabled={productsLoading}
+              disabled={isFetchingNextPage}
               style={{
                 backgroundColor: '#e53935',
                 border: 'none',
@@ -482,7 +495,7 @@ const HomePage = () => {
                 boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
               }}
             >
-              {productsLoading ? (
+              {isFetchingNextPage ? (
                 <>
                   <span className="spinner-border spinner-border-sm me-2"></span>
                   Loading...
@@ -493,7 +506,7 @@ const HomePage = () => {
             </button>
           )}
 
-          {!hasMore && products.length > 0 && (
+          {!hasNextPage && products.length > 0 && (
             <p className="text-muted">No more products to show</p>
           )}
         </div>
