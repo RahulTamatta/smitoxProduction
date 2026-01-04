@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  server:
+    build: ./server
+    container_name: smitox-server
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    networks:
+      - smitox-net
+    restart: unless-stopped
+
+  client:
+    build: ./client
+    container_name: smitox-client
+    ports:
+      - "3000:3000"
+    networks:
+      - smitox-net
+    depends_on:
+      - server
+    restart: unless-stopped
+
+networks:
+  smitox-net:
+    driver: bridge
