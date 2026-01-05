@@ -8,6 +8,8 @@ services:
       - ./server/.env
     networks:
       - smitox-net
+    volumes:
+      - ./server/uploads:/app/uploads
     restart: unless-stopped
 
   client:
