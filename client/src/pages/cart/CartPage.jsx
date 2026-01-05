@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { AiFillWarning } from "react-icons/ai";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout/Layout";
+import OptimizedImage from "../../components/OptimizedImage";
 import { useAuth } from "../../context/auth";
 import { useCart } from "../../context/cart";
 import "./cartPage.css";

@@ -3,6 +3,7 @@ import moment from "moment";
 import { useEffect, useState } from "react";
 import Layout from "../../components/Layout/Layout";
 import UserMenu from "../../components/Layout/UserMenu";
+import OptimizedImage from "../../components/OptimizedImage";
 import { useAuth } from "../../context/auth";
 
 const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {

@@ -2,6 +2,7 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import AdminMenu from "../../components/Layout/AdminMenu";
+import OptimizedImage from "../../components/OptimizedImage";
 import Layout from "./../../components/Layout/Layout";
 
 const Products = () => {

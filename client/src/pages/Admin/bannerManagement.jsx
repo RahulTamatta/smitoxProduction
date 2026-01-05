@@ -2,6 +2,8 @@ import axios from 'axios';
 import { Pencil, PlusCircle, Trash } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Alert, Button, Form, Modal, Spinner, Table } from 'react-bootstrap';
+import toast from 'react-hot-toast';
+import OptimizedImage from '../../components/OptimizedImage';
 
 const BannerManagement = () => {
   const [banners, setBanners] = useState([]);

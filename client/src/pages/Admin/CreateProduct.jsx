@@ -3,6 +3,7 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import OptimizedImage from "../../components/OptimizedImage";
 import { useAuth } from "../../context/auth"; // <-- Add this import
 import AdminMenu from "./../../components/Layout/AdminMenu";
 import Layout from "./../../components/Layout/Layout";

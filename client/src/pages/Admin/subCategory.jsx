@@ -3,6 +3,7 @@ import { Button, Form, Modal, Table, ToggleButton } from "react-bootstrap";
 import toast from "react-hot-toast";
 import AdminMenu from "../../components/Layout/AdminMenu";
 import Layout from "../../components/Layout/Layout";
+import OptimizedImage from "../../components/OptimizedImage";
 import { api } from "../../context/auth";
 
 const SubcategoryList = () => {
