@@ -202,7 +202,7 @@ const CategoryProduct = () => {
                       border: (currentSubcategory?._id === sub._id) ? '2px solid #2563eb' : '1px solid #eee'
                     }}>
                       <LazyLoadImage
-                        src={sub.photos || 'https://via.placeholder.com/70'}
+                        src={sub.photos ? (sub.photos.startsWith('http') ? sub.photos : `https://www.smitox.com/${sub.photos}`) : 'https://www.smitox.com/api/v1/placeholder/64/64'}
                         alt={sub.name}
                         effect="blur"
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}

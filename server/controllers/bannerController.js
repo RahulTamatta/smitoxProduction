@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import path from "path";
 import bannerModel from "../models/bannerModel.js";
+import productModel from "../models/productModel.js";
 
 // Create Banner
 export const createBannerController = async (req, res) => {
