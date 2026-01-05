@@ -1,94 +1,95 @@
-# Hostinger MERN Deployment Guide (Docker & Local Storage Version)
+# Hostinger VPS Deployment Guide
 
-This guide provides instructions on how to set up and host the **Smitox Production** project on Hostinger.
-
----
-
-## 1. Recommended Hosting Plans
-
-For MERN applications, we recommend a plan that gives you full control and SSD/NVMe storage.
-
-### **Option A: Hostinger KVM VPS (Starts at US$ 4.99/mo) - RECOMMENDED**
-This is the best choice because it supports **Docker**, which makes deployment extremely easy.
-- **KVM 2 (US$ 9.99/mo)**: Recommended specs (2 vCPUs, 8GB RAM, 100GB NVMe).
-
-### **Option B: Hostinger Cloud Startup (hPanel)**
-Easier dashboard but more restrictive Node.js environment. Does not support Docker as easily.
+Quick guide for deploying SmitoxProduction to Hostinger VPS with Docker.
 
 ---
 
-## 2. Docker Deployment (Recommended for VPS)
+## Prerequisites
+- Hostinger KVM VPS (recommended KVM 2 at $9.99/mo)
+- Docker installed on VPS
 
-Since the project is now Dockerized, you can deploy it in a few commands.
+---
 
-### **Step 1: Install Docker on VPS**
-Run these on your Ubuntu VPS:
+## 1. Docker Setup (Already Complete)
+
+Your `docker-compose.yml` runs:
+- **Server** on port 8080
+- **Client** on port 3000
+
 ```bash
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
+docker compose up -d --build
 ```
-
-### **Step 2: Deploy the Stack**
-1. **Clone your repo**: `git clone <repo_url>`
-2. **Navigate to project**: `cd smitoxProduction`
-3. **Configure environment**: Create a `.env` file inside the `server/` directory with your database and API keys.
-4. **Start everything**:
-   ```bash
-   docker compose up -d --build
-   ```
-
-### **Step 3: Post-Deployment**
-- **Frontend**: Runs on port `3000`
-- **Backend**: Runs on port `8080`
-- Use **Nginx** as a reverse proxy to point your domain (port 80/443) to port 3000.
 
 ---
 
-## 3. Setting Up Local Image Storage
+## 2. Nginx Setup (Required)
 
-Instead of Cloudinary, you can save files directly to the Hostinger disk.
+Run this on your VPS to make the site accessible:
 
-### **Step 1: Create the Uploads Folder**
-On your server (VPS or cPanel), create the directory:
 ```bash
-mkdir -p server/uploads/products
-chmod 755 server/uploads
+# Install Nginx
+sudo apt update && sudo apt install nginx -y
+
+# Create config
+sudo nano /etc/nginx/sites-available/smitox
 ```
 
-### **Step 2: Serving Images via Express**
-I have already configured the `server.js` to serve these files:
-```javascript
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-```
-
-### **Step 3: Serving Images via Nginx (VPS Only)**
-For better performance, tell Nginx to serve the `uploads` folder:
+Paste this config:
 ```nginx
-location /uploads/ {
-    alias /home/root/smitoxProduction/server/uploads/;
+server {
+    listen 80;
+    server_name 72.61.248.86;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+    }
+
+    location /api/ {
+        proxy_pass http://localhost:8080/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    location /uploads/ {
+        proxy_pass http://localhost:8080/uploads/;
+    }
 }
 ```
 
----
-
-## 4. Manual Setup for hPanel (Non-Docker)
-
-If you are using Hostinger's **Shared/Cloud Hosting**:
-
-1. **Upload Files**: Use File Manager to upload your project.
-2. **Node.js Setup**:
-   - Go to hPanel -> **Advanced** -> **Node.js**.
-   - Set **Application Root** to your `server/` folder.
-   - Set **Application Startup File** to `server.js`.
-3. **Install Dependencies**: Run `npm install` in the `server/` folder via the Node.js panel.
-4. **Environment Variables**: Add your `MONGO_URL` and `JWT_SECRET` in the Node.js configuration panel.
+Enable and reload:
+```bash
+sudo rm /etc/nginx/sites-enabled/default
+sudo ln -s /etc/nginx/sites-available/smitox /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
 
 ---
 
-## 5. Summary Checklist
+## 3. Access Your Site
 
-1. Buy **KVM 2 VPS**.
-2. Install **Docker**.
-3. Clone repo and create `server/.env`.
-4. Run `docker compose up -d --build`.
-5. Point your domain to port 3000 using Nginx.
+After Nginx setup:
+- **Website**: http://72.61.248.86
+- **API**: http://72.61.248.86/api/v1
+
+---
+
+## Troubleshooting
+
+```bash
+# Check containers running
+docker ps
+
+# View server logs
+docker logs smitox-server
+
+# View client logs  
+docker logs smitox-client
+
+# Rebuild containers
+docker compose down && docker compose up -d --build
+```
