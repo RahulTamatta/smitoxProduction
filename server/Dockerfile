@@ -9,9 +9,9 @@ COPY package*.json ./
 RUN apk add --no-cache python3 make g++ build-base
 
 # Install dependencies
-RUN npm install
+RUN npm install --ignore-scripts
 
-# Copy server code (excluding items in .dockerignore)
+# Copy server code
 COPY . .
 
 # Expose the server port
