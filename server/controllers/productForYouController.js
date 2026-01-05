@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import path from "path";
 import productForYouModel from "../models/productForYouModel.js";
 import productModel from "../models/productModel.js";

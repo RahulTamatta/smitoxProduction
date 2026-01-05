@@ -1,4 +1,6 @@
 import path from "path";
+import slugify from "slugify";
+import subcategoryModel from "../models/subcategoryModel.js";
 
 // Create Subcategory Controller
 export const createSubcategoryController = async (req, res) => {
