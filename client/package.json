@@ -31,6 +31,7 @@
     "react": "^18.2.0",
     "react-bootstrap": "^2.10.9",
     "react-dom": "^18.2.0",
+    "lucide-react": "^0.476.0",
     "react-feather": "^2.0.10",
     "react-helmet": "^6.1.0",
     "react-hot-toast": "^2.4.0",
