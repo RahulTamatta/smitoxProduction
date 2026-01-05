@@ -5,6 +5,9 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
+# Install build tools for node-gyp (required for @sentry/profiling-node)
+RUN apk add --no-cache python3 make g++ build-base
+
 # Install dependencies
 RUN npm install
 
