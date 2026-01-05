@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import path from "path";
 import productForYouModel from "../models/productForYouModel.js";
 import productModel from "../models/productModel.js";
 import subcategoryModel from "../models/subcategoryModel.js";
@@ -177,7 +177,8 @@ export const singleProductController = async (req, res) => {
 
 export const createProductForYouController = async (req, res) => {
   try {
-    const { categoryId, subcategoryId, productId } = req.fields;
+    const { categoryId, subcategoryId, productId } = req.body;
+    const file = req.file;
 
     if (!categoryId) return res.status(400).send({ error: "Category is required" });
     if (!subcategoryId) return res.status(400).send({ error: "Subcategory is required" });
@@ -188,6 +189,10 @@ export const createProductForYouController = async (req, res) => {
       subcategoryId,
       productId
     };
+
+    if (file) {
+      productForYouData.photos = `uploads/banners/${path.basename(file.path)}`;
+    }
 
     const banner = await new productForYouModel(productForYouData).save();
 
@@ -255,16 +260,22 @@ export const bulkCreateProductForYouController = async (req, res) => {
 
 export const updateBannerController = async (req, res) => {
   try {
-    const { categoryId, subcategoryId, productId } = req.fields;
+    const { categoryId, subcategoryId, productId } = req.body;
+    const file = req.file;
     const { id } = req.params;
 
     if (!categoryId) return res.status(400).send({ error: "Category is required" });
     if (!subcategoryId) return res.status(400).send({ error: "Subcategory is required" });
     if (!productId) return res.status(400).send({ error: "Product is required" });
 
+    const updateData = { categoryId, subcategoryId, productId };
+    if (file) {
+      updateData.photos = `uploads/banners/${path.basename(file.path)}`;
+    }
+
     const banner = await productForYouModel.findByIdAndUpdate(
       id,
-      { categoryId, subcategoryId, productId },
+      updateData,
       { new: true }
     );
 

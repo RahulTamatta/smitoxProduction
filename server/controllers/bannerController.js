@@ -1,13 +1,10 @@
-import bannerModel from "../models/bannerModel.js";
-import fs from "fs";
-import slugify from "slugify";
-import productModel from "../models/productModel.js";
-import mongoose from 'mongoose';
-// Create Banner
+import path from "path";
+
 // Create Banner
 export const createBannerController = async (req, res) => {
   try {
-    const { bannerName, categoryId, subcategoryId, photos } = req.body;
+    const { bannerName, categoryId, subcategoryId } = req.body;
+    const photo = req.file;
 
     // Validations
     if (!bannerName) {
@@ -19,8 +16,8 @@ export const createBannerController = async (req, res) => {
     if (!subcategoryId) {
       return res.status(400).send({ success: false, message: "Subcategory is required" });
     }
-    if (!photos) {
-      return res.status(400).send({ success: false, message: "Photos URL is required" });
+    if (!photo) {
+      return res.status(400).send({ success: false, message: "Banner image is required" });
     }
 
     // Validate ObjectIds
@@ -37,12 +34,14 @@ export const createBannerController = async (req, res) => {
       });
     }
 
+    const photoPath = `uploads/banners/${path.basename(photo.path)}`;
+
     // Create banner
     const banner = await new bannerModel({
       bannerName,
       categoryId,
       subcategoryId,
-      photos,
+      photos: photoPath,
     }).save();
 
     res.status(201).send({
@@ -63,8 +62,9 @@ export const createBannerController = async (req, res) => {
 // Update Banner
 export const updateBannerController = async (req, res) => {
   try {
-    const { bannerName, categoryId, subcategoryId, photos } = req.body;
+    const { bannerName, categoryId, subcategoryId } = req.body;
     const { id } = req.params;
+    const photo = req.file;
 
     // Validate banner ID
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -80,33 +80,16 @@ export const updateBannerController = async (req, res) => {
       });
     }
 
-    // Validations
-    if (!bannerName) {
-      return res.status(400).send({ success: false, message: "Banner name is required" });
-    }
-    if (!categoryId || !mongoose.Types.ObjectId.isValid(categoryId)) {
-      return res.status(400).send({ success: false, message: "Valid category ID is required" });
-    }
-    if (!subcategoryId || !mongoose.Types.ObjectId.isValid(subcategoryId)) {
-      return res.status(400).send({ success: false, message: "Valid subcategory ID is required" });
-    }
-
-    // Check for duplicate banner name (excluding current banner)
-    const duplicateBanner = await bannerModel.findOne({
-      bannerName,
-      _id: { $ne: id },
-    });
-    if (duplicateBanner) {
-      return res.status(400).send({
-        success: false,
-        message: "Banner with this name already exists",
-      });
+    // Update data object
+    const updateData = { bannerName, categoryId, subcategoryId };
+    if (photo) {
+      updateData.photos = `uploads/banners/${path.basename(photo.path)}`;
     }
 
     // Update banner
     const updatedBanner = await bannerModel.findByIdAndUpdate(
       id,
-      { bannerName, categoryId, subcategoryId, photos },
+      updateData,
       { new: true }
     ).populate("categoryId subcategoryId");
 

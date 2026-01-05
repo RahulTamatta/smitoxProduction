@@ -168,35 +168,6 @@ const CreateProduct = () => {
   };
 
 
-  // Add this function for Cloudinary upload
-  const uploadToCloudinary = async (file) => {
-    console.log('Starting Cloudinary upload for file:', file.name);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', 'smitoxphoto');
-      formData.append('cloud_name', 'dnjtpihzs');
-
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/dnjtpihzs/image/upload`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Upload successful, URL:', data.secure_url);
-      return data.secure_url;
-    } catch (error) {
-      console.error('Cloudinary upload error:', error);
-      throw error;
-    }
-  };
 
   // Modify the handleCreate function to handle image uploads
   const handleCreate = async (e) => {
@@ -205,36 +176,24 @@ const CreateProduct = () => {
       toast.loading("Creating product...");
       const productData = new FormData();
 
-      // Upload main photo if it exists
-      let mainPhotoUrl = "";
+      // Handle main photo
       if (photo) {
-        mainPhotoUrl = await uploadToCloudinary(photo);
-        productData.append("photos", mainPhotoUrl);
+        productData.append("photo", photo);
+      } else if (photos) {
+        productData.append("photos", photos); // Existing path if any
       }
 
-      // Handle multiple images upload
-      let allImageUrls = [...(multipleimages || [])];
-
-      // Process multiple images if any are selected
+      // Handle multiple images
       if (images && images.length > 0) {
-        console.log(`Uploading ${images.length} additional images...`);
-        const imageUploadPromises = [];
-
-        // Create a separate promise for each image upload
         for (const imageFile of images) {
-          imageUploadPromises.push(uploadToCloudinary(imageFile));
+          productData.append("images", imageFile);
         }
-
-        // Wait for all uploads to complete and collect URLs
-        const newImageUrls = await Promise.all(imageUploadPromises);
-        console.log(`Successfully uploaded ${newImageUrls.length} images`);
-
-        // Add new image URLs to the existing ones
-        allImageUrls = [...allImageUrls, ...newImageUrls];
       }
 
-      // Add the image URLs as a JSON string
-      productData.append("multipleimages", JSON.stringify(allImageUrls));
+      // If there are existing multiple image paths
+      if (multipleimages && multipleimages.length > 0) {
+        productData.append("multipleimages", JSON.stringify(multipleimages));
+      }
 
       // Add all other form fields
       const formFields = {
@@ -259,8 +218,6 @@ const CreateProduct = () => {
         }
       });
 
-      // All uploads have already been completed
-
       const { data } = await axios.post(
         "/api/v1/product/create-product",
         productData,
@@ -278,11 +235,11 @@ const CreateProduct = () => {
         navigate("/dashboard/admin/products");
       } else {
         toast.dismiss();
-        //toast.error(data?.message || "Error creating product");
+        toast.error(data?.message || "Error creating product");
       }
     } catch (error) {
       toast.dismiss();
-      //toast.error(error.message || "Error creating product");
+      toast.error(error.response?.data?.message || error.message || "Error creating product");
       console.error('Create error:', error);
     }
   };
@@ -437,10 +394,11 @@ const CreateProduct = () => {
                     </div>
                   ) : photos ? (
                     <div className="text-center">
-                      <img
+                      <OptimizedImage
                         src={photos}
                         alt="product_photo"
-                        height="200"
+                        height={200}
+                        style={{ objectFit: 'contain' }}
                         className="img img-responsive"
                       />
                     </div>
@@ -519,12 +477,12 @@ const CreateProduct = () => {
                           className="position-relative"
                           style={{ width: "100px", height: "100px" }}
                         >
-                          <img
+                          <OptimizedImage
                             src={imgUrl}
                             alt={`Product image ${index + 1}`}
+                            width={100}
+                            height={100}
                             style={{
-                              width: "100px",
-                              height: "100px",
                               objectFit: "cover",
                             }}
                             className="border rounded"

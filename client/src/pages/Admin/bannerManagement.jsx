@@ -88,62 +88,39 @@ const BannerManagement = () => {
     setFormData({ ...formData, image: e.target.files[0] });
   };
 
-  const uploadToCloudinary = async (file) => {
-    console.log('Starting Cloudinary upload for file:', file.name);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', 'smitoxphoto'); // Use your upload preset
-      formData.append('cloud_name', 'dnjtpihzs'); // Use your cloud name
-
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/dnjtpihzs/image/upload`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Upload successful, URL:', data.secure_url);
-      return data.secure_url;
-    } catch (error) {
-      console.error('Cloudinary upload error:', error);
-      throw error;
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      let photoUrl = '';
+      toast.loading(currentBanner ? "Updating banner..." : "Creating banner...");
+
+      const bannerData = new FormData();
+      bannerData.append("bannerName", formData.bannerName);
+      bannerData.append("categoryId", formData.categoryId);
+      bannerData.append("subcategoryId", formData.subcategoryId);
       if (formData.image) {
-        photoUrl = await uploadToCloudinary(formData.image);
+        bannerData.append("photo", formData.image);
       }
 
-      const submitData = {
-        bannerName: formData.bannerName,
-        categoryId: formData.categoryId,
-        subcategoryId: formData.subcategoryId,
-        photos: photoUrl || (currentBanner ? currentBanner.photos : '')
-      };
-
       if (currentBanner) {
-        await axios.put(`/api/v1/bannerManagement/update-banner/${currentBanner._id}`, submitData);
-        //toast.success('Banner updated successfully');
+        const { data } = await axios.put(`/api/v1/bannerManagement/update-banner/${currentBanner._id}`, bannerData);
+        if (data.success) {
+          toast.dismiss();
+          toast.success('Banner updated successfully');
+        }
       } else {
-        await axios.post('/api/v1/bannerManagement/create-banner', submitData);
-        //toast.success('Banner created successfully');
+        const { data } = await axios.post('/api/v1/bannerManagement/create-banner', bannerData);
+        if (data.success) {
+          toast.dismiss();
+          toast.success('Banner created successfully');
+        }
       }
       fetchBanners();
       handleCloseModal();
     } catch (error) {
       console.error('Error submitting banner:', error);
-      //toast.error('Failed to submit banner');
+      toast.dismiss();
+      toast.error('Failed to submit banner');
     }
   };
   const handleDelete = async (id) => {
@@ -231,10 +208,12 @@ const BannerManagement = () => {
                           <td>{banner.categoryId?.name}</td>
                           <td>{banner.subcategoryId?.name}</td>
                           <td>
-                            <img
+                            <OptimizedImage
                               src={banner.photos}
                               alt={banner.bannerName}
-                              width="50"
+                              width={100}
+                              height={50}
+                              style={{ objectFit: 'contain' }}
                               className="img-thumbnail"
                             />
                           </td>

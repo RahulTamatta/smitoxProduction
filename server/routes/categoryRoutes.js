@@ -1,6 +1,6 @@
 import express from "express";
-import { requireSignIn } from "./../middlewares/authMiddleware.js";
-import { requireCapability, auditLog } from "../middlewares/rbacMiddleware.js";
+import { upload } from "../middlewares/multer.js";
+import { auditLog, requireCapability } from "../middlewares/rbacMiddleware.js";
 import {
   categoryControlller,
   createCategoryController,
@@ -8,6 +8,7 @@ import {
   singleCategoryController,
   updateCategoryController,
 } from "./../controllers/categoryController.js";
+import { requireSignIn } from "./../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
@@ -17,6 +18,7 @@ router.post(
   "/create-category",
   requireSignIn,
   requireCapability("categories:write"),
+  upload.single('photo'),
   createCategoryController
 );
 
@@ -25,6 +27,7 @@ router.put(
   "/update-category/:id",
   requireSignIn,
   requireCapability("categories:write"),
+  upload.single('photo'),
   updateCategoryController
 );
 

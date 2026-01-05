@@ -1,11 +1,8 @@
-import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import AdminMenu from "../../components/Layout/AdminMenu";
 import Layout from "./../../components/Layout/Layout";
-import axios from "axios";
-import toast from "react-hot-toast";
-import { Link } from "react-router-dom";
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Edit, Trash2, MessageCircle } from "lucide-react";
 
 const Products = () => {
   const navigate = useNavigate();
@@ -95,10 +92,10 @@ const Products = () => {
   // Bulk actions
   const handleBulkAction = async (action) => {
     if (selectedProducts.length === 0) return;
-    
+
     try {
       if (action === "delete" && !window.confirm("Are you sure?")) return;
-      
+
       const endpoints = selectedProducts.map(id => {
         if (action === "delete") {
           return axios.delete(`/api/v1/product/delete-product/${id}`);
@@ -156,18 +153,18 @@ const Products = () => {
               : [...prev, product._id]
           )}
         />
-        <img
-          src={product.photos || '/placeholder.jpg'}
+        <OptimizedImage
+          src={product.photos}
           alt={product.name}
-          style={{ 
-            width: '64px',
-            height: '64px',
+          width={64}
+          height={64}
+          style={{
             objectFit: 'cover',
             borderRadius: '4px'
           }}
         />
         <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: 'bold' }}>{product.custom_order}</div>
+          <div style={{ fontWeight: 'bold' }}>{product.custom_order}</div>
           <div style={{ fontWeight: 'bold' }}>{product.name}</div>
           <div style={{ color: 'gray', fontSize: '0.875rem' }}>
             {product.category?.name} - {product.subcategory.name}
@@ -180,7 +177,7 @@ const Products = () => {
           <div>Stock: {product.stock}</div>
         </div>
         <div>
-          <span style={{ 
+          <span style={{
             padding: '4px 8px',
             borderRadius: '4px',
             backgroundColor: product.isActive === "1" ? '#dcfce7' : '#fee2e2',
@@ -193,8 +190,8 @@ const Products = () => {
       <div style={{ display: 'flex', gap: '8px' }}>
         <Link
           to={`/dashboard/admin/product/${product.slug}`}
-          style={{ 
-            flex: 1, 
+          style={{
+            flex: 1,
             textAlign: 'center',
             backgroundColor: '#3b82f6',
             color: 'white',
@@ -213,21 +210,21 @@ const Products = () => {
     <Layout>
       <AdminMenu />
       <div className="container-fluid dashboard">
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
           gap: '24px'
         }}>
           <div>
-            <h1 style={{ 
-              fontSize: isMobile ? '20px' : '28px', 
-              fontWeight: '600', 
+            <h1 style={{
+              fontSize: isMobile ? '20px' : '28px',
+              fontWeight: '600',
               marginBottom: '4px',
               color: '#0f172a'
             }}>
               Products
             </h1>
-            <p style={{ 
+            <p style={{
               fontSize: '14px',
               color: '#6b7280',
               margin: '0'
@@ -235,9 +232,9 @@ const Products = () => {
               Manage and view all your products.
             </p>
           </div>
-  
+
           {/* Filter Tabs */}
-          <div style={{ 
+          <div style={{
             display: 'flex',
             flexWrap: 'wrap',
             gap: '12px',
@@ -261,15 +258,15 @@ const Products = () => {
                   transition: 'all 0.2s ease'
                 }}
               >
-                {tab === 'all' ? 'All Products' : 
-                 tab === 'active' ? 'Active' :
-                 tab === 'inactive' ? 'Inactive' : 'Out of Stock'}
+                {tab === 'all' ? 'All Products' :
+                  tab === 'active' ? 'Active' :
+                    tab === 'inactive' ? 'Inactive' : 'Out of Stock'}
               </button>
             ))}
           </div>
-  
+
           {/* Search and Bulk Actions */}
-          <div style={{ 
+          <div style={{
             display: 'flex',
             flexDirection: isMobile ? 'column' : 'row',
             gap: '16px',
@@ -294,7 +291,7 @@ const Products = () => {
               onFocus={(e) => e.target.style.borderColor = '#137fec'}
               onBlur={(e) => e.target.style.borderColor = '#e4e7eb'}
             />
-            <div style={{ 
+            <div style={{
               display: 'flex',
               gap: '8px',
               flexWrap: 'wrap',
@@ -306,9 +303,9 @@ const Products = () => {
                   onClick={() => handleBulkAction(action)}
                   disabled={!selectedProducts.length}
                   style={{
-                    backgroundColor: 
+                    backgroundColor:
                       action === 'delete' ? '#dc2626' :
-                      action === 'activate' ? '#16a34a' : '#eab308',
+                        action === 'activate' ? '#16a34a' : '#eab308',
                     color: action === 'deactivate' ? '#0f172a' : 'white',
                     padding: '10px 16px',
                     borderRadius: '6px',
@@ -322,12 +319,12 @@ const Products = () => {
                   }}
                 >
                   {action === 'delete' ? 'Delete Selected' :
-                   action === 'activate' ? 'Activate Selected' : 'Deactivate Selected'}
+                    action === 'activate' ? 'Activate Selected' : 'Deactivate Selected'}
                 </button>
               ))}
             </div>
           </div>
-  
+
           {/* Products Display */}
           {isMobile ? (
             <div style={{ padding: '0 8px' }}>
@@ -340,7 +337,7 @@ const Products = () => {
               )}
             </div>
           ) : (
-            <div style={{ 
+            <div style={{
               backgroundColor: 'white',
               borderRadius: '12px',
               border: '1px solid #e4e7eb',
@@ -349,12 +346,12 @@ const Products = () => {
             }}>
               <table style={{ width: '100%', minWidth: '900px' }}>
                 <thead>
-                  <tr style={{ 
+                  <tr style={{
                     borderBottom: '1px solid #e4e7eb',
                     backgroundColor: '#f9fafb'
                   }}>
-                    {['','#', 'Photo', 'Name', 'Category', 'Subcategory', 'Price', 'Stock', 'Status', 'Actions'].map((header) => (
-                      <th key={header} style={{ 
+                    {['', '#', 'Photo', 'Name', 'Category', 'Subcategory', 'Price', 'Stock', 'Status', 'Actions'].map((header) => (
+                      <th key={header} style={{
                         padding: '12px 16px',
                         textAlign: 'left',
                         fontSize: '12px',
@@ -386,12 +383,12 @@ const Products = () => {
                     </tr>
                   ) : (
                     products.map((product) => (
-                      <tr key={product._id} style={{ 
+                      <tr key={product._id} style={{
                         borderBottom: '1px solid #e4e7eb',
                         transition: 'background-color 0.15s ease'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
                         <td style={{ padding: '12px 16px' }}>
                           <input
@@ -406,27 +403,27 @@ const Products = () => {
                           />
                         </td>
                         <td style={{ padding: '12px 16px', fontSize: '14px', color: '#0f172a' }}>{product.custom_order}</td>
-                        
+
                         <td style={{ padding: '12px 16px' }}>
-                          <img
-                            src={product.photos || '/placeholder.jpg'}
+                          <OptimizedImage
+                            src={product.photos}
                             alt={product.name}
-                            style={{ 
-                              width: '48px',
-                              height: '48px',
+                            width={48}
+                            height={48}
+                            style={{
                               objectFit: 'cover',
                               borderRadius: '6px'
                             }}
                           />
                         </td>
                         <td style={{ padding: '12px 16px', fontSize: '14px', color: '#0f172a', fontWeight: '500' }}>{product.name}</td>
-                      
+
                         <td style={{ padding: '12px 16px', fontSize: '14px', color: '#6b7280' }}>{product.category?.name}</td>
                         <td style={{ padding: '12px 16px', fontSize: '14px', color: '#6b7280' }}>{product.subcategory.name}</td>
                         <td style={{ padding: '12px 16px', fontSize: '14px', color: '#0f172a', fontWeight: '500' }}>₹{product.perPiecePrice}</td>
                         <td style={{ padding: '12px 16px', fontSize: '14px', color: '#0f172a' }}>{product.stock}</td>
                         <td style={{ padding: '12px 16px' }}>
-                          <span style={{ 
+                          <span style={{
                             padding: '4px 12px',
                             borderRadius: '20px',
                             fontSize: '12px',
@@ -440,8 +437,8 @@ const Products = () => {
                         <td style={{ padding: '12px 16px' }}>
                           <Link
                             to={`/dashboard/admin/product/${product.slug}`}
-                            style={{ 
-                              color: '#137fec', 
+                            style={{
+                              color: '#137fec',
                               textDecoration: 'none',
                               fontSize: '14px',
                               fontWeight: '500',
@@ -458,10 +455,10 @@ const Products = () => {
               </table>
             </div>
           )}
-  
+
           {/* Pagination */}
           {totalPages > 1 && (
-            <nav aria-label="Pagination" style={{ 
+            <nav aria-label="Pagination" style={{
               marginTop: '24px',
               display: 'flex',
               flexDirection: isMobile ? 'column' : 'row',
@@ -471,7 +468,7 @@ const Products = () => {
               borderTop: '1px solid #e4e7eb',
               paddingTop: '16px'
             }}>
-              <span style={{ 
+              <span style={{
                 fontSize: '13px',
                 color: '#6b7280'
               }}>

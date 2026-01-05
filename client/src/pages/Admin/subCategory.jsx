@@ -22,35 +22,6 @@ const SubcategoryList = () => {
   const [editPhotos, setEditPhotos] = useState(null);
   const [editIsActive, setEditIsActive] = useState(true);
 
-  // Upload to Cloudinary function
-  const uploadToCloudinary = async (file) => {
-    console.log('Starting Cloudinary upload for file:', file.name);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', 'smitoxphoto');
-      formData.append('cloud_name', 'dnjtpihzs');
-
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/dnjtpihzs/image/upload`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Upload successful, URL:', data.secure_url);
-      return data.secure_url;
-    } catch (error) {
-      console.error('Cloudinary upload error:', error);
-      throw error;
-    }
-  };
 
   // Get all categories for dropdown
   const getAllCategories = async () => {
@@ -82,17 +53,15 @@ const SubcategoryList = () => {
     try {
       toast.loading("Creating subcategory...");
 
-      let photoUrl = "";
+      const subcategoryData = new FormData();
+      subcategoryData.append("name", name);
+      subcategoryData.append("parentCategoryId", parentCategoryId);
+      subcategoryData.append("isActive", isActive);
       if (photos) {
-        photoUrl = await uploadToCloudinary(photos);
+        subcategoryData.append("photo", photos);
       }
 
-      const { data } = await api.post("/api/v1/subcategory/create-subcategory", {
-        name,
-        parentCategoryId,
-        photos: photoUrl,
-        isActive
-      });
+      const { data } = await api.post("/api/v1/subcategory/create-subcategory", subcategoryData);
 
       if (data?.success) {
         toast.dismiss();
@@ -104,12 +73,12 @@ const SubcategoryList = () => {
         getAllSubcategories();
       } else {
         toast.dismiss();
-        //toast.error(data.message);
+        toast.error(data.message || "Failed to create subcategory");
       }
     } catch (error) {
       console.error(error);
       toast.dismiss();
-      ////toast.error("Failed to create subcategory.");
+      toast.error("Failed to create subcategory.");
     }
   };
 
@@ -121,19 +90,17 @@ const SubcategoryList = () => {
     try {
       toast.loading("Updating subcategory...");
 
-      let photoUrl = editingSubcategory.photos;
+      const subcategoryData = new FormData();
+      subcategoryData.append("name", editName);
+      subcategoryData.append("parentCategoryId", editParentCategoryId);
+      subcategoryData.append("isActive", editIsActive);
       if (editPhotos) {
-        photoUrl = await uploadToCloudinary(editPhotos);
+        subcategoryData.append("photo", editPhotos);
       }
 
       const { data } = await api.put(
         `/api/v1/subcategory/update-subcategory/${editingSubcategory._id}`,
-        {
-          name: editName,
-          parentCategoryId: editParentCategoryId,
-          photos: photoUrl,
-          isActive: editIsActive,
-        }
+        subcategoryData
       );
 
       if (data?.success) {
@@ -143,12 +110,12 @@ const SubcategoryList = () => {
         getAllSubcategories();
       } else {
         toast.dismiss();
-        //toast.error(data.message);
+        toast.error(data.message || "Failed to update subcategory");
       }
     } catch (error) {
       console.error(error);
       toast.dismiss();
-      ////toast.error("Failed to update subcategory.");
+      toast.error("Failed to update subcategory.");
     }
   };
 
@@ -284,10 +251,12 @@ const SubcategoryList = () => {
                       {subcategories.map((subcategory) => (
                         <tr key={subcategory._id}>
                           <td style={{ textAlign: "center" }}>
-                            <img
-                              src={subcategory.photos || "placeholder-image-url.jpg"}
+                            <OptimizedImage
+                              src={subcategory.photos}
                               alt={subcategory.name}
-                              style={{ height: "60px", width: "60px", objectFit: "cover", borderRadius: "4px" }}
+                              width={60}
+                              height={60}
+                              style={{ objectFit: "cover", borderRadius: "4px" }}
                             />
                           </td>
                           <td>{subcategory.name}</td>
@@ -390,10 +359,11 @@ const SubcategoryList = () => {
                     ) : (
                       editingSubcategory?.photos && (
                         <div className="text-center">
-                          <img
+                          <OptimizedImage
                             src={editingSubcategory.photos}
                             alt="subcategory_photos"
-                            height="200"
+                            height={200}
+                            style={{ objectFit: 'contain' }}
                             className="img img-responsive"
                           />
                         </div>

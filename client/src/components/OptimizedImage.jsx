@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /**
  * OptimizedImage component that handles various image services and implements
@@ -33,8 +33,8 @@ const OptimizedImage = ({
   quality = 80,
   format = 'auto',
   sizes = '',
-  onLoad = () => {},
-  onError = () => {},
+  onLoad = () => { },
+  onError = () => { },
   placeholder = '/placeholder-image.jpg',
   backgroundColor = '#f0f0f0',
 }) => {
@@ -43,7 +43,7 @@ const OptimizedImage = ({
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [fallbackTriggered, setFallbackTriggered] = useState(false);
-  
+
   const imageRef = useRef(null);
   const retryCount = useRef(0);
   const maxRetries = 2;
@@ -51,44 +51,35 @@ const OptimizedImage = ({
   // Function to optimize image URL based on service (ImageKit, Cloudinary, etc.)
   const getOptimizedUrl = (url, options = {}) => {
     if (!url) return placeholder;
-    
+
     // Handle base64 encoded images
     if (url.startsWith('data:')) return url;
 
+    // Handle local storage paths
+    if (url.startsWith('uploads/')) {
+      // Use proxy in development or full URL in production if needed
+      // Since Nginx serves /uploads/, we can just use the absolute path from root
+      return `/${url}`;
+    }
+
     const { width: w, quality: q = quality, format: f = format } = options;
-    
+
     // Handle ImageKit URLs
     if (url.includes('ik.imagekit.io')) {
       const transformations = [];
       if (w) transformations.push(`w-${w}`);
       transformations.push(`q-${q}`);
       transformations.push(`f-${f}`);
-      
+
       const urlParts = url.split('/');
       const baseUrl = urlParts.slice(0, 3).join('/');
       const path = urlParts.slice(3).join('/');
-      
+
       return `${baseUrl}/tr:${transformations.join(',')}/${path}`;
     }
-    
-    // Handle Cloudinary URLs
-    if (url.includes('cloudinary.com')) {
-      try {
-        const urlParts = url.split('/upload/');
-        if (urlParts.length !== 2) return url;
-        
-        const transformations = [];
-        if (w) transformations.push(`w_${w}`);
-        transformations.push(`q_${q}`);
-        if (f !== 'auto') transformations.push(`f_${f}`);
-        
-        return `${urlParts[0]}/upload/${transformations.join(',')}/${urlParts[1]}`;
-      } catch (error) {
-        console.error('Error optimizing Cloudinary URL:', error);
-        return url;
-      }
-    }
-    
+
+
+
     // Return original URL for other services
     return url;
   };
@@ -136,7 +127,7 @@ const OptimizedImage = ({
     if (!fallbackTriggered && retryCount.current < maxRetries) {
       retryCount.current += 1;
       console.warn(`Image load failed, trying fallback... (${retryCount.current}/${maxRetries})`);
-      
+
       // Try the original URL without transformations
       if (src && src !== imgSrc) {
         setFallbackTriggered(true);
@@ -144,7 +135,7 @@ const OptimizedImage = ({
         return;
       }
     }
-    
+
     // If we've already tried or reached max retries, show placeholder
     setHasError(true);
     setImgSrc(placeholder);
@@ -154,7 +145,7 @@ const OptimizedImage = ({
   // Generate srcSet for responsive images
   const generateSrcSet = () => {
     if (!src || hasError || fallbackTriggered) return undefined;
-    
+
     const widths = [width, width * 2];
     return widths
       .map(w => `${getOptimizedUrl(src, { width: w, quality, format })} ${w}w`)
@@ -162,8 +153,8 @@ const OptimizedImage = ({
   };
 
   return (
-    <div 
-      style={{ 
+    <div
+      style={{
         position: 'relative',
         width: width ? `${width}px` : '100%',
         height: height ? `${height}px` : 'auto',

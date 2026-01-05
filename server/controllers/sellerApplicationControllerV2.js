@@ -23,15 +23,23 @@ const getRazorpayInstance = () => {
  */
 export const saveDraftApplication = async (req, res) => {
   try {
-    // When using express-formidable, fields are in req.fields, not req.body
-    const source = req.fields && Object.keys(req.fields).length > 0
-      ? req.fields
-      : req.body || {};
-
-    // Prefer value from fields/body, but fall back to query param
-    const { selectedPlanId: bodyPlanId, ...applicationData } = source;
+    const { selectedPlanId: bodyPlanId, ...applicationData } = req.body;
     const selectedPlanId = bodyPlanId || req.query?.selectedPlanId;
     const userId = req.user._id;
+
+    // Multer files
+    const files = req.files || {};
+    const identityProofImage = files.identityProofImage?.[0];
+    const addressProofImage = files.addressProofImage?.[0];
+    const gstImage = files.gstImage?.[0];
+    const panImage = files.panImage?.[0];
+    const cancelledCheckImage = files.cancelledCheckImage?.[0];
+
+    // Helper to get relative path
+    const getLocalPath = (file) => {
+      if (!file) return null;
+      return `uploads/users/${path.basename(file.path)}`;
+    };
 
     // Validate plan ID is provided
     if (!selectedPlanId) {
@@ -44,7 +52,6 @@ export const saveDraftApplication = async (req, res) => {
     // Validate plan exists
     const plan = await subscriptionPlanModel.findById(selectedPlanId);
     if (!plan) {
-      console.error(`Plan not found for ID: ${selectedPlanId}`);
       return res.status(404).send({
         success: false,
         message: "Subscription plan not found",
@@ -72,33 +79,39 @@ export const saveDraftApplication = async (req, res) => {
       status: "draft",
     });
 
+    const updateData = {
+      ...applicationData,
+      selectedPlanId,
+      selectedPlanSnapshot: planSnapshot,
+    };
+
+    // Add file paths if uploaded
+    if (identityProofImage) updateData.identityProofImage = getLocalPath(identityProofImage);
+    if (addressProofImage) updateData.addressProofImage = getLocalPath(addressProofImage);
+    if (gstImage) updateData.gstImage = getLocalPath(gstImage);
+    if (panImage) updateData.panImage = getLocalPath(panImage);
+    if (cancelledCheckImage) updateData.cancelledCheckImage = getLocalPath(cancelledCheckImage);
+
     if (application) {
       // Update existing draft
-      application = Object.assign(application, {
-        selectedPlanId,
-        selectedPlanSnapshot: planSnapshot,
-        ...applicationData,
-      });
+      application = Object.assign(application, updateData);
     } else {
       // Create new draft
       application = new sellerApplicationModel({
+        ...updateData,
         userId,
-        selectedPlanId,
-        selectedPlanSnapshot: planSnapshot,
         status: "draft",
         lockPlan: false,
-        ...applicationData,
-        // Enforce user details
         email: req.user.email_id,
         phone: req.user.mobile_no,
       });
     }
 
-    // Always ensure email and phone match the user (in case they were modified in draft update)
+    // Always ensure email and phone match the user
     application.email = req.user.email_id;
     application.phone = req.user.mobile_no;
 
-    // Save draft without validation (validation happens at submission)
+    // Save draft without validation
     await application.save({ validateBeforeSave: false });
 
     res.status(200).send({

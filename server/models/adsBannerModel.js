@@ -13,6 +13,10 @@ const adsbannerSchema = new mongoose.Schema(
       data: Buffer,
       contentType: String,
     },
+    photos: {
+      type: String,
+      required: false,
+    },
     link: {
       type: String,
     },

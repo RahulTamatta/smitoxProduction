@@ -28,7 +28,7 @@
     "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.3",
     "bootstrap": "^5.3.3",
-    "cloudinary": "^2.6.1",
+
     "colors": "^1.4.0",
     "concurrently": "^7.6.0",
     "cors": "^2.8.5",

@@ -1,5 +1,4 @@
 import express from "express";
-import formidable from "express-formidable";
 import {
   adminGetProductsForYouController,
   bulkCreateProductForYouController,
@@ -14,6 +13,7 @@ import {
   updateBannerController
 } from "../controllers/productForYouController.js"; // Updated import based on your controllers
 import { requireSignIn } from "../middlewares/authMiddleware.js";
+import { upload } from "../middlewares/multer.js";
 import { auditLog, requireCapability } from "../middlewares/rbacMiddleware.js";
 
 const router = express.Router();
@@ -23,7 +23,7 @@ router.post(
   "/createProductForYou",
   requireSignIn,
   requireCapability("productforyou:write"),
-  formidable(),
+  upload.single("photos"),
   createProductForYouController
 );
 
@@ -51,7 +51,7 @@ router.put(
   "/update-product/:id",
   requireSignIn,
   requireCapability("productforyou:write"),
-  formidable(),
+  upload.single("photos"),
   updateBannerController
 );
 router.get("/product-photo/:pid", getProductPhoto);

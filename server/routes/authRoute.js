@@ -1,23 +1,25 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import {
-    addProductToOrderController,
-    addTrackingInfo,
-    deleteProductFromOrderController,
-    forgotPasswordController,
-    getAllOrdersController,
-    getOrdersController,
-    getProfileController,
-    loginController,
-    orderStatusController,
-    refreshTokenController // Import the refresh token controller
-    ,
-    registerController,
-    sendOTPController,
-    updateOrderController,
-    updateProfileController,
-    verifyOTPAndLoginController
+  addProductToOrderController,
+  addTrackingInfo,
+  deleteProductFromOrderController,
+  forgotPasswordController,
+  getAllOrdersController,
+  getOrdersController,
+  getProfileController,
+  loginController,
+  orderStatusController,
+  refreshTokenController // Import the refresh token controller
+  ,
+
+  registerController,
+  sendOTPController,
+  updateOrderController,
+  updateProfileController,
+  verifyOTPAndLoginController
 } from '../controllers/authController.js';
+import { upload } from '../middlewares/multer.js';
 import { requireCapability, requireSignIn } from '../middlewares/rbacMiddleware.js';
 import orderModel from '../models/orderModel.js'; // Changed to import
 // import { addTrackingInfo } from "../controllers/orderController.js";
@@ -56,7 +58,14 @@ router.get("/admin-auth", requireSignIn, (req, res) => {
 });
 
 //update profile
-router.put("/profile", requireSignIn, updateProfileController);
+router.put("/profile", requireSignIn, upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'gst_image', maxCount: 1 },
+  { name: 'pan_image', maxCount: 1 },
+  { name: 'check_image', maxCount: 1 },
+  { name: 'identity_proof_image', maxCount: 1 },
+  { name: 'address_proof_image', maxCount: 1 }
+]), updateProfileController);
 router.get("/profile", requireSignIn, getProfileController);
 
 //orders
@@ -66,7 +75,7 @@ router.get("/orders/:user_id", getOrdersController);
 router.get("/order/:orderId", requireSignIn, requireCapability("orders:read"), async (req, res) => {
   try {
     const { orderId } = req.params;
-    
+
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
       return res.status(400).json({
         success: false,

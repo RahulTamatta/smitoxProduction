@@ -1,13 +1,15 @@
 import express from "express";
-import { requireSignIn } from "../middlewares/authMiddleware.js";
-import { requireCapability, auditLog } from "../middlewares/rbacMiddleware.js";
 import {
-  createBannerController,getBannerProductsController,
-  getBannersController,updateBannerController,
-  bannerImageController,deleteBannerController
- 
+  bannerImageController,
+  createBannerController,
+  deleteBannerController,
+  getBannerProductsController,
+  getBannersController, updateBannerController
 } from "../controllers/bannerController.js";
-import formidable from "express-formidable";
+import { requireSignIn } from "../middlewares/authMiddleware.js";
+import { upload } from "../middlewares/multer.js";
+import { auditLog, requireCapability } from "../middlewares/rbacMiddleware.js";
+// import formidable from "express-formidable";
 
 const router = express.Router();
 
@@ -20,7 +22,7 @@ router.post(
   "/create-banner",
   requireSignIn,
   requireCapability("banners:write"),
-
+  upload.single('photo'),
   createBannerController,
 
 );
@@ -30,7 +32,7 @@ router.put(
   "/update-banner/:id",
   requireSignIn,
   requireCapability("banners:write"),
-
+  upload.single('photo'),
   updateBannerController
 );
 

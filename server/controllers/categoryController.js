@@ -1,26 +1,16 @@
-import categoryModel from "../models/categoryModel.js";
-import slugify from "slugify";
-import fs from 'fs';
+import path from "path";
 
 // Category Controller functions
 
 export const createCategoryController = async (req, res) => {
   try {
-    const { name, photos } = req.body;
-    console.log("request body", req.body);
-    
-    // Changed photo to photos in validation
-    if (photos && photos.length > 5 * 1024 * 1024) { // 5MB limit
-      return res.status(400).send({
-        success: false,
-        message: "Image size too large. Maximum 5MB allowed."
-      });
-    }
-    
+    const { name } = req.body;
+    const photo = req.file;
+
     if (!name) {
       return res.status(401).send({ message: "Name is required" });
     }
-    
+
     const existingCategory = await categoryModel.findOne({ name });
     if (existingCategory) {
       return res.status(200).send({
@@ -28,16 +18,20 @@ export const createCategoryController = async (req, res) => {
         message: "Category Already Exists",
       });
     }
-    
-    // Updated to use photos instead of photo
+
+    let photoPath = "";
+    if (photo) {
+      photoPath = `uploads/categories/${path.basename(photo.path)}`;
+    }
+
     const categoryData = {
       name,
       slug: slugify(name),
-      photos: photos  // Store the URL from Cloudinary
+      photos: photoPath
     };
-    
+
     const category = await new categoryModel(categoryData).save();
-    
+
     res.status(201).send({
       success: true,
       message: "New category created",
@@ -55,13 +49,13 @@ export const createCategoryController = async (req, res) => {
 
 export const updateCategoryController = async (req, res) => {
   try {
-    const { name, photos } = req.body; // Changed photo to photos
+    const { name } = req.body;
     const { id } = req.params;
+    const photo = req.file;
 
-    // Build the update data object with photos
     const updateData = { name, slug: slugify(name) };
-    if (photos) {
-      updateData.photos = photos; // Update photos if provided
+    if (photo) {
+      updateData.photos = `uploads/categories/${path.basename(photo.path)}`;
     }
 
     const category = await categoryModel.findByIdAndUpdate(

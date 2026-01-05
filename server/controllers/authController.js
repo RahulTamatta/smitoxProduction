@@ -125,7 +125,7 @@ export const verifyOTPAndLoginController = async (req, res) => {
 
       // Generate RBAC-aware token with capabilities
       const token = generateToken(userForToken);
-      
+
       // Generate refresh token with 1-year expiration
       const refreshToken = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
         expiresIn: "365d", // 1 year
@@ -143,9 +143,9 @@ export const verifyOTPAndLoginController = async (req, res) => {
           role: user.role,
           roleString: user.roleString || NUMBER_TO_ROLE[user.role] || "user", // Include roleString for RBAC
           pincode: user.pincode,
-          city:user.city,
-          landmark:user.landmark,
-          state:user.state,
+          city: user.city,
+          landmark: user.landmark,
+          state: user.state,
           status: user.status,
           order_type: user.order_type, // return order_type as part of the user profile
           wishlist: user.wishlist,
@@ -173,32 +173,32 @@ export const verifyOTPAndLoginController = async (req, res) => {
 
 // Register user
 export const registerController = async (req, res) => {
-  const { 
-    user_fullname, 
-    email_id, 
-    mobile_no, 
+  const {
+    user_fullname,
+    email_id,
+    mobile_no,
     address,
     pincode,
     city,
-    landmark, 
+    landmark,
     state
   } = req.body;
- 
+
   try {
     // Check if user already exists
-    const existingUser = await userModel.findOne({ 
-      $or: [{ email_id }, { mobile_no }] 
+    const existingUser = await userModel.findOne({
+      $or: [{ email_id }, { mobile_no }]
     });
-    
+
     if (existingUser) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: existingUser.email_id === email_id 
-          ? "Email already exists" 
-          : "Mobile number already exists" 
+        message: existingUser.email_id === email_id
+          ? "Email already exists"
+          : "Mobile number already exists"
       });
     }
- 
+
     // Validations
     if (!user_fullname) {
       return res.status(400).send({ error: "Name is Required" });
@@ -216,24 +216,24 @@ export const registerController = async (req, res) => {
       return res.status(400).send({ message: "PIN Code is Required" });
     }
     if (!city) {
-      return res.status(400).send({ message: "City is Required" }); 
+      return res.status(400).send({ message: "City is Required" });
     }
     if (!state) {
       return res.status(400).send({ message: "State is Required" });
     }
- 
+
     // Check pincode and create if necessary
     let existingPincode = await Pincode.findOne({ code: pincode });
     if (!existingPincode) {
-      existingPincode = await new Pincode({ 
+      existingPincode = await new Pincode({
         code: pincode,
         isAvailable: true,
         city,
         state,
-        landmark 
+        landmark
       }).save();
     }
- 
+
     // Create new user
     const newUser = new userModel({
       user_fullname,
@@ -246,10 +246,10 @@ export const registerController = async (req, res) => {
       state,
       role: 0, // Default role for new users
     });
- 
+
     // Save the new user
     await newUser.save();
- 
+
     // Generate RBAC-aware token with capabilities
     const token = generateToken(newUser);
 
@@ -257,7 +257,7 @@ export const registerController = async (req, res) => {
     const refreshToken = JWT.sign({ _id: newUser._id }, process.env.JWT_SECRET, {
       expiresIn: "365d", // 1 year
     });
- 
+
     // Send success response with user details, token and refresh token
     res.status(201).json({
       success: true,
@@ -278,16 +278,16 @@ export const registerController = async (req, res) => {
       token,
       refreshToken,
     });
- 
+
   } catch (error) {
     console.log(error);
     res.status(500).json({
       success: false,
-      message: "Registration failed. Try again later.", 
+      message: "Registration failed. Try again later.",
       error: error.message
     });
   }
- };
+};
 
 // Login with email_id and password
 export const loginController = async (req, res) => {
@@ -343,7 +343,7 @@ export const loginController = async (req, res) => {
 
     // Generate RBAC-aware token with capabilities
     const token = generateToken(userForToken);
-    
+
     // Generate refresh token with 1-year expiration
     const refreshToken = JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "365d", // 1 year
@@ -425,28 +425,83 @@ export const forgotPasswordController = async (req, res) => {
 // Update Profile
 export const updateProfileController = async (req, res) => {
   try {
-    const { user_fullname, email_id, password, address, phone, pincode,state,city,landmark } = req.body; // Include pincode
-    const user = await userModel.findById(req.user._id);
+    const {
+      user_fullname,
+      email_id,
+      password,
+      address,
+      phone,
+      pincode,
+      state,
+      city,
+      landmark,
+      gst_no,
+      pan_no,
+      account_name,
+      account_no,
+      ifsccode,
+      identity_proof,
+      identity_proof_no,
+      address_proof,
+      address_proof_no
+    } = req.body;
 
-    if (password && password.length < 6) {
-      return res.json({ error: "Password is required and should be 6 characters long" });
+    const user = await userModel.findById(req.user._id);
+    if (!user) {
+      return res.status(404).send({ success: false, message: "User not found" });
     }
 
-    const hashedPassword = password ? await hashPassword(password) : undefined;
+    // Multer files
+    const files = req.files || {};
+    const profileImage = files.image?.[0];
+    const gstImage = files.gst_image?.[0];
+    const panImage = files.pan_image?.[0];
+    const checkImage = files.check_image?.[0];
+    const identityProofImage = files.identity_proof_image?.[0];
+    const addressProofImage = files.address_proof_image?.[0];
+
+    // Helper to get relative path
+    const getLocalPath = (file) => {
+      if (!file) return null;
+      return `uploads/users/${path.basename(file.path)}`;
+    };
+
+    const updateData = {
+      user_fullname: user_fullname || user.user_fullname,
+      phone: phone || user.phone,
+      address: address || user.address,
+      city: city || user.city,
+      state: state || user.state,
+      landmark: landmark || user.landmark,
+      pincode: pincode || user.pincode,
+      gst_no: gst_no || user.gst_no,
+      pan_no: pan_no || user.pan_no,
+      account_name: account_name || user.account_name,
+      account_no: account_no || user.account_no,
+      ifsccode: ifsccode || user.ifsccode,
+      identity_proof: identity_proof || user.identity_proof,
+      identity_proof_no: identity_proof_no || user.identity_proof_no,
+      address_proof: address_proof || user.address_proof,
+      address_proof_no: address_proof_no || user.address_proof_no,
+    };
+
+    if (password && password.length >= 6) {
+      updateData.password = await hashPassword(password);
+    } else if (password) {
+      return res.json({ error: "Password should be at least 6 characters long" });
+    }
+
+    // Add file paths if uploaded
+    if (profileImage) updateData.image = getLocalPath(profileImage);
+    if (gstImage) updateData.gst_image = getLocalPath(gstImage);
+    if (panImage) updateData.pan_image = getLocalPath(panImage);
+    if (checkImage) updateData.check_image = getLocalPath(checkImage);
+    if (identityProofImage) updateData.identity_proof_image = getLocalPath(identityProofImage);
+    if (addressProofImage) updateData.address_proof_image = getLocalPath(addressProofImage);
 
     const updatedUser = await userModel.findByIdAndUpdate(
       req.user._id,
-      {
-        user_fullname: user_fullname || user.user_fullname,
-        password: hashedPassword || user.password,
-        phone: phone || user.phone,
-        address: address || user.address,
-        city:city||user.city,
-        state:state||user.state,
-        landmark:landmark||user.landmark,
-
-        pincode: pincode || user.pincode, // Update pincode
-      },
+      updateData,
       { new: true }
     );
 
@@ -456,11 +511,11 @@ export const updateProfileController = async (req, res) => {
       updatedUser,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Error updating profile:", error);
     res.status(400).send({
       success: false,
       message: "Error While Updating Profile",
-      error,
+      error: error.message,
     });
   }
 };
@@ -547,12 +602,12 @@ export const getAllOrdersController = async (req, res) => {
 
     const userSearchQuery = search
       ? {
-          $or: [
-            { user_fullname: { $regex: search, $options: "i" } },
-            // Search mobile_no with regex for partial matches
-            { mobile_no: { $regex: search, $options: "i" } },
-          ],
-        }
+        $or: [
+          { user_fullname: { $regex: search, $options: "i" } },
+          // Search mobile_no with regex for partial matches
+          { mobile_no: { $regex: search, $options: "i" } },
+        ],
+      }
       : {};
 
     let matchingUserIds = [];
@@ -564,24 +619,24 @@ export const getAllOrdersController = async (req, res) => {
       const searchConditions = [
         // Order ID search (if valid ObjectId)
         ...(mongoose.Types.ObjectId.isValid(search) ? [{ _id: new mongoose.Types.ObjectId(search) }] : []),
-        
+
         // User-related searches
         ...(matchingUserIds.length > 0 ? [{ buyer: { $in: matchingUserIds } }] : []),
-        
+
         // Direct user info search (in case populate is not working)
         { "buyerInfo.mobile_no": { $regex: search, $options: "i" } },
         { "buyerInfo.user_fullname": { $regex: search, $options: "i" } },
-        
+
         // Tracking and payment info
         { "tracking.id": { $regex: search, $options: "i" } },
         { "tracking.company": { $regex: search, $options: "i" } },
         { "payment.transactionId": { $regex: search, $options: "i" } },
-        
+
         // Search in order items
         { "products.name": { $regex: search, $options: "i" } },
         { "products.sku": { $regex: search, $options: "i" } }
       ];
-      
+
       // Only add $or if we have search conditions
       if (searchConditions.length > 0) {
         query.$or = searchConditions;
@@ -673,7 +728,7 @@ export const addProductToOrderController = async (req, res) => {
     if (product.stock < quantity) {  // Changed to check against quantity being added
       errorMessages.push("insufficient stock");
     }
-    
+
     if (errorMessages.length > 0) {
       return res.status(400).json({
         success: false,
@@ -703,7 +758,7 @@ export const addProductToOrderController = async (req, res) => {
         const productPrice = parseFloat(product.price) || 0;
         const productQuantity = parseInt(product.quantity) || 0;
         return total + (productQuantity * productPrice);
-      }, 
+      },
       0
     );
     order.amount = totalAmount;
@@ -758,11 +813,11 @@ export const orderStatusController = async (req, res) => {
 
     // Validate status value
     const validStatuses = [
-      "Pending", "Completed", "Cash on Delivery", "Confirmed", 
-      "Accepted", "Cancelled", "Rejected", "Dispatched", 
+      "Pending", "Completed", "Cash on Delivery", "Confirmed",
+      "Accepted", "Cancelled", "Rejected", "Dispatched",
       "Delivered", "Returned"
     ];
-    
+
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
@@ -1011,7 +1066,7 @@ export const deleteProductFromOrderController = async (req, res) => {
 export const refreshTokenController = async (req, res) => {
   try {
     const { refreshToken } = req.body;
-    
+
     if (!refreshToken) {
       return res.status(400).send({
         success: false,
@@ -1039,7 +1094,7 @@ export const refreshTokenController = async (req, res) => {
         });
       }
     }
-    
+
     // Check if user exists
     const user = await userModel.findById(decoded._id);
     if (!user) {
@@ -1097,7 +1152,7 @@ export const refreshTokenController = async (req, res) => {
     });
   } catch (error) {
     console.error("Token refresh error:", error);
-    
+
     res.status(500).send({
       success: false,
       message: "Error refreshing token",

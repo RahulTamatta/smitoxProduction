@@ -14,35 +14,6 @@ const CreateCategory = () => {
   const [updatedName, setUpdatedName] = useState("");
   const [updatedPhoto, setUpdatedPhoto] = useState(null);
 
-  // Upload to Cloudinary function
-  const uploadToCloudinary = async (file) => {
-    console.log('Starting Cloudinary upload for file:', file.name);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', 'smitoxphoto');
-      formData.append('cloud_name', 'dnjtpihzs');
-
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/dnjtpihzs/image/upload`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Upload successful, URL:', data.secure_url);
-      return data.secure_url;
-    } catch (error) {
-      console.error('Cloudinary upload error:', error);
-      throw error;
-    }
-  };
 
   // handle Form
   const handleSubmit = async (e) => {
@@ -50,25 +21,13 @@ const CreateCategory = () => {
     try {
       toast.loading("Creating category...");
 
-      let photoUrl = "";
+      const categoryData = new FormData();
+      categoryData.append("name", name);
       if (photos) {
-        photoUrl = await uploadToCloudinary(photos);
+        categoryData.append("photo", photos);
       }
 
-      // Get token from localStorage
-      const auth = JSON.parse(localStorage.getItem('auth')) || {};
-      const token = auth.token;
-
-      if (!token) {
-        toast.dismiss();
-        toast.error("Please login to continue");
-        return;
-      }
-
-      const { data } = await api.post("/api/v1/category/create-category", {
-        name,
-        photos: photoUrl
-      });
+      const { data } = await api.post("/api/v1/category/create-category", categoryData);
 
       if (data?.success) {
         toast.dismiss();
@@ -78,12 +37,12 @@ const CreateCategory = () => {
         setPhotos(null);
       } else {
         toast.dismiss();
-        //toast.error(data.message);
+        toast.error(data.message || "Failed to create category");
       }
     } catch (error) {
       console.log(error);
       toast.dismiss();
-      ////toast.error("Something went wrong in input form");
+      toast.error("Something went wrong in input form");
     }
   };
 
@@ -110,27 +69,15 @@ const CreateCategory = () => {
     try {
       toast.loading("Updating category...");
 
-      let photoUrl = "";
+      const categoryData = new FormData();
+      categoryData.append("name", updatedName);
       if (updatedPhoto) {
-        photoUrl = await uploadToCloudinary(updatedPhoto);
-      }
-
-      // Get token from localStorage
-      const auth = JSON.parse(localStorage.getItem('auth')) || {};
-      const token = auth.token;
-
-      if (!token) {
-        toast.dismiss();
-        toast.error("Please login to continue");
-        return;
+        categoryData.append("photo", updatedPhoto);
       }
 
       const { data } = await api.put(
         `/api/v1/category/update-category/${selected._id}`,
-        {
-          name: updatedName,
-          photos: photoUrl || selected.photos
-        }
+        categoryData
       );
 
       if (data?.success) {
@@ -143,12 +90,12 @@ const CreateCategory = () => {
         getAllCategory();
       } else {
         toast.dismiss();
-        //toast.error(data.message);
+        toast.error(data.message || "Failed to update category");
       }
     } catch (error) {
       console.log(error);
       toast.dismiss();
-      ////toast.error("Something went wrong while updating");
+      toast.error("Something went wrong while updating");
     }
   };
 
@@ -247,10 +194,12 @@ const CreateCategory = () => {
                       <td>{c.name}</td>
                       <td>
                         {c.photos && (
-                          <img
+                          <OptimizedImage
                             src={c.photos}
                             alt={c.name}
-                            style={{ width: "50px", height: "50px", objectFit: "cover" }}
+                            width={50}
+                            height={50}
+                            style={{ objectFit: "cover" }}
                           />
                         )}
                       </td>
@@ -316,10 +265,11 @@ const CreateCategory = () => {
                 ) : (
                   selected?.photos && (
                     <div className="text-center">
-                      <img
+                      <OptimizedImage
                         src={selected.photos}
                         alt="category_photo"
-                        height="200"
+                        height={200}
+                        style={{ objectFit: 'contain' }}
                         className="img img-responsive"
                       />
                     </div>

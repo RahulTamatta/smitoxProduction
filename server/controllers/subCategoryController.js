@@ -1,11 +1,10 @@
-import subcategoryModel from "../models/subcategoryModel.js";
-import slugify from "slugify";
+import path from "path";
 
-// Create Subcategory
 // Create Subcategory Controller
 export const createSubcategoryController = async (req, res) => {
   try {
-    const { name, photos, parentCategoryId, isActive } = req.body;
+    const { name, parentCategoryId, isActive } = req.body;
+    const photo = req.file;
 
     if (!name) {
       return res.status(401).send({ message: "Name is required" });
@@ -23,11 +22,9 @@ export const createSubcategoryController = async (req, res) => {
       });
     }
 
-    if (photos && photos.length > 5 * 1024 * 1024) { // 5MB size limit
-      return res.status(400).send({
-        success: false,
-        message: "Image size too large. Maximum 5MB allowed.",
-      });
+    let photoPath = "";
+    if (photo) {
+      photoPath = `uploads/subcategories/${path.basename(photo.path)}`;
     }
 
     const subcategoryData = {
@@ -35,7 +32,7 @@ export const createSubcategoryController = async (req, res) => {
       slug: slugify(name),
       isActive: isActive !== undefined ? isActive : true,
       category: parentCategoryId,
-      photos, // Store the URLs from Cloudinary
+      photos: photoPath,
     };
 
     const subcategory = await new subcategoryModel(subcategoryData).save();
@@ -55,12 +52,12 @@ export const createSubcategoryController = async (req, res) => {
   }
 };
 
-
 // Update Subcategory Controller
 export const updateSubcategoryController = async (req, res) => {
   try {
-    const { name, category, isActive, photos } = req.body;
+    const { name, category, isActive } = req.body;
     const { id } = req.params;
+    const photo = req.file;
 
     if (!category) {
       return res.status(401).send({ message: "Parent category is required" });
@@ -73,14 +70,8 @@ export const updateSubcategoryController = async (req, res) => {
       isActive,
     };
 
-    if (photos) {
-      if (photos.length > 5 * 1024 * 1024) { // Validate photos size
-        return res.status(400).send({
-          success: false,
-          message: "Image size too large. Maximum 5MB allowed.",
-        });
-      }
-      updateData.photos = photos; // Update photos if provided
+    if (photo) {
+      updateData.photos = `uploads/subcategories/${path.basename(photo.path)}`;
     }
 
     const subcategory = await subcategoryModel.findByIdAndUpdate(id, updateData, { new: true });
@@ -248,7 +239,7 @@ export const toggleSubcategoryStatusController = async (req, res) => {
   try {
     const { id } = req.params;
     const subcategory = await subcategoryModel.findById(id);
-    
+
     if (!subcategory) {
       return res.status(404).send({
         success: false,

@@ -25,6 +25,10 @@ const productForYouSchema = new mongoose.Schema(
       data: Buffer,
       contentType: String,
     },
+    photos: {
+      type: String,
+      required: false,
+    },
   },
   { timestamps: true }
 );

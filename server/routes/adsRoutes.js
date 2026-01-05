@@ -1,12 +1,12 @@
 import express from "express";
-import { requireSignIn } from "../middlewares/authMiddleware.js";
-import { requireCapability } from "../middlewares/rbacMiddleware.js";
 import {
   createAdsBanner,
-  getAdsBanners,
   getAdsBannerImage,
+  getAdsBanners,
 } from "../controllers/adsBannerController.js";
-import formidable from "express-formidable";
+import { requireSignIn } from "../middlewares/authMiddleware.js";
+import { upload } from "../middlewares/multer.js";
+import { requireCapability } from "../middlewares/rbacMiddleware.js";
 
 const router = express.Router();
 
@@ -15,7 +15,7 @@ router.post(
   "/create-adsbanner",
   requireSignIn,
   requireCapability("banners:write"),
-  formidable(),
+  upload.single("adBannerImage"),
   createAdsBanner
 );
 

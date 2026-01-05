@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from "react";
-import UserMenu from "../../components/Layout/UserMenu";
-import Layout from "../../components/Layout/Layout";
 import axios from "axios";
-import { useAuth } from "../../context/auth";
 import moment from "moment";
+import { useEffect, useState } from "react";
+import Layout from "../../components/Layout/Layout";
+import UserMenu from "../../components/Layout/UserMenu";
+import { useAuth } from "../../context/auth";
 
 const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
   const [order, setOrder] = useState(selectedOrder);
 
   // Calculation functions
   const calculateSubtotal = () => {
-    return order.products.reduce((total, product) => 
+    return order.products.reduce((total, product) =>
       total + product.price * product.quantity, 0);
   };
 
@@ -130,14 +130,13 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
                     <tr key={index}>
                       <td>
                         <div className="d-flex align-items-center">
-                          <img
-                            src={product.product?.photos || '/default-product.jpg'}
+                          <OptimizedImage
+                            src={product.product?.photos}
                             alt={product.product?.name}
+                            width={50}
+                            height={50}
+                            style={{ objectFit: 'cover' }}
                             className="img-thumbnail me-2"
-                            style={{ width: '50px', height: '50px', objectFit: 'cover' }}
-                            onError={(e) => {
-                              e.target.src = '/default-product.jpg';
-                            }}
                           />
                           <div>
                             <div className="fw-medium">{product.product?.name}</div>
@@ -175,7 +174,7 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
                         <td><strong>COD Charges</strong></td>
                         <td className="text-end">₹{(order.codCharges || 0).toFixed(2)}</td>
                       </tr>
-                     
+
                       <tr className="table-active">
                         <td><strong>Total Amount</strong></td>
                         <td className="text-end">₹{calculateTotal().toFixed(2)}</td>
@@ -193,15 +192,15 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
                         <td className="text-end">₹{calculateAmountPending().toFixed(2)}</td>
                       </tr>
                     </tbody>
-                    
+
                   </table>
                   <p className="text-danger">
-  <ul>
-   
-    <li>Courier charge will be added (depends on weight and COD amount).</li>
-    <li>10% advance payment is required to confirm the order.</li>
-  </ul>
-</p>
+                    <ul>
+
+                      <li>Courier charge will be added (depends on weight and COD amount).</li>
+                      <li>10% advance payment is required to confirm the order.</li>
+                    </ul>
+                  </p>
 
                 </div>
               </div>
@@ -234,7 +233,7 @@ const Orders = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [loading, setLoading] = useState(true);
-  
+
   const statuses = [
     "All",
     "Pending",
@@ -257,7 +256,7 @@ const Orders = () => {
     try {
       setLoading(true);
       const { data } = await axios.get(`/api/v1/auth/orders/${auth.user._id}`);
-      const sortedOrders = data.sort((a, b) => 
+      const sortedOrders = data.sort((a, b) =>
         new Date(b.createdAt) - new Date(a.createdAt)
       );
       setOrders(sortedOrders);
@@ -284,47 +283,47 @@ const Orders = () => {
   };
 
   const handleUpdateOrder = (updatedOrder) => {
-    const updatedOrders = orders.map(o => 
+    const updatedOrders = orders.map(o =>
       o._id === updatedOrder._id ? updatedOrder : o
     );
-    setOrders(updatedOrders.sort((a, b) => 
+    setOrders(updatedOrders.sort((a, b) =>
       new Date(b.createdAt) - new Date(a.createdAt)
     ));
   };
   const calculateTotals = (order) => {
     // Handle null/undefined cases
     if (!order || !order.products || !Array.isArray(order.products)) {
-      return { 
-        subtotal: 0, 
-        gst: 0, 
-        total: 0 
+      return {
+        subtotal: 0,
+        gst: 0,
+        total: 0
       };
     }
-  
+
     let subtotal = 0;
     let gst = 0;
-  
+
     // Calculate product totals with safe number conversions
     order.products.forEach(product => {
       // Safely parse numerical values with fallbacks
       const price = Number(product?.price) || 0;
       const quantity = Number(product?.quantity) || 0;
       const productGst = Number(product?.gst) || 0;
-  
+
       // Calculate product contributions
       const productTotal = price * quantity;
       subtotal += productTotal;
       gst += (productTotal * productGst) / 100;
     });
-  
+
     // Parse additional charges with fallbacks
     const deliveryCharges = Number(order.deliveryCharges) || 0;
     const codCharges = Number(order.codCharges) || 0;
     const discount = Number(order.discount) || 0;
-  
+
     // Calculate final total
     const total = subtotal + gst + deliveryCharges + codCharges - discount;
-  
+
     // Return values with consistent 2 decimal places
     return {
       subtotal: Number(subtotal.toFixed(2)),
@@ -342,7 +341,7 @@ const Orders = () => {
           <div className="col-md-9">
             <div className="d-flex justify-content-between align-items-center mb-4">
               <h1>Your Orders</h1>
-              <button 
+              <button
                 className="btn btn-sm btn-outline-secondary"
                 onClick={fetchOrders}
               >
@@ -357,11 +356,10 @@ const Orders = () => {
                   <button
                     key={status}
                     onClick={() => setSelectedStatus(status)}
-                    className={`btn btn-sm ${
-                      selectedStatus === status 
-                        ? 'btn-primary' 
-                        : 'btn-outline-secondary'
-                    }`}
+                    className={`btn btn-sm ${selectedStatus === status
+                      ? 'btn-primary'
+                      : 'btn-outline-secondary'
+                      }`}
                     style={{ whiteSpace: 'nowrap' }}
                   >
                     {status}
@@ -386,7 +384,7 @@ const Orders = () => {
                   const totals = calculateTotals(order);
                   return (
                     <div className="col-12" key={order._id}>
-                      <div 
+                      <div
                         className="card shadow-sm cursor-pointer"
                         onClick={() => setSelectedOrder(order)}
                       >

@@ -1,5 +1,4 @@
 import { Suspense, useEffect, useState } from "react";
-import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
 import { useLocation, useNavigate } from "react-router-dom";
 import Slider from "react-slick";
@@ -344,7 +343,7 @@ const HomePage = () => {
                 paddingTop: isMobile ? '56.25%' : '35%', // 16:9 aspect ratio for mobile, wider for desktop
                 width: '100%',
               }}>
-                <img
+                <OptimizedImage
                   src={banner.photos}
                   alt={banner.bannerName}
                   style={{
@@ -403,10 +402,11 @@ const HomePage = () => {
                   overflow: 'hidden',
                   border: '2px solid #f0f0f0'
                 }}>
-                  <LazyLoadImage
+                  <OptimizedImage
                     src={c.photos}
                     alt={c.name}
-                    effect="blur"
+                    width={isMobile ? 70 : 80}
+                    height={isMobile ? 70 : 80}
                     style={{
                       width: '100%',
                       height: '100%',

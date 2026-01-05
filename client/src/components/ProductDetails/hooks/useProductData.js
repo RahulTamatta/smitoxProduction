@@ -114,7 +114,7 @@ export const useProductData = () => {
               const url = new URL(img);
               return url.protocol === 'http:' || url.protocol === 'https:';
             } catch {
-              return img.startsWith('/') && img !== '/' && img.length > 1 || img.includes('cloudinary.com') || img.includes('res.cloudinary.com');
+              return img.startsWith('/') && img !== '/' && img.length > 1;
             }
           });
         } else {

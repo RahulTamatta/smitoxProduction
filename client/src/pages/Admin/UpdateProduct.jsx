@@ -55,35 +55,6 @@ const UpdateProduct = () => {
   const [photos, setPhotos] = useState(""); // For single photo URL
   const [multipleimages, setMultipleImages] = useState([]); // For multiple image URLs
 
-  // Upload to Cloudinary function
-  const uploadToCloudinary = async (file) => {
-    console.log('Starting Cloudinary upload for file:', file.name);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', 'smitoxphoto');
-      formData.append('cloud_name', 'dnjtpihzs');
-
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/dnjtpihzs/image/upload`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Upload successful, URL:', data.secure_url);
-      return data.secure_url;
-    } catch (error) {
-      console.error('Cloudinary upload error:', error);
-      throw error;
-    }
-  };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
@@ -91,53 +62,24 @@ const UpdateProduct = () => {
       toast.loading("Updating product...");
       const productData = new FormData();
 
-      // Handle single photo upload
-      let photoUrl = "";
+      // Handle main photo
       if (photo) {
-        // Upload the new file and set the returned URL
-        photoUrl = await uploadToCloudinary(photo);
-        productData.append("photos", photoUrl);
+        productData.append("photo", photo);
       } else if (photos) {
-        // If no new file provided, use the fallback URL already stored in state
-        productData.append("photos", photos);
+        productData.append("photos", photos); // Existing path if any
       }
 
-      // Handle multiple images upload
-      let allImageUrls = [];
-
-      // If there are existing multiple images, use them as the starting point
-      if (multipleimages && Array.isArray(multipleimages)) {
-        allImageUrls = [...multipleimages];
-      } else if (multipleimages && typeof multipleimages === "string") {
-        try {
-          // If it's a JSON string, parse it
-          allImageUrls = JSON.parse(multipleimages);
-        } catch (err) {
-          console.error('Error parsing multipleimages:', err);
-          allImageUrls = [];
-        }
-      }
-
-      // Process new images if any are selected
+      // Handle multiple images
       if (images && images.length > 0) {
-        console.log(`Uploading ${images.length} additional images...`);
-        const imageUploadPromises = [];
-
-        // Create a separate promise for each image upload
         for (const imageFile of images) {
-          imageUploadPromises.push(uploadToCloudinary(imageFile));
+          productData.append("images", imageFile);
         }
-
-        // Wait for all uploads to complete and collect URLs
-        const newImageUrls = await Promise.all(imageUploadPromises);
-        console.log(`Successfully uploaded ${newImageUrls.length} images`);
-
-        // Add new image URLs to the existing ones
-        allImageUrls = [...allImageUrls, ...newImageUrls];
       }
 
-      // Add the image URLs as a JSON string
-      productData.append("multipleimages", JSON.stringify(allImageUrls));
+      // If there are existing multiple image paths
+      if (multipleimages && multipleimages.length > 0) {
+        productData.append("multipleimages", JSON.stringify(multipleimages));
+      }
 
       // Batch append all other form fields
       const formFields = {
@@ -194,14 +136,16 @@ const UpdateProduct = () => {
 
       if (data?.success) {
         toast.dismiss();
-        // Optionally, show success message and navigate
-        // toast.success("Product Updated Successfully");
-        // navigate('/dashboard/admin/products');
+        toast.success("Product Updated Successfully");
+        navigate('/dashboard/admin/products');
+      } else {
+        toast.dismiss();
+        toast.error(data?.message || "Error updating product");
       }
     } catch (error) {
       toast.dismiss();
       console.error("Update error:", error);
-      // Optionally: toast.error(error.message || "Error updating product");
+      toast.error(error.response?.data?.message || error.message || "Error updating product");
     }
   };
 
@@ -542,10 +486,11 @@ const UpdateProduct = () => {
                     </div>
                   ) : photos ? (
                     <div className="text-center">
-                      <img
+                      <OptimizedImage
                         src={photos}
                         alt="product_photo"
-                        height="200"
+                        height={200}
+                        style={{ objectFit: 'contain' }}
                         className="img img-responsive"
                       />
                     </div>
@@ -612,10 +557,12 @@ const UpdateProduct = () => {
                     <div className="d-flex flex-wrap gap-2">
                       {multipleimages.map((imgUrl, index) => (
                         <div key={index} className="position-relative" style={{ width: '100px', height: '100px' }}>
-                          <img
+                          <OptimizedImage
                             src={imgUrl}
                             alt={`Product image ${index + 1}`}
-                            style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+                            width={100}
+                            height={100}
+                            style={{ objectFit: 'cover' }}
                             className="border rounded"
                           />
                           <button

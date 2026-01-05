@@ -1,27 +1,26 @@
-import express from "express";
 import {
   createProductController,
   deleteProductController,
   getProductController,
-  getSingleProductController,verifyPaymentController,
+  getSingleProductController,
+  processPaymentController,
   productCategoryController,
   productCountController,
   productFiltersController,
   productListController,
   productPhotoController,
+  productSubcategoryController,
   realtedProductController,
   searchProductController,
   updateProductController,
-  getProductPhoto,
-  productSubcategoryController,
-  processPaymentController, // Add this new controller
-  // braintreeTokenController, // Keep this for UPI token generation
+  verifyPaymentController
 } from "../controllers/productController.js";
 import { requireSignIn } from "../middlewares/authMiddleware.js";
-import { requireCapability, auditLog } from "../middlewares/rbacMiddleware.js";
-import formidable from "express-formidable";
-import productModel from "../models/productModel.js";
+import { upload } from "../middlewares/multer.js";
+import { auditLog, requireCapability } from "../middlewares/rbacMiddleware.js";
+// import formidable from "express-formidable";
 import Cart from "../models/cartModel.js";
+import productModel from "../models/productModel.js";
 import Wishlist from "../models/wishlistModel.js";
 
 const router = express.Router();
@@ -31,7 +30,7 @@ router.post(
   "/create-product",
   requireSignIn,
   requireCapability("products:write"),
-  formidable(),
+  upload.fields([{ name: 'photo', maxCount: 1 }, { name: 'images', maxCount: 10 }]),
   createProductController
 );
 // router.post('/generate-sku', generateSKU);
@@ -41,7 +40,7 @@ router.put(
   "/update-product/:pid",
   requireSignIn,
   requireCapability("products:write"),
-  formidable(),
+  upload.fields([{ name: 'photo', maxCount: 1 }, { name: 'images', maxCount: 10 }]),
   updateProductController
 );
 

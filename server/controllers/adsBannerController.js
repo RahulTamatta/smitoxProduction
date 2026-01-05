@@ -1,13 +1,10 @@
+import path from "path";
 import AdsBanner from "../models/adsBannerModel.js";
-import fs from "fs";
 
 export const createAdsBanner = async (req, res) => {
   try {
     const { adBannerName, adBannerLink, adBannerPosition } = req.body;
     const adBannerImage = req.file;
-    
-    console.log("Request body", req.body);
-    console.log("Request file", req.file);
 
     // Validation
     if (!adBannerName) {
@@ -16,31 +13,20 @@ export const createAdsBanner = async (req, res) => {
     if (!adBannerImage) {
       return res.status(400).send({ success: false, message: "Image is required" });
     }
-    if (adBannerImage.size > 1000000) {
-      return res.status(400).send({ success: false, message: "Image should be less than 1mb" });
-    }
 
     const adsBanner = new AdsBanner({
-      adBannerName,
-      adBannerLink,
-      adBannerPosition,
-      adBannerImage: {
-        data: fs.readFileSync(adBannerImage.path),
-        contentType: adBannerImage.mimetype
-      }
+      name: adBannerName,
+      link: adBannerLink,
+      description: adBannerPosition, // Assuming adBannerPosition maps to description for now or just skip it
+      photos: `uploads/banners/${path.basename(adBannerImage.path)}`
     });
 
     await adsBanner.save();
-    
+
     res.status(201).send({
       success: true,
       message: "AdsBanner created successfully",
-      adsBanner: {
-        id: adsBanner._id,
-        adBannerName: adsBanner.adBannerName,
-        adBannerLink: adsBanner.adBannerLink,
-        position: adsBanner.adBannerPosition
-      }
+      adsBanner
     });
   } catch (error) {
     console.error("Error in creating adsBanner:", error);

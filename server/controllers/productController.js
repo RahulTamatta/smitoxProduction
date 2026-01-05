@@ -1,7 +1,5 @@
-import cloudinary from "cloudinary"; // Import Cloudinary
 import crypto from "crypto";
 import dotenv from "dotenv";
-import fs from "fs";
 import mongoose from "mongoose";
 import Razorpay from "razorpay";
 import slugify from "slugify";
@@ -12,16 +10,7 @@ import productModel from "../models/productModel.js";
 import subcategoryModel from "../models/subcategoryModel.js";
 dotenv.config();
 
-// Configure Cloudinary
-try {
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-  });
-} catch (error) {
-  console.error('Error configuring Cloudinary:', error);
-}
+
 
 class CustomOrderService {
   static async assignCustomOrder(
@@ -70,8 +59,6 @@ class CustomOrderService {
 }
 export const createProductController = async (req, res) => {
   try {
-    console.log("req.files:", req.files);
-    console.log("req.imageUrl:", req.imageUrl);
     const {
       name,
       description,
@@ -102,159 +89,48 @@ export const createProductController = async (req, res) => {
       sku,
       tag,
       fk_tags,
-      photos, // fallback if no image uploaded via middleware
+      photos, // fallback
       multipleimages,
       custom_order,
-    } = req.fields;
+    } = req.body; // Changed from req.fields to req.body
 
-    // Handle files from request
-    const { photo, images } = req.files || {};
-    console.log("photo:", photo);
-    console.log("images:", images);
-    console.log("photos:", photos);
+    // Multer files
+    const photo = req.files?.photo?.[0];
+    const images = req.files?.images;
 
-    // Photo validation for Buffer-based images
-    if (photo && photo.size > 1000000) {
-      return res
-        .status(400)
-        .send({ error: "Photo size should be less than 1MB." });
+    // Handle primary photo
+    let productPhoto = photos || null;
+    if (photo) {
+      // Create relative path: uploads/products/filename.ext
+      const fileName = path.basename(photo.path);
+      productPhoto = `uploads/products/${fileName}`;
     }
 
+    // Handle multiple images
+    let imageUrls = [];
     if (images) {
-      const imageArray = Array.isArray(images) ? images : [images];
-      for (let img of imageArray) {
-        if (img.size > 1000000) {
-          return res
-            .status(400)
-            .send({ error: "Each image size should be less than 1MB." });
-        }
-      }
+      imageUrls = images.map(file => {
+        const fileName = path.basename(file.path);
+        return `uploads/products/${fileName}`;
+      });
     }
 
-    // Function to upload image to Cloudinary
-    const uploadToCloudinary = async (file, folder) => {
+    // Parse numeric/JSON fields safely
+    const parseJSON = (data, fallback = []) => {
+      if (!data) return fallback;
       try {
-        const result = await cloudinary.uploader.upload(file.path, {
-          folder: folder,
-          use_filename: true,
-          unique_filename: false,
-        });
-        return result.secure_url;
-      } catch (error) {
-        console.error("Cloudinary upload error:", error);
-        throw error;
+        return typeof data === "string" ? JSON.parse(data) : data;
+      } catch (e) {
+        return fallback;
       }
     };
 
-    // Upload primary photo to Cloudinary
-    let productPhoto = req.imageUrl || photos || null;
-    if (photo && !req.imageUrl) {
-      try {
-        const photoFile = {
-          name: photo.name || "product-photo.jpg",
-          type: photo.type,
-          size: photo.size,
-          path: photo.path,
-        };
-        productPhoto = await uploadToCloudinary(photoFile, "products");
-      } catch (uploadError) {
-        console.error("Error uploading to Cloudinary:", uploadError);
-        // Fallback to ImageKit or local storage if Cloudinary fails
-      }
-    }
-
-    // Upload multiple images to Cloudinary
-    let imageUrls = [];
-    if (images) {
-      const imageArray = Array.isArray(images) ? images : [images];
-      try {
-        const uploadPromises = imageArray.map(async (img) => {
-          const imgFile = {
-            name: img.name || `product-image-${Date.now()}.jpg`,
-            type: img.type,
-            size: img.size,
-            path: img.path,
-          };
-          return await uploadToCloudinary(imgFile, "products/gallery");
-        });
-        imageUrls = (await Promise.all(uploadPromises)).filter(
-          (url) => url !== null
-        );
-      } catch (uploadError) {
-        console.error(
-          "Error uploading multiple images to Cloudinary:",
-          uploadError
-        );
-        // Fallback logic
-      }
-    }
-
-    // Parse multipleimages if provided as string
-    let parsedMultipleImages = [];
-    if (multipleimages) {
-      try {
-        parsedMultipleImages =
-          typeof multipleimages === "string"
-            ? JSON.parse(multipleimages)
-            : Array.isArray(multipleimages)
-              ? multipleimages
-              : [multipleimages];
-      } catch (error) {
-        console.warn("Error parsing multiple images:", error);
-        parsedMultipleImages = Array.isArray(multipleimages)
-          ? multipleimages
-          : multipleimages
-            ? [multipleimages]
-            : [];
-      }
-    }
-
-    // Combine existing image URLs with newly uploaded ones
-    const finalMultipleImages = [...parsedMultipleImages, ...imageUrls];
-
-    // Parse bulkProducts if provided
-    let formattedBulkProducts = null;
-    if (bulkProducts) {
-      if (typeof bulkProducts === "string") {
-        try {
-          formattedBulkProducts = JSON.parse(bulkProducts);
-        } catch (error) {
-          console.error("Error parsing bulkProducts:", error);
-          return res.status(400).send({ error: "Invalid bulkProducts data" });
-        }
-      }
-      if (formattedBulkProducts && !Array.isArray(formattedBulkProducts)) {
-        return res.status(400).send({ error: "bulkProducts must be an array" });
-      }
-      if (Array.isArray(formattedBulkProducts)) {
-        formattedBulkProducts = formattedBulkProducts.map((item) => ({
-          minimum: isNaN(parseInt(item.minimum)) ? 0 : parseInt(item.minimum),
-          maximum: isNaN(parseInt(item.maximum)) ? 0 : parseInt(item.maximum),
-          discount_mrp: isNaN(parseFloat(item.discount_mrp))
-            ? 0
-            : parseFloat(item.discount_mrp),
-          selling_price_set: isNaN(parseFloat(item.selling_price_set))
-            ? 0
-            : parseFloat(item.selling_price_set),
-        }));
-      }
-    }
-
-    // Parse fk_tags if provided
-    let parsedFkTags = [];
-    if (fk_tags) {
-      try {
-        parsedFkTags =
-          typeof fk_tags === "string" ? JSON.parse(fk_tags) : fk_tags;
-      } catch (error) {
-        console.warn("Error parsing FK tags:", error);
-        parsedFkTags = Array.isArray(fk_tags)
-          ? fk_tags
-          : fk_tags
-            ? [fk_tags]
-            : [];
-      }
-    }
+    const finalMultipleImages = [...parseJSON(multipleimages), ...imageUrls];
+    const formattedBulkProducts = parseJSON(bulkProducts);
+    const parsedFkTags = parseJSON(fk_tags);
+    const parsedVariants = parseJSON(variants);
+    const parsedSets = parseJSON(sets);
+    const parsedTags = parseJSON(tag);
 
     // Function to generate SKU if not provided
     const generateSKU = () => {
@@ -267,17 +143,14 @@ export const createProductController = async (req, res) => {
       return `SM-${timeComponent}${randomLetters}`;
     };
 
-    // Determine custom order if needed
+    // Determine custom order
     let productCustomOrder = custom_order;
     if (!productCustomOrder) {
       const lastProduct = await productModel
         .findOne()
         .sort({ custom_order: -1 })
         .select("custom_order");
-
-      productCustomOrder = lastProduct?.custom_order
-        ? lastProduct.custom_order + 1
-        : 1;
+      productCustomOrder = lastProduct?.custom_order ? lastProduct.custom_order + 1 : 1;
     }
 
     // Create the new product
@@ -288,54 +161,36 @@ export const createProductController = async (req, res) => {
       price: parseFloat(price),
       category: mongoose.Types.ObjectId(category),
       subcategory: mongoose.Types.ObjectId(subcategory),
-      brand: mongoose.Types.ObjectId(brand),
-      quantity: parseInt(quantity),
+      brand: brand ? mongoose.Types.ObjectId(brand) : undefined,
+      quantity: parseInt(quantity) || 0,
       stock: parseInt(stock) || 0,
-      shipping: shipping === "1",
+      shipping: shipping === "1" || shipping === true,
       hsn,
       unit,
-      unitSet: parseInt(unitSet),
+      unitSet: parseInt(unitSet) || 0,
       additionalUnit,
-      gst: parseFloat(gst),
+      gst: gst,
       gstType,
-      purchaseRate: parseFloat(purchaseRate),
-      mrp: parseFloat(mrp),
-      perPiecePrice: parseFloat(perPiecePrice),
-      weight: parseFloat(weight),
+      purchaseRate: parseFloat(purchaseRate) || 0,
+      mrp: parseFloat(mrp) || 0,
+      perPiecePrice: parseFloat(perPiecePrice) || 0,
+      weight: parseFloat(weight) || 0,
       youtubeUrl,
       sku: sku || generateSKU(),
-      bulkProducts: formattedBulkProducts || [],
-      allowCOD: allowCOD === "1",
-      returnProduct: returnProduct === "1",
+      bulkProducts: formattedBulkProducts,
+      allowCOD: allowCOD === "1" || allowCOD === true,
+      returnProduct: returnProduct === "1" || returnProduct === true,
       userId,
       isActive: "1",
-      variants: variants ? JSON.parse(variants) : [],
-      sets: sets ? JSON.parse(sets) : [],
-      tag: Array.isArray(tag) ? tag : tag ? [tag] : [],
+      variants: parsedVariants,
+      sets: parsedSets,
+      tag: parsedTags,
       fk_tags: parsedFkTags,
-      photos: productPhoto, // Use Cloudinary URL
+      photos: productPhoto,
       multipleimages: finalMultipleImages,
       custom_order: productCustomOrder,
     });
 
-    // Handle Buffer-based photo if ImageKit upload failed
-    if (photo && !productPhoto) {
-      newProduct.photo = {
-        data: fs.readFileSync(photo.path),
-        contentType: photo.type,
-      };
-    }
-
-    // Handle Buffer-based multiple images if ImageKit upload failed
-    if (images && finalMultipleImages.length === parsedMultipleImages.length) {
-      const imageArray = Array.isArray(images) ? images : [images];
-      newProduct.images = imageArray.map((img) => ({
-        data: fs.readFileSync(img.path),
-        contentType: img.type,
-      }));
-    }
-
-    // Save the product in MongoDB
     await newProduct.save();
 
     res.status(201).send({
@@ -387,13 +242,10 @@ export const updateProductController = async (req, res) => {
       fk_tags,
       youtubeUrl,
       tag,
-      photos, // fallback if no image uploaded via middleware
-      multipleimages,
+      photos, // existing photo URL
+      multipleimages, // existing images array
       custom_order,
-    } = req.fields;
-
-    // Handle files from request
-    const { photo, images } = req.files || {};
+    } = req.body;
 
     // Find the original product
     const product = await productModel.findById(req.params.pid);
@@ -401,7 +253,40 @@ export const updateProductController = async (req, res) => {
       return res.status(404).send({ error: "Product not found" });
     }
 
-    // Preserve original custom order and assign a new one if needed
+    // Multer files
+    const photoFile = req.files?.photo?.[0];
+    const imagesFiles = req.files?.images;
+
+    // Handle primary photo
+    let productPhoto = photos || product.photos;
+    if (photoFile) {
+      const fileName = path.basename(photoFile.path);
+      productPhoto = `uploads/products/${fileName}`;
+    }
+
+    // Handle multiple images
+    let newImageUrls = [];
+    if (imagesFiles) {
+      newImageUrls = imagesFiles.map(file => {
+        const fileName = path.basename(file.path);
+        return `uploads/products/${fileName}`;
+      });
+    }
+
+    // Helper to parse JSON safely
+    const parseJSON = (data, fallback = []) => {
+      if (!data) return fallback;
+      try {
+        return typeof data === "string" ? JSON.parse(data) : data;
+      } catch (e) {
+        return fallback;
+      }
+    };
+
+    const existingMultipleImages = parseJSON(multipleimages);
+    const finalMultipleImages = [...existingMultipleImages, ...newImageUrls];
+
+    // Preserve original custom order logic
     const originalOrder = product.custom_order;
     const finalCustomOrder = await CustomOrderService.assignCustomOrder(
       custom_order,
@@ -409,171 +294,47 @@ export const updateProductController = async (req, res) => {
       req.params.pid
     );
 
-    // Prepare updated fields (converting numeric/JSON values as needed)
+    // Update fields
     const updatedFields = {
       name,
       description,
-      slug: slugify(name),
-      price: parseFloat(price),
-      category: mongoose.Types.ObjectId(category),
-      subcategory: mongoose.Types.ObjectId(subcategory),
-      brand: mongoose.Types.ObjectId(brand),
-      quantity: parseInt(quantity),
-      stock: parseInt(stock) || 0,
-      minimumqty: parseInt(minimumqty),
-      shipping: shipping === "1",
-      hsn,
-      unit,
-      unitSet: parseInt(unitSet),
-      additionalUnit,
-      gst: parseFloat(gst),
-      gstType,
-      purchaseRate: parseFloat(purchaseRate),
-      mrp: parseFloat(mrp),
-      perPiecePrice: parseFloat(perPiecePrice),
-      setPrice: parseFloat(setPrice),
-      weight: parseFloat(weight),
-      allowCOD: allowCOD === "1",
-      returnProduct: returnProduct === "1",
-      userId,
-      isActive: "1",
-      variants: JSON.parse(variants || "[]"),
-      sets: JSON.parse(sets || "[]"),
-      sku,
-      youtubeUrl: youtubeUrl || "",
-      tag: Array.isArray(tag) ? tag : tag ? [tag] : [],
-      // Use existing photo if none provided
-      photos: photos || product.photos,
+      slug: slugify(name || product.name),
+      price: price ? parseFloat(price) : product.price,
+      category: category ? mongoose.Types.ObjectId(category) : product.category,
+      subcategory: subcategory ? mongoose.Types.ObjectId(subcategory) : product.subcategory,
+      brand: brand ? mongoose.Types.ObjectId(brand) : product.brand,
+      quantity: quantity !== undefined ? parseInt(quantity) : product.quantity,
+      stock: stock !== undefined ? parseInt(stock) : product.stock,
+      minimumqty: minimumqty !== undefined ? parseInt(minimumqty) : product.minimumqty,
+      shipping: shipping === "1" || shipping === true,
+      hsn: hsn || product.hsn,
+      unit: unit || product.unit,
+      unitSet: unitSet !== undefined ? parseInt(unitSet) : product.unitSet,
+      additionalUnit: additionalUnit || product.additionalUnit,
+      gst: gst || product.gst,
+      gstType: gstType || product.gstType,
+      purchaseRate: purchaseRate ? parseFloat(purchaseRate) : product.purchaseRate,
+      mrp: mrp ? parseFloat(mrp) : product.mrp,
+      perPiecePrice: perPiecePrice ? parseFloat(perPiecePrice) : product.perPiecePrice,
+      setPrice: setPrice ? parseFloat(setPrice) : product.setPrice,
+      weight: weight ? parseFloat(weight) : product.weight,
+      allowCOD: allowCOD === "1" || allowCOD === true,
+      returnProduct: returnProduct === "1" || returnProduct === true,
+      userId: userId || product.userId,
+      variants: parseJSON(variants, product.variants),
+      sets: parseJSON(sets, product.sets),
+      sku: sku || product.sku,
+      youtubeUrl: youtubeUrl || product.youtubeUrl,
+      tag: parseJSON(tag, product.tag),
+      fk_tags: parseJSON(fk_tags, product.fk_tags),
+      bulkProducts: parseJSON(bulkProducts, product.bulkProducts),
+      photos: productPhoto,
+      multipleimages: finalMultipleImages,
       custom_order: finalCustomOrder,
-      multipleimages: Array.isArray(multipleimages)
-        ? multipleimages
-        : multipleimages
-          ? [multipleimages]
-          : [],
     };
 
-    // Handle FK tags
-    if (fk_tags) {
-      let parsedFkTags = [];
-      if (typeof fk_tags === "string") {
-        try {
-          parsedFkTags = JSON.parse(fk_tags);
-        } catch (error) {
-          console.error("Error parsing fk_tags:", error);
-          return res.status(400).send({ error: "Invalid fk_tags data" });
-        }
-      } else if (Array.isArray(fk_tags)) {
-        parsedFkTags = fk_tags;
-      }
-      updatedFields.fk_tags = parsedFkTags;
-    }
-
-    // Handle bulkProducts parsing
-    if (bulkProducts) {
-      let formattedBulkProducts = null;
-      if (typeof bulkProducts === "string") {
-        try {
-          formattedBulkProducts = JSON.parse(bulkProducts);
-        } catch (error) {
-          console.error("Error parsing bulkProducts:", error);
-          return res.status(400).send({ error: "Invalid bulkProducts data" });
-        }
-      }
-      if (Array.isArray(formattedBulkProducts)) {
-        formattedBulkProducts = formattedBulkProducts.map((item) => ({
-          minimum: parseInt(item.minimum),
-          maximum: parseInt(item.maximum),
-          discount_mrp: parseFloat(item.discount_mrp),
-          selling_price_set: parseFloat(item.selling_price_set),
-        }));
-      }
-      updatedFields.bulkProducts = formattedBulkProducts;
-    }
-
-    // === Cloud Upload Logic for Primary Photo ===
-    let productPhoto = req.imageUrl || photos || product.photos;
-    if (photo && !req.imageUrl) {
-      try {
-        const photoFile = {
-          name: photo.name || "product-photo.jpg",
-          type: photo.type,
-          size: photo.size,
-          path: photo.path,
-        };
-        productPhoto = await uploadToCloudinary(photoFile, "products");
-      } catch (uploadError) {
-        console.error("Error uploading to Cloudinary:", uploadError);
-        // Fallback logic
-      }
-    }
-    updatedFields.photos = productPhoto;
-
-    // === Cloud Upload Logic for Multiple Images ===
-    let imageUrls = [];
-    if (images) {
-      const imageArray = Array.isArray(images) ? images : [images];
-      try {
-        const uploadPromises = imageArray.map(async (img) => {
-          const imgFile = {
-            name: img.name || `product-image-${Date.now()}.jpg`,
-            type: img.type,
-            size: img.size,
-            path: img.path,
-          };
-          return await uploadToCloudinary(imgFile, "products/gallery");
-        });
-        imageUrls = (await Promise.all(uploadPromises)).filter(
-          (url) => url !== null
-        );
-      } catch (uploadError) {
-        console.error(
-          "Error uploading multiple images to Cloudinary:",
-          uploadError
-        );
-        // Fallback logic
-      }
-    }
-    // Parse multipleimages from req.fields if provided
-    let parsedMultipleImages = [];
-    if (multipleimages) {
-      try {
-        parsedMultipleImages =
-          typeof multipleimages === "string"
-            ? JSON.parse(multipleimages)
-            : Array.isArray(multipleimages)
-              ? multipleimages
-              : [multipleimages];
-      } catch (error) {
-        console.warn("Error parsing multiple images:", error);
-        parsedMultipleImages = Array.isArray(multipleimages)
-          ? multipleimages
-          : multipleimages
-            ? [multipleimages]
-            : [];
-      }
-    }
-    const finalMultipleImages = [...parsedMultipleImages, ...imageUrls];
-    updatedFields.multipleimages = finalMultipleImages;
-
-    // Update the product document with the new fields
+    // Update document
     Object.assign(product, updatedFields);
-
-    // Fallback: if cloud upload did not occur, you can use Buffer-based handling
-    if (photo && !productPhoto) {
-      product.photo = {
-        data: fs.readFileSync(photo.path),
-        contentType: photo.type,
-      };
-    }
-    if (images && finalMultipleImages.length === parsedMultipleImages.length) {
-      const imageArray = Array.isArray(images) ? images : [images];
-      product.images = imageArray.map((img) => ({
-        data: fs.readFileSync(img.path),
-        contentType: img.type,
-      }));
-    }
-
-    // Save the updated product
     await product.save();
 
     res.status(200).send({
@@ -662,28 +423,7 @@ export const getProductController = async (req, res) => {
   }
 };
 
-// Helper function: wrap Cloudinary API resource call into a promise to get file size (bytes)
-const getResourceBytes = (publicId) => {
-  return new Promise((resolve) => {
-    if (!process.env.CLOUDINARY_CLOUD_NAME) {
-      return resolve(0);
-    }
 
-    // Set a timeout to prevent hanging
-    const timeout = setTimeout(() => {
-      resolve(0);
-    }, 2000); // 2 second timeout
-
-    cloudinary.api.resource(publicId, (error, result) => {
-      clearTimeout(timeout);
-      if (error) {
-        // Silently fail - don't log errors
-        return resolve(0);
-      }
-      resolve(result.bytes || 0);
-    });
-  });
-};
 
 export const productListController = async (req, res) => {
   try {
@@ -795,48 +535,26 @@ export const productListController = async (req, res) => {
       .limit(perPage)
       .sort(sortQuery);
 
-    // Process products to attach optimized Cloudinary photo URLs
-    // and collect promises for file size retrieval
-    const bandwidthPromises = [];
+    // Simplified response without Cloudinary bandwidth calculation
     const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject();
       if (productObj.photos) {
-        // Generate an optimized URL using low quality and auto format for better bandwidth savings
-        productObj.photoUrl = cloudinary.url(productObj.photos, {
-          transformation: [{
-            // width: 200,
-            // height: 200,
-            // crop: "contain",
-            quality: "30", // Lower quality (30%) to reduce bandwidth
-            // fetch_format: "auto"
-          }]
-        });
-        // Add a promise to retrieve the file size for this photo
-        bandwidthPromises.push(getResourceBytes(productObj.photos));
-      } else {
-        // If no photo exists, add a zero-size placeholder
-        bandwidthPromises.push(Promise.resolve(0));
+        // Use the relative path directly; OptimizedImage on frontend handles resolving it
+        productObj.photoUrl = productObj.photos;
       }
       return productObj;
     });
 
-    // Wait for all Cloudinary API calls to get file sizes
-    const bytesArray = await Promise.all(bandwidthPromises);
-    const totalBytes = bytesArray.reduce((sum, current) => sum + current, 0);
-
     // Enhanced response with pagination metadata
     res.status(200).send({
       success: true,
+      count: productsWithPhotos.length,
       total,
       products: productsWithPhotos,
-      pagination: {
-        currentPage: page,
-        perPage,
-        totalPages: Math.ceil(total / perPage),
-        hasNextPage: skip + products.length < total,
-        hasPrevPage: page > 1
-      },
-      bandwidthUsedBytes: totalBytes
+      currentPage: page,
+      totalPages: Math.ceil(total / perPage),
+      hasNextPage: skip + products.length < total,
+      hasPrevPage: page > 1
     });
   } catch (error) {
     console.error(error);
@@ -923,15 +641,7 @@ export const searchProductController = async (req, res) => {
     const resultsWithPhotos = results.map((product) => {
       const productObj = product.toObject();
       if (productObj.photos) {
-        productObj.photoUrl = cloudinary.url(productObj.photos, {
-          transformation: [{
-            width: 200,
-            height: 200,
-            crop: "fill",
-            quality: "30", // Lower quality for search results
-            fetch_format: "auto"
-          }],
-        });
+        productObj.photoUrl = productObj.photos;
       }
       return productObj;
     });
@@ -964,15 +674,7 @@ export const realtedProductController = async (req, res) => {
     const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject();
       if (productObj.photos) {
-        productObj.photoUrl = cloudinary.url(productObj.photos, {
-          transformation: [{
-            width: 200,
-            height: 200,
-            crop: "fill",
-            quality: "30", // Lower quality
-            fetch_format: "auto"
-          }],
-        });
+        productObj.photoUrl = productObj.photos;
       }
       return productObj;
     });
@@ -1036,14 +738,7 @@ export const getSingleProductController = async (req, res) => {
     // Convert photo to base64
     const productObj = product.toObject();
     if (productObj.photos) {
-      productObj.photoUrl = cloudinary.url(productObj.photos, {
-        transformation: [{
-          width: 400,
-          height: 400,
-          crop: "fill",
-          quality: "50" // Slightly higher quality for product detail page
-        }],
-      });
+      productObj.photoUrl = productObj.photos;
     }
 
     res.status(200).send({
@@ -1883,26 +1578,13 @@ export const productCategoryController = async (req, res) => {
     // Calculate if there are more products to load
     const hasMore = total > skip + products.length;
 
-    // Process products to attach optimized Cloudinary photo URLs
+    // Process products to attach photo URLs
     const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject(); // Convert Mongoose doc to plain object
       if (productObj.photos) {
-        try {
-          // Generate an optimized URL using lower quality for better bandwidth savings
-          productObj.photoUrl = cloudinary.url(productObj.photos, { // Assuming 'photos' contains the Cloudinary public ID
-            transformation: [{
-              quality: "auto:low", // Use Cloudinary's auto low quality optimization
-              fetch_format: "auto" // Automatically select best format (webp, avif)
-            }]
-          });
-        } catch (cloudinaryError) {
-          console.error("Error generating Cloudinary URL:", cloudinaryError);
-          productObj.photoUrl = null; // Set to null or a placeholder if URL generation fails
-        }
-        // Optionally remove the original photos field if only the URL is needed client-side
-        // delete productObj.photos;
+        productObj.photoUrl = productObj.photos;
       } else {
-        productObj.photoUrl = null; // Set to null if no photo ID exists
+        productObj.photoUrl = null; // Set to null if no photo exists
       }
       return productObj;
     });
@@ -1989,22 +1671,11 @@ export const productSubcategoryController = async (req, res) => {
     // Calculate if there are more products to load
     const hasMore = total > skip + products.length;
 
-    // Process products to include optimized Cloudinary photo URLs
+    // Process products to include photo URLs
     const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject();
       if (productObj.photos) {
-        try {
-          productObj.photoUrl = cloudinary.url(productObj.photos, { // Assuming 'photos' is the public ID
-            transformation: [{
-              quality: "auto:low",
-              fetch_format: "auto"
-            }]
-          });
-        } catch (cloudinaryError) {
-          console.error("Error generating Cloudinary URL:", cloudinaryError);
-          productObj.photoUrl = null;
-        }
-        // delete productObj.photos; // Optional: remove original field
+        productObj.photoUrl = productObj.photos;
       } else {
         productObj.photoUrl = null;
       }

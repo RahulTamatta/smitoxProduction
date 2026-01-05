@@ -1,5 +1,4 @@
 import express from "express";
-import formidable from "express-formidable";
 import {
   approveApplication,
   getApplicationById,
@@ -14,6 +13,7 @@ import {
   upgradePlan,
   verifyPayment,
 } from "../controllers/sellerApplicationControllerV2.js";
+import { upload } from "../middlewares/multer.js";
 import {
   auditLog,
   requireCapability,
@@ -26,7 +26,13 @@ const router = express.Router();
 router.post(
   "/apply",
   requireSignIn,
-  formidable(),
+  upload.fields([
+    { name: "identityProofImage", maxCount: 1 },
+    { name: "addressProofImage", maxCount: 1 },
+    { name: "gstImage", maxCount: 1 },
+    { name: "panImage", maxCount: 1 },
+    { name: "cancelledCheckImage", maxCount: 1 }
+  ]),
   auditLog("save_draft_application", "seller_application", "low"),
   saveDraftApplication
 );
