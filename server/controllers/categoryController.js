@@ -1,4 +1,6 @@
 import path from "path";
+import slugify from "slugify";
+import categoryModel from "../models/categoryModel.js";
 
 // Category Controller functions
 
