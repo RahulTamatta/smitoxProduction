@@ -71,15 +71,16 @@ router.put("/updateStatus/products/:id", async (req, res) => {
     }
 
     // Send success response with updated product
-    // If product is deactivated, remove it from all carts and wishlists
+    // If product is deactivated, remove it from all carts, wishlists, and banners
     if (product && req.body.isActive === "0") {
       try {
         await Promise.all([
           Cart.updateMany({}, { $pull: { products: { product: product._id } } }),
           Wishlist.updateMany({}, { $pull: { products: { product: product._id } } }),
+          mongoose.model("ProductForYou").deleteMany({ productId: product._id }),
         ]);
       } catch (cleanupErr) {
-        console.error("Error cleaning up carts/wishlists for deactivated product:", cleanupErr);
+        console.error("Error cleaning up carts/wishlists/banners for deactivated product:", cleanupErr);
         // Continue; don't fail the request due to cleanup
       }
     }

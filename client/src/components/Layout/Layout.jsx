@@ -80,6 +80,20 @@ const Layout = ({ children, title, description, keywords, author }) => {
         <meta name="author" content={author} />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
         <title>{title}</title>
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:url" content={window.location.href} />
+        <meta property="og:site_name" content="Smitox B2B" />
+        <meta property="og:image" content="https://www.smitox.com/logo512.png" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content="https://www.smitox.com/logo512.png" />
       </Helmet>
 
       {/* Header - Fixed position (hidden on admin routes) */}
@@ -138,9 +152,9 @@ const Layout = ({ children, title, description, keywords, author }) => {
 };
 
 Layout.defaultProps = {
-  title: "Smitox - B2B Wholesale Marketplace",
-  description: "Premier B2B marketplace for wholesale buyers and sellers. Connect with verified manufacturers, distributors, and bulk suppliers.",
-  keywords: "b2b marketplace, wholesale, bulk orders, business suppliers, manufacturers, distributors, procurement, smitox",
-  author: "rahultamatta"
+  title: "Smitox - India's Leading B2B Wholesale Marketplace",
+  description: "Shop bulk products at factory prices on India's premier B2B platform. Connect with verified manufacturers, distributors, and suppliers.",
+  keywords: "b2b wholesale, bulk buying, factory price, smitox, marketplace india, SME supplier, verified manufacturers",
+  author: "Smitox B2B"
 };
 export default Layout;

@@ -1,23 +1,22 @@
 
 
-import React from "react";
-import Layout from "./../components/Layout/Layout";
 import { AiFillWarning } from 'react-icons/ai';
+import Layout from "./../components/Layout/Layout";
 import StockPopup from "./cart/StockPopup";
 
 // Import modular components
+import BulkPricingTable from '../components/ProductDetails/BulkPricingTable';
 import ProductImageGallery from '../components/ProductDetails/ProductImageGallery';
 import ProductInfo from '../components/ProductDetails/ProductInfo';
-import QuantitySelector from '../components/ProductDetails/QuantitySelector';
-import BulkPricingTable from '../components/ProductDetails/BulkPricingTable';
 import ProductsForYou from '../components/ProductDetails/ProductsForYou';
+import QuantitySelector from '../components/ProductDetails/QuantitySelector';
+import ImageZoomModal from '../components/ProductDetails/modals/ImageZoomModal';
 import LoginPromptModal from '../components/ProductDetails/modals/LoginPromptModal';
 import YouTubePopupModal from '../components/ProductDetails/modals/YouTubePopupModal';
-import ImageZoomModal from '../components/ProductDetails/modals/ImageZoomModal';
 
 // Import custom hooks
-import { useProductData } from '../components/ProductDetails/hooks/useProductData';
 import { useCartOperations } from '../components/ProductDetails/hooks/useCartOperations';
+import { useProductData } from '../components/ProductDetails/hooks/useProductData';
 import { useUIState } from '../components/ProductDetails/hooks/useUIState';
 
 
@@ -90,10 +89,14 @@ const ProductDetails = () => {
     );
   }
   return (
-    <Layout>
+    <Layout
+      title={`${product.name} - Buy Wholesale at Smitox`}
+      description={`${product.description?.substring(0, 160) || "Buy " + product.name + " at wholesale prices on Smitox."}`}
+      keywords={`${product.name}, wholesale ${product.name}, bulk ${product.name}, smitox`}
+    >
       {isNetworkError && (
         <div className="alert alert-warning m-2">
-          <AiFillWarning /> Network connection issues detected. 
+          <AiFillWarning /> Network connection issues detected.
           Some features may not work properly.
         </div>
       )}
@@ -119,7 +122,7 @@ const ProductDetails = () => {
               isMobile={isMobile}
               isTablet={isTablet}
             />
-            
+
             {/* Quantity Selector */}
             <QuantitySelector
               displayQuantity={displayQuantity}
@@ -140,7 +143,7 @@ const ProductDetails = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Products For You Section */}
       <ProductsForYou
         productsForYou={productsForYou}
@@ -148,7 +151,7 @@ const ProductDetails = () => {
         onProductClick={handleProductNavigation}
         isMobile={isMobile}
       />
-      
+
       {/* Stock Popup Modal */}
       <StockPopup
         show={showStockPopup}

@@ -143,7 +143,7 @@ const Header = () => {
             <Link to="/" className="navbar-brand" onClick={handleHomeClick} style={{ margin: 0, padding: 0 }}>
               <img
                 src={logo}
-                alt="Smitox Logo"
+                alt="Smitox B2B"
                 style={logoStyles}
               />
             </Link>

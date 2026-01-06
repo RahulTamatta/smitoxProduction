@@ -4,10 +4,13 @@ import mongoose from "mongoose";
 import Razorpay from "razorpay";
 import slugify from "slugify";
 import { enrichOrderProducts } from "../helpers/orderSnapshotHelper.js";
+import cartModel from "../models/cartModel.js";
 import categoryModel from "../models/categoryModel.js";
 import orderModel from "../models/orderModel.js";
+import productForYouModel from "../models/productForYouModel.js";
 import productModel from "../models/productModel.js";
 import subcategoryModel from "../models/subcategoryModel.js";
+import wishlistModel from "../models/wishlistModel.js";
 dotenv.config();
 
 
@@ -782,13 +785,45 @@ export const productPhotoController = async (req, res) => {
   }
 };
 
-//delete controller
+// delete controller
 export const deleteProductController = async (req, res) => {
   try {
-    await productModel.findByIdAndDelete(req.params.pid).select("-photos");
+    const { pid } = req.params;
+
+    // Delete the product itself
+    await productModel.findByIdAndDelete(pid).select("-photos");
+
+    // Cleanup: Remove product from all carts, wishlists, banners, and orders
+    try {
+      await Promise.all([
+        // Remove from all Carts
+        cartModel.updateMany(
+          {},
+          { $pull: { products: { product: pid } } }
+        ),
+        // Remove from all Wishlists
+        wishlistModel.updateMany(
+          {},
+          { $pull: { products: { product: pid } } }
+        ),
+        // Remove from all "Product For You" / Banners
+        productForYouModel.deleteMany({ productId: pid }),
+        // Remove from all Orders (as requested: "order panels in whole codebase")
+        // Note: This removes the product item from the orders' products array
+        orderModel.updateMany(
+          {},
+          { $pull: { products: { product: pid } } }
+        )
+      ]);
+      console.log(`[Cleanup] Successfully removed product ${pid} from all collections.`);
+    } catch (cleanupError) {
+      console.error(`[Cleanup] Error cleaning up data for deleted product ${pid}:`, cleanupError);
+      // We continue since the main product is already deleted
+    }
+
     res.status(200).send({
       success: true,
-      message: "Product Deleted successfully",
+      message: "Product Deleted successfully and cleaned up from all user lists",
     });
   } catch (error) {
     console.log(error);
@@ -1714,6 +1749,7 @@ export const productFiltersController = async (req, res) => {
       ...(checked.length > 0 && { category: checked }),
       ...(radio.length && { price: { $gte: radio[0], $lte: radio[1] } }),
       stock: { $gt: 0 }, // Only products with stock > 0
+      isActive: "1",    // Only active products
     };
 
     const products = await productModel.find(args);

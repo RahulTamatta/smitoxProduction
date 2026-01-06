@@ -292,7 +292,7 @@ const HomePage = () => {
 
   return (
 
-    <Layout title={"All Products - Best offers"}>
+    <Layout title={"Smitox - India's Leading B2B Wholesale Marketplace"}>
       {/* Mobile Search */}
 
       {/* {isMobile && (
