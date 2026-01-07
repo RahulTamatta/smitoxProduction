@@ -1,5 +1,8 @@
 import { Button, Form, Table } from "react-bootstrap";
 
+// Get the API base URL from environment or use relative path
+const API_BASE_URL = process.env.REACT_APP_API_URL || "";
+
 const ProductTable = ({
   products,
   handleProductChange,
@@ -10,6 +13,30 @@ const ProductTable = ({
   selectedOrder,
   handleInputChange,
 }) => {
+  // Helper function to get proper image URL
+  const getImageUrl = (product) => {
+    // Try multiple sources for the image
+    const imagePath =
+      product.productImage ||
+      product.product?.photos ||
+      product.photos ||
+      (product.product && typeof product.product === 'object' ? product.product.photos : null);
+
+    if (!imagePath) {
+      return "https://via.placeholder.com/50?text=No+Image";
+    }
+
+    // If it's already an absolute URL (http/https), use it directly
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+
+    // If it's a relative path (like "uploads/products/..."), prepend the API base URL
+    // Remove leading slash if present to avoid double slashes
+    const cleanPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+    return `${API_BASE_URL}${cleanPath}`;
+  };
+
   // Get unit price from snapshot data (no bulk pricing calculation)
   const getUnitPrice = (product) => {
     // Use snapshot unitPrice if available, otherwise fall back to price
@@ -68,10 +95,14 @@ const ProductTable = ({
                   </td>
                   <td>
                     <img
-                      src={product.productImage || product.product?.photos || product.photos || productData.photos || "https://via.placeholder.com/50"}
+                      src={getImageUrl(product)}
                       alt={product.productName || product.product?.name || product.name || productData.name || "Product image"}
                       width="50"
                       className="img-fluid"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "https://via.placeholder.com/50?text=No+Image";
+                      }}
                     />
                   </td>
                   <td style={{ minWidth: "260px", maxWidth: "480px" }}>
