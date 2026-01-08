@@ -364,7 +364,11 @@ const UpdateProduct = () => {
     try {
       let answer = window.prompt("Are you sure you want to delete this product?");
       if (!answer) return;
-      await axios.delete(`/api/v1/product/delete-product/${id}`);
+      await axios.delete(`/api/v1/product/delete-product/${id}`, {
+        headers: {
+          Authorization: auth?.token,
+        },
+      });
       //toast.success("Product Deleted Successfully");
       navigate("/dashboard/admin/products");
     } catch (error) {

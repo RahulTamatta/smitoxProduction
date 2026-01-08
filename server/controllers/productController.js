@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import path from "path";
 import Razorpay from "razorpay";
 import slugify from "slugify";
 import { enrichOrderProducts } from "../helpers/orderSnapshotHelper.js";
@@ -538,7 +539,7 @@ export const productListController = async (req, res) => {
       .limit(perPage)
       .sort(sortQuery);
 
-    // Simplified response without Cloudinary bandwidth calculation
+    // Simplified response without bandwidth calculation
     const productsWithPhotos = products.map((product) => {
       const productObj = product.toObject();
       if (productObj.photos) {

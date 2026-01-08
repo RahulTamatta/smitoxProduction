@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import AdminMenu from "../../components/Layout/AdminMenu";
 import OptimizedImage from "../../components/OptimizedImage";
+import { useAuth } from "../../context/auth";
 import Layout from "./../../components/Layout/Layout";
 
 const Products = () => {
@@ -15,6 +16,7 @@ const Products = () => {
   const searchFromUrl = urlParams.get('search') || "";
   const filterFromUrl = urlParams.get('filter') || "all";
 
+  const [auth] = useAuth(); // Auth hook
   const [products, setProducts] = useState([]);
   const [filter, setFilter] = useState(filterFromUrl);
   const [searchTerm, setSearchTerm] = useState(searchFromUrl);
@@ -99,10 +101,18 @@ const Products = () => {
 
       const endpoints = selectedProducts.map(id => {
         if (action === "delete") {
-          return axios.delete(`/api/v1/product/delete-product/${id}`);
+          return axios.delete(`/api/v1/product/delete-product/${id}`, {
+            headers: {
+              Authorization: auth?.token,
+            },
+          });
         }
         return axios.put(`/api/v1/product/updateStatus/products/${id}`, {
           isActive: action === "activate" ? "1" : "0"
+        }, {
+          headers: {
+            Authorization: auth?.token,
+          },
         });
       });
 
