@@ -14,6 +14,9 @@ import {
   ,
 
 
+
+
+
   registerController,
   sendOTPController,
   updateOrderController,
@@ -51,15 +54,39 @@ router.get("/fix-my-permissions", async (req, res) => {
     const user = await mongoose.model("User").findById(userId);
     if (!user) return res.send("User not found");
 
+    const beforeState = {
+      role: user.role,
+      roleString: user.roleString,
+      permissions: user.permissions
+    };
+
+    // FORCE UPDATE
     user.role = 3;
     user.roleString = 'super_admin';
-    user.permissions = undefined; // Force clear
 
-    await user.save();
+    // Completely unset the permissions field
+    await mongoose.model("User").updateOne({ _id: userId }, { $unset: { permissions: 1 } });
 
-    res.send("<h1>SUCCESS!</h1><p>Permissions reset successfully.</p><p>Please <b>LOGOUT</b> and <b>LOGIN</b> again to get a new token.</p>");
+    // Re-fetch to confirm
+    const updatedUser = await mongoose.model("User").findById(userId);
+
+    const afterState = {
+      role: updatedUser.role,
+      roleString: updatedUser.roleString,
+      permissions: updatedUser.permissions
+    };
+
+    res.send(`
+      <h1>Permissions Reset Report</h1>
+      <h3>Before Fix:</h3>
+      <pre>${JSON.stringify(beforeState, null, 2)}</pre>
+      <h3>After Fix:</h3>
+      <pre>${JSON.stringify(afterState, null, 2)}</pre>
+      <p>Permissions have been forcefully removed. The "After Fix" permissions should be undefined or empty.</p>
+      <h2>PLEASE LOG OUT AND LOG IN AGAIN.</h2>
+    `);
   } catch (e) {
-    res.status(500).send(e.message);
+    res.status(500).send(e.stack);
   }
 });
 
