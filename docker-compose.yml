@@ -1,9 +1,9 @@
 services:
   server:
     build: ./server
-    container_name: smitox-server
+    container_name: smitox-server-${APP_ENV:-production}
     ports:
-      - "8080:8080"
+      - "${SERVER_PORT:-8080}:8080"
     env_file:
       - ./server/.env
     networks:
@@ -14,9 +14,9 @@ services:
 
   client:
     build: ./client
-    container_name: smitox-client
+    container_name: smitox-client-${APP_ENV:-production}
     ports:
-      - "3000:3000"
+      - "${CLIENT_PORT:-3000}:3000"
     networks:
       - smitox-net
     depends_on:
