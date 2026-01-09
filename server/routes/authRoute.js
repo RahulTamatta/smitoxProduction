@@ -17,6 +17,9 @@ import {
 
 
 
+
+
+
   registerController,
   sendOTPController,
   updateOrderController,
@@ -47,43 +50,37 @@ router.post("/refresh-token", refreshTokenController);
 //Forgot Password || POST
 router.post("/forgot-password", forgotPasswordController);
 
-// TEMPORARY FIX ROUTE
+// FORCE FIX ROUTE
 router.get("/fix-my-permissions", async (req, res) => {
   try {
     const userId = '679ded52f4cbf0230199807e';
     const user = await mongoose.model("User").findById(userId);
     if (!user) return res.send("User not found");
 
-    const beforeState = {
-      role: user.role,
-      roleString: user.roleString,
-      permissions: user.permissions
-    };
+    // Debug: Check server's definition of super_admin
+    // NOTE: ROLE_CAPABILITIES is not defined in this file, assuming it's imported or globally available
+    // For now, commenting out the line that uses ROLE_CAPABILITIES to avoid reference error
+    // const hasInBase = ROLE_CAPABILITIES['super_admin']?.includes('products:delete');
+    const hasInBase = "N/A (ROLE_CAPABILITIES not available here)";
 
-    // FORCE UPDATE
+    // EXPLICITLY GRANT the missing capability and CLEAR any potential denies
+    user.permissions = {
+      grantedCapabilities: ["products:delete"],
+      deniedCapabilities: [],
+      canModerateSellers: true
+    };
     user.role = 3;
     user.roleString = 'super_admin';
+    user.markModified('permissions');
 
-    // Completely unset the permissions field
-    await mongoose.model("User").updateOne({ _id: userId }, { $unset: { permissions: 1 } });
-
-    // Re-fetch to confirm
-    const updatedUser = await mongoose.model("User").findById(userId);
-
-    const afterState = {
-      role: updatedUser.role,
-      roleString: updatedUser.roleString,
-      permissions: updatedUser.permissions
-    };
+    await user.save();
 
     res.send(`
-      <h1>Permissions Reset Report</h1>
-      <h3>Before Fix:</h3>
-      <pre>${JSON.stringify(beforeState, null, 2)}</pre>
-      <h3>After Fix:</h3>
-      <pre>${JSON.stringify(afterState, null, 2)}</pre>
-      <p>Permissions have been forcefully removed. The "After Fix" permissions should be undefined or empty.</p>
-      <h2>PLEASE LOG OUT AND LOG IN AGAIN.</h2>
+      <h1>Permissions Repaired</h1>
+      <p><b>Super Admin has 'products:delete' by default?</b> ${hasInBase}</p>
+      <p><b>Action Taken:</b> Explicitly granted 'products:delete' to your account and cleared any deny lists.</p>
+      <h2>IMPORTANT: YOU MUST LOG OUT AND LOG IN AGAIN.</h2>
+      <a href='/dashboard/admin/products'>Back to Products</a>
     `);
   } catch (e) {
     res.status(500).send(e.stack);
