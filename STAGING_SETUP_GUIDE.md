@@ -25,6 +25,7 @@ Log in to your VPS as `root` and run these commands to set up the subdomain rout
 
 ```bash
 # Update the configuration file
+
 cat > /etc/nginx/sites-available/smitox << 'EOF'
 # Production - smitox.com
 server {
@@ -110,15 +111,21 @@ docker compose up -d --build
 
 ---
 
-## 5. Verification Commands (Run on VPS)
-Check if your services are responding correctly under the staging host header.
+## 6. CORS Verification (Crucial for Browser)
+To ensure browsers don't block requests, verify that the `Access-Control-Allow-Origin` header matches the staging domain exactly when requested.
 
+Run this on your VPS:
 ```bash
-# Verify Staging Frontend
-curl -I -H "Host: staging.smitox.com" http://127.0.0.1
-
-# Verify Staging API
-curl -I -H "Host: staging.smitox.com" http://127.0.0.1/api/v1/product/get-product
+curl -I -X OPTIONS \
+  -H "Origin: https://staging.smitox.com" \
+  -H "Access-Control-Request-Method: GET" \
+  -H "Host: staging.smitox.com" \
+  http://127.0.0.1/api/v1/product/get-product
 ```
 
-If the first command returns `200 OK` and the second returns `200` or `302`, your staging environment is live!
+**Correct Output should contain:**
+```
+Access-Control-Allow-Origin: https://staging.smitox.com
+Access-Control-Allow-Credentials: true
+```
+If you see `Access-Control-Allow-Origin: *`, the browser will block logins! The fixes I applied to `server.js` prevent this.
