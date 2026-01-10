@@ -1,35 +1,32 @@
-import express from "express";
-import colors from "colors";
-import dotenv from "dotenv";
-import morgan from "morgan";
-import { fileURLToPath } from 'url'; // To convert import.meta.url to a pathname
-import { dirname } from 'path'; // To get the directory name from a file path
-import connectDB from "./config/db.js";
-import authRoutes from "./routes/authRoute.js";
-import sellerApplicationRoutes from "./routes/sellerApplicationRoutes.js";
-import sellerApplicationRoutesV2 from "./routes/sellerApplicationRoutesV2.js";
-import subscriptionPlanRoutes from "./routes/subscriptionPlanRoutes.js";
-import paymentRoutes from "./routes/paymentRoutes.js";
-import adminAnalyticsRoutes from "./routes/adminAnalyticsRoutes.js";
-import paymentWebhookRoutes from "./routes/paymentWebhookRoutes.js";
-import categoryRoutes from "./routes/categoryRoutes.js";
-import subCategoryRoutes from "./routes/subCategoryRoutes.js";
-import productRoutes from "./routes/productRoutes.js";
-import bannerRoutes from "./routes/bannerRoutes.js";
-import productForYou from "./routes/productForYouRoutes.js";
-import cors from "cors";
-import path from "path";
-import adsbannerRoutes from "./routes/adsRoutes.js";
-import brandRoutes from "./routes/brandNameRoutes.js"; 
-import usersListsRoutes from "./routes/cartRoutes.js"; 
-import pincodeRoutes from "./routes/pincodeRoutes.js";
-import cartRoutes from "./routes/cartRoutes.js";
-import minimumOrderRoutes from "./routes/miniMumRoutes.js";
-import imageRoutes from "./routes/imageRoutes.js";
 import * as Sentry from "@sentry/node";
+import cors from "cors";
+import dotenv from "dotenv";
+import express from "express";
+import morgan from "morgan";
+import path from "path";
+import { fileURLToPath } from 'url'; // To convert import.meta.url to a pathname
+import connectDB from "./config/db.js";
+import { checkPlanExpiry } from "./jobs/planExpiryCheckJob.js";
 import { startPlanExpiryJob } from "./jobs/planExpiryJob.js";
 import { startPlanExpiryJob as startScheduledPlanExpiryJob } from "./jobs/schedulePlanExpiryJob.js";
-import { checkPlanExpiry } from "./jobs/planExpiryCheckJob.js";
+import adminAnalyticsRoutes from "./routes/adminAnalyticsRoutes.js";
+import adsbannerRoutes from "./routes/adsRoutes.js";
+import authRoutes from "./routes/authRoute.js";
+import bannerRoutes from "./routes/bannerRoutes.js";
+import brandRoutes from "./routes/brandNameRoutes.js";
+import { default as cartRoutes, default as usersListsRoutes } from "./routes/cartRoutes.js";
+import categoryRoutes from "./routes/categoryRoutes.js";
+import imageRoutes from "./routes/imageRoutes.js";
+import minimumOrderRoutes from "./routes/miniMumRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
+import paymentWebhookRoutes from "./routes/paymentWebhookRoutes.js";
+import pincodeRoutes from "./routes/pincodeRoutes.js";
+import productForYou from "./routes/productForYouRoutes.js";
+import productRoutes from "./routes/productRoutes.js";
+import sellerApplicationRoutes from "./routes/sellerApplicationRoutes.js";
+import sellerApplicationRoutesV2 from "./routes/sellerApplicationRoutesV2.js";
+import subCategoryRoutes from "./routes/subCategoryRoutes.js";
+import subscriptionPlanRoutes from "./routes/subscriptionPlanRoutes.js";
 
 // Configure environment variables
 dotenv.config();
@@ -52,7 +49,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Middleware
 app.use(cors()); // Enable Cross-Origin Resource Sharing
-app.use(express.json()); // Parse incoming JSON requests
+// Note: express.json({ limit: '50mb' }) is already configured above (line 50)
 app.use(morgan("dev")); // HTTP request logger
 
 // Plan Expiry Check Middleware - Check on every seller request
@@ -130,12 +127,12 @@ const PORT = process.env.PORT || 8080;
 // Start the server
 const server = app.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`.cyan);
-  
+
   // Start Plan Expiry CRON Jobs
   try {
     startPlanExpiryJob();
     console.log("✅ Plan Expiry CRON Job started successfully".green);
-    
+
     startScheduledPlanExpiryJob();
     console.log("✅ Scheduled Plan Expiry CRON Job started successfully".green);
   } catch (error) {
