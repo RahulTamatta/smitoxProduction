@@ -24,7 +24,7 @@ docker compose up -d --build
 
 ## 2. Nginx Setup (Required)
 
-Run this on your VPS to make the site accessible:
+Runfor this on your VPS to make the site accessible:
 
 ```bash
 # Install Nginx
