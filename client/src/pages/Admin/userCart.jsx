@@ -157,7 +157,8 @@ const AddToCartPages = () => {
           : [],
         paymentMethod: "COD",
         amount: 0, // COD amount is 0
-        amountPending: totalPrice() // Full amount pending for COD
+        amountPending: totalPrice(), // Full amount pending for COD
+        buyerId: userId // Place order for this user, not the admin
       };
 
       const { data } = await axios.post("/api/v1/product/process-payment", orderData, {

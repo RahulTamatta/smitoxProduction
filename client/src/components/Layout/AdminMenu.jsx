@@ -159,14 +159,14 @@ const AdminMenu = () => {
         {/* Header */}
         <div className="d-flex align-items-center justify-content-between p-3 mb-2" style={{ height: "60px", borderBottom: "1px solid #1e293b" }}>
           {!isCollapsed && (
-            <div className="d-flex align-items-center gap-2 overflow-hidden">
+            <NavLink to="/" className="d-flex align-items-center gap-2 overflow-hidden" style={{ textDecoration: 'none' }}>
               <img
                 src={logo}
                 alt="Logo"
                 style={{ height: 28, width: 28, borderRadius: 6, objectFit: "contain" }}
               />
               <span style={{ fontSize: "16px", fontWeight: "600", color: "#fff" }}>Admin</span>
-            </div>
+            </NavLink>
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}

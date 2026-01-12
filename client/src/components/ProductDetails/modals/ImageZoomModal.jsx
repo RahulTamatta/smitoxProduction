@@ -1,4 +1,3 @@
-import React from 'react';
 import { FaTimes } from 'react-icons/fa';
 
 const ImageZoomModal = ({
@@ -9,6 +8,26 @@ const ImageZoomModal = ({
   setSelectedImage
 }) => {
   if (!showImageZoom) return null;
+
+  // Helper function to ensure image URLs have proper base URL
+  const normalizeImageUrl = (url) => {
+    if (!url || typeof url !== 'string') return '';
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('data:')) return url;
+    const cleanUrl = url.startsWith('/') ? url.substring(1) : url;
+    return `https://www.smitox.com/${cleanUrl}`;
+  };
+
+  const getMainImageUrl = () => {
+    if (selectedImage === 0) {
+      return normalizeImageUrl(product.photos);
+    }
+    if (product.multipleimages && Array.isArray(product.multipleimages) &&
+      product.multipleimages.length > 0 && selectedImage <= product.multipleimages.length) {
+      return normalizeImageUrl(product.multipleimages[selectedImage - 1]);
+    }
+    return normalizeImageUrl(product.photos);
+  };
 
   return (
     <div style={{
@@ -40,7 +59,7 @@ const ImageZoomModal = ({
       >
         <FaTimes size={24} />
       </button>
-      
+
       <div style={{
         width: "90%",
         maxWidth: "1200px",
@@ -50,9 +69,7 @@ const ImageZoomModal = ({
         justifyContent: "center"
       }}>
         <img
-          src={selectedImage === 0 ? product.photos : 
-              (product.multipleimages && Array.isArray(product.multipleimages) && product.multipleimages.length > 0 && selectedImage <= product.multipleimages.length) ? 
-              product.multipleimages[selectedImage - 1] : product.photos}
+          src={getMainImageUrl()}
           alt={product.name}
           style={{
             maxWidth: "100%",
@@ -61,7 +78,8 @@ const ImageZoomModal = ({
           }}
         />
       </div>
-      
+
+
       {/* Thumbnail navigation in zoom view if there are multiple images */}
       {(product.multipleimages && Array.isArray(product.multipleimages) && product.multipleimages.length > 0) && (
         <div style={{
@@ -88,37 +106,37 @@ const ImageZoomModal = ({
             }}
           >
             <img
-              src={product.photos}
+              src={normalizeImageUrl(product.photos)}
               alt={`${product.name} - Main`}
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
           </div>
-          
+
           {/* Additional images */}
           {product.multipleimages
-            .filter(imgUrl => imgUrl && typeof imgUrl === 'string' && imgUrl.trim() && 
+            .filter(imgUrl => imgUrl && typeof imgUrl === 'string' && imgUrl.trim() &&
               imgUrl !== 'null' && imgUrl !== '[null]' && imgUrl !== 'undefined')
             .map((imgUrl, index) => (
-            <div
-              key={index}
-              onClick={() => setSelectedImage(index + 1)}
-              style={{
-                width: "60px",
-                height: "60px",
-                border: selectedImage === index + 1 ? "2px solid #ffa41c" : "1px solid #555",
-                borderRadius: "4px",
-                overflow: "hidden",
-                cursor: "pointer",
-                flexShrink: 0
-              }}
-            >
-              <img
-                src={imgUrl}
-                alt={`${product.name} - ${index + 1}`}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
-            </div>
-          ))}
+              <div
+                key={index}
+                onClick={() => setSelectedImage(index + 1)}
+                style={{
+                  width: "60px",
+                  height: "60px",
+                  border: selectedImage === index + 1 ? "2px solid #ffa41c" : "1px solid #555",
+                  borderRadius: "4px",
+                  overflow: "hidden",
+                  cursor: "pointer",
+                  flexShrink: 0
+                }}
+              >
+                <img
+                  src={normalizeImageUrl(imgUrl)}
+                  alt={`${product.name} - ${index + 1}`}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              </div>
+            ))}
         </div>
       )}
     </div>

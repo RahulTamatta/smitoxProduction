@@ -1,16 +1,15 @@
-import React, { useState, useEffect } from "react";
-import {
-  Table,
-  Button,
-  Modal,
-  Form,
-  Nav,
-  Spinner,
-  Alert,
-} from "react-bootstrap";
+import { message } from "antd";
 import axios from "axios";
 import moment from "moment";
-import { message } from "antd";
+import { useEffect, useState } from "react";
+import {
+  Alert,
+  Button,
+  Form,
+  Modal,
+  Spinner,
+  Table
+} from "react-bootstrap";
 import AdminMenu from "../../../components/Layout/AdminMenu";
 import Layout from "../../../components/Layout/Layout";
 import { useAuth } from "../../../context/auth";
@@ -37,7 +36,7 @@ const AdminOrders = () => {
   const [error, setError] = useState(null);
 
   const [values, setValues] = useSearch();
-const [addProductError, setAddProductError] = useState("");
+  const [addProductError, setAddProductError] = useState("");
 
   const [showTrackingModal, setShowTrackingModal] = useState(false);
   const [trackingInfo, setTrackingInfo] = useState({ company: "", id: "" });
@@ -46,12 +45,13 @@ const [addProductError, setAddProductError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [totalOrders, setTotalOrders] = useState(0);
+  const [sortBy, setSortBy] = useState("latest"); // 'latest' or 'oldest'
 
   useEffect(() => {
-    if (auth?.token) getOrders(orderType, currentPage, searchTerm);
-  }, [auth?.token, orderType, currentPage]);
+    if (auth?.token) getOrders(orderType, currentPage, searchTerm, sortBy);
+  }, [auth?.token, orderType, currentPage, sortBy]);
 
-  const getOrders = async (type = "all", page = 1, search = "") => {
+  const getOrders = async (type = "all", page = 1, search = "", sort = "latest") => {
     try {
       setLoading(true);
       setError(null);
@@ -64,6 +64,7 @@ const [addProductError, setAddProductError] = useState("");
           page,
           limit: itemsPerPage,
           search, // Send search query to backend
+          sortBy: sort, // 'latest' or 'oldest'
         },
       });
       setOrders(Array.isArray(data.orders) ? data.orders : []);
@@ -80,7 +81,12 @@ const [addProductError, setAddProductError] = useState("");
   const handleSearch = (value) => {
     setSearchTerm(value);
     setCurrentPage(1);
-    getOrders(orderType, 1, value);
+    getOrders(orderType, 1, value, sortBy);
+  };
+
+  const handleSortChange = (value) => {
+    setSortBy(value);
+    setCurrentPage(1);
   };
 
   const handlePageChange = (newPage) => {
@@ -97,7 +103,7 @@ const [addProductError, setAddProductError] = useState("");
 
   const handleStatusChange = async (orderId, value) => {
     try {
-      await axios.put(`/api/v1/auth/order-status/${orderId}`, 
+      await axios.put(`/api/v1/auth/order-status/${orderId}`,
         { status: value },
         {
           headers: {
@@ -134,21 +140,21 @@ const [addProductError, setAddProductError] = useState("");
     setSelectedOrder((prevOrder) => {
       const updatedProducts = [...prevOrder.products];
       const product = updatedProducts[index];
-      
+
       // Update the field
       updatedProducts[index] = { ...product, [field]: value };
-      
+
       // If price is changed, recalculate snapshot data
       if (field === 'price') {
         const quantity = product.quantity || 0;
         const unitPrice = parseFloat(value) || 0;
         const gst = parseFloat(product.gst || product.product?.gst) || 0;
-        
+
         // Recalculate amounts
         const netAmount = parseFloat((unitPrice * quantity).toFixed(2));
         const taxAmount = parseFloat(((netAmount * gst) / 100).toFixed(2));
         const totalAmount = parseFloat((netAmount + taxAmount).toFixed(2));
-        
+
         // Update all snapshot fields
         updatedProducts[index] = {
           ...updatedProducts[index],
@@ -158,7 +164,7 @@ const [addProductError, setAddProductError] = useState("");
           totalAmount: totalAmount
         };
       }
-      
+
       return { ...prevOrder, products: updatedProducts };
     });
   };
@@ -167,10 +173,10 @@ const [addProductError, setAddProductError] = useState("");
   const handleQuantityChangeWithUnitSet = (index, increment, customQuantity = null) => {
     setSelectedOrder((prevOrder) => {
       if (!prevOrder?.products) return prevOrder;
-      
+
       const product = prevOrder.products[index];
       const currentQuantity = product.quantity || 0;
-      
+
       // Handle custom quantity input or simple increments
       let newQuantity;
       if (customQuantity !== null) {
@@ -178,28 +184,28 @@ const [addProductError, setAddProductError] = useState("");
         newQuantity = customQuantity;
       } else {
         // Simple increment/decrement by 1
-        newQuantity = increment 
+        newQuantity = increment
           ? currentQuantity + 1  // Add 1 for increment
           : currentQuantity - 1; // Subtract 1 for decrement
       }
-      
+
       // Don't allow negative quantities
       const updatedQuantity = Math.max(0, newQuantity);
-      
+
       // If quantity becomes 0, remove the product from the order
       if (updatedQuantity === 0) {
         const updatedProducts = prevOrder.products.filter((_, i) => i !== index);
         return { ...prevOrder, products: updatedProducts };
       }
-      
+
       // Recalculate snapshot data when quantity changes
       const unitPrice = parseFloat(product.unitPrice || product.price) || 0;
       const gst = parseFloat(product.gst || product.product?.gst) || 0;
-      
+
       const netAmount = parseFloat((unitPrice * updatedQuantity).toFixed(2));
       const taxAmount = parseFloat(((netAmount * gst) / 100).toFixed(2));
       const totalAmount = parseFloat((netAmount + taxAmount).toFixed(2));
-      
+
       const updatedProducts = [...prevOrder.products];
       updatedProducts[index] = {
         ...updatedProducts[index],
@@ -208,7 +214,7 @@ const [addProductError, setAddProductError] = useState("");
         taxAmount: taxAmount,
         totalAmount: totalAmount
       };
-      
+
       return { ...prevOrder, products: updatedProducts };
     });
   };
@@ -248,19 +254,19 @@ const [addProductError, setAddProductError] = useState("");
         let errorMessage = "Cannot add product: ";
         if (product.isActive === "0") errorMessage += "Product is inactive";
         if (product.stock <= 0) errorMessage += "Product is out of stock";
-        
+
         message.error(errorMessage);
         return;
       }
-  
+
       // Capture current paid amount before adding product
       const originalAmount = selectedOrder.amount;
-  
+
       // Send only essential data to server
       const addResponse = await axios.put(
         `/api/v1/auth/order/${selectedOrder._id}/add`,
-        { 
-          productId: product._id, 
+        {
+          productId: product._id,
           quantity: product.unitSet || 1 // Ensure minimum quantity
         },
         {
@@ -269,22 +275,22 @@ const [addProductError, setAddProductError] = useState("");
           }
         }
       );
-  
+
       if (!addResponse.data.success) {
         throw new Error(addResponse.data.message);
       }
-  
+
       // Preserve original amount in the updated order data
       const updatedOrder = {
         ...addResponse.data.order,
         amount: originalAmount // Maintain the original paid amount
       };
-  
+
       // Update local state with preserved amount
       setSelectedOrder(updatedOrder);
       message.success("Product added successfully");
       getOrders(orderType, currentPage, searchTerm);
-  
+
     } catch (error) {
       console.error("Add to order error:", error);
       setAddProductError(error.response?.data?.message || "Error adding product to order");
@@ -320,11 +326,11 @@ const [addProductError, setAddProductError] = useState("");
           price: Number(p.price) || 0,
         })),
       },
-      {
-        headers: {
-          Authorization: auth?.token
-        }
-      });
+        {
+          headers: {
+            Authorization: auth?.token
+          }
+        });
 
       if (response.data.success) {
         setSelectedOrder(response.data.order);
@@ -354,7 +360,7 @@ const [addProductError, setAddProductError] = useState("");
         (Number(product.price) *
           Number(product.quantity) *
           (Number(product.gst) || 0)) /
-          100
+        100
       );
     }, 0);
 
@@ -407,11 +413,11 @@ const [addProductError, setAddProductError] = useState("");
       await axios.put(`/api/v1/auth/order-status/${selectedOrder._id}`, {
         status: "Delivered",
       },
-      {
-        headers: {
-          Authorization: auth?.token
-        }
-      });
+        {
+          headers: {
+            Authorization: auth?.token
+          }
+        });
       setShow(false);
       getOrders(orderType, currentPage, searchTerm);
       message.success("Order status updated to Delivered");
@@ -426,11 +432,11 @@ const [addProductError, setAddProductError] = useState("");
       await axios.put(`/api/v1/auth/order-status/${selectedOrder._id}`, {
         status: "Returned",
       },
-      {
-        headers: {
-          Authorization: auth?.token
-        }
-      });
+        {
+          headers: {
+            Authorization: auth?.token
+          }
+        });
       setShow(false);
       getOrders(orderType, currentPage, searchTerm);
       message.success("Order status updated to Returned");
@@ -559,18 +565,29 @@ const [addProductError, setAddProductError] = useState("");
             ))}
           </div>
 
-          <div className="search-wrapper">
-            <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <circle cx="11" cy="11" r="8"></circle>
-              <path d="m21 21-4.35-4.35"></path>
-            </svg>
-            <input
-              type="text"
-              className="search-input"
-              placeholder="Search orders by ID, buyer name..."
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-            />
+          <div className="search-wrapper" style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: '250px' }}>
+              <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Search orders by ID, buyer name..."
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+              />
+            </div>
+            <select
+              className="form-select"
+              value={sortBy}
+              onChange={(e) => handleSortChange(e.target.value)}
+              style={{ width: 'auto', minWidth: '150px' }}
+            >
+              <option value="latest">Latest First</option>
+              <option value="oldest">Oldest First</option>
+            </select>
           </div>
 
           {loading ? (
@@ -583,90 +600,90 @@ const [addProductError, setAddProductError] = useState("");
             <Alert variant="info">No orders found</Alert>
           ) : (
             <>
-       <div className="admin-table-wrapper table-responsive">
-       <Table 
-  striped 
-  hover 
-  className="admin-table"
-  cellSpacing="0" 
-  cellPadding="0"
->
-  <thead>
-    <tr>
-      <th>#</th>
-      <th>Order Info</th>
-      <th>Total</th>
-      <th>Payment</th>
-      <th>Status</th>
-      <th>Created</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
+              <div className="admin-table-wrapper table-responsive">
+                <Table
+                  striped
+                  hover
+                  className="admin-table"
+                  cellSpacing="0"
+                  cellPadding="0"
+                >
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Order Info</th>
+                      <th>Total</th>
+                      <th>Payment</th>
+                      <th>Status</th>
+                      <th>Created</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
 
-  <tbody>
-    {orders.map((o, index) => {
-      const totals = calculateTotalsad(o);
-      return (
-        <tr key={o._id}>
-          <td>
-            {(currentPage - 1) * itemsPerPage + index + 1}
-          </td>
-          <td className="order-info-cell">
-            <div className="buyer-name">{o.buyer?.user_fullname || 'N/A'}</div>
-            <div className="buyer-phone">{o.buyer?.mobile_no || 'N/A'}</div>
-            <div className="order-id-badge" onClick={() => handleShow(o)}>
-              {o._id.substring(0, 10)}
-            </div>
-            {(() => {
-              const trackingId = o?.shipment?.trackingId ?? o?.tracking?.id ?? o?.trackingId ?? "";
-              const hasTracking = Boolean(trackingId && String(trackingId).trim().length);
-              return hasTracking ? (
-                <div className="mt-1 text-xs text-slate-600">
-                  <span className="uppercase tracking-wide font-semibold">Tracking ID:</span>
-                  <span className="ml-1 font-mono break-all">{trackingId}</span>
-                </div>
-              ) : null;
-            })()}
-          </td>
-          <td className="total-cell">Rs {totals.total.toFixed(2)}</td>
-          <td className="payment-cell">{o.payment?.paymentMethod || 'COD'}</td>
-          <td className="status-cell">
-            <span className={`status-badge status-${o.status.toLowerCase()}`}>
-              {o.status}
-            </span>
-          </td>
-          <td className="date-cell">
-            {moment(o.createdAt).format('DD-MM-YYYY')}
-          </td>
-          <td className="action-cell">
-            <div className="action-buttons-stack">
-              <Button
-                className="view-btn"
-                onClick={() => handleShow(o)}
-              >
-                View
-              </Button>
-              {(() => {
-                const trackingId = o?.shipment?.trackingId ?? o?.tracking?.id ?? o?.trackingId ?? "";
-                const hasTracking = Boolean(trackingId && String(trackingId).trim().length);
-                return !hasTracking ? (
-                  <Button
-                    className="track-btn"
-                    onClick={() => handleTrackingModalShow(o)}
-                    aria-label="Add tracking"
-                  >
-                    + Track
-                  </Button>
-                ) : null;
-              })()}
-            </div>
-          </td>
-        </tr>
-      );
-    })}
-  </tbody>
-</Table>
-       </div>
+                  <tbody>
+                    {orders.map((o, index) => {
+                      const totals = calculateTotalsad(o);
+                      return (
+                        <tr key={o._id}>
+                          <td>
+                            {(currentPage - 1) * itemsPerPage + index + 1}
+                          </td>
+                          <td className="order-info-cell">
+                            <div className="buyer-name">{o.buyer?.user_fullname || 'N/A'}</div>
+                            <div className="buyer-phone">{o.buyer?.mobile_no || 'N/A'}</div>
+                            <div className="order-id-badge" onClick={() => handleShow(o)}>
+                              {o._id.substring(0, 10)}
+                            </div>
+                            {(() => {
+                              const trackingId = o?.shipment?.trackingId ?? o?.tracking?.id ?? o?.trackingId ?? "";
+                              const hasTracking = Boolean(trackingId && String(trackingId).trim().length);
+                              return hasTracking ? (
+                                <div className="mt-1 text-xs text-slate-600">
+                                  <span className="uppercase tracking-wide font-semibold">Tracking ID:</span>
+                                  <span className="ml-1 font-mono break-all">{trackingId}</span>
+                                </div>
+                              ) : null;
+                            })()}
+                          </td>
+                          <td className="total-cell">Rs {totals.total.toFixed(2)}</td>
+                          <td className="payment-cell">{o.payment?.paymentMethod || 'COD'}</td>
+                          <td className="status-cell">
+                            <span className={`status-badge status-${o.status.toLowerCase()}`}>
+                              {o.status}
+                            </span>
+                          </td>
+                          <td className="date-cell">
+                            {moment(o.createdAt).format('DD-MM-YYYY')}
+                          </td>
+                          <td className="action-cell">
+                            <div className="action-buttons-stack">
+                              <Button
+                                className="view-btn"
+                                onClick={() => handleShow(o)}
+                              >
+                                View
+                              </Button>
+                              {(() => {
+                                const trackingId = o?.shipment?.trackingId ?? o?.tracking?.id ?? o?.trackingId ?? "";
+                                const hasTracking = Boolean(trackingId && String(trackingId).trim().length);
+                                return !hasTracking ? (
+                                  <Button
+                                    className="track-btn"
+                                    onClick={() => handleTrackingModalShow(o)}
+                                    aria-label="Add tracking"
+                                  >
+                                    + Track
+                                  </Button>
+                                ) : null;
+                              })()}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </Table>
+              </div>
 
               <div className="pagination-wrapper">
                 <span className="pagination-info">
@@ -747,7 +764,7 @@ const [addProductError, setAddProductError] = useState("");
       </div>
 
       {selectedOrder && (
-        <OrderModal 
+        <OrderModal
           show={show}
           handleClose={handleClose}
           selectedOrder={selectedOrder}
@@ -774,8 +791,8 @@ const [addProductError, setAddProductError] = useState("");
         />
       )}
 
-      <Modal 
-        show={showTrackingModal} 
+      <Modal
+        show={showTrackingModal}
         onHide={handleTrackingModalClose}
         className="tracking-modal"
         size="sm"
