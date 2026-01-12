@@ -96,13 +96,26 @@ export const getProductsForYouController = async (req, res) => {
       products = [...products, ...fallbackProducts.map(p => p.toObject())];
     }
 
+    // Convert photos to photoUrl if needed and prepare for frontend
+    const finalProducts = products.map(p => {
+      const productObj = p;
+      if (productObj.photos && productObj.photos.data) {
+        productObj.photoUrl = `data:${productObj.photos.contentType};base64,${productObj.photos.data.toString("base64")}`;
+      } else if (productObj.photos && typeof productObj.photos === 'string') {
+        productObj.photoUrl = productObj.photos;
+      } else if (productObj.multipleimages && productObj.multipleimages.length > 0) {
+        productObj.photoUrl = productObj.multipleimages[0];
+      }
+      return { productId: productObj };
+    });
+
     // Shuffle the final list for variety
-    products = products.sort(() => Math.random() - 0.5);
+    const shuffledProducts = finalProducts.sort(() => Math.random() - 0.5);
 
     res.status(200).send({
       success: true,
       message: "Products fetched successfully",
-      products: products.map(p => ({ productId: p })) // Keep structure compatible with frontend mapping
+      products: shuffledProducts,
     });
   } catch (error) {
     console.error(error);

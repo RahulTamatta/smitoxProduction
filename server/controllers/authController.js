@@ -590,7 +590,7 @@ export const getOrdersController = async (req, res) => {
 // };
 export const getAllOrdersController = async (req, res) => {
   try {
-    const { status, page = 1, limit = 10, search = "" } = req.query;
+    const { status, page = 1, limit = 10, search = "", sortBy = "newest" } = req.query;
     const pageNumber = Math.max(1, parseInt(page, 10)) || 1;
     const limitNumber = Math.max(1, parseInt(limit, 10)) || 10;
     const skip = (pageNumber - 1) * limitNumber;
@@ -598,6 +598,12 @@ export const getAllOrdersController = async (req, res) => {
     let query = {};
     if (status && status !== "all-orders") {
       query.status = status;
+    }
+
+    // Sort logic
+    let sortOptions = { updatedAt: -1 };
+    if (sortBy === "oldest") {
+      sortOptions = { createdAt: 1 };
     }
 
     const userSearchQuery = search
@@ -655,7 +661,7 @@ export const getAllOrdersController = async (req, res) => {
         path: "products.product",
         select: "name photos gst price unitSet bulkProducts perPiecePrice mrp stock isActive",
       })
-      .sort({ createdAt: -1 })
+      .sort(sortOptions)
       .skip(skip)
       .limit(limitNumber);
 
@@ -827,7 +833,7 @@ export const orderStatusController = async (req, res) => {
 
     const order = await orderModel.findByIdAndUpdate(
       orderId,
-      { status },
+      { status, updatedAt: Date.now() },
       { new: true }
     );
 

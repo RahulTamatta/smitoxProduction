@@ -16,6 +16,13 @@ import AdminMenu from "../../components/Layout/AdminMenu";
 import Layout from "../../components/Layout/Layout";
 import { useAuth } from "../../context/auth";
 const ProductForYou = () => {
+  const getImageUrl = (url) => {
+    if (!url) return '/placeholder-image.png';
+    if (url.startsWith('data:') || url.startsWith('http')) return url;
+    // Prefix with / if it's a relative path like 'uploads/...'
+    return url.startsWith('/') ? url : `/${url}`;
+  };
+
   const [banners, setBanners] = useState([]);
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
@@ -392,7 +399,7 @@ const ProductForYou = () => {
                                   {product.multipleimages &&
                                     product.multipleimages.length > 0 ? (
                                     <Image
-                                      src={product.multipleimages[0]}
+                                      src={getImageUrl(product.multipleimages[0])}
                                       alt={product.name}
                                       rounded
                                       style={{
@@ -558,13 +565,12 @@ const ProductForYou = () => {
                                     <td>
                                       {banner.productId?._id ? (
                                         <Image
-                                          src={
+                                          src={getImageUrl(
                                             banner.productId.photoUrl ||
                                             (banner.productId.multipleimages && banner.productId.multipleimages.length > 0
                                               ? banner.productId.multipleimages[0]
-                                              : (typeof banner.productId.photos === 'string' ? banner.productId.photos : null)
-                                            )
-                                          }
+                                              : (typeof banner.productId.photos === 'string' ? banner.productId.photos : null))
+                                          )}
                                           alt={banner.productId?.name}
                                           thumbnail
                                           style={{

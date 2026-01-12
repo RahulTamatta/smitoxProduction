@@ -1028,6 +1028,14 @@ export const processPaymentController = async (req, res) => {
         const enrichedProducts = await enrichOrderProducts(products);
         console.log(`[Payment] Products enriched with snapshot data | Count: ${enrichedProducts.length}`);
 
+        // If admin (role 1) is placing the order and userId is provided, use that userId
+        // Otherwise use the authenticated user's ID
+        let buyerId = req.user._id;
+        if (req.user.role === 1 && req.body.userId) {
+          console.log(`[Payment] Admin placing order for user: ${req.body.userId}`);
+          buyerId = req.body.userId;
+        }
+
         const order = new orderModel({
           products: enrichedProducts,
           payment: {
@@ -1035,7 +1043,7 @@ export const processPaymentController = async (req, res) => {
             transactionId: `${paymentMethod}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
             status: paymentMethod === "COD" ? false : true,
           },
-          buyer: req.user._id,
+          buyer: buyerId,
           amount: amount,
           amountPending: amountPending || 0,
           status: "Pending",

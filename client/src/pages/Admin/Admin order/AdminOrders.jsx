@@ -34,6 +34,7 @@ const AdminOrders = () => {
   const [orderType, setOrderType] = useState("Pending");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sortBy, setSortBy] = useState("newest");
 
   const [values, setValues] = useSearch();
   const [addProductError, setAddProductError] = useState("");
@@ -47,10 +48,10 @@ const AdminOrders = () => {
   const [totalOrders, setTotalOrders] = useState(0);
 
   useEffect(() => {
-    if (auth?.token) getOrders(orderType, currentPage, searchTerm);
-  }, [auth?.token, orderType, currentPage]);
+    if (auth?.token) getOrders(orderType, currentPage, searchTerm, sortBy);
+  }, [auth?.token, orderType, currentPage, sortBy]);
 
-  const getOrders = async (type = "all", page = 1, search = "") => {
+  const getOrders = async (type = "all", page = 1, search = "", sort = "newest") => {
     try {
       setLoading(true);
       setError(null);
@@ -63,6 +64,7 @@ const AdminOrders = () => {
           page,
           limit: itemsPerPage,
           search, // Send search query to backend
+          sortBy: sort, // Send sort parameter to backend
         },
       });
       setOrders(Array.isArray(data.orders) ? data.orders : []);
@@ -79,7 +81,7 @@ const AdminOrders = () => {
   const handleSearch = (value) => {
     setSearchTerm(value);
     setCurrentPage(1);
-    getOrders(orderType, 1, value);
+    getOrders(orderType, 1, value, sortBy);
   };
 
   const handlePageChange = (newPage) => {
@@ -91,8 +93,8 @@ const AdminOrders = () => {
   const totalPages = Math.ceil(totalOrders / itemsPerPage);
 
   useEffect(() => {
-    if (auth?.token) getOrders(orderType);
-  }, [auth?.token, orderType]);
+    if (auth?.token) getOrders(orderType, currentPage, searchTerm, sortBy);
+  }, [auth?.token, orderType, sortBy]);
 
   const handleStatusChange = async (orderId, value) => {
     try {
@@ -103,7 +105,7 @@ const AdminOrders = () => {
             Authorization: auth?.token
           }
         });
-      getOrders(orderType, currentPage, searchTerm);
+      getOrders(orderType, currentPage, searchTerm, sortBy);
       message.success("Order status updated successfully");
     } catch (error) {
       console.log(error);
@@ -558,8 +560,22 @@ const AdminOrders = () => {
             ))}
           </div>
 
-          <div className="search-wrapper">
-            <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <div className="search-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: '1.5rem', maxWidth: '450px' }}>
+            <svg
+              className="search-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              style={{
+                position: 'absolute',
+                left: '12px',
+                width: '18px',
+                height: '18px',
+                color: '#64748b',
+                pointerEvents: 'none',
+                zIndex: 1
+              }}
+            >
               <circle cx="11" cy="11" r="8"></circle>
               <path d="m21 21-4.35-4.35"></path>
             </svg>
@@ -569,7 +585,35 @@ const AdminOrders = () => {
               placeholder="Search orders by ID, buyer name..."
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 12px 10px 40px',
+                fontSize: '14px',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                outline: 'none'
+              }}
             />
+            {/* Commented out Sort By option per user request */}
+            {/* <div className="sort-dropdown ms-3">
+              <select
+                className="form-select"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                style={{
+                  width: "180px",
+                  borderRadius: "8px",
+                  padding: "8px 12px",
+                  fontSize: "14px",
+                  border: "1px solid #e2e8f0",
+                  backgroundColor: "#fff",
+                  cursor: "pointer",
+                }}
+              >
+                <option value="newest">Latest First</option>
+                <option value="oldest">Oldest First</option>
+              </select>
+            </div> */}
           </div>
 
           {loading ? (
