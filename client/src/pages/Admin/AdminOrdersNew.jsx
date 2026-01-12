@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import { message } from "antd";
 import axios from "axios";
 import moment from "moment";
-import { message } from "antd";
+import { useEffect, useState } from "react";
 import AdminMenu from "../../components/Layout/AdminMenu";
 import Layout from "../../components/Layout/Layout";
 import { useAuth } from "../../context/auth";
@@ -35,10 +35,11 @@ const AdminOrdersNew = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [totalOrders, setTotalOrders] = useState(0);
+  const [sortBy, setSortBy] = useState("newest"); // Default sort by newest
 
   useEffect(() => {
     if (auth?.token) getOrders(orderType, currentPage, searchTerm);
-  }, [auth?.token, orderType, currentPage]);
+  }, [auth?.token, orderType, currentPage, sortBy]); // Add sortBy dependency
 
   const getOrders = async (type = "all-orders", page = 1, search = "") => {
     try {
@@ -46,7 +47,13 @@ const AdminOrdersNew = () => {
       setError(null);
       const { data } = await axios.get(`/api/v1/auth/all-orders`, {
         headers: { Authorization: auth?.token },
-        params: { status: type, page, limit: itemsPerPage, search },
+        params: {
+          status: type,
+          page,
+          limit: itemsPerPage,
+          search,
+          sortBy // Pass sort parameter
+        },
       });
       setOrders(Array.isArray(data.orders) ? data.orders : []);
       setTotalOrders(data.total);
@@ -199,7 +206,7 @@ const AdminOrdersNew = () => {
         (Number(product.price) *
           Number(product.quantity) *
           (Number(product.gst) || 0)) /
-          100
+        100
       );
     }, 0);
 
@@ -457,19 +464,39 @@ const AdminOrdersNew = () => {
           ))}
         </div>
 
-        {/* Search Input */}
-        <div className="search-wrapper">
-          <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="m21 21-4.35-4.35"></path>
-          </svg>
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Search orders by ID, buyer name..."
-            value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
-          />
+        {/* Search Input and Sort */}
+        <div className="search-wrapper" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Search orders by ID, buyer name..."
+              value={searchTerm}
+              onChange={(e) => handleSearch(e.target.value)}
+            />
+          </div>
+
+          <div className="sort-wrapper">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="form-select"
+              style={{
+                padding: '0.6rem 1rem',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                outline: 'none',
+                minWidth: '150px'
+              }}
+            >
+              <option value="newest">Latest First</option>
+              <option value="oldest">Oldest First</option>
+            </select>
+          </div>
         </div>
 
         {/* Orders Table */}
