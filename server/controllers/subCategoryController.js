@@ -7,6 +7,8 @@ export const createSubcategoryController = async (req, res) => {
   try {
     const { name, parentCategoryId, isActive } = req.body;
     const photo = req.file;
+    console.log("createSubcategoryController - req.body:", req.body);
+    console.log("createSubcategoryController - req.file:", req.file);
 
     if (!name) {
       return res.status(401).send({ message: "Name is required" });
@@ -57,18 +59,21 @@ export const createSubcategoryController = async (req, res) => {
 // Update Subcategory Controller
 export const updateSubcategoryController = async (req, res) => {
   try {
-    const { name, category, isActive } = req.body;
+    const { name, category, parentCategoryId, isActive } = req.body;
     const { id } = req.params;
     const photo = req.file;
 
-    if (!category) {
+    // Accept either 'category' or 'parentCategoryId' from frontend
+    const categoryId = category || parentCategoryId;
+
+    if (!categoryId) {
       return res.status(401).send({ message: "Parent category is required" });
     }
 
     const updateData = {
       name,
       slug: slugify(name),
-      category,
+      category: categoryId,
       isActive,
     };
 
@@ -240,6 +245,7 @@ export const getAllSubcategoriesController = async (req, res) => {
 export const toggleSubcategoryStatusController = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log("toggleSubcategoryStatusController - id:", id);
     const subcategory = await subcategoryModel.findById(id);
 
     if (!subcategory) {
@@ -249,8 +255,10 @@ export const toggleSubcategoryStatusController = async (req, res) => {
       });
     }
 
+    console.log("toggleSubcategoryStatusController - before toggle:", subcategory.isActive);
     subcategory.isActive = !subcategory.isActive;
     await subcategory.save();
+    console.log("toggleSubcategoryStatusController - after toggle:", subcategory.isActive);
 
     res.status(200).send({
       success: true,

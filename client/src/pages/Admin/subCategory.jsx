@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Form, Modal, Table, ToggleButton } from "react-bootstrap";
+import { Button, Form, Modal, Table } from "react-bootstrap";
 import toast from "react-hot-toast";
 import AdminMenu from "../../components/Layout/AdminMenu";
 import Layout from "../../components/Layout/Layout";
@@ -58,8 +58,12 @@ const SubcategoryList = () => {
       subcategoryData.append("name", name);
       subcategoryData.append("parentCategoryId", parentCategoryId);
       subcategoryData.append("isActive", isActive);
+      console.log("DEBUG: photos state value:", photos);
       if (photos) {
         subcategoryData.append("photo", photos);
+        console.log("DEBUG: Appended photo to FormData:", photos.name, photos.size, photos.type);
+      } else {
+        console.log("DEBUG: No photo selected, skipping append");
       }
 
       const { data } = await api.post("/api/v1/subcategory/create-subcategory", subcategoryData);
@@ -263,15 +267,16 @@ const SubcategoryList = () => {
                           <td>{subcategory.name}</td>
                           <td>{categories.find((c) => c._id === subcategory.category)?.name || "N/A"}</td>
                           <td style={{ textAlign: "center" }}>
-                            <ToggleButton
-                              type="checkbox"
-                              variant={subcategory.isActive ? "outline-success" : "outline-danger"}
-                              checked={subcategory.isActive}
-                              onChange={() => toggleSubcategoryStatus(subcategory._id, subcategory.isActive)}
+                            <Button
+                              variant={subcategory.isActive ? "success" : "danger"}
+                              onClick={() => {
+                                console.log("Toggle clicked for:", subcategory._id, subcategory.isActive);
+                                toggleSubcategoryStatus(subcategory._id, subcategory.isActive);
+                              }}
                               size="sm"
                             >
                               {subcategory.isActive ? "Active" : "Inactive"}
-                            </ToggleButton>
+                            </Button>
                           </td>
                           <td style={{ textAlign: "center" }}>
                             <Button

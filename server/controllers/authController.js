@@ -600,10 +600,10 @@ export const getAllOrdersController = async (req, res) => {
       query.status = status;
     }
 
-    // Sort logic
-    let sortOptions = { updatedAt: -1 };
+    // Sort logic - sort by status change timestamp, not general update
+    let sortOptions = { statusUpdatedAt: -1 };
     if (sortBy === "oldest") {
-      sortOptions = { createdAt: 1 };
+      sortOptions = { statusUpdatedAt: 1 };
     }
 
     const userSearchQuery = search
@@ -833,7 +833,7 @@ export const orderStatusController = async (req, res) => {
 
     const order = await orderModel.findByIdAndUpdate(
       orderId,
-      { status, updatedAt: Date.now() },
+      { status, statusUpdatedAt: Date.now() },
       { new: true }
     );
 

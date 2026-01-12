@@ -63,7 +63,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.resolve();
 
 // Serve static files from the React build directory
-app.use(express.static(path.join(__dirname, "./client/build")));
+app.use(express.static(path.join(__dirname, "../client/build")));
 
 // Serve static files from uploads directory (for Hostinger local storage)
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -98,9 +98,13 @@ app.use('/api/v1/webhooks/payments', paymentWebhookRoutes);
 // Admin Analytics
 app.use('/api/v1/admin/analytics', adminAnalyticsRoutes);
 
-// Serve React app for any other unknown routes
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "./client/build", "index.html"));
+// Serve React app for any other unknown routes (exclude /uploads and /api)
+app.get("*", (req, res, next) => {
+  // Skip this for /uploads and /api routes
+  if (req.path.startsWith('/uploads') || req.path.startsWith('/api')) {
+    return next();
+  }
+  res.sendFile(path.join(__dirname, "../client/build", "index.html"));
 });
 
 // Skip the Sentry error handler for now

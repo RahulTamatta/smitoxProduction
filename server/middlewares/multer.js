@@ -11,12 +11,13 @@ const storage = multer.diskStorage({
         let folder = 'others';
 
         // Determine folder based on route or fieldname
+        // IMPORTANT: Check 'subcategory' BEFORE 'category' since 'category' is a substring of 'subcategory'
         if (req.baseUrl.includes('product')) {
             folder = 'products';
-        } else if (req.baseUrl.includes('category')) {
-            folder = 'categories';
         } else if (req.baseUrl.includes('subcategory')) {
             folder = 'subcategories';
+        } else if (req.baseUrl.includes('category')) {
+            folder = 'categories';
         } else if (req.baseUrl.includes('banner')) {
             folder = 'banners';
         } else if (req.baseUrl.includes('auth') || req.baseUrl.includes('user')) {

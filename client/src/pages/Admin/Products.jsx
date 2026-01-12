@@ -188,12 +188,28 @@ const Products = () => {
           <div>Stock: {product.stock}</div>
         </div>
         <div>
-          <span style={{
-            padding: '4px 8px',
-            borderRadius: '4px',
-            backgroundColor: product.isActive === "1" ? '#dcfce7' : '#fee2e2',
-            color: product.isActive === "1" ? '#166534' : '#991b1b'
-          }}>
+          <span
+            onClick={async (e) => {
+              e.stopPropagation();
+              try {
+                const newStatus = product.isActive === "1" ? "0" : "1";
+                await axios.put(`/api/v1/product/updateStatus/products/${product._id}`, {
+                  isActive: newStatus
+                }, {
+                  headers: { Authorization: auth?.token }
+                });
+                getAllProducts();
+              } catch (error) {
+                console.error("Status toggle failed:", error);
+              }
+            }}
+            style={{
+              padding: '4px 8px',
+              borderRadius: '4px',
+              backgroundColor: product.isActive === "1" ? '#dcfce7' : '#fee2e2',
+              color: product.isActive === "1" ? '#166534' : '#991b1b',
+              cursor: 'pointer'
+            }}>
             {product.isActive === "1" ? "Active" : "Inactive"}
           </span>
         </div>
@@ -434,16 +450,34 @@ const Products = () => {
                         <td style={{ padding: '12px 16px', fontSize: '14px', color: '#0f172a', fontWeight: '500' }}>₹{product.perPiecePrice}</td>
                         <td style={{ padding: '12px 16px', fontSize: '14px', color: '#0f172a' }}>{product.stock}</td>
                         <td style={{ padding: '12px 16px' }}>
-                          <span style={{
-                            padding: '4px 12px',
-                            borderRadius: '20px',
-                            fontSize: '12px',
-                            fontWeight: '500',
-                            backgroundColor: product.isActive === "1" ? '#ecfdf3' : '#fef2f2',
-                            color: product.isActive === "1" ? '#16a34a' : '#dc2626'
-                          }}>
+                          <button
+                            onClick={async () => {
+                              try {
+                                const newStatus = product.isActive === "1" ? "0" : "1";
+                                await axios.put(`/api/v1/product/updateStatus/products/${product._id}`, {
+                                  isActive: newStatus
+                                }, {
+                                  headers: { Authorization: auth?.token }
+                                });
+                                getAllProducts();
+                              } catch (error) {
+                                console.error("Status toggle failed:", error);
+                              }
+                            }}
+                            style={{
+                              padding: '4px 12px',
+                              borderRadius: '20px',
+                              fontSize: '12px',
+                              fontWeight: '500',
+                              backgroundColor: product.isActive === "1" ? '#ecfdf3' : '#fef2f2',
+                              color: product.isActive === "1" ? '#16a34a' : '#dc2626',
+                              border: 'none',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
                             {product.isActive === "1" ? "Active" : "Inactive"}
-                          </span>
+                          </button>
                         </td>
                         <td style={{ padding: '12px 16px' }}>
                           <Link

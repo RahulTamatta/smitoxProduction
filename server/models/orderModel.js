@@ -55,11 +55,11 @@ const orderSchema = new mongoose.Schema(
     payment: {
       paymentMethod: {
         type: String,
-        enum: ["COD", "Razorpay","Advance"],
+        enum: ["COD", "Razorpay", "Advance"],
         // required: true,
       },
       transactionId: String,
-     
+
     },
     amount: {
       type: Number,
@@ -69,15 +69,15 @@ const orderSchema = new mongoose.Schema(
       type: String,
       default: "Pending",
       enum: [
-        "Pending", 
-        "Completed", 
-        "Cash on Delivery", 
-        "Confirmed", 
-        "Accepted", 
-        "Cancelled", 
-        "Rejected", 
-        "Dispatched", 
-        "Delivered", 
+        "Pending",
+        "Completed",
+        "Cash on Delivery",
+        "Confirmed",
+        "Accepted",
+        "Cancelled",
+        "Rejected",
+        "Dispatched",
+        "Delivered",
         "Returned"
       ]
     },
@@ -100,6 +100,10 @@ const orderSchema = new mongoose.Schema(
     tracking: {
       company: String,
       id: String,
+    },
+    statusUpdatedAt: {
+      type: Date,
+      default: Date.now,
     },
   },
   { timestamps: true }
