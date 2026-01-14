@@ -1,9 +1,10 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import AdminMenu from "../../components/Layout/AdminMenu";
 import OptimizedImage from "../../components/OptimizedImage";
-import { useAuth } from "../../context/auth";
+import { api, useAuth } from "../../context/auth";
 import Layout from "./../../components/Layout/Layout";
 
 const Products = () => {
@@ -142,6 +143,35 @@ const Products = () => {
     }
   };
 
+  // Handle Status Toggle with Optimistic Update
+  const handleStatusToggle = async (product) => {
+    const originalStatus = product.isActive;
+    const newStatus = originalStatus === "1" ? "0" : "1";
+
+    // Optimistic Update
+    setProducts(prevProducts =>
+      prevProducts.map(p =>
+        p._id === product._id ? { ...p, isActive: newStatus } : p
+      )
+    );
+
+    try {
+      await api.put(`/api/v1/product/updateStatus/products/${product._id}`, {
+        isActive: newStatus
+      });
+      toast.success(newStatus === "1" ? "Product activated" : "Product deactivated");
+    } catch (error) {
+      console.error("Status toggle failed:", error);
+      // Revert on error
+      setProducts(prevProducts =>
+        prevProducts.map(p =>
+          p._id === product._id ? { ...p, isActive: originalStatus } : p
+        )
+      );
+      toast.error("Failed to update status");
+    }
+  };
+
   // Mobile Product Card View
   const MobileProductCard = ({ product }) => (
     <div style={{
@@ -189,19 +219,9 @@ const Products = () => {
         </div>
         <div>
           <span
-            onClick={async (e) => {
+            onClick={(e) => {
               e.stopPropagation();
-              try {
-                const newStatus = product.isActive === "1" ? "0" : "1";
-                await axios.put(`/api/v1/product/updateStatus/products/${product._id}`, {
-                  isActive: newStatus
-                }, {
-                  headers: { Authorization: auth?.token }
-                });
-                getAllProducts();
-              } catch (error) {
-                console.error("Status toggle failed:", error);
-              }
+              handleStatusToggle(product);
             }}
             style={{
               padding: '4px 8px',
@@ -451,19 +471,7 @@ const Products = () => {
                         <td style={{ padding: '12px 16px', fontSize: '14px', color: '#0f172a' }}>{product.stock}</td>
                         <td style={{ padding: '12px 16px' }}>
                           <button
-                            onClick={async () => {
-                              try {
-                                const newStatus = product.isActive === "1" ? "0" : "1";
-                                await axios.put(`/api/v1/product/updateStatus/products/${product._id}`, {
-                                  isActive: newStatus
-                                }, {
-                                  headers: { Authorization: auth?.token }
-                                });
-                                getAllProducts();
-                              } catch (error) {
-                                console.error("Status toggle failed:", error);
-                              }
-                            }}
+                            onClick={() => handleStatusToggle(product)}
                             style={{
                               padding: '4px 12px',
                               borderRadius: '20px',

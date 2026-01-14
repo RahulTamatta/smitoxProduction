@@ -142,20 +142,34 @@ const SubcategoryList = () => {
 
   // Toggle subcategory status
   const toggleSubcategoryStatus = async (id, currentStatus) => {
+    // Optimistic UI Update
+    setSubcategories(prev => prev.map(cat =>
+      cat._id === id ? { ...cat, isActive: !currentStatus } : cat
+    ));
+
     try {
       const { data } = await api.patch(
         `/api/v1/subcategory/toggle-subcategory/${id}`,
         { isActive: !currentStatus }
       );
       if (data?.success) {
-        toast.success("Subcategory status updated.");
-        getAllSubcategories();
+        toast.success("Status updated");
+        // Optional: refresh from server to be sure, or trust the optimistic update
+        // getAllSubcategories(); 
       } else {
-        //toast.error(data.message);
+        // Revert on failure
+        setSubcategories(prev => prev.map(cat =>
+          cat._id === id ? { ...cat, isActive: currentStatus } : cat
+        ));
+        toast.error(data.message || "Failed to update status");
       }
     } catch (error) {
       console.error(error);
-      ////toast.error("Failed to update status.");
+      // Revert on error
+      setSubcategories(prev => prev.map(cat =>
+        cat._id === id ? { ...cat, isActive: currentStatus } : cat
+      ));
+      toast.error("Failed to update status.");
     }
   };
 
@@ -311,11 +325,16 @@ const SubcategoryList = () => {
             </div>
 
             {/* Edit Modal */}
-            <Modal show={showEditModal} onHide={() => setShowEditModal(false)}>
-              <Modal.Header closeButton>
+            <Modal
+              show={showEditModal}
+              onHide={() => setShowEditModal(false)}
+              style={{ zIndex: 99999 }} // Ensure high z-index
+              contentClassName="bg-white" // Bootstrap class for white background
+            >
+              <Modal.Header closeButton className="bg-white border-bottom">
                 <Modal.Title>Edit Subcategory</Modal.Title>
               </Modal.Header>
-              <Modal.Body>
+              <Modal.Body className="bg-white">
                 <Form onSubmit={handleUpdate}>
                   <Form.Group className="mb-3">
                     <Form.Label>Subcategory Name</Form.Label>

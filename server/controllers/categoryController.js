@@ -6,8 +6,10 @@ import categoryModel from "../models/categoryModel.js";
 
 export const createCategoryController = async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, isActive } = req.body;
     const photo = req.file;
+
+    console.log("createCategoryController body:", req.body);
 
     if (!name) {
       return res.status(401).send({ message: "Name is required" });
@@ -28,6 +30,7 @@ export const createCategoryController = async (req, res) => {
 
     const categoryData = {
       name,
+      isActive: isActive === 'true' || isActive === true,
       slug: slugify(name),
       photos: photoPath
     };
@@ -51,11 +54,15 @@ export const createCategoryController = async (req, res) => {
 
 export const updateCategoryController = async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, isActive } = req.body;
     const { id } = req.params;
     const photo = req.file;
 
-    const updateData = { name, slug: slugify(name) };
+    const updateData = {
+      name,
+      slug: slugify(name),
+      isActive: isActive === 'true' || isActive === true
+    };
     if (photo) {
       updateData.photos = `uploads/categories/${path.basename(photo.path)}`;
     }
@@ -88,10 +95,19 @@ export const updateCategoryController = async (req, res) => {
   }
 };
 
-// No changes needed for categoryController (get all)
+// get all category
 export const categoryControlller = async (req, res) => {
   try {
-    const category = await categoryModel.find({});
+    const { active } = req.query;
+    const query = {};
+
+    // If active query param is present, filter by isActive
+    // Include true OR missing (legacy data)
+    if (active) {
+      query.$or = [{ isActive: true }, { isActive: { $exists: false } }];
+    }
+
+    const category = await categoryModel.find(query);
     res.status(200).send({
       success: true,
       message: "All Categories List",
@@ -141,6 +157,36 @@ export const deleteCategoryCOntroller = async (req, res) => {
       success: false,
       message: "error while deleting category",
       error,
+    });
+  }
+};
+
+export const toggleCategoryStatusController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const category = await categoryModel.findById(id);
+
+    if (!category) {
+      return res.status(404).send({
+        success: false,
+        message: "Category not found",
+      });
+    }
+
+    category.isActive = !category.isActive;
+    await category.save();
+
+    res.status(200).send({
+      success: true,
+      message: "Category status updated",
+      category,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      error,
+      message: "Error while toggling status",
     });
   }
 };

@@ -18,6 +18,10 @@ const categorySchema = new mongoose.Schema({
     lowercase: true,
   },
   subcategories: [{ type: String }],
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 export default mongoose.model("Category", categorySchema);

@@ -6,6 +6,7 @@ import {
   createCategoryController,
   deleteCategoryCOntroller,
   singleCategoryController,
+  toggleCategoryStatusController,
   updateCategoryController,
 } from "./../controllers/categoryController.js";
 import { requireSignIn } from "./../middlewares/authMiddleware.js";
@@ -44,6 +45,14 @@ router.delete(
   requireCapability("categories:delete"),
   auditLog("delete", "category", "high"),
   deleteCategoryCOntroller
+);
+
+// Toggle Status
+router.patch(
+  "/toggle-category/:id",
+  requireSignIn,
+  requireCapability("categories:write"),
+  toggleCategoryStatusController
 );
 
 export default router;

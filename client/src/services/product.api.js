@@ -49,7 +49,7 @@ export const fetchProductBySlug = async (slug) => {
  * Fetch all categories
  */
 export const fetchCategories = async () => {
-    const { data } = await api.get('/category/get-category');
+    const { data } = await api.get('/category/get-category?active=true');
     return data.category;
 };
 
@@ -100,6 +100,6 @@ export const fetchBanners = async () => {
  * Fetch all subcategories
  */
 export const fetchSubcategories = async () => {
-    const { data } = await api.get('/subcategory/get-subcategories');
+    const { data } = await api.get('/subcategory/get-subcategories?active=true');
     return data.subcategories || [];
 };

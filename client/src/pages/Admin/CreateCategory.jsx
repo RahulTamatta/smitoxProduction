@@ -14,6 +14,8 @@ const CreateCategory = () => {
   const [selected, setSelected] = useState(null);
   const [updatedName, setUpdatedName] = useState("");
   const [updatedPhoto, setUpdatedPhoto] = useState(null);
+  const [isActive, setIsActive] = useState(true);
+  const [updatedIsActive, setUpdatedIsActive] = useState(true);
 
 
   // handle Form
@@ -24,6 +26,7 @@ const CreateCategory = () => {
 
       const categoryData = new FormData();
       categoryData.append("name", name);
+      categoryData.append("isActive", isActive);
       if (photos) {
         categoryData.append("photo", photos);
       }
@@ -36,6 +39,7 @@ const CreateCategory = () => {
         getAllCategory();
         setName("");
         setPhotos(null);
+        setIsActive(true);
       } else {
         toast.dismiss();
         toast.error(data.message || "Failed to create category");
@@ -72,6 +76,7 @@ const CreateCategory = () => {
 
       const categoryData = new FormData();
       categoryData.append("name", updatedName);
+      categoryData.append("isActive", updatedIsActive);
       if (updatedPhoto) {
         categoryData.append("photo", updatedPhoto);
       }
@@ -86,7 +91,10 @@ const CreateCategory = () => {
         toast.success(`${updatedName} is updated`);
         setSelected(null);
         setUpdatedName("");
+        setSelected(null);
+        setUpdatedName("");
         setUpdatedPhoto(null);
+        setUpdatedIsActive(true);
         setVisible(false);
         getAllCategory();
       } else {
@@ -141,6 +149,16 @@ const CreateCategory = () => {
                   onChange={(e) => setName(e.target.value)}
                 />
               </div>
+              <div className="mb-3 form-check">
+                <input
+                  type="checkbox"
+                  className="form-check-input"
+                  id="activeCheck"
+                  checked={isActive}
+                  onChange={(e) => setIsActive(e.target.checked)}
+                />
+                <label className="form-check-label" htmlFor="activeCheck">Active</label>
+              </div>
               <div className="mb-3">
                 <label className="btn btn-outline-secondary col-md-12">
                   {photos ? photos.name : "Upload Photo"}
@@ -185,6 +203,7 @@ const CreateCategory = () => {
                 <thead>
                   <tr>
                     <th scope="col">Name</th>
+                    <th scope="col">Status</th>
                     <th scope="col">Image</th>
                     <th scope="col">Actions</th>
                   </tr>
@@ -193,6 +212,30 @@ const CreateCategory = () => {
                   {categories?.map((c) => (
                     <tr key={c._id}>
                       <td>{c.name}</td>
+                      <td>
+                        <button
+                          onClick={async () => {
+                            // Optimistic Update
+                            setCategories(prev => prev.map(cat =>
+                              cat._id === c._id ? { ...cat, isActive: !cat.isActive } : cat
+                            ));
+                            try {
+                              await api.patch(`/api/v1/category/toggle-category/${c._id}`);
+                              toast.success("Status updated");
+                            } catch (error) {
+                              // Revert
+                              setCategories(prev => prev.map(cat =>
+                                cat._id === c._id ? { ...cat, isActive: !cat.isActive } : cat
+                              ));
+                              toast.error("Failed to update status");
+                            }
+                          }}
+                          className={`btn btn-sm ${c.isActive ? 'btn-success' : 'btn-danger'}`}
+                          style={{ width: '100px' }}
+                        >
+                          {c.isActive ? "Active" : "Inactive"}
+                        </button>
+                      </td>
                       <td>
                         {c.photos && (
                           <OptimizedImage
@@ -211,6 +254,7 @@ const CreateCategory = () => {
                             setVisible(true);
                             setUpdatedName(c.name);
                             setSelected(c);
+                            setUpdatedIsActive(c.isActive !== undefined ? c.isActive : true);
                           }}
                         >
                           Edit
@@ -242,6 +286,16 @@ const CreateCategory = () => {
                   value={updatedName}
                   onChange={(e) => setUpdatedName(e.target.value)}
                 />
+              </div>
+              <div className="mb-3 form-check">
+                <input
+                  type="checkbox"
+                  className="form-check-input"
+                  id="updateActiveCheck"
+                  checked={updatedIsActive}
+                  onChange={(e) => setUpdatedIsActive(e.target.checked)}
+                />
+                <label className="form-check-label" htmlFor="updateActiveCheck">Active</label>
               </div>
               <div className="mb-3">
                 <label className="btn btn-outline-secondary col-md-12">
