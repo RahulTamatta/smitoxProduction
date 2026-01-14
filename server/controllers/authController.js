@@ -590,20 +590,36 @@ export const getOrdersController = async (req, res) => {
 // };
 export const getAllOrdersController = async (req, res) => {
   try {
-    const { status, page = 1, limit = 10, search = "", sortBy = "newest" } = req.query;
+    const {
+      status,
+      page = 1,
+      limit = 10,
+      search = "",
+      sortBy = "newest",
+      sortByStatusChange = false  // New toggle: if true, sort by status change instead of creation date
+    } = req.query;
     const pageNumber = Math.max(1, parseInt(page, 10)) || 1;
     const limitNumber = Math.max(1, parseInt(limit, 10)) || 10;
     const skip = (pageNumber - 1) * limitNumber;
 
     let query = {};
-    if (status && status !== "all-orders") {
+    // Status filter is optional - only apply if explicitly provided and not "all"
+    if (status && status !== "all-orders" && status !== "all") {
       query.status = status;
     }
 
-    // Sort logic - sort by status change timestamp, not general update
-    let sortOptions = { statusUpdatedAt: -1 };
-    if (sortBy === "oldest") {
-      sortOptions = { statusUpdatedAt: 1 };
+    // Sort logic:
+    // - Default: sort by createdAt (order creation date), newest first
+    // - If sortByStatusChange=true: sort by statusUpdatedAt (latest status change first)
+    let sortOptions;
+    const isSortByStatus = sortByStatusChange === 'true' || sortByStatusChange === true;
+
+    if (isSortByStatus) {
+      // Sort by status change timestamp
+      sortOptions = sortBy === "oldest" ? { statusUpdatedAt: 1 } : { statusUpdatedAt: -1 };
+    } else {
+      // Default: Sort by order creation date
+      sortOptions = sortBy === "oldest" ? { createdAt: 1 } : { createdAt: -1 };
     }
 
     const userSearchQuery = search

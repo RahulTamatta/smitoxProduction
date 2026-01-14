@@ -35,6 +35,7 @@ const AdminOrders = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sortBy, setSortBy] = useState("newest");
+  const [sortByStatusChange, setSortByStatusChange] = useState(false);
 
   const [values, setValues] = useSearch();
   const [addProductError, setAddProductError] = useState("");
@@ -49,7 +50,7 @@ const AdminOrders = () => {
 
   useEffect(() => {
     if (auth?.token) getOrders(orderType, currentPage, searchTerm, sortBy);
-  }, [auth?.token, orderType, currentPage, sortBy]);
+  }, [auth?.token, orderType, currentPage, sortBy, sortByStatusChange]);
 
   const getOrders = async (type = "all", page = 1, search = "", sort = "newest") => {
     try {
@@ -65,6 +66,7 @@ const AdminOrders = () => {
           limit: itemsPerPage,
           search, // Send search query to backend
           sortBy: sort, // Send sort parameter to backend
+          sortByStatusChange, // Send status change sort toggle
         },
       });
       setOrders(Array.isArray(data.orders) ? data.orders : []);
@@ -560,40 +562,77 @@ const AdminOrders = () => {
             ))}
           </div>
 
-          <div className="search-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: '1.5rem', maxWidth: '450px' }}>
-            <svg
-              className="search-icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              style={{
-                position: 'absolute',
-                left: '12px',
-                width: '18px',
-                height: '18px',
-                color: '#64748b',
-                pointerEvents: 'none',
-                zIndex: 1
-              }}
-            >
-              <circle cx="11" cy="11" r="8"></circle>
-              <path d="m21 21-4.35-4.35"></path>
-            </svg>
-            <input
-              type="text"
-              className="search-input"
-              placeholder="Search orders by ID, buyer name..."
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px 12px 10px 40px',
-                fontSize: '14px',
-                border: '1px solid #e2e8f0',
-                borderRadius: '8px',
-                outline: 'none'
-              }}
-            />
+          <div className="search-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+            {/* Search Input Wrapper */}
+            <div style={{ position: 'relative', flex: '1', minWidth: '300px', maxWidth: '400px' }}>
+              <svg
+                className="search-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                style={{
+                  position: 'absolute',
+                  left: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '18px',
+                  height: '18px',
+                  color: '#64748b',
+                  pointerEvents: 'none',
+                  zIndex: 1
+                }}
+              >
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Search orders by ID, buyer name..."
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px 10px 40px',
+                  fontSize: '14px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  outline: 'none'
+                }}
+              />
+            </div>
+
+            {/* Sort by Status Change Toggle */}
+            <div className="ms-3 d-flex align-items-center">
+              <label
+                className="status-change-toggle"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  background: sortByStatusChange ? '#4f46e5' : '#f1f5f9',
+                  color: sortByStatusChange ? 'white' : '#475569',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  fontSize: '14px',
+                  border: sortByStatusChange ? '1px solid #4f46e5' : '1px solid #e2e8f0',
+                  transition: 'all 0.2s',
+                  userSelect: 'none',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={sortByStatusChange}
+                  onChange={(e) => setSortByStatusChange(e.target.checked)}
+                  style={{ display: 'none' }}
+                />
+                <span style={{ fontSize: '16px', lineHeight: 1 }}>{sortByStatusChange ? '✓' : '○'}</span>
+                <span>Sort by Status Change</span>
+              </label>
+            </div>
             {/* Commented out Sort By option per user request */}
             {/* <div className="sort-dropdown ms-3">
               <select

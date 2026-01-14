@@ -58,11 +58,20 @@
   border-color: #0d6efd;
 }
 
-/* Search Input */
+/* Search Input and Controls Row */
 .search-wrapper {
-  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   margin-bottom: 1.5rem;
-  max-width: 28rem;
+  flex-wrap: wrap;
+}
+
+.search-input-wrapper {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+  max-width: 400px;
 }
 
 .search-icon {

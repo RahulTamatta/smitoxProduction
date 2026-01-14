@@ -16,6 +16,7 @@ import bannerRoutes from "./routes/bannerRoutes.js";
 import brandRoutes from "./routes/brandNameRoutes.js";
 import { default as cartRoutes, default as usersListsRoutes } from "./routes/cartRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
+import dashboardAnalyticsRoutes from "./routes/dashboardAnalyticsRoutes.js";
 import imageRoutes from "./routes/imageRoutes.js";
 import minimumOrderRoutes from "./routes/miniMumRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
@@ -97,6 +98,9 @@ app.use('/api/v1/webhooks/payments', paymentWebhookRoutes);
 
 // Admin Analytics
 app.use('/api/v1/admin/analytics', adminAnalyticsRoutes);
+
+// Admin Dashboard (Comprehensive Analytics)
+app.use('/api/v1/admin/dashboard', dashboardAnalyticsRoutes);
 
 // Serve React app for any other unknown routes (exclude /uploads and /api)
 app.get("*", (req, res, next) => {

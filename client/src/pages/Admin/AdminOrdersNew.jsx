@@ -36,10 +36,11 @@ const AdminOrdersNew = () => {
   const [itemsPerPage] = useState(10);
   const [totalOrders, setTotalOrders] = useState(0);
   const [sortBy, setSortBy] = useState("newest"); // Default sort by newest
+  const [sortByStatusChange, setSortByStatusChange] = useState(false); // Toggle for sorting by status change
 
   useEffect(() => {
     if (auth?.token) getOrders(orderType, currentPage, searchTerm);
-  }, [auth?.token, orderType, currentPage, sortBy]); // Add sortBy dependency
+  }, [auth?.token, orderType, currentPage, sortBy, sortByStatusChange]); // Add sort dependencies
 
   const getOrders = async (type = "all-orders", page = 1, search = "") => {
     try {
@@ -52,7 +53,8 @@ const AdminOrdersNew = () => {
           page,
           limit: itemsPerPage,
           search,
-          sortBy // Pass sort parameter
+          sortBy,
+          sortByStatusChange // Pass status change sort toggle
         },
       });
       setOrders(Array.isArray(data.orders) ? data.orders : []);
@@ -465,8 +467,8 @@ const AdminOrdersNew = () => {
         </div>
 
         {/* Search Input and Sort */}
-        <div className="search-wrapper" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <div style={{ position: 'relative', flex: 1 }}>
+        <div className="search-wrapper">
+          <div className="search-input-wrapper">
             <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <circle cx="11" cy="11" r="8"></circle>
               <path d="m21 21-4.35-4.35"></path>
@@ -479,6 +481,34 @@ const AdminOrdersNew = () => {
               onChange={(e) => handleSearch(e.target.value)}
             />
           </div>
+
+          {/* Sort by Status Change Toggle */}
+          <label
+            className="status-change-toggle"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '0.6rem 1rem',
+              background: sortByStatusChange ? '#4f46e5' : '#f1f5f9',
+              color: sortByStatusChange ? 'white' : '#475569',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: '500',
+              fontSize: '14px',
+              border: sortByStatusChange ? '1px solid #4f46e5' : '1px solid #e2e8f0',
+              transition: 'all 0.2s'
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={sortByStatusChange}
+              onChange={(e) => setSortByStatusChange(e.target.checked)}
+              style={{ display: 'none' }}
+            />
+            <span style={{ fontSize: '16px' }}>{sortByStatusChange ? '✓' : '○'}</span>
+            Sort by Status Change
+          </label>
 
           <div className="sort-wrapper">
             <select
