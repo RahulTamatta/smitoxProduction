@@ -48,6 +48,17 @@ const ROLE_COLORS = {
 
 const CHART_COLORS = ["#4f46e5", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#f97316", "#ec4899"];
 
+// Quick date presets
+const DATE_PRESETS = [
+  { label: "Today", value: "today" },
+  { label: "Yesterday", value: "yesterday" },
+  { label: "Last 7 Days", value: "7d" },
+  { label: "Last 30 Days", value: "30d" },
+  { label: "This Month", value: "thisMonth" },
+  { label: "Last Month", value: "lastMonth" },
+  { label: "This Year", value: "thisYear" },
+];
+
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
@@ -73,22 +84,70 @@ const formatDate = (dateString) => {
   });
 };
 
-const formatDateTime = (dateString) => {
-  if (!dateString) return "-";
-  return new Date(dateString).toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+const getDateRange = (preset) => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  switch (preset) {
+    case "today":
+      return {
+        from: today.toISOString().split("T")[0],
+        to: today.toISOString().split("T")[0],
+      };
+    case "yesterday":
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      return {
+        from: yesterday.toISOString().split("T")[0],
+        to: yesterday.toISOString().split("T")[0],
+      };
+    case "7d":
+      const last7 = new Date(today);
+      last7.setDate(last7.getDate() - 6);
+      return {
+        from: last7.toISOString().split("T")[0],
+        to: today.toISOString().split("T")[0],
+      };
+    case "30d":
+      const last30 = new Date(today);
+      last30.setDate(last30.getDate() - 29);
+      return {
+        from: last30.toISOString().split("T")[0],
+        to: today.toISOString().split("T")[0],
+      };
+    case "thisMonth":
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      return {
+        from: monthStart.toISOString().split("T")[0],
+        to: today.toISOString().split("T")[0],
+      };
+    case "lastMonth":
+      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      return {
+        from: lastMonthStart.toISOString().split("T")[0],
+        to: lastMonthEnd.toISOString().split("T")[0],
+      };
+    case "thisYear":
+      const yearStart = new Date(now.getFullYear(), 0, 1);
+      return {
+        from: yearStart.toISOString().split("T")[0],
+        to: today.toISOString().split("T")[0],
+      };
+    default:
+      return {
+        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+        to: today.toISOString().split("T")[0],
+      };
+  }
 };
 
 // ============================================================================
 // SUB-COMPONENTS
 // ============================================================================
 
-const KPICard = ({ icon, iconClass, value, label, sublabel, trend }) => (
-  <div className="kpi-card">
+const KPICard = ({ icon, iconClass, value, label, sublabel, trend, onClick }) => (
+  <div className="kpi-card" onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
     <div className="kpi-card-header">
       <div className={`kpi-card-icon ${iconClass}`}>{icon}</div>
       {trend !== undefined && trend !== null && (
@@ -181,6 +240,39 @@ const DataTable = ({ columns, data = [], emptyMessage = "No data available" }) =
   </div>
 );
 
+const QuickStats = ({ data }) => (
+  <div className="quick-stats-row">
+    <div className="quick-stat">
+      <span className="quick-stat-icon">📅</span>
+      <div>
+        <div className="quick-stat-value">{formatNumber(data?.todayOrders || 0)}</div>
+        <div className="quick-stat-label">Today's Orders</div>
+      </div>
+    </div>
+    <div className="quick-stat">
+      <span className="quick-stat-icon">💰</span>
+      <div>
+        <div className="quick-stat-value">{formatCurrency(data?.todayRevenue || 0)}</div>
+        <div className="quick-stat-label">Today's Revenue</div>
+      </div>
+    </div>
+    <div className="quick-stat">
+      <span className="quick-stat-icon">👤</span>
+      <div>
+        <div className="quick-stat-value">{formatNumber(data?.newUsersToday || 0)}</div>
+        <div className="quick-stat-label">New Users Today</div>
+      </div>
+    </div>
+    <div className="quick-stat">
+      <span className="quick-stat-icon">⏳</span>
+      <div>
+        <div className="quick-stat-value">{formatNumber(data?.pendingOrders || 0)}</div>
+        <div className="quick-stat-label">Pending Orders</div>
+      </div>
+    </div>
+  </div>
+);
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -190,14 +282,25 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState({});
-  const [dateRange, setDateRange] = useState({
-    from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-    to: new Date().toISOString().split("T")[0],
-  });
+  const [activePreset, setActivePreset] = useState("30d");
+  const [dateRange, setDateRange] = useState(getDateRange("30d"));
   const [groupBy, setGroupBy] = useState("day");
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   // Check if user is super_admin
   const isSuperAdmin = auth?.user?.roleString === "super_admin" || auth?.user?.role === 3;
+
+  // Handle preset selection
+  const handlePresetClick = (preset) => {
+    setActivePreset(preset);
+    setDateRange(getDateRange(preset));
+  };
+
+  // Handle custom date change
+  const handleDateChange = (field, value) => {
+    setActivePreset("custom");
+    setDateRange({ ...dateRange, [field]: value });
+  };
 
   // Fetch dashboard data
   const fetchData = useCallback(async () => {
@@ -208,6 +311,7 @@ const AdminDashboard = () => {
       const params = { from: dateRange.from, to: dateRange.to, groupBy };
       const result = await fetchAllDashboardData(params, auth?.token, isSuperAdmin);
       setData(result);
+      setLastUpdated(new Date());
     } catch (err) {
       console.error("Dashboard fetch error:", err);
       setError(err.message || "Failed to load dashboard data");
@@ -222,13 +326,15 @@ const AdminDashboard = () => {
     }
   }, [auth?.token, fetchData]);
 
-  // Refresh handler
-  const handleRefresh = () => {
-    fetchData();
-  };
+  // Auto-refresh every 5 minutes
+  useEffect(() => {
+    if (!auth?.token) return;
+    const interval = setInterval(fetchData, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [auth?.token, fetchData]);
 
   // Render loading state
-  if (loading) {
+  if (loading && !data.overview) {
     return (
       <Layout>
         <AdminMenu />
@@ -251,7 +357,7 @@ const AdminDashboard = () => {
           <div className="dashboard-error">
             <h3>⚠️ Error Loading Dashboard</h3>
             <p>{error}</p>
-            <button onClick={handleRefresh}>Try Again</button>
+            <button onClick={fetchData}>Try Again</button>
           </div>
         </div>
       </Layout>
@@ -268,6 +374,14 @@ const AdminDashboard = () => {
   const auditData = data.auditLogs?.data || {};
   const healthData = data.systemHealth?.data || {};
 
+  // Quick stats for today
+  const quickStats = {
+    todayOrders: overview.orders?.today || 0,
+    todayRevenue: overview.revenue?.today || 0,
+    newUsersToday: overview.users?.today || 0,
+    pendingOrders: overview.orders?.pending || 0,
+  };
+
   return (
     <Layout>
       <AdminMenu />
@@ -280,27 +394,50 @@ const AdminDashboard = () => {
               <p>
                 Welcome back, {auth?.user?.user_fullname || "Admin"} •{" "}
                 {isSuperAdmin ? "Super Admin Access" : "Admin Access"}
+                {lastUpdated && (
+                  <span className="last-updated">
+                    {" "}• Last updated: {lastUpdated.toLocaleTimeString("en-IN")}
+                  </span>
+                )}
               </p>
             </div>
             <div className="dashboard-header-actions">
-              <div className="dashboard-date-range">
-                <input
-                  type="date"
-                  value={dateRange.from}
-                  onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
-                />
-                <span>to</span>
-                <input
-                  type="date"
-                  value={dateRange.to}
-                  onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
-                />
-              </div>
-              <button className="dashboard-refresh-btn" onClick={handleRefresh} disabled={loading}>
-                🔄 Refresh
+              <button className="dashboard-refresh-btn" onClick={fetchData} disabled={loading}>
+                {loading ? "⏳ Loading..." : "🔄 Refresh"}
               </button>
             </div>
           </div>
+
+          {/* Quick Date Presets */}
+          <div className="date-presets-container">
+            <div className="date-presets">
+              {DATE_PRESETS.map((preset) => (
+                <button
+                  key={preset.value}
+                  className={`date-preset-btn ${activePreset === preset.value ? "active" : ""}`}
+                  onClick={() => handlePresetClick(preset.value)}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+            <div className="custom-date-range">
+              <input
+                type="date"
+                value={dateRange.from}
+                onChange={(e) => handleDateChange("from", e.target.value)}
+              />
+              <span>to</span>
+              <input
+                type="date"
+                value={dateRange.to}
+                onChange={(e) => handleDateChange("to", e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Quick Stats Row */}
+          <QuickStats data={quickStats} />
 
           {/* KPI Cards */}
           <div className="kpi-grid">
@@ -331,8 +468,8 @@ const AdminDashboard = () => {
               icon="💰"
               iconClass="revenue"
               value={formatCurrency(overview.revenue?.total || 0)}
-              label="Total Revenue"
-              sublabel={`${formatCurrency(overview.revenue?.today || 0)} today`}
+              label="Period Revenue"
+              sublabel={`All-time: ${formatCurrency(overview.revenue?.allTime || 0)}`}
               trend={overview.revenue?.trend}
             />
             <KPICard
@@ -347,12 +484,13 @@ const AdminDashboard = () => {
           {/* ============ ORDERS SECTION ============ */}
           <div className="dashboard-section">
             <h2 className="dashboard-section-title"><span>📦</span> Orders Analytics</h2>
-            <div className="dashboard-grid">
+            <div className="dashboard-grid-2col">
               {/* Order Trends Chart */}
               <DashboardCard
                 title="Order Trends"
                 subtitle="Orders and revenue over time"
                 tooltip="Track daily/weekly/monthly order volume and revenue trends"
+                className="span-2"
                 actions={
                   <>
                     <button className={groupBy === "day" ? "active" : ""} onClick={() => setGroupBy("day")}>
@@ -416,13 +554,35 @@ const AdminDashboard = () => {
               <DashboardCard title="Order Status" subtitle="Current order distribution" tooltip="Breakdown of orders by their current fulfillment status">
                 <StatusBreakdown data={ordersData.statusBreakdown || []} />
               </DashboardCard>
+
+              {/* Recent Orders Summary */}
+              <DashboardCard title="Recent Activity" subtitle="Quick order stats">
+                <div className="recent-stats-grid">
+                  <div className="recent-stat">
+                    <div className="recent-stat-value text-warning">{formatNumber(ordersData.statusBreakdown?.find(s => s.status === "Pending")?.count || 0)}</div>
+                    <div className="recent-stat-label">Pending</div>
+                  </div>
+                  <div className="recent-stat">
+                    <div className="recent-stat-value text-info">{formatNumber(ordersData.statusBreakdown?.find(s => s.status === "Confirmed")?.count || 0)}</div>
+                    <div className="recent-stat-label">Confirmed</div>
+                  </div>
+                  <div className="recent-stat">
+                    <div className="recent-stat-value text-purple">{formatNumber(ordersData.statusBreakdown?.find(s => s.status === "Dispatched")?.count || 0)}</div>
+                    <div className="recent-stat-label">Dispatched</div>
+                  </div>
+                  <div className="recent-stat">
+                    <div className="recent-stat-value text-success">{formatNumber(ordersData.statusBreakdown?.find(s => s.status === "Delivered")?.count || 0)}</div>
+                    <div className="recent-stat-label">Delivered</div>
+                  </div>
+                </div>
+              </DashboardCard>
             </div>
           </div>
 
           {/* ============ USERS SECTION ============ */}
           <div className="dashboard-section">
             <h2 className="dashboard-section-title"><span>👥</span> User Analytics</h2>
-            <div className="dashboard-grid">
+            <div className="dashboard-grid-2col">
               {/* User Registrations */}
               <DashboardCard title="User Registrations" subtitle="New users over time" tooltip="New user signups during the selected date range">
                 <div className="chart-container small">
@@ -463,7 +623,7 @@ const AdminDashboard = () => {
               </DashboardCard>
 
               {/* Active Users */}
-              <DashboardCard title="Active Users" subtitle="User activity metrics" tooltip="Users who logged in within the specified time periods">
+              <DashboardCard title="Active Users" subtitle="User activity metrics" tooltip="Users who logged in within the specified time periods" className="span-2">
                 <div className="active-users-grid">
                   <div className="active-user-stat">
                     <div className="active-user-count">{formatNumber(usersData.activeUsers?.last24h || 0)}</div>
@@ -485,7 +645,7 @@ const AdminDashboard = () => {
           {/* ============ PRODUCTS SECTION ============ */}
           <div className="dashboard-section">
             <h2 className="dashboard-section-title"><span>🏷️</span> Product Analytics</h2>
-            <div className="dashboard-grid">
+            <div className="dashboard-grid-2col">
               {/* Top Products */}
               <DashboardCard title="Top Selling Products" subtitle="By order quantity" tooltip="Most ordered products ranked by total units sold">
                 <DataTable
@@ -507,7 +667,11 @@ const AdminDashboard = () => {
                         src={product.photos || "/placeholder-product.png"}
                         alt={product.name}
                         className="stock-alert-image"
-                        onError={(e) => (e.target.src = "/placeholder-product.png")}
+                        onError={(e) => {
+                          if (e.target.src !== window.location.origin + "/placeholder-product.png" && e.target.src !== "/placeholder-product.png") {
+                            e.target.src = "/placeholder-product.png";
+                          }
+                        }}
                       />
                       <div className="stock-alert-info">
                         <div className="stock-alert-name">{product.name?.substring(0, 25)}...</div>
@@ -528,7 +692,7 @@ const AdminDashboard = () => {
           {/* ============ SELLERS SECTION ============ */}
           <div className="dashboard-section">
             <h2 className="dashboard-section-title"><span>🏪</span> Seller Analytics</h2>
-            <div className="dashboard-grid">
+            <div className="dashboard-grid-2col">
               {/* Seller Applications */}
               <DashboardCard title="Seller Applications" subtitle="Application status breakdown" tooltip="Overview of seller onboarding applications by status">
                 <StatusBreakdown data={sellersData.statusBreakdown || []} />
@@ -557,13 +721,14 @@ const AdminDashboard = () => {
           {isSuperAdmin && (
             <div className="dashboard-section">
               <h2 className="dashboard-section-title"><span>👑</span> Super Admin Only</h2>
-              <div className="dashboard-grid">
+              <div className="dashboard-grid-2col">
                 {/* Revenue Analytics */}
                 <DashboardCard
                   title="💰 Revenue Analytics"
                   subtitle="Detailed financial overview"
                   tooltip="Complete payment and revenue trends over time"
                   superAdminOnly
+                  className="span-2"
                 >
                   <div className="chart-container">
                     <ResponsiveContainer width="100%" height="100%">
@@ -613,24 +778,6 @@ const AdminDashboard = () => {
                   </div>
                 </DashboardCard>
 
-                {/* Audit Logs */}
-                <DashboardCard title="🔒 Audit Logs" subtitle="Recent admin activities" tooltip="Security log of admin actions and system events" superAdminOnly>
-                  <DataTable
-                    columns={[
-                      { key: "action", label: "Action" },
-                      { key: "resourceType", label: "Resource" },
-                      { key: "actor", label: "Actor", render: (v) => v?.user_fullname || v?.email_id || "-" },
-                      {
-                        key: "severity",
-                        label: "Severity",
-                        render: (v) => <span className={`status-badge ${v}`}>{v}</span>,
-                      },
-                    ]}
-                    data={(auditData.logs || []).slice(0, 8)}
-                    emptyMessage="No audit logs found"
-                  />
-                </DashboardCard>
-
                 {/* System Health */}
                 <DashboardCard title="🖥️ System Health" subtitle="Server status" tooltip="Real-time server metrics and database status" superAdminOnly>
                   <div className="system-health-grid">
@@ -656,6 +803,24 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                 </DashboardCard>
+
+                {/* Audit Logs */}
+                <DashboardCard title="🔒 Audit Logs" subtitle="Recent admin activities" tooltip="Security log of admin actions and system events" superAdminOnly>
+                  <DataTable
+                    columns={[
+                      { key: "action", label: "Action" },
+                      { key: "resourceType", label: "Resource" },
+                      { key: "actor", label: "Actor", render: (v) => v?.user_fullname || v?.email_id || "-" },
+                      {
+                        key: "severity",
+                        label: "Severity",
+                        render: (v) => <span className={`status-badge ${v}`}>{v}</span>,
+                      },
+                    ]}
+                    data={(auditData.logs || []).slice(0, 8)}
+                    emptyMessage="No audit logs found"
+                  />
+                </DashboardCard>
               </div>
             </div>
           )}
@@ -667,4 +832,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-

@@ -1,66 +1,151 @@
+import path from "path";
+import { ROLES } from "../config/rbac-policy.js";
+import { generateToken } from "../helpers/tokenHelper.js";
+import { logAuditEvent } from "../middlewares/rbacMiddleware.js";
 import sellerApplicationModel from "../models/sellerApplicationModel.js";
 import sellerProfileModel from "../models/sellerProfileModel.js";
 import subscriptionPlanModel from "../models/subscriptionPlanModel.js";
 import userModel from "../models/userModel.js";
-import { logAuditEvent } from "../middlewares/rbacMiddleware.js";
-import { generateToken } from "../helpers/tokenHelper.js";
-import { ROLES } from "../config/rbac-policy.js";
 
 /**
- * Submit seller application
+ * Helper to get relative path from multer file
+ */
+const getLocalPath = (file) => {
+  if (!file) return null;
+  return `uploads/users/${path.basename(file.path)}`;
+};
+
+/**
+ * Submit seller application (Direct - no draft)
+ * Handles file uploads and creates application in 'submitted' status
  */
 export const submitSellerApplication = async (req, res) => {
   try {
     const { selectedPlanId, ...applicationData } = req.body;
+    const userId = req.user._id;
 
-    // Validate plan exists
+    // Handle file uploads from multer
+    const files = req.files || {};
+
+    // Validate plan exists and is active
     const plan = await subscriptionPlanModel.findById(selectedPlanId);
-    if (!plan) {
+    if (!plan || !plan.isActive) {
       return res.status(404).send({
         success: false,
-        message: "Subscription plan not found",
+        message: "Subscription plan not found or inactive",
       });
     }
 
-    // Check if user already has a pending/approved application
+    // Check if user already has an active or pending application
     const existingApp = await sellerApplicationModel.findOne({
-      userId: req.user._id,
-      status: { $in: ["submitted", "under_review", "approved"] },
+      userId,
+      status: { $in: ["submitted", "under_review", "approved_pending_payment", "approved", "active"] },
     });
 
     if (existingApp) {
       return res.status(400).send({
         success: false,
-        message: "You already have an active seller application",
+        message: "You already have an active or pending application",
+        existingStatus: existingApp.status,
+        applicationId: existingApp._id,
       });
     }
 
-    // Create application
+    // Delete any old rejected/draft applications for this user
+    await sellerApplicationModel.deleteMany({
+      userId,
+      status: { $in: ["draft", "rejected", "cancelled"] },
+    });
+
+    // Create plan snapshot (price protection)
+    const planSnapshot = {
+      _id: plan._id,
+      name: plan.name,
+      price: plan.price,
+      currency: plan.currency || "INR",
+      billingCycle: plan.billingCycle,
+      isFree: plan.isFree,
+      includedCapabilities: plan.includedCapabilities || [],
+      excludedCapabilities: plan.excludedCapabilities || [],
+      version: plan.version || 1,
+      capturedAt: new Date(),
+    };
+
+    // Create application directly in 'submitted' status
     const application = new sellerApplicationModel({
-      userId: req.user._id,
+      userId,
+      status: "submitted",
+      submittedAt: new Date(),
+      lockPlan: true,
       selectedPlanId,
-      ...applicationData,
+      selectedPlanSnapshot: planSnapshot,
+
+      // Personal Info
+      firstName: applicationData.firstName,
+      lastName: applicationData.lastName,
+      email: req.user.email_id,
+      phone: req.user.mobile_no,
+
+      // Address
+      addressLine1: applicationData.addressLine1,
+      addressLine2: applicationData.addressLine2 || "",
+      city: applicationData.city,
+      state: applicationData.state,
+      pincode: applicationData.pincode,
+      country: applicationData.country || "India",
+
+      // KYC Documents
+      identityProofType: applicationData.identityProofType || "aadhar",
+      identityProofNumber: applicationData.identityProofNumber,
+      identityProofImage: getLocalPath(files.identityProofImage?.[0]),
+      addressProofType: applicationData.addressProofType || "aadhar",
+      addressProofImage: getLocalPath(files.addressProofImage?.[0]),
+
+      // Business Info
+      businessName: applicationData.businessName,
+      businessType: applicationData.businessType || "sole_proprietor",
+      gstNumber: applicationData.gstNumber || "",
+      gstImage: getLocalPath(files.gstImage?.[0]),
+      panNumber: applicationData.panNumber || "",
+      panImage: getLocalPath(files.panImage?.[0]),
+      businessDescription: applicationData.businessDescription || "",
+
+      // Banking
+      accountHolderName: applicationData.accountHolderName,
+      accountNumber: applicationData.accountNumber,
+      accountType: applicationData.accountType || "savings",
+      ifscCode: applicationData.ifscCode,
+      bankName: applicationData.bankName,
+      cancelledCheckImage: getLocalPath(files.cancelledCheckImage?.[0]),
+
+      // Consents
+      termsAccepted: applicationData.termsAccepted === "true" || applicationData.termsAccepted === true,
+      privacyAccepted: applicationData.privacyAccepted === "true" || applicationData.privacyAccepted === true,
+      communicationConsent: applicationData.communicationConsent === "true" || applicationData.communicationConsent === true,
     });
 
     await application.save();
 
     // Log audit event
     await logAuditEvent({
-      actor: req.user._id,
+      actor: userId,
       actorRole: ROLES.USER,
-      action: "submit",
+      action: "submit_seller_application",
       resourceType: "seller_application",
       resourceId: application._id,
       severity: "medium",
-      description: `Seller application submitted for plan: ${plan.name}`,
+      description: `Seller application submitted for ${plan.name} plan`,
       ipAddress: req.ip,
       userAgent: req.headers["user-agent"],
     });
 
     res.status(201).send({
       success: true,
-      message: "Seller application submitted successfully",
-      application,
+      message: "Application submitted successfully! You will be notified once reviewed.",
+      applicationId: application._id,
+      status: "submitted",
+      planName: plan.name,
+      isFree: plan.isFree,
     });
   } catch (error) {
     console.error("Error submitting seller application:", error);
@@ -81,7 +166,7 @@ export const getSellerApplications = async (req, res) => {
     const { status, page = 1, limit = 10, search, sort = "-createdAt" } = req.query;
 
     const query = {};
-    
+
     // Filter by status
     if (status) {
       if (status === "all") {
@@ -90,7 +175,7 @@ export const getSellerApplications = async (req, res) => {
         query.status = status;
       }
     }
-    
+
     // Search by name, email, or business name
     if (search) {
       query.$or = [

@@ -7,8 +7,7 @@ import {
   getActiveSubscriptionPlans,
   getMyApplication,
   retryPayment,
-  saveDraftApplication,
-  submitApplication,
+  submitApplicationDirect,
 } from "../../services/sellerApi";
 import "./sellerWizard.css";
 
@@ -218,37 +217,9 @@ const SellerWizardV2 = () => {
     }
   };
 
-  // Save draft
-  const handleSaveDraft = async () => {
-    try {
-      setLoading(true);
-      setError("");
 
-      const formDataToSend = new FormData();
-      Object.keys(formData).forEach((key) => {
-        if (formData[key] instanceof File) {
-          formDataToSend.append(key, formData[key]);
-        } else {
-          formDataToSend.append(key, formData[key]);
-        }
-      });
 
-      const response = await saveDraftApplication(formDataToSend, auth?.token);
-
-      if (response.success) {
-        setApplicationId(response.applicationId);
-        setSuccess("Draft saved successfully!");
-        setTimeout(() => setSuccess(""), 3000);
-      }
-
-      setLoading(false);
-    } catch (err) {
-      setError(err.message || "Failed to save draft");
-      setLoading(false);
-    }
-  };
-
-  // Submit application
+  // Submit application directly (no draft)
   const handleSubmit = async () => {
     try {
       // Validate required fields
@@ -265,34 +236,29 @@ const SellerWizardV2 = () => {
       setLoading(true);
       setError("");
 
-      // First save draft if not saved
-      if (!applicationId) {
-        const formDataToSend = new FormData();
-        Object.keys(formData).forEach((key) => {
-          if (formData[key] instanceof File) {
-            formDataToSend.append(key, formData[key]);
-          } else {
-            formDataToSend.append(key, formData[key]);
-          }
-        });
+      // Create FormData and submit directly
+      const formDataToSend = new FormData();
+      Object.keys(formData).forEach((key) => {
+        if (formData[key] instanceof File) {
+          formDataToSend.append(key, formData[key]);
+        } else if (typeof formData[key] === 'boolean') {
+          formDataToSend.append(key, formData[key] ? 'true' : 'false');
+        } else {
+          formDataToSend.append(key, formData[key]);
+        }
+      });
 
-        const draftRes = await saveDraftApplication(
-          formDataToSend,
-          auth?.token
-        );
-        if (!draftRes.success) throw new Error("Failed to save draft");
-        setApplicationId(draftRes.applicationId);
-      }
-
-      // Submit application
-      const submitRes = await submitApplication(applicationId, auth?.token);
+      const submitRes = await submitApplicationDirect(formDataToSend, auth?.token);
 
       if (submitRes.success) {
         setSuccess("Application submitted successfully!");
+        setApplicationId(submitRes.applicationId);
         setIsLocked(true);
         setTimeout(() => {
           navigate("/seller/status");
         }, 2000);
+      } else {
+        throw new Error(submitRes.message || "Failed to submit application");
       }
 
       setLoading(false);
@@ -829,52 +795,34 @@ const SellerWizardV2 = () => {
               )}
 
               {currentStep > 0 && currentStep < 6 && (
-                <>
-                  <button
-                    className="btn btn-outline"
-                    onClick={handleSaveDraft}
-                    disabled={loading}
-                  >
-                    Save Draft
-                  </button>
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => setCurrentStep(currentStep + 1)}
-                    disabled={loading}
-                  >
-                    Next
-                    <ChevronRight size={18} />
-                  </button>
-                </>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => setCurrentStep(currentStep + 1)}
+                  disabled={loading}
+                >
+                  Next
+                  <ChevronRight size={18} />
+                </button>
               )}
 
               {currentStep === 6 && (
-                <>
-                  <button
-                    className="btn btn-outline"
-                    onClick={handleSaveDraft}
-                    disabled={loading}
-                  >
-                    Save Draft
-                  </button>
-                  <button
-                    className="btn btn-success"
-                    onClick={handleSubmit}
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader size={18} className="spinner-small" />
-                        Submitting...
-                      </>
-                    ) : (
-                      <>
-                        <Check size={18} />
-                        Submit Application
-                      </>
-                    )}
-                  </button>
-                </>
+                <button
+                  className="btn btn-success"
+                  onClick={handleSubmit}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader size={18} className="spinner-small" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Check size={18} />
+                      Submit Application
+                    </>
+                  )}
+                </button>
               )}
             </div>
           )}

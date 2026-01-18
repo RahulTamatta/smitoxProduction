@@ -67,6 +67,10 @@ export const getOverviewStats = async (req, res) => {
         const { start, end } = parseDateRange(from, to);
         const { prevStart, prevEnd } = getPreviousPeriod(start, end);
 
+        // Define valid revenue statuses (exclude cancelled/rejected)
+        const REVENUE_STATUSES = ["Pending", "Confirmed", "Accepted", "Dispatched", "Delivered", "Completed", "Cash on Delivery"];
+        const COMPLETED_STATUSES = ["Delivered", "Completed"];
+
         // Parallel queries for performance
         const [
             // Current period stats
@@ -77,8 +81,10 @@ export const getOverviewStats = async (req, res) => {
             totalProducts,
             activeProducts,
             lowStockProducts,
-            totalRevenue,
+            periodRevenue,
+            allTimeRevenue,
             todayRevenue,
+            todayOrders,
             activeSellers,
             pendingApplications,
             // Previous period stats for trends
@@ -94,19 +100,35 @@ export const getOverviewStats = async (req, res) => {
             Product.countDocuments(),
             Product.countDocuments({ isActive: "1" }),
             Product.countDocuments({ stock: { $lt: 10, $gte: 0 } }),
+            // Period revenue (within selected date range, excluding cancelled)
             Order.aggregate([
-                { $match: { status: { $in: ["Completed", "Delivered"] } } },
+                {
+                    $match: {
+                        createdAt: { $gte: start, $lte: end },
+                        status: { $in: REVENUE_STATUSES }
+                    }
+                },
                 { $group: { _id: null, total: { $sum: "$amount" } } },
             ]),
+            // All-time revenue (completed orders only)
+            Order.aggregate([
+                { $match: { status: { $in: COMPLETED_STATUSES } } },
+                { $group: { _id: null, total: { $sum: "$amount" } } },
+            ]),
+            // Today's revenue
             Order.aggregate([
                 {
                     $match: {
                         createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
-                        status: { $in: ["Completed", "Delivered", "Pending", "Confirmed"] },
+                        status: { $in: REVENUE_STATUSES },
                     },
                 },
                 { $group: { _id: null, total: { $sum: "$amount" } } },
             ]),
+            // Today's orders
+            Order.countDocuments({
+                createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) }
+            }),
             SellerApplication.countDocuments({ status: "active" }),
             SellerApplication.countDocuments({ status: { $in: ["submitted", "under_review"] } }),
             // Previous period
@@ -116,7 +138,7 @@ export const getOverviewStats = async (req, res) => {
                 {
                     $match: {
                         createdAt: { $gte: prevStart, $lte: prevEnd },
-                        status: { $in: ["Completed", "Delivered"] },
+                        status: { $in: REVENUE_STATUSES },
                     },
                 },
                 { $group: { _id: null, total: { $sum: "$amount" } } },
@@ -124,9 +146,10 @@ export const getOverviewStats = async (req, res) => {
         ]);
 
         // Extract aggregation results
-        const currentRevenue = totalRevenue[0]?.total || 0;
+        const currentRevenue = periodRevenue[0]?.total || 0;
         const previousRevenue = prevRevenue[0]?.total || 0;
         const currentOrders = await Order.countDocuments({ createdAt: { $gte: start, $lte: end } });
+        const allTimeRevenueTotal = allTimeRevenue[0]?.total || 0;
 
         res.status(200).json({
             success: true,
@@ -134,11 +157,13 @@ export const getOverviewStats = async (req, res) => {
                 users: {
                     total: totalUsers,
                     new: newUsers,
+                    today: await User.countDocuments({ createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) } }),
                     trend: calculateTrend(newUsers, prevNewUsers),
                 },
                 orders: {
                     total: totalOrders,
                     pending: pendingOrders,
+                    today: todayOrders,
                     periodCount: currentOrders,
                     trend: calculateTrend(currentOrders, prevOrders),
                 },
@@ -148,7 +173,8 @@ export const getOverviewStats = async (req, res) => {
                     lowStock: lowStockProducts,
                 },
                 revenue: {
-                    total: currentRevenue,
+                    total: currentRevenue,  // Revenue for selected period
+                    allTime: allTimeRevenueTotal,  // All-time completed revenue
                     today: todayRevenue[0]?.total || 0,
                     trend: calculateTrend(currentRevenue, previousRevenue),
                 },
@@ -203,7 +229,16 @@ export const getOrdersAnalytics = async (req, res) => {
                         $group: {
                             _id: { $dateTrunc: { date: "$createdAt", unit: timeUnit } },
                             count: { $sum: 1 },
-                            revenue: { $sum: "$amount" },
+                            // Only sum revenue for non-cancelled orders
+                            revenue: {
+                                $sum: {
+                                    $cond: [
+                                        { $in: ["$status", ["Cancelled", "Rejected"]] },
+                                        0,
+                                        "$amount"
+                                    ]
+                                }
+                            },
                         },
                     },
                     { $project: { _id: 0, date: "$_id", count: 1, revenue: 1 } },
@@ -226,7 +261,22 @@ export const getOrdersAnalytics = async (req, res) => {
                 // Payment method breakdown
                 Order.aggregate([
                     { $match: { "payment.paymentMethod": { $exists: true } } },
-                    { $group: { _id: "$payment.paymentMethod", count: { $sum: 1 }, revenue: { $sum: "$amount" } } },
+                    {
+                        $group: {
+                            _id: "$payment.paymentMethod",
+                            count: { $sum: 1 },
+                            // Only sum revenue for non-cancelled orders
+                            revenue: {
+                                $sum: {
+                                    $cond: [
+                                        { $in: ["$status", ["Cancelled", "Rejected"]] },
+                                        0,
+                                        "$amount"
+                                    ]
+                                }
+                            }
+                        }
+                    },
                     { $project: { _id: 0, method: "$_id", count: 1, revenue: 1 } },
                 ]),
             ]);

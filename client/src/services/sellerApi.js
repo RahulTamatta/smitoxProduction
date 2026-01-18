@@ -53,6 +53,35 @@ export const submitApplication = async (applicationId, token) => {
 };
 
 /**
+ * Submit application directly (single step, no draft)
+ * This combines save and submit in one API call
+ */
+export const submitApplicationDirect = async (applicationData, token) => {
+  try {
+    // Get selectedPlanId for query param fallback
+    let selectedPlanId;
+    if (applicationData instanceof FormData) {
+      selectedPlanId = applicationData.get("selectedPlanId");
+    }
+
+    const response = await axios.post(
+      `${API_BASE}/sellers/applications/submit`,
+      applicationData,
+      {
+        params: selectedPlanId ? { selectedPlanId } : undefined,
+        headers: {
+          Authorization: token,
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/**
  * Get user's application status
  */
 export const getMyApplication = async (token) => {
@@ -195,6 +224,7 @@ export const rejectApplication = async (applicationId, reason, token) => {
 export default {
   saveDraftApplication,
   submitApplication,
+  submitApplicationDirect,
   getMyApplication,
   getActiveSubscriptionPlans,
   retryPayment,

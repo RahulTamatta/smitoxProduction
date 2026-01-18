@@ -1,6 +1,5 @@
 /* ============================================================================
-   Admin Dashboard Styles
-   Simple single-column layout for maximum device compatibility
+   Admin Dashboard Styles - Enhanced with Date Presets & 2-Column Layout
    ============================================================================ */
 
 :root {
@@ -44,7 +43,7 @@
 }
 
 .admin-dashboard-container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -54,11 +53,11 @@
 
 .dashboard-header {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
   gap: 16px;
-  margin-bottom: 32px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--dash-border);
+  margin-bottom: 24px;
+  flex-wrap: wrap;
 }
 
 .dashboard-header-content h1 {
@@ -75,29 +74,15 @@
   margin-top: 4px;
 }
 
+.last-updated {
+  color: var(--dash-success);
+  font-weight: 500;
+}
+
 .dashboard-header-actions {
   display: flex;
-  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
-}
-
-.dashboard-date-range {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--dash-surface);
-  border: 1px solid var(--dash-border);
-  border-radius: 8px;
-  padding: 8px 12px;
-}
-
-.dashboard-date-range input {
-  border: none;
-  background: transparent;
-  font-size: 14px;
-  color: var(--dash-text);
-  width: 120px;
 }
 
 .dashboard-refresh-btn {
@@ -109,11 +94,151 @@
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .dashboard-refresh-btn:hover {
   background: #4338ca;
+  transform: translateY(-1px);
+}
+
+.dashboard-refresh-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* ============================================================================
+   Date Presets - NEW
+   ============================================================================ */
+
+.date-presets-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--dash-surface);
+  border-radius: 12px;
+  border: 1px solid var(--dash-border);
+}
+
+.date-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.date-preset-btn {
+  padding: 8px 16px;
+  background: var(--dash-bg);
+  border: 1px solid var(--dash-border);
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dash-text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.date-preset-btn:hover {
+  background: #e2e8f0;
+  color: var(--dash-text);
+}
+
+.date-preset-btn.active {
+  background: var(--dash-primary);
+  color: white;
+  border-color: var(--dash-primary);
+}
+
+.custom-date-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.custom-date-range input {
+  padding: 8px 12px;
+  border: 1px solid var(--dash-border);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--dash-text);
+  background: var(--dash-bg);
+}
+
+.custom-date-range span {
+  color: var(--dash-text-muted);
+  font-size: 13px;
+}
+
+@media (max-width: 768px) {
+  .date-presets-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .date-presets {
+    justify-content: center;
+  }
+
+  .custom-date-range {
+    justify-content: center;
+  }
+}
+
+/* ============================================================================
+   Quick Stats Row - NEW
+   ============================================================================ */
+
+.quick-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.quick-stat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, var(--dash-surface), #f8fafc);
+  border-radius: 12px;
+  border: 1px solid var(--dash-border);
+}
+
+.quick-stat-icon {
+  font-size: 28px;
+}
+
+.quick-stat-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--dash-text);
+  line-height: 1;
+}
+
+.quick-stat-label {
+  font-size: 11px;
+  color: var(--dash-text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+@media (max-width: 900px) {
+  .quick-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 500px) {
+  .quick-stats-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ============================================================================
@@ -141,14 +266,14 @@
 }
 
 /* ============================================================================
-   KPI Cards - Horizontal Scroll on Mobile
+   KPI Cards
    ============================================================================ */
 
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
-  margin-bottom: 0;
+  margin-bottom: 32px;
 }
 
 .kpi-card {
@@ -157,6 +282,12 @@
   padding: 20px;
   border: 1px solid var(--dash-border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .kpi-card-header {
@@ -237,10 +368,37 @@
   font-weight: 500;
 }
 
+.kpi-card-sublabel {
+  font-size: 11px;
+  color: var(--dash-text-muted);
+  margin-top: 4px;
+}
+
 /* ============================================================================
-   Dashboard Cards - Single Column Stack
+   Dashboard Cards - 2-Column Grid
    ============================================================================ */
 
+.dashboard-grid-2col {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.dashboard-grid-2col .span-2 {
+  grid-column: span 2;
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid-2col {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-grid-2col .span-2 {
+    grid-column: span 1;
+  }
+}
+
+/* Single column fallback */
 .dashboard-grid {
   display: flex;
   flex-direction: column;
@@ -253,14 +411,6 @@
   padding: 24px;
   border: 1px solid var(--dash-border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  width: 100%;
-}
-
-/* Remove column classes - all cards are full width */
-.dashboard-card.col-4,
-.dashboard-card.col-6,
-.dashboard-card.col-8,
-.dashboard-card.col-12 {
   width: 100%;
 }
 
@@ -307,6 +457,7 @@
   color: var(--dash-text-muted);
   cursor: pointer;
   font-weight: 500;
+  transition: all 0.2s;
 }
 
 .dashboard-card-actions button.active,
@@ -350,6 +501,59 @@
   line-height: 1.4;
   text-align: center;
   white-space: normal;
+}
+
+/* ============================================================================
+   Recent Stats Grid - NEW
+   ============================================================================ */
+
+.recent-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.recent-stat {
+  text-align: center;
+  padding: 16px;
+  background: var(--dash-bg);
+  border-radius: 10px;
+}
+
+.recent-stat-value {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.recent-stat-value.text-warning {
+  color: #f59e0b;
+}
+
+.recent-stat-value.text-info {
+  color: #3b82f6;
+}
+
+.recent-stat-value.text-purple {
+  color: #8b5cf6;
+}
+
+.recent-stat-value.text-success {
+  color: #10b981;
+}
+
+.recent-stat-label {
+  font-size: 11px;
+  color: var(--dash-text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .recent-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 /* ============================================================================
@@ -433,6 +637,23 @@
   color: #b91c1c;
 }
 
+.status-badge.info,
+.status-badge.low {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.status-badge.medium {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.status-badge.high,
+.status-badge.critical {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 /* ============================================================================
    Status Breakdown
    ============================================================================ */
@@ -481,31 +702,7 @@
 .status-item-bar-fill {
   height: 100%;
   border-radius: 99px;
-}
-
-/* Status Colors */
-.status-pending {
-  background: var(--dash-warning);
-}
-
-.status-confirmed {
-  background: #3b82f6;
-}
-
-.status-dispatched {
-  background: #8b5cf6;
-}
-
-.status-delivered {
-  background: var(--dash-success);
-}
-
-.status-cancelled {
-  background: var(--dash-danger);
-}
-
-.status-rejected {
-  background: #b91c1c;
+  transition: width 0.3s ease;
 }
 
 /* ============================================================================
