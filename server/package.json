@@ -14,12 +14,14 @@
     "sync-deps": "npm install && npm dedupe",
     "prepare": "node scripts/prepare.js",
     "build": "node scripts/build.js",
-    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand tests/rbac.integration.test.js"
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand tests/rbac.integration.test.js",
+    "search:reindex": "node scripts/reindex.js"
   },
   "keywords": [],
   "author": "Rahul Tamatta",
   "license": "MIT",
   "dependencies": {
+    "@elastic/elasticsearch": "^8.11.0",
     "@sendgrid/mail": "^7.7.0",
     "@sentry/node": "^7.120.3",
     "@sentry/profiling-node": "^7.120.3",
@@ -28,7 +30,6 @@
     "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.3",
     "bootstrap": "^5.3.3",
-
     "colors": "^1.4.0",
     "concurrently": "^7.6.0",
     "cors": "^2.8.5",
@@ -49,6 +50,7 @@
     "node-cron": "^3.0.3",
     "nodemon": "^2.0.20",
     "razorpay": "^2.9.5",
+    "redis": "^4.6.11",
     "slugify": "^1.6.5",
     "util": "^0.12.5",
     "uuid": "^8.3.2",

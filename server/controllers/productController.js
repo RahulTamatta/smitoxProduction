@@ -12,6 +12,7 @@ import productForYouModel from "../models/productForYouModel.js";
 import productModel from "../models/productModel.js";
 import subcategoryModel from "../models/subcategoryModel.js";
 import wishlistModel from "../models/wishlistModel.js";
+import { deleteProductIndex, indexProduct, updateProductIndex } from "../services/syncService.js";
 dotenv.config();
 
 
@@ -197,6 +198,16 @@ export const createProductController = async (req, res) => {
 
     await newProduct.save();
 
+    // Sync to Elasticsearch (async, non-blocking)
+    const populatedProduct = await productModel
+      .findById(newProduct._id)
+      .populate('category', 'name')
+      .populate('subcategory', 'name')
+      .populate('brand', 'name');
+    indexProduct(populatedProduct).catch(err =>
+      console.error('ES index error:', err.message)
+    );
+
     res.status(201).send({
       success: true,
       message: "Product Created Successfully",
@@ -340,6 +351,16 @@ export const updateProductController = async (req, res) => {
     // Update document
     Object.assign(product, updatedFields);
     await product.save();
+
+    // Sync to Elasticsearch (async, non-blocking)
+    const populatedProduct = await productModel
+      .findById(product._id)
+      .populate('category', 'name')
+      .populate('subcategory', 'name')
+      .populate('brand', 'name');
+    updateProductIndex(populatedProduct).catch(err =>
+      console.error('ES update error:', err.message)
+    );
 
     res.status(200).send({
       success: true,
@@ -821,6 +842,11 @@ export const deleteProductController = async (req, res) => {
       console.error(`[Cleanup] Error cleaning up data for deleted product ${pid}:`, cleanupError);
       // We continue since the main product is already deleted
     }
+
+    // Remove from Elasticsearch (async, non-blocking)
+    deleteProductIndex(pid).catch(err =>
+      console.error('ES delete error:', err.message)
+    );
 
     res.status(200).send({
       success: true,

@@ -1,11 +1,13 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import AdminMenu from "../../components/Layout/AdminMenu";
 import OptimizedImage from "../../components/OptimizedImage";
 import { api, useAuth } from "../../context/auth";
 import Layout from "./../../components/Layout/Layout";
+
+const DEBOUNCE_MS = 300;
 
 const Products = () => {
   const navigate = useNavigate();
@@ -27,6 +29,9 @@ const Products = () => {
   const [totalProducts, setTotalProducts] = useState(0);
   const [loading, setLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchFromUrl);
+
+  const debounceTimerRef = useRef(null);
 
   // Responsive check
   useEffect(() => {
@@ -79,9 +84,27 @@ const Products = () => {
     }
   };
 
+  // Debounce search term
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1);
+    }, DEBOUNCE_MS);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [searchTerm]);
+
   useEffect(() => {
     getAllProducts();
-  }, [currentPage, searchTerm, filter]);
+  }, [currentPage, debouncedSearchTerm, filter]);
 
   const handleFilterChange = (newFilter) => {
     setFilter(newFilter);
@@ -90,7 +113,7 @@ const Products = () => {
 
   const handleSearch = (value) => {
     setSearchTerm(value);
-    setCurrentPage(1);
+    // Don't set page here - debounce effect will handle it
   };
 
   // Bulk actions

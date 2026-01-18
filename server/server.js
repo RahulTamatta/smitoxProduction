@@ -6,6 +6,8 @@ import morgan from "morgan";
 import path from "path";
 import { fileURLToPath } from 'url'; // To convert import.meta.url to a pathname
 import connectDB from "./config/db.js";
+import { checkConnection as checkElasticsearch, initializeIndex } from "./config/elasticsearch.js";
+import { initializeRedis } from "./config/redis.js";
 import { checkPlanExpiry } from "./jobs/planExpiryCheckJob.js";
 import { startPlanExpiryJob } from "./jobs/planExpiryJob.js";
 import { startPlanExpiryJob as startScheduledPlanExpiryJob } from "./jobs/schedulePlanExpiryJob.js";
@@ -24,6 +26,7 @@ import paymentWebhookRoutes from "./routes/paymentWebhookRoutes.js";
 import pincodeRoutes from "./routes/pincodeRoutes.js";
 import productForYou from "./routes/productForYouRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
+import searchRoutes from "./routes/searchRoutes.js";
 import sellerApplicationRoutes from "./routes/sellerApplicationRoutes.js";
 import sellerApplicationRoutesV2 from "./routes/sellerApplicationRoutesV2.js";
 import subCategoryRoutes from "./routes/subCategoryRoutes.js";
@@ -102,6 +105,9 @@ app.use('/api/v1/admin/analytics', adminAnalyticsRoutes);
 // Admin Dashboard (Comprehensive Analytics)
 app.use('/api/v1/admin/dashboard', dashboardAnalyticsRoutes);
 
+// Search API (Elasticsearch-powered)
+app.use('/api/search', searchRoutes);
+
 // Serve React app for any other unknown routes (exclude /uploads and /api)
 app.get("*", (req, res, next) => {
   // Skip this for /uploads and /api routes
@@ -152,5 +158,42 @@ const server = app.listen(PORT, "0.0.0.0", () => {
   } catch (error) {
     console.error("❌ Failed to start Plan Expiry CRON Job:", error.message);
   }
+
+  // Initialize Search Infrastructure (non-blocking)
+  initSearchInfrastructure();
 });
 server.timeout = 300000; // 5 minute timeout
+
+/**
+ * Initialize Elasticsearch and Redis for search functionality
+ * This runs asynchronously and doesn't block server startup
+ */
+async function initSearchInfrastructure() {
+  console.log('🔍 Initializing search infrastructure...');
+
+  try {
+    // Initialize Redis
+    const redisConnected = await initializeRedis();
+    if (redisConnected) {
+      console.log('✅ Redis cache connected'.green);
+    } else {
+      console.log('⚠️  Redis not available - search will work without caching'.yellow);
+    }
+  } catch (error) {
+    console.error('❌ Redis initialization failed:', error.message);
+  }
+
+  try {
+    // Initialize Elasticsearch
+    const esConnected = await checkElasticsearch();
+    if (esConnected) {
+      console.log('✅ Elasticsearch connected'.green);
+      await initializeIndex();
+      console.log('✅ Elasticsearch index initialized'.green);
+    } else {
+      console.log('⚠️  Elasticsearch not available - search will fallback to MongoDB'.yellow);
+    }
+  } catch (error) {
+    console.error('❌ Elasticsearch initialization failed:', error.message);
+  }
+}
