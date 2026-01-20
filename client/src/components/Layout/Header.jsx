@@ -164,6 +164,13 @@ const Header = () => {
                 </NavLink>
               </li>
 
+              <li className="nav-item">
+                <NavLink to="/seller-wizard" className="nav-link d-flex align-items-center">
+                  <span style={{ marginRight: "5px", color: "white" }}>📦</span>
+                  Become a Seller
+                </NavLink>
+              </li>
+
               {!auth?.user ? (
                 <li className="nav-item">
                   <NavLink to="/login" className="nav-link d-flex align-items-center">
@@ -173,12 +180,6 @@ const Header = () => {
                 </li>
               ) : (
                 <>
-                  <li className="nav-item">
-                    <NavLink to="/seller-wizard" className="nav-link d-flex align-items-center">
-                      <span style={{ marginRight: "5px", color: "white" }}>📦</span>
-                      Become a Seller
-                    </NavLink>
-                  </li>
                   <li className="nav-item dropdown">
                     <NavLink
                       className="nav-link dropdown-toggle"
@@ -253,6 +254,12 @@ const Header = () => {
                 </NavLink>
               </li>
 
+              <li className="nav-item">
+                <NavLink to="/seller-wizard" className="nav-link p-1" style={{ color: "white", padding: "0.25rem 0.5rem" }}>
+                  <span style={{ color: "white", fontSize: "16px" }}>📦</span>
+                </NavLink>
+              </li>
+
               {!auth?.user ? (
                 <li className="nav-item">
                   <NavLink to="/login" className="nav-link p-1" style={{ color: "white", padding: "0.25rem 0.5rem" }}>
@@ -261,11 +268,6 @@ const Header = () => {
                 </li>
               ) : (
                 <>
-                  <li className="nav-item">
-                    <NavLink to="/seller-wizard" className="nav-link p-1" style={{ color: "white", padding: "0.25rem 0.5rem" }}>
-                      <span style={{ color: "white", fontSize: "16px" }}>📦</span>
-                    </NavLink>
-                  </li>
                   <li className="nav-item dropdown">
                     <NavLink
                       className="nav-link dropdown-toggle p-1"

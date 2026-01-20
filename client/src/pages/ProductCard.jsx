@@ -172,7 +172,8 @@ const ProductCard = ({ product, onClick }) => {
               {product.perPiecePrice?.toLocaleString("en-IN", {
                 style: "currency",
                 currency: "INR",
-                maximumFractionDigits: 0
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
               }) || "Price not available"}
             </span>
             {product.mrp && (
@@ -187,7 +188,8 @@ const ProductCard = ({ product, onClick }) => {
                 {product.mrp.toLocaleString("en-IN", {
                   style: "currency",
                   currency: "INR",
-                  maximumFractionDigits: 0
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 2
                 })}
               </span>
             )}
