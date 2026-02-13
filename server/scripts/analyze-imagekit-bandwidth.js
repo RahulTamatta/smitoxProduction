@@ -8,7 +8,7 @@ const path = require('path');
 // Configuration
 const config = {
   mongodb: {
-    uri: process.env.MONGODB_URI || 'mongodb+srv://smitoxJSbWYZGtLBJGWxjO@smitox.rlcilry.mongodb.net/?retryWrites=true&w=majority&appName=smitox',
+    uri: process.env.MONGO_URL || 'mongodb+srv://smitox:JSbWYZGtLBJGWxjO@smitox.rlcilry.mongodb.net/?retryWrites=true&w=majority&appName=smitox',
     database: 'smitox',
     collection: 'images'
   },
@@ -42,13 +42,13 @@ const extractFileIdFromUrl = (url) => {
     // Otherwise try to extract from path
     const pathParts = urlObj.pathname.split('/');
     const lastPart = pathParts[pathParts.length - 1];
-    
+
     // ImageKit files often have format like filename_fileId
     if (lastPart.includes('_')) {
       const parts = lastPart.split('_');
       return parts[parts.length - 1].split('?')[0];
     }
-    
+
     return lastPart.split('?')[0]; // Fallback to just using the last part
   } catch (error) {
     console.error(`Error extracting fileId from URL ${url}:`, error);
@@ -94,11 +94,11 @@ async function getUsageStatistics(fileId) {
   try {
     const startDate = new Date(config.timeframe.startDate);
     const endDate = new Date(config.timeframe.endDate);
-    
+
     // Format dates for ImageKit API
     const fromTimestamp = Math.floor(startDate.getTime() / 1000);
     const toTimestamp = Math.floor(endDate.getTime() / 1000);
-    
+
     // Using axios directly for this since the SDK might not have this endpoint
     const response = await axios.get(
       `https://api.imagekit.io/v1/analytics/usage`,
@@ -114,7 +114,7 @@ async function getUsageStatistics(fileId) {
         }
       }
     );
-    
+
     return response.data;
   } catch (error) {
     console.error(`Error fetching usage statistics for fileId ${fileId}:`, error);
@@ -126,40 +126,40 @@ async function getUsageStatistics(fileId) {
 async function analyzeImagekitBandwidth() {
   console.log('Starting ImageKit bandwidth analysis...');
   let client;
-  
+
   try {
     // Create output directory if it doesn't exist
     if (!fs.existsSync(config.outputDir)) {
       fs.mkdirSync(config.outputDir, { recursive: true });
     }
-    
+
     // Connect to MongoDB
     console.log('Connecting to MongoDB...');
     client = await MongoClient.connect(config.mongodb.uri);
     const db = client.db(config.mongodb.database);
     const collection = db.collection(config.mongodb.collection);
-    
+
     // Query all documents with ImageKit URLs
     const imagesQuery = {
       url: { $regex: 'ik.imagekit.io', $options: 'i' }
     };
-    
+
     const imageDocs = await collection.find(imagesQuery).toArray();
     console.log(`Found ${imageDocs.length} images with ImageKit URLs.`);
-    
+
     // Prepare results array
     const analysisResults = [];
     let totalBandwidth = 0;
     let totalRequests = 0;
-    
+
     // Analyze each image
     for (let i = 0; i < imageDocs.length; i++) {
       const doc = imageDocs[i];
       const url = doc.url;
       const fileId = extractFileIdFromUrl(url);
-      
-      console.log(`[${i+1}/${imageDocs.length}] Analyzing ${url} (fileId: ${fileId})`);
-      
+
+      console.log(`[${i + 1}/${imageDocs.length}] Analyzing ${url} (fileId: ${fileId})`);
+
       if (!fileId) {
         analysisResults.push({
           url,
@@ -168,54 +168,54 @@ async function analyzeImagekitBandwidth() {
         });
         continue;
       }
-      
+
       // Fetch metadata and caching info in parallel
       const [metadata, cacheHeaders, usageStats] = await Promise.all([
         getImageMetadata(fileId),
         getImageCachingHeaders(url),
         getUsageStatistics(fileId)
       ]);
-      
+
       // Calculate bandwidth efficiency metrics
       let requestCount = 0;
       let bandwidthUsage = 0;
       let bandwidthEfficiency = 'N/A';
-      
+
       if (usageStats && usageStats.requests) {
         requestCount = usageStats.requests.total || 0;
         bandwidthUsage = usageStats.bandwidth?.total || 0;
-        
+
         // Calculate theoretical max bandwidth without caching
         const theoreticalBandwidth = requestCount * (metadata?.size || 0);
-        
+
         // Calculate efficiency (how much bandwidth was saved by caching)
         if (theoreticalBandwidth > 0) {
           const savedBandwidth = theoreticalBandwidth - bandwidthUsage;
           bandwidthEfficiency = `${((savedBandwidth / theoreticalBandwidth) * 100).toFixed(2)}%`;
         }
-        
+
         totalBandwidth += bandwidthUsage;
         totalRequests += requestCount;
       }
-      
+
       // Determine if the image has proper caching configured
-      const hasCaching = cacheHeaders.cacheControl && 
-                          !cacheHeaders.cacheControl.includes('no-cache') &&
-                          !cacheHeaders.cacheControl.includes('no-store') &&
-                          !cacheHeaders.cacheControl.includes('Error');
-      
+      const hasCaching = cacheHeaders.cacheControl &&
+        !cacheHeaders.cacheControl.includes('no-cache') &&
+        !cacheHeaders.cacheControl.includes('no-store') &&
+        !cacheHeaders.cacheControl.includes('Error');
+
       // Determine if this is a high-traffic image
       const isHighTraffic = requestCount > 1000; // Arbitrary threshold
-      
+
       // Determine if this is a large file
       const isLargeFile = metadata && metadata.size > 500 * 1024; // >500KB
-      
+
       // Overall assessment
       let assessmentReason = [];
       if (isHighTraffic) assessmentReason.push('High traffic');
       if (isLargeFile) assessmentReason.push('Large file size');
       if (!hasCaching) assessmentReason.push('Ineffective caching');
-      
+
       // Optimization recommendations
       const recommendations = [];
       if (isLargeFile) {
@@ -229,7 +229,7 @@ async function analyzeImagekitBandwidth() {
         recommendations.push('Use a CDN if not already');
         recommendations.push('Implement client-side caching strategies');
       }
-      
+
       analysisResults.push({
         url,
         fileId,
@@ -256,7 +256,7 @@ async function analyzeImagekitBandwidth() {
         recommendations
       });
     }
-    
+
     // Generate the report
     const report = {
       summary: {
@@ -273,11 +273,11 @@ async function analyzeImagekitBandwidth() {
       topRequestedImages: [...analysisResults]
         .sort((a, b) => (b.usage?.requests || 0) - (a.usage?.requests || 0))
         .slice(0, 10),
-      imagesNeedingOptimization: analysisResults.filter(img => 
+      imagesNeedingOptimization: analysisResults.filter(img =>
         img.assessment?.isLargeFile || !img.assessment?.hasCaching),
       detailedResults: analysisResults
     };
-    
+
     // Calculate overall findings
     report.findings = {
       highTrafficCount: analysisResults.filter(r => r.assessment?.isHighTraffic).length,
@@ -286,16 +286,16 @@ async function analyzeImagekitBandwidth() {
       recommendedActions: [
         `${report.findings?.largeFileCount} images need size optimization`,
         `${report.findings?.poorCachingCount} images need improved caching`,
-        totalBandwidth > 1024 * 1024 * 1024 * 10 ? 'Overall bandwidth usage is very high' : 
+        totalBandwidth > 1024 * 1024 * 1024 * 10 ? 'Overall bandwidth usage is very high' :
           'Overall bandwidth usage is acceptable'
       ]
     };
-    
+
     // Write the report to file
     const dateStr = new Date().toISOString().split('T')[0];
     const reportFilePath = path.join(config.outputDir, `imagekit-bandwidth-analysis-${dateStr}.json`);
     fs.writeFileSync(reportFilePath, JSON.stringify(report, null, 2));
-    
+
     // Write a human-readable summary to file
     const summaryFilePath = path.join(config.outputDir, `imagekit-bandwidth-summary-${dateStr}.txt`);
     const summary = `
@@ -318,15 +318,15 @@ KEY FINDINGS
 
 TOP BANDWIDTH CONSUMERS
 ---------------------
-${report.topBandwidthConsumers.map((img, i) => 
-  `${i+1}. ${img.metadata?.name || 'Unknown'}: ${img.usage?.bandwidthHuman} (${img.usage?.requests || 0} requests)`
-).join('\n')}
+${report.topBandwidthConsumers.map((img, i) =>
+      `${i + 1}. ${img.metadata?.name || 'Unknown'}: ${img.usage?.bandwidthHuman} (${img.usage?.requests || 0} requests)`
+    ).join('\n')}
 
 TOP REQUESTED IMAGES
 ------------------
-${report.topRequestedImages.map((img, i) => 
-  `${i+1}. ${img.metadata?.name || 'Unknown'}: ${img.usage?.requests || 0} requests (${img.usage?.bandwidthHuman})`
-).join('\n')}
+${report.topRequestedImages.map((img, i) =>
+      `${i + 1}. ${img.metadata?.name || 'Unknown'}: ${img.usage?.requests || 0} requests (${img.usage?.bandwidthHuman})`
+    ).join('\n')}
 
 RECOMMENDATIONS
 -------------
@@ -340,13 +340,13 @@ RECOMMENDATIONS
 
 The detailed analysis report is available at: ${reportFilePath}
 `;
-    
+
     fs.writeFileSync(summaryFilePath, summary);
-    
+
     console.log(`Analysis complete. Reports saved to:`);
     console.log(`- Detailed JSON: ${reportFilePath}`);
     console.log(`- Summary: ${summaryFilePath}`);
-    
+
     return {
       status: 'success',
       reportPath: reportFilePath,

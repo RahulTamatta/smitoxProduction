@@ -231,7 +231,7 @@ const Products = () => {
           <div style={{ fontWeight: 'bold' }}>{product.custom_order}</div>
           <div style={{ fontWeight: 'bold' }}>{product.name}</div>
           <div style={{ color: 'gray', fontSize: '0.875rem' }}>
-            {product.category?.name} - {product.subcategory.name}
+            {product.category?.name || 'No Category'} - {product.subcategory?.name || 'No Subcategory'}
           </div>
         </div>
       </div>
@@ -488,8 +488,8 @@ const Products = () => {
                         </td>
                         <td style={{ padding: '12px 16px', fontSize: '14px', color: '#0f172a', fontWeight: '500' }}>{product.name}</td>
 
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#6b7280' }}>{product.category?.name}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#6b7280' }}>{product.subcategory.name}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#6b7280' }}>{product.category?.name || 'N/A'}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#6b7280' }}>{product.subcategory?.name || 'N/A'}</td>
                         <td style={{ padding: '12px 16px', fontSize: '14px', color: '#0f172a', fontWeight: '500' }}>₹{product.perPiecePrice}</td>
                         <td style={{ padding: '12px 16px', fontSize: '14px', color: '#0f172a' }}>{product.stock}</td>
                         <td style={{ padding: '12px 16px' }}>

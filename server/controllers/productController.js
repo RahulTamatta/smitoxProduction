@@ -1054,11 +1054,18 @@ export const processPaymentController = async (req, res) => {
         const enrichedProducts = await enrichOrderProducts(products);
         console.log(`[Payment] Products enriched with snapshot data | Count: ${enrichedProducts.length}`);
 
-        // If admin (role 1) is placing the order and userId is provided, use that userId
+        // If admin (role 1 or role string 'admin'/'super_admin') is placing the order and userId is provided, use that userId
         // Otherwise use the authenticated user's ID
         let buyerId = req.user._id;
-        if (req.user.role === 1 && req.body.userId) {
-          console.log(`[Payment] Admin placing order for user: ${req.body.userId}`);
+
+        // Check if user is admin - handle both numeric (1) and string ('admin', 'super_admin') roles
+        const isAdmin = req.user.role === 1 ||
+          req.user.role === '1' ||
+          req.user.role === 'admin' ||
+          req.user.role === 'super_admin';
+
+        if (isAdmin && req.body.userId) {
+          console.log(`[Payment] Admin placing order for customer user: ${req.body.userId}`);
           buyerId = req.body.userId;
         }
 

@@ -146,7 +146,7 @@ const PORT = process.env.PORT || 8080;
 
 // Start the server
 const server = app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`.cyan);
+  console.log(`Server running in ${process.env.DEV_MODE || 'development'} mode on port ${PORT}`.cyan);
 
   // Start Plan Expiry CRON Jobs
   try {

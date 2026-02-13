@@ -109,4 +109,8 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Add index for faster payment lookups during reconciliation
+orderSchema.index({ 'payment.transactionId': 1 });
+orderSchema.index({ 'payment.razorpayPaymentId': 1 });
+
 export default mongoose.model("Order", orderSchema);
