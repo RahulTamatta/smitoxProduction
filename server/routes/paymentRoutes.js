@@ -1,11 +1,12 @@
 import express from "express";
 import {
   createPaymentOrder,
-  verifyPayment,
   getPaymentDetails,
+  getSubscriptionStatus,
   getUserPayments,
+  verifyPayment
 } from "../controllers/paymentController.js";
-import { requireSignIn, auditLog } from "../middlewares/rbacMiddleware.js";
+import { auditLog, requireSignIn } from "../middlewares/rbacMiddleware.js";
 
 const router = express.Router();
 
@@ -37,6 +38,13 @@ router.get(
   "/",
   requireSignIn,
   getUserPayments
+);
+
+// Get subscription status (Polling endpoint)
+router.get(
+  "/status/current",
+  requireSignIn,
+  getSubscriptionStatus
 );
 
 export default router;

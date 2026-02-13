@@ -1,0 +1,518 @@
+date,time,sender,content
+01/11/24,10:53 pm,Rahul,"18k
+1300k
+6k
+2k
+5k ios ka
+5k(1 nov)"
+16/11/24,12:05 pm,Rahul,"""name"": ""vvhvh"",
+""slug"": ""vvhvh"",
+""description"": ""hvhjv jh"",
+""price"": 2100,
+""category"": {
+""$oid"": ""670d5f0bf7fd1885a2a36953""
+},
+""subcategory"": {
+""$oid"": ""670d5f1ff7fd1885a2a3695f""
+},
+""brand"": {
+""$oid"": ""670d5f71f7fd1885a2a36984""
+},
+""quantity"": 1,
+""stock"": 1,
+""photo"": {
+""data"": {
+""$binary"": {
+""base64"": ""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"",
+""subType"": ""00""
+}
+},
+""contentType"": ""image/jpeg""
+},
+""images"": [],
+""shipping"": false,
+""hsn"": ""hjhj"",
+""unit"": """",
+""additionalUnit"": ""Unit A"",
+""purchaseRate"": 12,
+""mrp"": 22,
+""perPiecePrice"": 100,
+""weight"": 1,
+""unitSet"": 21,
+""gst"": 4535,
+""allowCOD"": false,
+""returnProduct"": false,
+""bulkProducts"": [
+{
+""minimum"": 1,
+""maximum"": 2000,
+""discount_mrp"": 2,
+""selling_price_set"": 98,
+""_id"": {
+""$oid"": ""670d64b851d2c8b6a9eb7afb""
+}
+}
+],
+""isActive"": ""1"",
+""variants"": [],
+""sets"": [],"
+16/11/24,12:06 pm,Rahul,"""name"": ""vvhvh"",
+""slug"": ""vvhvh"",
+""description"": ""hvhjv jh"",
+""price"": 2100,
+""category"": {
+""$oid"": ""670d5f0bf7fd1885a2a36953""
+},
+""subcategory"": {
+""$oid"": ""670d5f1ff7fd1885a2a3695f""
+},
+""brand"": {
+""$oid"": ""670d5f71f7fd1885a2a36984""
+},
+""quantity"": 1,
+""stock"": 1,
+""photo"": {
+""data"": {
+""$binary"": {
+""base64"":
+""images"": [],
+""shipping"": false,
+""hsn"": ""hjhj"",
+""unit"": """",
+""additionalUnit"": ""Unit A"",
+""purchaseRate"": 12,
+""mrp"": 22,
+""perPiecePrice"": 100,
+""weight"": 1,
+""unitSet"": 21,
+""gst"": 4535,
+""allowCOD"": false,
+""returnProduct"": false,
+""bulkProducts"": [
+{
+""minimum"": 1,
+""maximum"": 2000,
+""discount_mrp"": 2,
+""selling_price_set"": 98,
+""_id"": {
+""$oid"": ""670d64b851d2c8b6a9eb7afb""
+}
+}
+],
+""isActive"": ""1"",
+""variants"": [],
+""sets"": [],"
+18/12/24,5:01 pm,Rahul,https://www.transfernow.net/dl/20241218SojUxsiV
+18/12/24,7:11 pm,Smitox B2b All Electronic,https://www.transfernow.net/dl/20241218zQ9w2h9V
+19/12/24,6:10 pm,Smitox B2b All Electronic,631331 is the OTP to verify your mobile number with Razorpay. OTP is valid till 18:14:27 IST. Do not share with anyone.
+07/01/25,1:30 pm,Smitox B2b All Electronic,"Platform: Digital Ocean
+Processor: 1 AMD vCPU
+RAM: 2GB
+Storage: 50GB Nvme SSD
+Price: $14/month + 18% GST (To billed monthly directly by Digital Ocean to client)
+One time setup We might require some help from developer)
+Monthly server maintenance - 1.5k/month - To be paid 12months in advance <This message was edited>"
+18/01/25,1:55 pm,Rahul,https://www.transfernow.net/dl/20250118InKujcq4
+02/04/25,12:07 pm,Smitox B2b All Electronic,18 he
+02/04/25,12:32 pm,Rahul,"{
+""_id"": {
+""$oid"": ""67d1473e856cf28c0dbf80d0""
+},
+""user"": {
+""$oid"": ""67a08ef706c7098123ee4d69""
+},
+""products"": [
+{
+""product"": {
+""$oid"": ""676a9aad7af06202e3814994""
+},
+""quantity"": 3,
+""_id"": {
+""$oid"": ""67d6638b8e54fefaeccf9006""
+}
+},
+{
+""product"": {
+""$oid"": ""6773b7227dc0e908e0634dc4""
+},
+""quantity"": 10,
+""_id"": {
+""$oid"": ""67def18dd782713bbd38c158""
+}
+},
+{
+""product"": {
+""$oid"": ""6773b78e7dc0e908e0635328""
+},
+""quantity"": 10,
+""_id"": {
+""$oid"": ""67def1c0d782713bbd38c1e0""
+}
+},
+{
+""product"": {
+""$oid"": ""6775304a91f3a4f5ea3c09b7""
+},
+""quantity"": 24,
+""_id"": {
+""$oid"": ""67e05e42d782713bbd407161""
+}
+},
+{
+""product"": {
+""$oid"": ""6773adc97dc0e908e062fd1f""
+},
+""quantity"": 10,
+""_id"": {
+""$oid"": ""67e05e93d782713bbd407888""
+}
+},
+{
+""product"": {
+""$oid"": ""6773ae417dc0e908e063040b""
+},
+""quantity"": 10,
+""_id"": {
+""$oid"": ""67e05ea8d782713bbd407986""
+}
+},
+{
+""product"": {
+""$oid"": ""6772bc6a7dc0e908e0628c74""
+},
+""quantity"": 50,
+""_id"": {
+""$oid"": ""67e05ecdd782713bbd407a6d""
+}
+},
+{
+""product"": {
+""$oid"": ""677bd39258e18843aa0938f8""
+},
+""quantity"": 5,
+""_id"": {
+""$oid"": ""67e061b4d782713bbd40a095""
+}
+},
+{
+""product"": {
+""$oid"": ""676a9ac17af06202e3814a0a""
+},
+""quantity"": 3,
+""_id"": {
+""$oid"": ""67e06425d782713bbd40b27b""
+}
+},
+{
+""product"": {
+""$oid"": ""6772bd0a7dc0e908e062994a""
+},
+""quantity"": 10,
+""_id"": {
+""$oid"": ""67ea6f16d0338b4d4952369e""
+}
+},
+{
+""product"": {
+""$oid"": ""676eb6e4aa0df4f25eab5157""
+},
+""quantity"": 10,
+""_id"": {
+""$oid"": ""67ea9745d0338b4d4954d2c5""
+}
+},
+{
+""product"": {
+""$oid"": ""676acab045ae9aa5fa4e4c21""
+},
+""quantity"": 3,
+""_id"": {
+""$oid"": ""67ea9968d0338b4d49550032""
+}
+},
+{
+""product"": {
+""$oid"": ""677bf8df58e18843aa0be15b""
+},
+""quantity"": 2,
+""_id"": {
+""$oid"": ""67ea9bd3d0338b4d49553ba7""
+}
+},
+{
+""product"": {
+""$oid"": ""677bcc6758e18843aa08a638""
+},
+""quantity"": 20,
+""_id"": {
+""$oid"": ""67ea9f53d0338b4d49557fea""
+}
+},
+{
+""product"": {
+""$oid"": ""6772944532474bf6e01f9548""
+},
+""quantity"": 5,
+""_id"": {
+""$oid"": ""67eaa025d0338b4d49558f0f""
+}
+},
+{
+""product"": {
+""$oid"": ""6772947432474bf6e01f99ec""
+},
+""quantity"": 5,
+""_id"": {
+""$oid"": ""67eaa039d0338b4d4955913f""
+}
+},
+{
+""product"": {
+""$oid"": ""676eb52daa0df4f25eab2f54""
+},
+""quantity"": 3,
+""_id"": {
+""$oid"": ""67ec0567d0338b4d495dc97b""
+}
+},
+{
+""product"": {
+""$oid"": ""676eb164aa0df4f25eaae8c4""
+},
+""quantity"": 1,
+""_id"": {
+""$oid"": ""67ec0577d0338b4d495dcb9e""
+}
+},
+{
+""product"": {
+""$oid"": ""6772a3da32474bf6e0203997""
+},
+""quantity"": 10,
+""_id"": {
+""$oid"": ""67ec06b3d0338b4d495de5c6""
+}
+},
+{
+""product"": {
+""$oid"": ""677288a39a69fe3ecb62bb1f""
+},
+""quantity"": 20,
+""_id"": {
+""$oid"": ""67ecc898d0338b4d496038ef""
+}
+},
+{
+""product"": {
+""$oid"": ""677287df9a69fe3ecb62ac14""
+},
+""quantity"": 20,
+""_id"": {
+""$oid"": ""67eccd84d0338b4d49605117""
+}
+},
+{
+""product"": {
+""$oid"": ""67e409c810d673b4c1bcbb15""
+},
+""quantity"": 200,
+""_id"": {
+""$oid"": ""67ecce04d0338b4d496054dd""
+}
+},
+{
+""product"": {
+""$oid"": ""679cb94ce4e2c7d3b8c26c26""
+},
+""quantity"": 20,
+""_id"": {
+""$oid"": ""67ecce31d0338b4d49605661""
+}
+},
+{
+""product"": {
+""$oid"": ""676d708d4dc1315c9b95abdf""
+},
+""quantity"": 10,
+""_id"": {
+""$oid"": ""67eccf3dd0338b4d49605c09""
+}
+},
+{
+""product"": {
+""$oid"": ""67b97eaa9547e3251418f6c3""
+},
+""quantity"": 10,
+""_id"": {
+""$oid"": ""67eccf70d0338b4d49605c9a""
+}
+},
+{
+""product"": {
+""$oid"": ""676eb32daa0df4f25eab0fb1""
+},
+""quantity"": 10,
+""_id"": {
+""$oid"": ""67eccfb0d0338b4d49605d81""
+}
+},
+{
+""product"": {
+""$oid"": ""67e7d310d0338b4d4949e69d""
+},
+""quantity"": 5,
+""_id"": {
+""$oid"": ""67eccfdcd0338b4d49605e1d""
+}
+},
+{
+""product"": {
+""$oid"": ""67a1f88e14daf2f09fa911a9""
+},
+""quantity"": 20,
+""_id"": {
+""$oid"": ""67eccfebd0338b4d49605e9d""
+}
+},
+{
+""product"": {
+""$oid"": ""67a1f93814daf2f09fa92546""
+},
+""quantity"": 20,
+""_id"": {
+""$oid"": ""67eccff2d0338b4d49605f23""
+}
+},
+{
+""product"": {
+""$oid"": ""67a1f97314daf2f09fa92694""
+},
+""quantity"": 20,
+""_id"": {
+""$oid"": ""67ecd001d0338b4d49605fb5""
+}
+},
+{
+""product"": {
+""$oid"": ""67779f8b24425d4aca74c1b3""
+},
+""quantity"": 5,
+""_id"": {
+""$oid"": ""67ecd22cd0338b4d49607039""
+}
+},
+{
+""product"": {
+""$oid"": ""6773cf0d64a4b30b1bddd4b7""
+},
+""quantity"": 5,
+""_id"": {
+""$oid"": ""67ecd286d0338b4d4960768c""
+}
+}
+],
+""createdAt"": {
+""$date"": ""2025-03-12T08:35:10.655Z""
+},
+""updatedAt"": {
+""$date"": ""2025-04-02T07:00:58.531Z""
+},
+""__v"": 140
+}"
+27/12/25,12:21 am,Rahul,18 or vaha pe mene bheja hu  ek bar dekho
+27/12/25,12:22 am,Smitox B2b All Electronic,Kya 18
+27/12/25,12:22 am,Rahul,18 search karo
+27/12/25,12:23 am,Rahul,Use pehle aise likha hoga kuch 18+ aisa
+22/01/26,11:40 pm,Rahul,"Here’s a **concrete, concise comparison** of **Plivo vs SignalWire** for your call-reminder app, including **voice call rates, phone number costs, and rotation planning**.
+---
+## 📞 Provider Pricing Summary
+### **1) Plivo (Good for India & quick setup)**
+**Voice call rate (India outbound):**
+* ~₹0.40 per minute for outbound calls. Billing is per 60-second interval, so a 20-second call still bills as 1 minute. ([plivo.com][1])
+**Phone number (DID) cost:**
+* Local Indian number: around **₹250/month** (approx.) for each number. ([plivo.com][1])
+**Pros:**
+* Easy India number provisioning
+* Stable for transactional reminders
+* Lower blocking risk when behaviour controls applied
+* Simple pay-as-you-go
+**Cons:**
+* Higher per-minute compared to some global providers
+* Billing per full minute (20 sec still counts as 60 sec) ([support.plivo.com][2])
+---
+### **2) SignalWire (Cheapest voice, best at scale)**
+**Voice call rate (outbound):**
+* Local outbound: ~$0.008/min (~₹0.65/min approx at ₹80/$). ([signalwire.com][3])
+**Phone number rental cost:**
+* Local DID: **$0.50/month (~₹40–45)**
+* Toll-Free DID: **$0.80/month (~₹65–70)** ([signalwire.com][3])
+**Pros:**
+* Very low call cost
+* Lower number cost
+* Good for high volume
+**Cons:**
+* India local DID support may be limited or require workarounds (provider focuses on U.S./Canada numbers)
+* Setup & compliance for India may need extra steps
+---
+## 📊 Quick Cost Comparison (Voice + DID)
+| Provider       |   Voice Cost / min | DID Cost / number / month | Best Fit                        |
+| -------------- | -----------------: | ------------------------: | ------------------------------- |
+| **Plivo**      |             ~₹0.40 |                     ~₹250 | India-centric reminders         |
+| **SignalWire** | ~₹0.65 (converted) |                   ~₹40–70 | High volume English/U.S. region |
+> Note: SignalWire voice rates vary by route type (e.g., SIP ~$0.003/min too). ([signalwire.com][3])
+---
+## 📈 How Many Numbers You Need (Rotation)
+You **do not** need to rotate numbers every month. Instead use **small stable pool** with **health-based rotation**:
+### Basic Rotation Rule
+* **Start with 2–3 active numbers**
+* **1 standby number** (idle, clean)
+* Monitor number health:
+* Rotate only if block rate rises
+* Do not replace every month automatically
+### Approx Plan Based on Users
+| Daily Call Load        | Estimated Numbers |
+| ---------------------- | ----------------: |
+| Up to ~1,500 calls/day |                 1 |
+| ~3,000–5,000 calls/day |               1–2 |
+| ~10,000 calls/day      |               2–3 |
+**Rotation Guidance:**
+* Rotate number only when necessary based on block/health signals
+* Keep numbers alive longer by controlling call frequency and patterns
+---
+## 🧠 Which One to Choose
+### When to pick **Plivo**
+* Your app is India-focused
+* You want easy +91 number buying
+* You want minimal compliance headaches
+* Reminder calls are short transactional calls
+### When to use **SignalWire**
+* You are targeting **US/International numbers**
+* You need **lowest voice cost at scale**
+* You are prepared to handle compliance yourself
+* You plan to mix AI agents or SIP calls
+---
+## 🪙 Practical Per-User Cost Example (India focus)
+For a reminder system billing calls:
+* **20 sec call ≈ 60 sec bill**
+* **Plivo ~₹0.40 / call**
+If user gets ~2 calls/week:
+```
+2 calls × 4 weeks × ₹0.40 ≈ ₹3.20/user/month
+```
+Phone numbers:
+* 2 numbers × ₹250 = ₹500/month
+* Spread over many users, this becomes negligible per user.
+---
+## 📌 Summary
+**Best choice for your call reminder app:**
+* **Plivo** for India (easy numbers, stable compliance)
+* **SignalWire** if you expand beyond India or want lowest voice cost at scale
+**Phone numbers:**
+* Pay monthly rental (~₹250 with Plivo, ~$0.50 with SignalWire)
+* Use a small pool (2–3) with monitoring
+* Rotate only on health signals
+---
+If you want, I can give you a **sample monthly cost calculator template** (Excel/Google Sheet model) for different user volumes.
+[1]: https://www.plivo.com/voice/pricing/?utm_source=chatgpt.com ""Voice API Pricing | PlivoIndia""
+[2]: https://support.plivo.com/hc/en-us/articles/360041863771-How-will-I-be-charged-for-calls?utm_source=chatgpt.com ""How will I be charged for calls?""
+[3]: https://signalwire.com/pricing/voice?utm_source=chatgpt.com ""Programmable Voice API - Pricing"""

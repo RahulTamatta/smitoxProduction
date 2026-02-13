@@ -1,9 +1,9 @@
-import Razorpay from "razorpay";
 import crypto from "crypto";
+import Razorpay from "razorpay";
+import { ROLES } from "../config/rbac-policy.js";
+import { logAuditEvent } from "../middlewares/rbacMiddleware.js";
 import paymentModel from "../models/paymentModel.js";
 import subscriptionPlanModel from "../models/subscriptionPlanModel.js";
-import { logAuditEvent } from "../middlewares/rbacMiddleware.js";
-import { ROLES } from "../config/rbac-policy.js";
 
 // Initialize Razorpay lazily to ensure env vars are loaded
 let razorpay = null;
@@ -128,14 +128,15 @@ export const verifyPayment = async (req, res) => {
       });
     }
 
-    // Update payment record
+    // Update payment record to 'verified' (Establish trust but don't activate yet)
+    // The Webhook is the single source of truth for activation
     const payment = await paymentModel.findOneAndUpdate(
       { razorpayOrderId: razorpay_order_id },
       {
-        status: "completed",
+        status: "verified",
         razorpayPaymentId: razorpay_payment_id,
         razorpaySignature: razorpay_signature,
-        completedAt: new Date(),
+        verifiedAt: new Date(),
       },
       { new: true }
     );
@@ -165,9 +166,10 @@ export const verifyPayment = async (req, res) => {
 
     res.status(200).send({
       success: true,
-      message: "Payment verified successfully",
+      message: "Payment verified successfully. Subscription activation in progress.",
       payment,
       planId,
+      shouldPoll: true,
     });
   } catch (error) {
     console.error("Error verifying payment:", error);
@@ -257,9 +259,39 @@ export const getUserPayments = async (req, res) => {
   }
 };
 
+/**
+ * Get subscription status for polling
+ */
+export const getSubscriptionStatus = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const status = await subscriptionService.getSubscriptionStatus(userId);
+
+    if (!status) {
+      return res.status(404).send({
+        success: false,
+        message: "No subscription profile found",
+      });
+    }
+
+    res.status(200).send({
+      success: true,
+      status,
+    });
+  } catch (error) {
+    console.error("Error fetching subscription status:", error);
+    res.status(500).send({
+      success: false,
+      message: "Error fetching subscription status",
+      error: error.message,
+    });
+  }
+};
+
 export default {
   createPaymentOrder,
   verifyPayment,
   getPaymentDetails,
   getUserPayments,
+  getSubscriptionStatus,
 };

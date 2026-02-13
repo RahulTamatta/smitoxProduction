@@ -35,13 +35,25 @@ const paymentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "completed", "failed", "refunded"],
+      enum: ["pending", "verified", "completed", "failed", "refunded"],
       default: "pending",
     },
     paymentMethod: {
       type: String,
       enum: ["razorpay", "stripe", "paypal"],
       default: "razorpay",
+    },
+    webhookEventId: {
+      type: String,
+      sparse: true,
+    },
+    verifiedAt: {
+      type: Date,
+      sparse: true,
+    },
+    processedAt: {
+      type: Date,
+      sparse: true,
     },
     refundAmount: {
       type: Number,

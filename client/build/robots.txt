@@ -1,5 +1,0 @@
-User-agent: *
-Disallow: /dashboard/
-Disallow: /admin/
-
-Sitemap: https://www.smitox.com/sitemap.xml
