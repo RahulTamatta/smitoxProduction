@@ -204,6 +204,8 @@ const UpdateProduct = () => {
               processedImages = [];
             }
           }
+          // If multipleimages is already an array, use it directly
+          else if (Array.isArray(product.multipleimages)) {
             // Filter out null, undefined, and strings like "null"
             processedImages = product.multipleimages
               .filter(img => img && img !== 'null' && img !== 'undefined' && img !== '[]')
