@@ -9,6 +9,22 @@ const YouTubePopupModal = ({
 }) => {
   if (!showYoutubePopup || !product.youtubeUrl) return null;
 
+  const getEmbedUrl = (url) => {
+    if (!url) return '';
+    
+    // Regular expression to match various YouTube URL formats
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/)([^#&?]*).*/;
+    const match = url.match(regExp);
+    
+    if (match && match[2].length === 11) {
+      return `https://www.youtube.com/embed/${match[2]}`;
+    }
+    
+    // If it's already an embed URL or simple URL, just return it as fallback
+    if (url.includes('embed/')) return url;
+    return url.replace('watch?v=', 'embed/');
+  };
+
   return (
     <div style={{
       position: "fixed",
@@ -50,11 +66,7 @@ const YouTubePopupModal = ({
         <iframe
           width="100%"
           height="100%"
-          src={product.youtubeUrl ? 
-            (product.youtubeUrl.includes('embed/') ? 
-              product.youtubeUrl : 
-              product.youtubeUrl.replace('watch?v=', 'embed/')
-            ) : ''}
+          src={getEmbedUrl(product.youtubeUrl)}
           title="YouTube video player"
           frameBorder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

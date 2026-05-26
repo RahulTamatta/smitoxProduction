@@ -153,7 +153,11 @@ const UpdateProduct = () => {
   // Get single product
   const getSingleProduct = async () => {
     try {
-      const { data } = await axios.get(`/api/v1/product/get-product/${params.slug}`);
+      const { data } = await axios.get(`/api/v1/product/admin/get-product/${params.slug}`, {
+        headers: {
+          Authorization: auth?.token,
+        },
+      });
       if (data?.success) {
         const product = data.product;
         console.log('Product data:', product);
@@ -200,20 +204,21 @@ const UpdateProduct = () => {
               processedImages = [];
             }
           }
-          // If multipleimages is already an array, use it directly
-          else if (Array.isArray(product.multipleimages)) {
-            processedImages = product.multipleimages.map(img => {
-              // If any array item is a string that needs parsing (like a JSON string)
-              if (typeof img === 'string' && img.startsWith('{')) {
-                try {
-                  const parsed = JSON.parse(img);
-                  return parsed.url || img;
-                } catch (e) {
-                  return img;
+            // Filter out null, undefined, and strings like "null"
+            processedImages = product.multipleimages
+              .filter(img => img && img !== 'null' && img !== 'undefined' && img !== '[]')
+              .map(img => {
+                // If any array item is a string that needs parsing (like a JSON string)
+                if (typeof img === 'string' && img.startsWith('{')) {
+                  try {
+                    const parsed = JSON.parse(img);
+                    return parsed.url || img;
+                  } catch (e) {
+                    return img;
+                  }
                 }
-              }
-              return img;
-            });
+                return img;
+              });
           }
 
           console.log('Processed multipleimages:', processedImages);
