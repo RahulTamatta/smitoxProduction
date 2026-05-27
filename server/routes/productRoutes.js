@@ -14,7 +14,8 @@ import {
   realtedProductController,
   searchProductController,
   updateProductController,
-  verifyPaymentController
+  verifyPaymentController,
+  getAdminSingleProductController
 } from "../controllers/productController.js";
 import { requireSignIn } from "../middlewares/authMiddleware.js";
 import { upload } from "../middlewares/multer.js";
@@ -116,6 +117,7 @@ router.put(
 
 
 router.get("/get-product/:slug", getSingleProductController);
+router.get("/admin/get-product/:slug", requireSignIn, requireCapability("products:read"), getAdminSingleProductController);
 router.get("/product-photo/:pid", productPhotoController);
 router.delete(
   "/delete-product/:pid",

@@ -1,27 +1,31 @@
-import React, { useState, useEffect } from "react";
-import { useAuth } from "../../context/auth";
-import Layout from "../../components/Layout/Layout";
 import {
-  getSellerApplications,
-  getApplicationById,
-  approveApplication,
-  rejectApplication,
-} from "../../services/sellerApi";
-import {
-  Search,
+  AlertCircle,
+  Ban,
+  Briefcase,
+  Check,
   ChevronLeft,
   ChevronRight,
   Eye,
-  Check,
-  X,
-  Loader,
-  AlertCircle,
   FileText,
+  Loader,
   Mail,
-  Phone,
   MapPin,
-  Briefcase,
+  Phone,
+  RotateCcw,
+  Search,
+  X
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import Layout from "../../components/Layout/Layout";
+import { useAuth } from "../../context/auth";
+import {
+  approveApplication,
+  getApplicationById,
+  getSellerApplications,
+  rejectApplication,
+  requestReupload,
+  suspendSeller,
+} from "../../services/sellerApi";
 import "./sellerApplications.css";
 
 const SellerApplications = () => {
@@ -44,9 +48,15 @@ const SellerApplications = () => {
   const [showDrawer, setShowDrawer] = useState(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showSuspendModal, setShowSuspendModal] = useState(false);
+  const [showReuploadModal, setShowReuploadModal] = useState(false);
   const [approveNotes, setApproveNotes] = useState("");
   const [rejectReason, setRejectReason] = useState("");
+  const [suspendReason, setSuspendReason] = useState("");
+  const [reuploadReason, setReuploadReason] = useState("");
+  const [reuploadFields, setReuploadFields] = useState([]);
   const [actionLoading, setActionLoading] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
 
   // Fetch applications
   useEffect(() => {
@@ -190,6 +200,8 @@ const SellerApplications = () => {
       approved: "badge-success",
       rejected: "badge-danger",
       active: "badge-success",
+      suspended: "badge-danger",
+      reupload_requested: "badge-warning",
     };
 
     return (
@@ -197,6 +209,63 @@ const SellerApplications = () => {
         {status.replace(/_/g, " ")}
       </span>
     );
+  };
+
+  // Handle suspend seller
+  const handleSuspend = async () => {
+    if (!suspendReason.trim()) {
+      setError("Please provide a suspension reason");
+      return;
+    }
+    try {
+      setActionLoading(true);
+      setError("");
+      const response = await suspendSeller(selectedApp._id, suspendReason, auth?.token);
+      if (response.success) {
+        setApplications(prev => prev.filter(app => app._id !== selectedApp._id));
+        setShowDrawer(false);
+        setShowSuspendModal(false);
+        setSuspendReason("");
+        alert("Seller suspended successfully!");
+      } else {
+        setError(response.message || "Failed to suspend seller");
+      }
+      setActionLoading(false);
+    } catch (err) {
+      setError(err.message || "Failed to suspend seller");
+      setActionLoading(false);
+    }
+  };
+
+  // Handle request re-upload
+  const handleRequestReupload = async () => {
+    if (!reuploadReason.trim()) {
+      setError("Please provide a reason for re-upload request");
+      return;
+    }
+    try {
+      setActionLoading(true);
+      setError("");
+      const response = await requestReupload(
+        selectedApp._id,
+        { reason: reuploadReason, fields: reuploadFields },
+        auth?.token
+      );
+      if (response.success) {
+        setApplications(prev => prev.filter(app => app._id !== selectedApp._id));
+        setShowDrawer(false);
+        setShowReuploadModal(false);
+        setReuploadReason("");
+        setReuploadFields([]);
+        alert("Re-upload requested successfully!");
+      } else {
+        setError(response.message || "Failed to request re-upload");
+      }
+      setActionLoading(false);
+    } catch (err) {
+      setError(err.message || "Failed to request re-upload");
+      setActionLoading(false);
+    }
   };
 
   // Render table
@@ -225,9 +294,9 @@ const SellerApplications = () => {
               </td>
               <td>
                 <strong>
-                  {app.selectedPlanSnapshot?.name || 
-                   app.selectedPlanId?.name || 
-                   "No Plan"}
+                  {app.selectedPlanSnapshot?.name ||
+                    app.selectedPlanId?.name ||
+                    "No Plan"}
                 </strong>
               </td>
               <td>
@@ -317,24 +386,36 @@ const SellerApplications = () => {
           <div className="section">
             <h3>Business Information</h3>
             <div className="info-grid">
+              {selectedApp.storeName && (
+                <div className="info-item">
+                  <label>Store Name</label>
+                  <p>{selectedApp.storeName}</p>
+                </div>
+              )}
               <div className="info-item">
                 <label>Business Name</label>
                 <p className="flex-center">
                   <Briefcase size={16} />
-                  {selectedApp.businessName}
+                  {selectedApp.businessName || selectedApp.legalBusinessName || "N/A"}
                 </p>
               </div>
               <div className="info-item">
                 <label>Business Type</label>
-                <p>{selectedApp.businessType.replace(/_/g, " ")}</p>
+                <p>{(selectedApp.businessType || "").replace(/_/g, " ")}</p>
               </div>
+              {selectedApp.businessCategory && (
+                <div className="info-item">
+                  <label>Category</label>
+                  <p>{selectedApp.businessCategory}</p>
+                </div>
+              )}
               <div className="info-item">
                 <label>GST Number</label>
-                <p>{selectedApp.gstNumber}</p>
+                <p>{selectedApp.gstNumber || (selectedApp.gstExemptionDeclared ? "GST Exempt (Declared)" : "Not Provided")}</p>
               </div>
               <div className="info-item">
                 <label>PAN Number</label>
-                <p>{selectedApp.panNumber}</p>
+                <p>{selectedApp.panNumber || "Not Provided"}</p>
               </div>
             </div>
             {selectedApp.businessDescription && (
@@ -375,9 +456,9 @@ const SellerApplications = () => {
               <div className="info-item">
                 <label>Selected Plan</label>
                 <p>
-                  {selectedApp.selectedPlanSnapshot?.name || 
-                   selectedApp.selectedPlanId?.name || 
-                   "No Plan"}
+                  {selectedApp.selectedPlanSnapshot?.name ||
+                    selectedApp.selectedPlanId?.name ||
+                    "No Plan"}
                 </p>
               </div>
               <div className="info-item">
@@ -403,49 +484,68 @@ const SellerApplications = () => {
             </div>
           )}
 
-          {/* Documents */}
+          {/* Documents with Preview */}
           <div className="section">
-            <h3>Documents</h3>
-            <div className="documents-list">
+            <h3>Uploaded Documents</h3>
+            <div className="documents-grid">
               {[
-                { label: "Identity Proof", file: selectedApp.identityProofImage },
-                { label: "Address Proof", file: selectedApp.addressProofImage },
+                { label: "Identity Proof", type: selectedApp.identityProofType, file: selectedApp.identityProofImage },
+                { label: "Address Proof", type: selectedApp.addressProofType, file: selectedApp.addressProofImage },
                 { label: "GST Certificate", file: selectedApp.gstImage },
-                { label: "PAN", file: selectedApp.panImage },
+                { label: "PAN Card", file: selectedApp.panImage },
                 { label: "Cancelled Cheque", file: selectedApp.cancelledCheckImage },
               ].map(
                 (doc, idx) =>
                   doc.file && (
-                    <a
-                      key={idx}
-                      href={doc.file}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="document-link"
-                    >
-                      <FileText size={16} />
-                      {doc.label}
-                    </a>
+                    <div key={idx} className="document-card">
+                      <div className="document-preview" onClick={() => setPreviewImage(doc.file)}>
+                        {doc.file.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                          <img src={doc.file} alt={doc.label} />
+                        ) : (
+                          <div className="doc-icon"><FileText size={32} /></div>
+                        )}
+                      </div>
+                      <div className="document-info">
+                        <span className="doc-label">{doc.label}</span>
+                        {doc.type && <span className="doc-type">{doc.type.replace(/_/g, " ")}</span>}
+                      </div>
+                      <a href={doc.file} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline">
+                        <Eye size={14} /> Open
+                      </a>
+                    </div>
                   )
               )}
             </div>
           </div>
+
+          {/* Image Preview Lightbox */}
+          {previewImage && (
+            <div className="image-lightbox" onClick={() => setPreviewImage(null)}>
+              <div className="lightbox-content" onClick={e => e.stopPropagation()}>
+                <button className="btn-close lightbox-close" onClick={() => setPreviewImage(null)}>✕</button>
+                <img src={previewImage} alt="Document Preview" />
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       <div className="drawer-footer">
-        {console.log("Drawer footer - selectedApp status:", selectedApp?.status)}
         {(selectedApp?.status === "submitted" || selectedApp?.status === "under_review") && (
           <>
             <button
-              className="btn btn-danger"
+              className="btn btn-warning btn-sm"
               onClick={() => {
-                console.log("Direct Reject button clicked");
-                const reason = prompt("Enter rejection reason:");
-                if (reason) {
-                  handleReject();
-                }
+                setShowReuploadModal(true);
               }}
+              disabled={actionLoading}
+            >
+              <RotateCcw size={16} />
+              Request Re-upload
+            </button>
+            <button
+              className="btn btn-danger"
+              onClick={() => setShowRejectModal(true)}
               disabled={actionLoading}
             >
               <X size={18} />
@@ -453,10 +553,7 @@ const SellerApplications = () => {
             </button>
             <button
               className="btn btn-success"
-              onClick={() => {
-                console.log("Direct Approve button clicked");
-                handleApprove();
-              }}
+              onClick={() => setShowApproveModal(true)}
               disabled={actionLoading}
             >
               <Check size={18} />
@@ -464,10 +561,20 @@ const SellerApplications = () => {
             </button>
           </>
         )}
-        {selectedApp && !["submitted", "under_review"].includes(selectedApp.status) && (
+        {(selectedApp?.status === "approved" || selectedApp?.status === "active") && (
+          <button
+            className="btn btn-danger"
+            onClick={() => setShowSuspendModal(true)}
+            disabled={actionLoading}
+          >
+            <Ban size={18} />
+            Suspend Seller
+          </button>
+        )}
+        {selectedApp && !["submitted", "under_review", "approved", "active"].includes(selectedApp.status) && (
           <div className="alert alert-info">
             <AlertCircle size={16} />
-            <span>This application has already been {selectedApp.status}</span>
+            <span>This application status is: {selectedApp.status.replace(/_/g, " ")}</span>
           </div>
         )}
       </div>
@@ -647,6 +754,9 @@ const SellerApplications = () => {
               <option value="under_review">Under Review</option>
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+              <option value="reupload_requested">Re-upload Requested</option>
             </select>
           </div>
 
@@ -709,11 +819,10 @@ const SellerApplications = () => {
                   (page) => (
                     <button
                       key={page}
-                      className={`btn btn-sm ${
-                        pagination.page === page
+                      className={`btn btn-sm ${pagination.page === page
                           ? "btn-primary"
                           : "btn-outline"
-                      }`}
+                        }`}
                       onClick={() =>
                         setPagination({ ...pagination, page })
                       }
@@ -747,14 +856,107 @@ const SellerApplications = () => {
         {renderApproveModal()}
         {renderRejectModal()}
 
+        {/* Suspend Modal */}
+        {showSuspendModal && (
+          <div className="modal show">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h2>Suspend Seller</h2>
+                <button className="btn-close" onClick={() => setShowSuspendModal(false)}>✕</button>
+              </div>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Suspension Reason *</label>
+                  <textarea
+                    value={suspendReason}
+                    onChange={(e) => setSuspendReason(e.target.value)}
+                    placeholder="Explain why this seller is being suspended..."
+                    rows="4"
+                    className="form-control"
+                    required
+                  />
+                </div>
+                <div className="alert alert-danger">
+                  <AlertCircle size={20} />
+                  <span>This will immediately revoke seller access and deactivate their account.</span>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setShowSuspendModal(false)} disabled={actionLoading}>Cancel</button>
+                <button className="btn btn-danger" onClick={handleSuspend} disabled={actionLoading || !suspendReason.trim()}>
+                  {actionLoading ? <><Loader size={18} className="spinner-small" /> Suspending...</> : <><Ban size={18} /> Suspend Seller</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Re-upload Modal */}
+        {showReuploadModal && (
+          <div className="modal show">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h2>Request Document Re-upload</h2>
+                <button className="btn-close" onClick={() => setShowReuploadModal(false)}>✕</button>
+              </div>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Reason for Re-upload *</label>
+                  <textarea
+                    value={reuploadReason}
+                    onChange={(e) => setReuploadReason(e.target.value)}
+                    placeholder="Explain what needs to be corrected or re-uploaded..."
+                    rows="4"
+                    className="form-control"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Fields to Re-upload (Select all that apply)</label>
+                  <div className="checkbox-group">
+                    {["identityProofImage", "addressProofImage", "gstImage", "panImage", "cancelledCheckImage", "gstNumber", "panNumber"].map(field => (
+                      <label key={field} className="form-check">
+                        <input
+                          type="checkbox"
+                          checked={reuploadFields.includes(field)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setReuploadFields(prev => [...prev, field]);
+                            } else {
+                              setReuploadFields(prev => prev.filter(f => f !== field));
+                            }
+                          }}
+                        />
+                        <span>{field.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="alert alert-warning">
+                  <AlertCircle size={20} />
+                  <span>The seller will be notified and can edit and resubmit their application.</span>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setShowReuploadModal(false)} disabled={actionLoading}>Cancel</button>
+                <button className="btn btn-warning" onClick={handleRequestReupload} disabled={actionLoading || !reuploadReason.trim()}>
+                  {actionLoading ? <><Loader size={18} className="spinner-small" /> Requesting...</> : <><RotateCcw size={18} /> Request Re-upload</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Overlay */}
-        {(showDrawer || showApproveModal || showRejectModal) && (
+        {(showDrawer || showApproveModal || showRejectModal || showSuspendModal || showReuploadModal) && (
           <div
             className="modal-overlay"
             onClick={() => {
               setShowDrawer(false);
               setShowApproveModal(false);
               setShowRejectModal(false);
+              setShowSuspendModal(false);
+              setShowReuploadModal(false);
             }}
           />
         )}

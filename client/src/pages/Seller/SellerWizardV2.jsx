@@ -26,34 +26,54 @@ const SellerWizardV2 = () => {
 
   const [formData, setFormData] = useState({
     selectedPlanId: "",
+    // Step 1: Account Details
     firstName: "",
     lastName: "",
     email: "",
     phone: "",
+    alternatePhone: "",
+    // Step 2: Business Details
+    storeName: "",
+    legalBusinessName: "",
+    businessName: "",
+    businessType: "sole_proprietor",
+    businessCategory: "",
+    yearsInBusiness: "",
+    businessDescription: "",
+    // Step 2: Business Address
     addressLine1: "",
     addressLine2: "",
+    area: "",
     city: "",
     state: "",
     pincode: "",
+    landmark: "",
     country: "India",
-    identityProofType: "aadhar",
-    identityProofNumber: "",
-    identityProofImage: null,
-    addressProofType: "aadhar",
-    addressProofImage: null,
-    businessName: "",
-    businessType: "sole_proprietor",
-    gstNumber: "",
-    gstImage: null,
+    // Pickup Address
+    pickupAddressLine1: "",
+    pickupCity: "",
+    pickupState: "",
+    pickupPincode: "",
+    // Step 3: Tax & GST
     panNumber: "",
     panImage: null,
-    businessDescription: "",
+    gstNumber: "",
+    gstExemptionDeclared: false,
+    gstImage: null,
+    // Step 4: Bank
     accountHolderName: "",
     accountNumber: "",
     accountType: "savings",
     ifscCode: "",
     bankName: "",
     cancelledCheckImage: null,
+    // Step 5: Documents
+    identityProofType: "aadhar",
+    identityProofNumber: "",
+    identityProofImage: null,
+    addressProofType: "aadhar",
+    addressProofImage: null,
+    // Step 6: Agreement
     termsAccepted: false,
     privacyAccepted: false,
     communicationConsent: false,
@@ -93,22 +113,45 @@ const SellerWizardV2 = () => {
               setApplicationStatus(app.status);
               setApplicationDetails(app);
 
-              // Pre-fill formData from existing application to show correct plan/details
+              // Pre-fill formData from existing application
               setFormData(prev => ({
                 ...prev,
                 selectedPlanId: app.selectedPlan?._id || app.selectedPlanId || "",
-                firstName: app.firstName || "",
-                lastName: app.lastName || "",
-                email: app.email || "",
-                phone: app.phone || "",
+                firstName: app.firstName || prev.firstName,
+                lastName: app.lastName || prev.lastName,
+                email: app.email || prev.email,
+                phone: app.phone || prev.phone,
+                alternatePhone: app.alternatePhone || "",
                 addressLine1: app.addressLine1 || "",
                 addressLine2: app.addressLine2 || "",
+                area: app.area || "",
                 city: app.city || "",
                 state: app.state || "",
                 pincode: app.pincode || "",
+                landmark: app.landmark || "",
                 country: app.country || "India",
+                pickupAddressLine1: app.pickupAddressLine1 || "",
+                pickupCity: app.pickupCity || "",
+                pickupState: app.pickupState || "",
+                pickupPincode: app.pickupPincode || "",
+                storeName: app.storeName || "",
+                legalBusinessName: app.legalBusinessName || "",
                 businessName: app.businessName || "",
-                // ... map other fields if needed, but selectedPlanId is crucial for payment step
+                businessType: app.businessType || "sole_proprietor",
+                businessCategory: app.businessCategory || "",
+                yearsInBusiness: app.yearsInBusiness || "",
+                businessDescription: app.businessDescription || "",
+                panNumber: app.panNumber || "",
+                gstNumber: app.gstNumber || "",
+                gstExemptionDeclared: app.gstExemptionDeclared || false,
+                accountHolderName: app.accountHolderName || "",
+                accountNumber: app.accountNumber || "",
+                accountType: app.accountType || "savings",
+                ifscCode: app.ifscCode || "",
+                bankName: app.bankName || "",
+                identityProofType: app.identityProofType || "aadhar",
+                identityProofNumber: app.identityProofNumber || "",
+                addressProofType: app.addressProofType || "aadhar",
               }));
 
               // If application is submitted/under_review/approved_pending_payment, lock plan
@@ -120,9 +163,9 @@ const SellerWizardV2 = () => {
                 setIsLocked(true);
               }
 
-              // If rejected, allow reapply (formData is already pre-filled above)
-              if (app.status === "rejected") {
-                // Logic to handle rejected state if specific actions needed
+              // If rejected or reupload_requested, allow re-edit
+              if (app.status === "rejected" || app.status === "reupload_requested") {
+                setIsLocked(false);
               }
             }
           } catch (err) {
@@ -171,17 +214,17 @@ const SellerWizardV2 = () => {
     let finalValue = value;
 
     // Numeric field validation
-    if (name === "phone" || name === "pincode" || name === "accountNumber") {
+    if (name === "phone" || name === "alternatePhone" || name === "pincode" || name === "accountNumber" || name === "pickupPincode") {
       finalValue = value.replace(/[^0-9]/g, "");
     }
 
     // Phone: max 10 digits
-    if (name === "phone") {
+    if (name === "phone" || name === "alternatePhone") {
       finalValue = finalValue.slice(0, 10);
     }
 
     // Pincode: max 6 digits
-    if (name === "pincode") {
+    if (name === "pincode" || name === "pickupPincode") {
       finalValue = finalValue.slice(0, 6);
     }
 
@@ -335,63 +378,74 @@ const SellerWizardV2 = () => {
     </div>
   );
 
-  // Steps 1-6: Form Fields
+  // Steps 1-6: Form Fields (matching planning docs)
   const renderFormStep = () => {
     const steps = [
       {
-        title: "Personal Information",
-        fields: ["firstName", "lastName", "email", "phone"],
+        title: "Step 1: Account Details",
+        subtitle: "Basic contact information",
+        fields: ["firstName", "lastName", "email", "phone", "alternatePhone"],
       },
       {
-        title: "Address Information",
-        fields: ["addressLine1", "addressLine2", "city", "state", "pincode"],
-      },
-      {
-        title: "Identity Verification",
+        title: "Step 2: Business Details",
+        subtitle: "Your business and address information",
         fields: [
-          "identityProofType",
-          "identityProofNumber",
-          "identityProofImage",
+          "storeName", "legalBusinessName", "businessType", "businessCategory",
+          "yearsInBusiness", "businessDescription",
+          "addressLine1", "addressLine2", "area", "city", "state", "pincode", "landmark",
+          "pickupAddressLine1", "pickupCity", "pickupState", "pickupPincode",
         ],
       },
       {
-        title: "Business Information",
+        title: "Step 3: Tax & GST Details",
+        subtitle: "PAN and GST information for compliance",
         fields: [
-          "businessName",
-          "businessType",
-          "businessDescription",
-          "gstNumber",
-          "gstImage",
-          "panNumber",
-          "panImage",
+          "panNumber", "panImage",
+          "gstNumber", "gstExemptionDeclared", "gstImage",
         ],
       },
       {
-        title: "Banking Information",
+        title: "Step 4: Bank Account (Payout)",
+        subtitle: "Bank details for seller payouts",
         fields: [
-          "accountHolderName",
-          "accountNumber",
-          "accountType",
-          "ifscCode",
-          "bankName",
-          "cancelledCheckImage",
+          "accountHolderName", "accountNumber", "accountType",
+          "ifscCode", "bankName", "cancelledCheckImage",
         ],
       },
       {
-        title: "Consents & Agreements",
+        title: "Step 5: Document Upload",
+        subtitle: "Identity and address verification documents",
+        fields: [
+          "identityProofType", "identityProofNumber", "identityProofImage",
+          "addressProofType", "addressProofImage",
+        ],
+      },
+      {
+        title: "Step 6: Agreement & Submit",
+        subtitle: "Review and accept the seller agreement",
         fields: ["termsAccepted", "privacyAccepted", "communicationConsent"],
       },
     ];
 
     const step = steps[currentStep - 1];
+    // Get reupload requested fields for highlighting
+    const reuploadFields = applicationDetails?.reuploadRequestedFields || [];
 
     return (
       <div className="wizard-step">
         <h2 className="step-title">{step.title}</h2>
+        {step.subtitle && <p className="step-subtitle">{step.subtitle}</p>}
+
+        {applicationStatus === "reupload_requested" && applicationDetails?.reuploadReason && (
+          <div className="alert alert-warning mb-4">
+            <AlertCircle size={20} />
+            <span><strong>Admin requested changes:</strong> {applicationDetails.reuploadReason}</span>
+          </div>
+        )}
 
         <div className="form-group">
           {step.fields.map((field) => (
-            <div key={field} className="mb-3">
+            <div key={field} className={`mb-3 ${reuploadFields.includes(field) ? 'reupload-highlight' : ''}`}>
               {renderFormField(field)}
             </div>
           ))}
@@ -403,54 +457,100 @@ const SellerWizardV2 = () => {
   // Render individual form field
   const renderFormField = (fieldName) => {
     const fieldLabels = {
-      firstName: "First Name",
-      lastName: "Last Name",
-      email: "Email",
-      phone: "Phone Number",
-      addressLine1: "Address Line 1",
-      addressLine2: "Address Line 2",
-      city: "City",
-      state: "State",
-      pincode: "Pincode",
-      identityProofType: "Identity Proof Type",
-      identityProofNumber: "Identity Proof Number",
-      identityProofImage: "Identity Proof Image",
-      addressProofType: "Address Proof Type",
-      addressProofNumber: "Address Proof Number",
-      addressProofImage: "Address Proof Image",
-      businessName: "Business Name",
-      businessType: "Business Type",
+      firstName: "First Name *",
+      lastName: "Last Name *",
+      email: "Email Address *",
+      phone: "Mobile Number *",
+      alternatePhone: "Alternate Contact Number",
+      storeName: "Store Display Name *",
+      legalBusinessName: "Legal Business Name *",
+      businessName: "Business Name *",
+      businessType: "Business Type *",
+      businessCategory: "Business Category *",
+      yearsInBusiness: "Years in Operation",
       businessDescription: "Business Description",
+      addressLine1: "Business Address Line 1 *",
+      addressLine2: "Address Line 2",
+      area: "Area / Locality",
+      city: "City *",
+      state: "State *",
+      pincode: "Pincode *",
+      landmark: "Landmark",
+      pickupAddressLine1: "Pickup Address Line 1",
+      pickupCity: "Pickup City",
+      pickupState: "Pickup State",
+      pickupPincode: "Pickup Pincode",
+      panNumber: "PAN Number *",
+      panImage: "PAN Card Image *",
       gstNumber: "GST Number",
+      gstExemptionDeclared: "I confirm my business is eligible to sell without GST under applicable Indian regulations",
       gstImage: "GST Certificate",
-      panNumber: "PAN Number",
-      panImage: "PAN Image",
-      accountHolderName: "Account Holder Name",
-      accountNumber: "Account Number",
-      accountType: "Account Type",
-      ifscCode: "IFSC Code",
-      bankName: "Bank Name",
-      cancelledCheckImage: "Cancelled Cheque",
-      termsAccepted: "I accept Terms & Conditions",
-      privacyAccepted: "I accept Privacy Policy",
-      communicationConsent: "I consent to marketing communications",
+      identityProofType: "Identity Proof Type *",
+      identityProofNumber: "Identity Proof Number *",
+      identityProofImage: "Identity Proof Image (Front) *",
+      addressProofType: "Address Proof Type",
+      addressProofImage: "Address Proof Document",
+      accountHolderName: "Account Holder Name *",
+      accountNumber: "Account Number *",
+      accountType: "Account Type *",
+      ifscCode: "IFSC Code *",
+      bankName: "Bank Name *",
+      cancelledCheckImage: "Cancelled Cheque / Bank Statement",
+      termsAccepted: "I accept the Terms & Conditions *",
+      privacyAccepted: "I accept the Seller Commission Agreement & Privacy Policy *",
+      communicationConsent: "I accept the Refund, Cancellation & Marketplace Rules",
     };
 
     const selectOptions = {
-      identityProofType: ["aadhar", "pan", "passport", "driving_license"],
-      addressProofType: ["aadhar", "passport", "utility_bill", "lease_agreement"],
-      businessType: ["sole_proprietor", "partnership", "pvt_ltd", "llp", "ngo"],
-      accountType: ["savings", "current"],
+      identityProofType: [
+        { value: "aadhar", label: "Aadhaar Card" },
+        { value: "passport", label: "Passport" },
+        { value: "driving_license", label: "Driving License" },
+        { value: "voter_id", label: "Voter ID" },
+      ],
+      addressProofType: [
+        { value: "gst_certificate", label: "GST Certificate" },
+        { value: "shop_act", label: "Shop Act License" },
+        { value: "business_registration", label: "Business Registration" },
+        { value: "utility_bill", label: "Electricity / Utility Bill" },
+      ],
+      businessType: [
+        { value: "sole_proprietor", label: "Individual / Proprietor" },
+        { value: "partnership", label: "Partnership Firm" },
+        { value: "pvt_ltd", label: "Private Limited Company" },
+        { value: "llp", label: "LLP" },
+        { value: "manufacturer", label: "Manufacturer" },
+        { value: "trader_distributor", label: "Trader / Distributor" },
+      ],
+      businessCategory: [
+        { value: "steel", label: "Steel & Iron" },
+        { value: "metals", label: "Metals & Alloys" },
+        { value: "industrial", label: "Industrial Supplies" },
+        { value: "chemicals", label: "Chemicals" },
+        { value: "construction", label: "Construction Materials" },
+        { value: "electronics", label: "Electronics & Electrical" },
+        { value: "food", label: "Food Products" },
+        { value: "pharma", label: "Pharmaceuticals" },
+        { value: "other", label: "Other" },
+      ],
+      accountType: [
+        { value: "savings", label: "Savings" },
+        { value: "current", label: "Current" },
+      ],
     };
 
     const label = fieldLabels[fieldName];
 
     // Checkbox fields
     if (
-      ["termsAccepted", "privacyAccepted", "communicationConsent"].includes(
+      ["termsAccepted", "privacyAccepted", "communicationConsent", "gstExemptionDeclared"].includes(
         fieldName
       )
     ) {
+      // Only show GST exemption if gstNumber is empty
+      if (fieldName === "gstExemptionDeclared" && formData.gstNumber) {
+        return null;
+      }
       return (
         <label className="form-check">
           <input
@@ -491,6 +591,7 @@ const SellerWizardV2 = () => {
 
     // Select fields
     if (selectOptions[fieldName]) {
+      const options = selectOptions[fieldName];
       return (
         <>
           <label className="form-label">{label}</label>
@@ -500,12 +601,16 @@ const SellerWizardV2 = () => {
             onChange={handleInputChange}
             className="form-control"
           >
-            <option value="">Select {label}</option>
-            {selectOptions[fieldName].map((option) => (
-              <option key={option} value={option}>
-                {option.replace(/_/g, " ")}
-              </option>
-            ))}
+            <option value="">Select {label.replace(' *', '')}</option>
+            {options.map((option) => {
+              const val = typeof option === 'string' ? option : option.value;
+              const display = typeof option === 'string' ? option.replace(/_/g, ' ') : option.label;
+              return (
+                <option key={val} value={val}>
+                  {display}
+                </option>
+              );
+            })}
           </select>
         </>
       );
@@ -577,17 +682,31 @@ const SellerWizardV2 = () => {
   };
 
   // Progress bar
+  const stepLabels = [
+    "Plan", "Account", "Business", "Tax & GST", "Bank", "Documents", "Agreement"
+  ];
+
   const renderProgress = () => (
     <div className="progress-container">
+      <div className="progress-steps">
+        {stepLabels.map((label, idx) => (
+          <div
+            key={idx}
+            className={`progress-step ${idx <= currentStep ? 'active' : ''} ${idx < currentStep ? 'completed' : ''}`}
+          >
+            <div className="step-number">
+              {idx < currentStep ? <Check size={14} /> : idx + 1}
+            </div>
+            <span className="step-label">{label}</span>
+          </div>
+        ))}
+      </div>
       <div className="progress-bar">
         <div
           className="progress-fill"
           style={{ width: `${((currentStep + 1) / 7) * 100}%` }}
         />
       </div>
-      <p className="progress-text">
-        Step {currentStep + 1} of 7
-      </p>
     </div>
   );
 

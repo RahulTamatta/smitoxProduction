@@ -65,7 +65,7 @@ export const submitApplicationDirect = async (applicationData, token) => {
     }
 
     const response = await axios.post(
-      `${API_BASE}/sellers/applications/submit`,
+      `${API_BASE}/sellers/direct-submit`,
       applicationData,
       {
         params: selectedPlanId ? { selectedPlanId } : undefined,
@@ -221,6 +221,42 @@ export const rejectApplication = async (applicationId, reason, token) => {
   }
 };
 
+/**
+ * Admin: Suspend seller
+ */
+export const suspendSeller = async (applicationId, reason, token) => {
+  try {
+    const response = await axios.post(
+      `${API_BASE}/sellers/${applicationId}/suspend`,
+      { reason },
+      {
+        headers: { Authorization: token },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Admin: Request document re-upload
+ */
+export const requestReupload = async (applicationId, { reason, fields }, token) => {
+  try {
+    const response = await axios.post(
+      `${API_BASE}/sellers/${applicationId}/request-reupload`,
+      { reason, fields },
+      {
+        headers: { Authorization: token },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
 export default {
   saveDraftApplication,
   submitApplication,
@@ -233,4 +269,6 @@ export default {
   getApplicationById,
   approveApplication,
   rejectApplication,
+  suspendSeller,
+  requestReupload,
 };

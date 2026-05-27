@@ -1,3 +1,5 @@
+import crypto from "crypto";
+import path from "path";
 import Razorpay from "razorpay";
 import { computeCapabilities, ROLES } from "../config/rbac-policy.js";
 import { generateToken } from "../helpers/tokenHelper.js";
@@ -38,7 +40,7 @@ export const saveDraftApplication = async (req, res) => {
     // Helper to get relative path
     const getLocalPath = (file) => {
       if (!file) return null;
-      return `uploads/users/${path.basename(file.path)}`;
+      return `uploads/sellers/${path.basename(file.path)}`;
     };
 
     // Validate plan ID is provided
@@ -156,7 +158,7 @@ export const submitApplication = async (req, res) => {
     }
 
     // Check if already submitted
-    if (application.status !== "draft" && application.status !== "rejected") {
+    if (application.status !== "draft" && application.status !== "rejected" && application.status !== "reupload_requested") {
       return res.status(400).send({
         success: false,
         message: "Application cannot be submitted in current status",
@@ -517,6 +519,21 @@ export const approveApplication = async (req, res) => {
           isActive: true,
           planActivatedAt: new Date(),
           planExpiresAt: null,
+          // Business info from application
+          businessName: application.businessName || application.storeName || "",
+          businessType: application.businessType || "sole_proprietor",
+          gstNumber: application.gstNumber || "",
+          panNumber: application.panNumber || "",
+          businessDescription: application.businessDescription || "",
+          // Contact info from application
+          primaryContactName: `${application.firstName || ""} ${application.lastName || ""}`.trim(),
+          primaryContactEmail: application.email || user.email_id || "",
+          primaryContactPhone: application.phone || user.mobile_no || "",
+          // Banking info from application
+          accountHolderName: application.accountHolderName || "",
+          accountNumber: application.accountNumber || "",
+          ifscCode: application.ifscCode || "",
+          bankName: application.bankName || "",
           permissions: {
             grantedCapabilities: plan.includedCapabilities || [],
             deniedCapabilities: plan.excludedCapabilities || [],
@@ -614,7 +631,7 @@ export const approveApplication = async (req, res) => {
 
     await application.save({ validateBeforeSave: false });
 
-    // Create or Update SellerProfile (inactive)
+    // Create or Update SellerProfile (inactive until payment)
     const sellerProfile = await sellerProfileModel.findOneAndUpdate(
       { userId: user._id },
       {
@@ -622,6 +639,21 @@ export const approveApplication = async (req, res) => {
         applicationId: application._id,
         currentPlanId: plan._id,
         isActive: false, // Remains inactive until payment
+        // Business info from application
+        businessName: application.businessName || application.storeName || "",
+        businessType: application.businessType || "sole_proprietor",
+        gstNumber: application.gstNumber || "",
+        panNumber: application.panNumber || "",
+        businessDescription: application.businessDescription || "",
+        // Contact info from application
+        primaryContactName: `${application.firstName || ""} ${application.lastName || ""}`.trim(),
+        primaryContactEmail: application.email || user.email_id || "",
+        primaryContactPhone: application.phone || user.mobile_no || "",
+        // Banking info from application
+        accountHolderName: application.accountHolderName || "",
+        accountNumber: application.accountNumber || "",
+        ifscCode: application.ifscCode || "",
+        bankName: application.bankName || "",
         permissions: {
           grantedCapabilities: [],
           deniedCapabilities: [],
@@ -1235,14 +1267,308 @@ export const verifyPayment = async (req, res) => {
   }
 };
 
+/**
+ * Suspend an active seller (Super Admin)
+ */
+export const suspendSeller = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const adminId = req.user._id;
+
+    if (!reason) {
+      return res.status(400).send({
+        success: false,
+        message: "Suspension reason is required",
+      });
+    }
+
+    // Find application
+    const application = await sellerApplicationModel.findById(id).populate("userId");
+    if (!application) {
+      return res.status(404).send({
+        success: false,
+        message: "Application not found",
+      });
+    }
+
+    // Can only suspend approved/active sellers
+    if (!["approved", "active"].includes(application.status)) {
+      return res.status(400).send({
+        success: false,
+        message: "Can only suspend approved or active sellers",
+      });
+    }
+
+    const user = application.userId;
+
+    // Update application
+    application.status = "suspended";
+    application.suspendedAt = new Date();
+    application.suspendedReason = reason;
+    application.reviewedBy = adminId;
+    application.reviewedAt = new Date();
+    application.reviewNotes = `Suspended: ${reason}`;
+    await application.save();
+
+    // Deactivate seller profile
+    await sellerProfileModel.findOneAndUpdate(
+      { userId: user._id },
+      {
+        isActive: false,
+        status: "suspended",
+        suspensionReason: reason,
+        suspensionDate: new Date(),
+      }
+    );
+
+    // Revoke seller role
+    user.roleString = "user";
+    user.permissions = {
+      grantedCapabilities: [],
+      deniedCapabilities: [],
+    };
+    await user.save();
+
+    // Log audit
+    await logAuditEvent({
+      actor: adminId,
+      actorRole: ROLES.SUPER_ADMIN,
+      action: "suspend_seller",
+      resourceType: "seller_application",
+      resourceId: application._id,
+      severity: "high",
+      description: `Seller suspended: ${reason}`,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+    });
+
+    res.status(200).send({
+      success: true,
+      message: "Seller suspended successfully",
+      status: "suspended",
+    });
+  } catch (error) {
+    console.error("Error suspending seller:", error);
+    res.status(500).send({
+      success: false,
+      message: "Error suspending seller",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Request document re-upload from seller (Super Admin)
+ */
+export const requestReupload = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason, fields } = req.body;
+    const adminId = req.user._id;
+
+    if (!reason) {
+      return res.status(400).send({
+        success: false,
+        message: "Re-upload reason is required",
+      });
+    }
+
+    // Find application
+    const application = await sellerApplicationModel.findById(id);
+    if (!application) {
+      return res.status(404).send({
+        success: false,
+        message: "Application not found",
+      });
+    }
+
+    // Can only request re-upload for submitted or under_review applications
+    if (!["submitted", "under_review"].includes(application.status)) {
+      return res.status(400).send({
+        success: false,
+        message: "Re-upload can only be requested for submitted applications",
+      });
+    }
+
+    // Update application
+    application.status = "reupload_requested";
+    application.reuploadReason = reason;
+    application.reuploadRequestedFields = fields || [];
+    application.reviewedBy = adminId;
+    application.reviewedAt = new Date();
+    application.reviewNotes = `Re-upload requested: ${reason}`;
+    application.lockPlan = false; // Allow edits
+    await application.save();
+
+    // Log audit
+    await logAuditEvent({
+      actor: adminId,
+      actorRole: ROLES.SUPER_ADMIN,
+      action: "request_reupload",
+      resourceType: "seller_application",
+      resourceId: application._id,
+      severity: "medium",
+      description: `Re-upload requested: ${reason}`,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+    });
+
+    res.status(200).send({
+      success: true,
+      message: "Re-upload requested successfully",
+      status: "reupload_requested",
+    });
+  } catch (error) {
+    console.error("Error requesting re-upload:", error);
+    res.status(500).send({
+      success: false,
+      message: "Error requesting re-upload",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Submit application directly (combined save + submit in one step)
+ * Accepts multipart/form-data with files, saves everything, then submits.
+ * Mirrors the product controller pattern: multer writes to disk → store relative path in DB.
+ */
+export const submitApplicationDirect = async (req, res) => {
+  try {
+    const { selectedPlanId: bodyPlanId, ...applicationData } = req.body;
+    const selectedPlanId = bodyPlanId || req.query?.selectedPlanId;
+    const userId = req.user._id;
+
+    // Multer files (same pattern as product createProductController)
+    const files = req.files || {};
+    const identityProofImage = files.identityProofImage?.[0];
+    const addressProofImage = files.addressProofImage?.[0];
+    const gstImage = files.gstImage?.[0];
+    const panImage = files.panImage?.[0];
+    const cancelledCheckImage = files.cancelledCheckImage?.[0];
+
+    // Helper to get relative path (same pattern as products: uploads/sellers/<filename>)
+    const getLocalPath = (file) => {
+      if (!file) return null;
+      return `uploads/sellers/${path.basename(file.path)}`;
+    };
+
+    // Validate plan
+    if (!selectedPlanId) {
+      return res.status(400).send({
+        success: false,
+        message: "Subscription plan ID is required",
+      });
+    }
+
+    const plan = await subscriptionPlanModel.findById(selectedPlanId);
+    if (!plan) {
+      return res.status(404).send({
+        success: false,
+        message: "Subscription plan not found",
+      });
+    }
+
+    // Build plan snapshot
+    const planSnapshot = {
+      _id: plan._id,
+      name: plan.name,
+      price: plan.price,
+      currency: plan.currency || "INR",
+      billingCycle: plan.billingCycle,
+      isFree: plan.isFree,
+      includedCapabilities: plan.includedCapabilities || [],
+      excludedCapabilities: plan.excludedCapabilities || [],
+      version: plan.version || 1,
+      capturedAt: new Date(),
+    };
+
+    // Parse booleans from form-data
+    const parseBool = (val) => val === "true" || val === true;
+
+    // Find existing draft or create new
+    let application = await sellerApplicationModel.findOne({
+      userId,
+      status: { $in: ["draft", "rejected", "reupload_requested"] },
+    });
+
+    const updateData = {
+      ...applicationData,
+      selectedPlanId,
+      selectedPlanSnapshot: planSnapshot,
+      termsAccepted: parseBool(applicationData.termsAccepted),
+      privacyAccepted: parseBool(applicationData.privacyAccepted),
+      gstExemptionDeclared: parseBool(applicationData.gstExemptionDeclared),
+    };
+
+    // Add file paths (VPS disk storage, relative paths like products)
+    if (identityProofImage) updateData.identityProofImage = getLocalPath(identityProofImage);
+    if (addressProofImage) updateData.addressProofImage = getLocalPath(addressProofImage);
+    if (gstImage) updateData.gstImage = getLocalPath(gstImage);
+    if (panImage) updateData.panImage = getLocalPath(panImage);
+    if (cancelledCheckImage) updateData.cancelledCheckImage = getLocalPath(cancelledCheckImage);
+
+    if (application) {
+      application = Object.assign(application, updateData);
+    } else {
+      application = new sellerApplicationModel({
+        ...updateData,
+        userId,
+        status: "draft",
+        lockPlan: false,
+        email: req.user.email,
+        phone: req.user.mobile_no,
+      });
+    }
+
+    // Submit the application
+    application.status = "submitted";
+    application.submittedAt = new Date();
+    application.lockPlan = true;
+    application.payment = null;
+
+    await application.save();
+
+    // Log audit event
+    await logAuditEvent({
+      actor: userId,
+      actorRole: ROLES.USER,
+      action: "submit_application_direct",
+      resourceType: "seller_application",
+      resourceId: application._id,
+      severity: "medium",
+      description: `Seller application submitted directly with files`,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+    });
+
+    res.status(200).send({
+      success: true,
+      message: "Application submitted successfully",
+      application,
+    });
+  } catch (error) {
+    console.error("Error in submitApplicationDirect:", error);
+    res.status(500).send({
+      success: false,
+      message: "Error submitting application",
+      error: error.message,
+    });
+  }
+};
+
 export default {
   saveDraftApplication,
   submitApplication,
+  submitApplicationDirect,
   getMyApplication,
   getSellerApplications,
   getApplicationById,
   approveApplication,
   rejectApplication,
+  suspendSeller,
+  requestReupload,
   retryPayment,
   renewPlan,
   upgradePlan,

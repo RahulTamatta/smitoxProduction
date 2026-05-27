@@ -386,9 +386,13 @@ export const getProductController = async (req, res) => {
     const skip = (page - 1) * limit;
 
     // Build the search query
-    const searchQuery = {
-      ...(search && { name: { $regex: search, $options: "i" } }),
-    };
+    const searchQuery = {};
+    if (search) {
+      const words = search.trim().split(/\s+/).filter(w => w.length > 0);
+      searchQuery.$and = words.map(word => ({
+        name: { $regex: word, $options: "i" }
+      }));
+    }
 
     // Apply filters if provided
     if (req.query.filter && req.query.filter !== "all") {
@@ -464,10 +468,13 @@ export const productListController = async (req, res) => {
     };
 
     if (search) {
-      filterQuery.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } }
-      ];
+      const words = search.trim().split(/\s+/).filter(w => w.length > 0);
+      filterQuery.$and = words.map(word => ({
+        $or: [
+          { name: { $regex: word, $options: "i" } },
+          { description: { $regex: word, $options: "i" } }
+        ]
+      }));
     }
 
     // Handle category filtering - support both ObjectId and slug/name
@@ -776,6 +783,43 @@ export const getSingleProductController = async (req, res) => {
     res.status(500).send({
       success: false,
       message: "Error while getting single product",
+      error,
+    });
+  }
+};
+
+export const getAdminSingleProductController = async (req, res) => {
+  try {
+    const product = await productModel
+      .findOne({ slug: req.params.slug })
+      .populate("category")
+      .populate("subcategory")
+      .populate("brand");
+
+    if (!product) {
+      return res.status(404).send({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    // Do NOT check isActive so admin can view inactive products
+
+    const productObj = product.toObject();
+    if (productObj.photos) {
+      productObj.photoUrl = productObj.photos;
+    }
+
+    res.status(200).send({
+      success: true,
+      message: "Admin Single Product Fetched",
+      product: productObj,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      message: "Error while getting single product (admin)",
       error,
     });
   }

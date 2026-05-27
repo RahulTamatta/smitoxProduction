@@ -7,9 +7,12 @@ import {
   getSellerApplications,
   rejectApplication,
   renewPlan,
+  requestReupload,
   retryPayment,
   saveDraftApplication,
   submitApplication,
+  submitApplicationDirect,
+  suspendSeller,
   upgradePlan,
   verifyPayment,
 } from "../controllers/sellerApplicationControllerV2.js";
@@ -42,6 +45,21 @@ router.post(
   requireSignIn,
   auditLog("submit_application", "seller_application", "medium"),
   submitApplication
+);
+
+// Direct submit (combined save + submit with file upload — VPS disk storage)
+router.post(
+  "/direct-submit",
+  requireSignIn,
+  upload.fields([
+    { name: "identityProofImage", maxCount: 1 },
+    { name: "addressProofImage", maxCount: 1 },
+    { name: "gstImage", maxCount: 1 },
+    { name: "panImage", maxCount: 1 },
+    { name: "cancelledCheckImage", maxCount: 1 }
+  ]),
+  auditLog("submit_application_direct", "seller_application", "medium"),
+  submitApplicationDirect
 );
 
 router.get("/my-application", requireSignIn, getMyApplication);
@@ -106,6 +124,22 @@ router.post(
   requireCapability("sellers:applications:reject"),
   auditLog("reject_application", "seller_application", "high"),
   rejectApplication
+);
+
+router.post(
+  "/:id/suspend",
+  requireSignIn,
+  requireCapability("sellers:applications:reject"),
+  auditLog("suspend_seller", "seller_application", "high"),
+  suspendSeller
+);
+
+router.post(
+  "/:id/request-reupload",
+  requireSignIn,
+  requireCapability("sellers:applications:reject"),
+  auditLog("request_reupload", "seller_application", "medium"),
+  requestReupload
 );
 
 export default router;

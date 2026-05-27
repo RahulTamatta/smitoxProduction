@@ -143,30 +143,65 @@ async function fetchRazorpayOrder(orderId) {
 }
 
 /**
- * Automatically create missing order if user approves
+ * Create order from failed payment log
  */
-async function createMissingOrder(payment, razorpayOrder, autoCreate = false) {
+async function createOrderFromFailedLog(log) {
     try {
         console.log(`\n${'='.repeat(60)}`);
-        console.log(`Processing payment: ${payment.id}`);
+        console.log(`Processing failed payment: ${log.payment_id}`);
         console.log(`${'='.repeat(60)}`);
 
-        if (!razorpayOrder || !razorpayOrder.notes || !razorpayOrder.notes.products) {
-            console.log('⚠️  Cannot create order: Missing product data in Razorpay order notes');
-            return { success: false, reason: 'Missing product data' };
+        // Check if order already exists  
+        const existingOrder = await orderModel.findOne({
+            $or: [
+                { 'payment.transactionId': log.order_id },
+                { 'payment.razorpayPaymentId': log.payment_id }
+            ]
+        });
+
+        if (existingOrder) {
+            console.log(`✅ Order already exists: ${existingOrder._id}`);
+            log.resolved = true;
+            log.resolvedAt = new Date();
+            log.resolvedBy = 'auto-reconciliation';
+            log.resolvedNote = `Order found: ${existingOrder._id}`;
+            await log.save();
+            return { success: true, orderId: existingOrder._id, action: 'found' };
         }
 
-        const products = JSON.parse(razorpayOrder.notes.products);
-        const userId = razorpayOrder.notes.userId;
+        // Fetch payment details from Razorpay
+        const payment = await razorpay.payments.fetch(log.payment_id);
+
+        if (payment.status !== 'captured') {
+            console.log(`⚠️ Payment not captured, status: ${payment.status}`);
+            log.resolved = true;
+            log.resolvedAt = new Date();
+            log.resolvedBy = 'auto-reconciliation';
+            log.resolvedNote = `Payment not captured, status: ${payment.status}`;
+            await log.save();
+            return { success: true, action: 'skipped', reason: 'not_captured' };
+        }
+
+        // Fetch Razorpay order
+        const razorpayOrder = await fetchRazorpayOrder(log.order_id);
+
+        if (!razorpayOrder || !razorpayOrder.notes || !razorpayOrder.notes.products) {
+            // Try using products from log
+            if (!log.products) {
+                console.log('⚠️ Cannot create order: Missing product data');
+                log.attemptCount += 1;
+                log.lastAttemptAt = new Date();
+                await log.save();
+                return { success: false, reason: 'Missing product data' };
+            }
+        }
+
+        const products = log.products || JSON.parse(razorpayOrder.notes.products);
+        const userId = log.userId || razorpayOrder.notes.userId;
 
         console.log(`User ID: ${userId}`);
         console.log(`Products: ${products.length} items`);
-        console.log(`Amount: ₹${payment.amount / 100}`);
-
-        if (!autoCreate) {
-            console.log('\n⏸️  Auto-create is disabled. Set --auto-create flag to create orders automatically.');
-            return { success: false, reason: 'Auto-create disabled' };
-        }
+        console.log(`Amount: ₹${log.amount}`);
 
         const session = await mongoose.startSession();
         session.startTransaction();
@@ -180,13 +215,13 @@ async function createMissingOrder(payment, razorpayOrder, autoCreate = false) {
                 products: enrichedProducts,
                 payment: {
                     paymentMethod: "Razorpay",
-                    transactionId: payment.order_id,
-                    razorpayPaymentId: payment.id,
+                    transactionId: log.order_id,
+                    razorpayPaymentId: log.payment_id,
                     status: true,
                 },
                 buyer: userId,
-                amount: parseFloat(razorpayOrder.notes.baseAmount),
-                amountPending: parseFloat(razorpayOrder.notes.amountPending) || 0,
+                amount: razorpayOrder?.notes?.baseAmount ? parseFloat(razorpayOrder.notes.baseAmount) : log.amount,
+                amountPending: razorpayOrder?.notes?.amountPending ? parseFloat(razorpayOrder.notes.amountPending) : 0,
                 status: "Pending",
             });
 
@@ -205,18 +240,33 @@ async function createMissingOrder(payment, razorpayOrder, autoCreate = false) {
             await session.commitTransaction();
             session.endSession();
 
+            // Mark as resolved
+            log.resolved = true;
+            log.resolvedAt = new Date();
+            log.resolvedBy = 'auto-reconciliation';
+            log.resolvedNote = `Order created: ${order._id}`;
+            await log.save();
+
             console.log(`✅ Order created successfully: ${order._id}`);
-            return { success: true, orderId: order._id };
+            return { success: true, orderId: order._id, action: 'created' };
 
         } catch (error) {
             await session.abortTransaction();
             session.endSession();
             console.error(`❌ Failed to create order:`, error.message);
+
+            log.attemptCount += 1;
+            log.lastAttemptAt = new Date();
+            await log.save();
+
             return { success: false, reason: error.message };
         }
 
     } catch (error) {
-        console.error(`Error in createMissingOrder:`, error);
+        console.error(`Error in createOrderFromFailedLog:`, error);
+        log.attemptCount += 1;
+        log.lastAttemptAt = new Date();
+        await log.save();
         return { success: false, reason: error.message };
     }
 }
@@ -229,7 +279,8 @@ async function reconcilePayments(options = {}) {
         fromDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
         toDate = new Date(),
         phoneNumber = null,
-        autoCreate = false
+        autoCreate = false,
+        failedLogsOnly = false  // NEW: Only process failed payment logs
     } = options;
 
     try {
@@ -237,6 +288,50 @@ async function reconcilePayments(options = {}) {
         console.log('\n🔗 Connecting to MongoDB...');
         await mongoose.connect(process.env.MONGO_URL);
         console.log('✓ Connected to MongoDB\n');
+
+        // NEW: Process failed payment logs first
+        if (failedLogsOnly || autoCreate) {
+            console.log('\n📋 Processing failed payment logs from database...\n');
+
+            const failedLogs = await FailedPaymentLog.find({ resolved: false })
+                .sort({ timestamp: 1 })
+                .limit(50);
+
+            console.log(`Found ${failedLogs.length} unresolved failed payments\n`);
+
+            if (failedLogs.length > 0) {
+                const failedResults = [];
+
+                for (const log of failedLogs) {
+                    const result = await createOrderFromFailedLog(log);
+                    failedResults.push({ log, result });
+
+                    // Small delay to avoid overwhelming APIs
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+
+                const created = failedResults.filter(r => r.result.success && r.result.action === 'created').length;
+                const found = failedResults.filter(r => r.result.success && r.result.action === 'found').length;
+                const skipped = failedResults.filter(r => r.result.success && r.result.action === 'skipped').length;
+                const failed = failedResults.filter(r => !r.result.success).length;
+
+                console.log('\n' + '='.repeat(80));
+                console.log('FAILED PAYMENT LOGS RECONCILIATION');
+                console.log('='.repeat(80));
+                console.log(`Total processed:        ${failedResults.length}`);
+                console.log(`Orders created:         ${created}`);
+                console.log(`Orders already existed: ${found}`);
+                console.log(`Payments skipped:       ${skipped}`);
+                console.log(`Still failed:           ${failed}`);
+                console.log('='.repeat(80) + '\n');
+            }
+
+            if (failedLogsOnly) {
+                await mongoose.connection.close();
+                console.log('✓ MongoDB connection closed\n');
+                return;
+            }
+        }
 
         // Fetch payments from Razorpay
         const payments = await fetchRazorpayPayments(fromDate, toDate);

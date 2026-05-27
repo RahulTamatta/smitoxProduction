@@ -2,13 +2,9 @@ import crypto from "crypto";
 import mongoose from "mongoose";
 import { ROLES } from "../config/rbac-policy.js";
 import { logAuditEvent } from "../middlewares/rbacMiddleware.js";
+import FailedPaymentLog from "../models/FailedPaymentLog.js";
 import orderModel from "../models/orderModel.js";
 import productModel from "../models/productModel.js";
-
-/**
- * Track failed payment-to-order conversions for reconciliation
- */
-const failedPaymentLog = [];
 
 /**
  * Enrich order products with snapshot data
@@ -59,25 +55,45 @@ export const handleCustomerOrderWebhook = async (req, res) => {
     try {
         console.log(`[Webhook] Customer order webhook received | Event: ${req.body.event}`);
 
-        // Validate webhook signature
+        // Validate webhook signature (MANDATORY for security)
         const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
-        if (webhookSecret) {
-            const signature = req.headers['x-razorpay-signature'];
-            const body = JSON.stringify(req.body);
 
-            const expectedSignature = crypto
-                .createHmac('sha256', webhookSecret)
-                .update(body)
-                .digest('hex');
-
-            if (signature !== expectedSignature) {
-                console.error('[Webhook] Invalid webhook signature');
-                return res.status(400).json({
-                    success: false,
-                    message: 'Invalid webhook signature'
-                });
-            }
+        // Ensure webhook secret is configured
+        if (!webhookSecret) {
+            console.error('[Webhook] RAZORPAY_WEBHOOK_SECRET not configured! Webhook processing disabled for security.');
+            return res.status(500).json({
+                success: false,
+                message: 'Webhook secret not configured. Please contact system administrator.'
+            });
         }
+
+        const signature = req.headers['x-razorpay-signature'];
+
+        // Ensure signature is present
+        if (!signature) {
+            console.error('[Webhook] Missing x-razorpay-signature header');
+            return res.status(400).json({
+                success: false,
+                message: 'Missing webhook signature'
+            });
+        }
+
+        // Verify signature
+        const body = JSON.stringify(req.body);
+        const expectedSignature = crypto
+            .createHmac('sha256', webhookSecret)
+            .update(body)
+            .digest('hex');
+
+        if (signature !== expectedSignature) {
+            console.error('[Webhook] Invalid webhook signature | Expected: ${expectedSignature.substring(0, 10)}... | Received: ${signature.substring(0, 10)}...');
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid webhook signature'
+            });
+        }
+
+        console.log('[Webhook] Signature verified successfully');
 
         const { event, payload } = req.body;
 
@@ -118,22 +134,34 @@ export const handleCustomerOrderWebhook = async (req, res) => {
                 key_secret: process.env.RAZORPAY_KEY_SECRET,
             });
 
-            razorpayOrder = await razorpay.orders.fetch(order_id);
+            // Add timeout wrapper to prevent infinite hangs
+            const fetchPromise = razorpay.orders.fetch(order_id);
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => {
+                    reject(new Error("Razorpay API timeout in webhook - order fetch took longer than 30 seconds"));
+                }, 30000); // 30 second timeout
+            });
+
+            razorpayOrder = await Promise.race([fetchPromise, timeoutPromise]);
             console.log(`[Webhook] Razorpay order fetched | Status: ${razorpayOrder.status}`);
         } catch (fetchError) {
             console.error(`[Webhook] Failed to fetch Razorpay order:`, fetchError);
 
-            // Log for reconciliation
-            failedPaymentLog.push({
-                timestamp: new Date(),
-                order_id,
-                payment_id,
-                amount: amount / 100,
-                contact,
-                email,
-                error: 'Failed to fetch Razorpay order details',
-                errorMessage: fetchError.message
-            });
+            // Log for reconciliation in database
+            try {
+                await FailedPaymentLog.create({
+                    order_id,
+                    payment_id,
+                    amount: amount / 100,
+                    contact,
+                    email,
+                    error: 'Failed to fetch Razorpay order details',
+                    errorMessage: fetchError.message,
+                    errorStack: fetchError.stack
+                });
+            } catch (logError) {
+                console.error(`[Webhook] Failed to log payment failure:`, logError);
+            }
 
             return res.status(500).json({
                 success: false,
@@ -150,17 +178,20 @@ export const handleCustomerOrderWebhook = async (req, res) => {
         } catch (parseError) {
             console.error(`[Webhook] Failed to parse products from notes:`, parseError);
 
-            failedPaymentLog.push({
-                timestamp: new Date(),
-                order_id,
-                payment_id,
-                amount: amount / 100,
-                contact,
-                email,
-                error: 'Failed to parse products data',
-                errorMessage: parseError.message,
-                notes: razorpayOrder.notes
-            });
+            try {
+                await FailedPaymentLog.create({
+                    order_id,
+                    payment_id,
+                    amount: amount / 100,
+                    contact,
+                    email,
+                    error: 'Failed to parse products data',
+                    errorMessage: parseError.message,
+                    errorStack: parseError.stack
+                });
+            } catch (logError) {
+                console.error(`[Webhook] Failed to log payment failure:`, logError);
+            }
 
             return res.status(500).json({
                 success: false,
@@ -243,19 +274,23 @@ export const handleCustomerOrderWebhook = async (req, res) => {
                 session.endSession();
             }
 
-            // Log for reconciliation
-            failedPaymentLog.push({
-                timestamp: new Date(),
-                order_id,
-                payment_id,
-                amount: amount / 100,
-                contact,
-                email,
-                userId: razorpayOrder.notes.userId,
-                error: 'Transaction failed during order creation',
-                errorMessage: transactionError.message,
-                products
-            });
+            // Log for reconciliation in database
+            try {
+                await FailedPaymentLog.create({
+                    order_id,
+                    payment_id,
+                    amount: amount / 100,
+                    contact,
+                    email,
+                    userId: razorpayOrder.notes.userId,
+                    error: 'Transaction failed during order creation',
+                    errorMessage: transactionError.message,
+                    errorStack: transactionError.stack,
+                    products
+                });
+            } catch (logError) {
+                console.error(`[Webhook] Failed to log payment failure:`, logError);
+            }
 
             res.status(500).json({
                 success: false,
@@ -276,13 +311,32 @@ export const handleCustomerOrderWebhook = async (req, res) => {
 
 /**
  * Get failed payment logs for reconciliation
+ * Query parameters:
+ *   - resolved: filter by resolved status (true/false)
+ *   - limit: number of results (default 100)
+ *   - skip: pagination offset (default 0)
  */
 export const getFailedPaymentLogs = async (req, res) => {
     try {
+        const { resolved, limit = 100, skip = 0 } = req.query;
+
+        const query = {};
+        if (resolved !== undefined) {
+            query.resolved = resolved === 'true';
+        }
+
+        const logs = await FailedPaymentLog.find(query)
+            .sort({ timestamp: -1 })
+            .limit(parseInt(limit))
+            .skip(parseInt(skip));
+
+        const count = await FailedPaymentLog.countDocuments(query);
+
         res.status(200).json({
             success: true,
-            count: failedPaymentLog.length,
-            logs: failedPaymentLog
+            count,
+            total: count,
+            logs
         });
     } catch (error) {
         res.status(500).json({

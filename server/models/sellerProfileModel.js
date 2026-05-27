@@ -45,22 +45,30 @@ const sellerProfileSchema = new mongoose.Schema(
       default: "active",
     },
     // Business Information
+    storeName: {
+      type: String,
+      default: "",
+    },
     businessName: {
       type: String,
-      required: true,
+      default: "",
     },
     businessType: {
       type: String,
-      enum: ["sole_proprietor", "partnership", "pvt_ltd", "llp", "ngo"],
-      required: true,
+      enum: ["sole_proprietor", "partnership", "pvt_ltd", "llp", "ngo", "manufacturer", "trader_distributor"],
+      default: "sole_proprietor",
+    },
+    businessCategory: {
+      type: String,
+      default: "",
     },
     gstNumber: {
       type: String,
-      required: true,
+      default: "",
     },
     panNumber: {
       type: String,
-      required: true,
+      default: "",
     },
     businessDescription: {
       type: String,
@@ -76,28 +84,28 @@ const sellerProfileSchema = new mongoose.Schema(
     // Contact Information
     primaryContactName: {
       type: String,
-      required: true,
+      default: "",
     },
     primaryContactEmail: {
       type: String,
-      required: true,
+      default: "",
     },
     primaryContactPhone: {
       type: String,
-      required: true,
+      default: "",
     },
     // Banking Information
     accountHolderName: {
       type: String,
-      required: true,
+      default: "",
     },
     accountNumber: {
       type: String,
-      required: true,
+      default: "",
     },
     ifscCode: {
       type: String,
-      required: true,
+      default: "",
     },
     bankName: {
       type: String,

@@ -6,17 +6,14 @@ const userSchema = new mongoose.Schema(
     user_id: {
       type: String,
    //   required: true,
-      unique: true,
     },
     mobile_no: {
       type: Schema.Types.Mixed,
    //   required: true,
-      unique: true,
     },
     email_id: {
       type: String,
    //   required: true,
-      unique: true,
     },
     user_fullname: {
       type: String,

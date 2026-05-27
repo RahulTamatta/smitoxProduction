@@ -494,3 +494,182 @@ hr {
   border-top: 1px solid #e4e7eb;
   margin: 24px 0;
 }
+
+/* New Progress Steps with Labels */
+.progress-steps {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 60px;
+  position: relative;
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e4e7eb;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  transition: all 0.3s ease;
+}
+
+.progress-step.active .step-number {
+  background: #137fec;
+  color: white;
+  box-shadow: 0 0 0 3px rgba(19, 127, 236, 0.15);
+}
+
+.progress-step.completed .step-number {
+  background: #16a34a;
+  color: white;
+}
+
+.progress-step .step-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #9ca3af;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.progress-step.active .step-label {
+  color: #137fec;
+  font-weight: 600;
+}
+
+.progress-step.completed .step-label {
+  color: #16a34a;
+}
+
+/* Re-upload Highlight */
+.reupload-highlight {
+  border: 2px solid #f59e0b;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fffbeb;
+  position: relative;
+}
+
+.reupload-highlight::before {
+  content: "⚠ Re-upload required";
+  position: absolute;
+  top: -10px;
+  left: 12px;
+  background: #f59e0b;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+/* Step subtitle */
+.step-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 20px;
+  margin-top: -4px;
+}
+
+/* GST exemption checkbox wrapper */
+.form-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #e4e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.form-check:hover {
+  background: #f9fafb;
+  border-color: #137fec;
+}
+
+.form-check-input {
+  width: 18px !important;
+  height: 18px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.form-check-label {
+  font-size: 14px;
+  color: #0f172a;
+  line-height: 1.5;
+}
+
+/* Badge styles */
+.badge-free {
+  background: #ecfdf3;
+  color: #16a34a;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Alert styles */
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.alert-warning {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+.alert-danger {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+.alert-success {
+  background: #ecfdf3;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.alert-info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+}
+
+@media (max-width: 768px) {
+  .progress-steps {
+    gap: 4px;
+  }
+  .progress-step .step-label {
+    font-size: 9px;
+  }
+  .step-number {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+}

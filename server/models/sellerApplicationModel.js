@@ -18,6 +18,8 @@ const sellerApplicationSchema = new mongoose.Schema(
         "approved",
         "rejected",
         "active",
+        "suspended",
+        "reupload_requested",
       ],
       default: "draft",
     },
@@ -125,12 +127,20 @@ const sellerApplicationSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    alternatePhone: {
+      type: String,
+      default: "",
+    },
     // Address Information
     addressLine1: {
       type: String,
       default: "",
     },
     addressLine2: {
+      type: String,
+      default: "",
+    },
+    area: {
       type: String,
       default: "",
     },
@@ -146,9 +156,30 @@ const sellerApplicationSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    landmark: {
+      type: String,
+      default: "",
+    },
     country: {
       type: String,
       default: "India",
+    },
+    // Pickup Address (may differ from business address)
+    pickupAddressLine1: {
+      type: String,
+      default: "",
+    },
+    pickupCity: {
+      type: String,
+      default: "",
+    },
+    pickupState: {
+      type: String,
+      default: "",
+    },
+    pickupPincode: {
+      type: String,
+      default: "",
     },
     // KYC Documents
     identityProofType: {
@@ -174,18 +205,38 @@ const sellerApplicationSchema = new mongoose.Schema(
       default: null,
     },
     // Business Information
+    storeName: {
+      type: String,
+      default: "",
+    },
+    legalBusinessName: {
+      type: String,
+      default: "",
+    },
     businessName: {
       type: String,
       default: "",
     },
     businessType: {
       type: String,
-      enum: ["sole_proprietor", "partnership", "pvt_ltd", "llp", "ngo"],
+      enum: ["sole_proprietor", "partnership", "pvt_ltd", "llp", "ngo", "manufacturer", "trader_distributor"],
       default: "sole_proprietor",
+    },
+    businessCategory: {
+      type: String,
+      default: "",
+    },
+    yearsInBusiness: {
+      type: Number,
+      default: null,
     },
     gstNumber: {
       type: String,
       default: "",
+    },
+    gstExemptionDeclared: {
+      type: Boolean,
+      default: false,
     },
     gstImage: {
       type: String,
@@ -250,6 +301,24 @@ const sellerApplicationSchema = new mongoose.Schema(
     activatedAt: {
       type: Date,
       default: null
+    },
+    // Suspension tracking
+    suspendedAt: {
+      type: Date,
+      default: null,
+    },
+    suspendedReason: {
+      type: String,
+      default: null,
+    },
+    // Re-upload request tracking
+    reuploadRequestedFields: {
+      type: [String],
+      default: [],
+    },
+    reuploadReason: {
+      type: String,
+      default: null,
     }
   },
   { timestamps: true }

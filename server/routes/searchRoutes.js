@@ -27,9 +27,10 @@ const mongoFallbackSearch = async (query, page = 1, limit = 20, includeInactive 
     const startTime = Date.now();
     const skip = (page - 1) * limit;
 
-    // Simple regex search on name (fast with text index)
+    // Split query into words and create an $and array so each word can match anywhere
+    const words = query.trim().split(/\s+/).filter(w => w.length > 0);
     const searchQuery = {
-        name: { $regex: query, $options: 'i' },
+        $and: words.map(word => ({ name: { $regex: word, $options: 'i' } })),
         stock: { $gt: 0 }
     };
 
@@ -85,7 +86,7 @@ const mongoFallbackAutocomplete = async (prefix, limit = 10) => {
 
     const products = await productModel
         .find({
-            name: { $regex: `^${prefix}`, $options: 'i' },
+            name: { $regex: prefix, $options: 'i' },
             isActive: '1',
             stock: { $gt: 0 }
         })

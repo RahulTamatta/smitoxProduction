@@ -1,21 +1,23 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/auth";
-import Layout from "../../components/Layout/Layout";
 import {
-  Clock,
-  CheckCircle,
   AlertCircle,
-  XCircle,
-  RefreshCw,
+  Ban,
+  Calendar,
+  CheckCircle,
+  Clock,
+  DollarSign,
   Edit,
   Loader,
-  Calendar,
-  DollarSign,
+  RefreshCw,
+  RotateCcw,
+  XCircle,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import Layout from "../../components/Layout/Layout";
+import { useAuth } from "../../context/auth";
 import {
-  getMyApplication,
   getCheckoutData,
+  getMyApplication,
   retryPayment,
 } from "../../services/sellerApi";
 import "./applicationStatus.css";
@@ -151,6 +153,8 @@ const ApplicationStatus = () => {
       approved: { icon: CheckCircle, color: "success", label: "Approved" },
       rejected: { icon: XCircle, color: "danger", label: "Rejected" },
       active: { icon: CheckCircle, color: "success", label: "Active" },
+      suspended: { icon: Ban, color: "danger", label: "Suspended" },
+      reupload_requested: { icon: RotateCcw, color: "warning", label: "Re-upload Requested" },
     };
 
     const badge = badges[status] || badges.draft;
@@ -376,6 +380,82 @@ const ApplicationStatus = () => {
             </div>
           )}
 
+          {/* Re-upload Requested */}
+          {application.status === "reupload_requested" && (
+            <div className="card mb-4">
+              <div className="card-header">
+                <h3>Changes Requested</h3>
+              </div>
+              <div className="card-body">
+                <div className="alert alert-warning mb-4">
+                  <RotateCcw size={20} />
+                  <div>
+                    <strong>Admin has requested changes to your application</strong>
+                    <p>
+                      {application.reuploadReason || application.reviewNotes || "Please review and update the requested documents or information."}
+                    </p>
+                  </div>
+                </div>
+
+                {application.reuploadRequestedFields && application.reuploadRequestedFields.length > 0 && (
+                  <div className="mb-4">
+                    <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>Fields to update:</h4>
+                    <ul style={{ paddingLeft: '20px', color: '#92400e' }}>
+                      {application.reuploadRequestedFields.map((field, i) => (
+                        <li key={i} style={{ marginBottom: '4px' }}>
+                          {field.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <button
+                  className="btn btn-primary btn-lg w-100"
+                  onClick={handleEditAndReapply}
+                >
+                  <Edit size={20} />
+                  Fix &amp; Resubmit
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Suspended */}
+          {application.status === "suspended" && (
+            <div className="card mb-4">
+              <div className="card-header">
+                <h3>Account Suspended</h3>
+              </div>
+              <div className="card-body">
+                <div className="alert alert-danger mb-4">
+                  <Ban size={20} />
+                  <div>
+                    <strong>Your seller account has been suspended</strong>
+                    <p>
+                      {application.suspendedReason || application.reviewNotes || "Your account has been suspended by the admin. Please contact support for more information."}
+                    </p>
+                  </div>
+                </div>
+
+                {application.suspendedAt && (
+                  <div className="info-item mb-4">
+                    <label>Suspended On</label>
+                    <p className="info-value">
+                      <Calendar size={16} />
+                      {new Date(application.suspendedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+
+                <div className="alert alert-info">
+                  <AlertCircle size={16} />
+                  <span>If you believe this is an error, please contact our support team.</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Approved (Free Plan) */}
           {application.status === "approved" && (
             <div className="card mb-4">
@@ -475,9 +555,8 @@ const ApplicationStatus = () => {
                 </div>
 
                 <div
-                  className={`timeline-item ${
-                    application.reviewedAt ? "completed" : ""
-                  }`}
+                  className={`timeline-item ${application.reviewedAt ? "completed" : ""
+                    }`}
                 >
                   <div className="timeline-marker">
                     {application.reviewedAt ? (
@@ -499,20 +578,20 @@ const ApplicationStatus = () => {
                 {["approved_pending_payment", "active"].includes(
                   application.status
                 ) && (
-                  <div className="timeline-item completed">
-                    <div className="timeline-marker">
-                      <CheckCircle size={24} />
+                    <div className="timeline-item completed">
+                      <div className="timeline-marker">
+                        <CheckCircle size={24} />
+                      </div>
+                      <div className="timeline-content">
+                        <h4>Approved</h4>
+                        <p>
+                          {application.reviewedAt
+                            ? new Date(application.reviewedAt).toLocaleString()
+                            : "N/A"}
+                        </p>
+                      </div>
                     </div>
-                    <div className="timeline-content">
-                      <h4>Approved</h4>
-                      <p>
-                        {application.reviewedAt
-                          ? new Date(application.reviewedAt).toLocaleString()
-                          : "N/A"}
-                      </p>
-                    </div>
-                  </div>
-                )}
+                  )}
 
                 {application.status === "active" && (
                   <div className="timeline-item completed">
@@ -524,8 +603,8 @@ const ApplicationStatus = () => {
                       <p>
                         {application.planActivatedAt
                           ? new Date(
-                              application.planActivatedAt
-                            ).toLocaleString()
+                            application.planActivatedAt
+                          ).toLocaleString()
                           : "N/A"}
                       </p>
                     </div>

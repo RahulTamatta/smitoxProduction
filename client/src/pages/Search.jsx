@@ -26,9 +26,29 @@ const Search = () => {
     sortBy
   });
 
-  const products = productsData?.products || [];
+  const [allProducts, setAllProducts] = useState([]);
+  const productsDataRef = useState(null); // Keep track to avoid infinite loops if needed, but not strictly necessary here.
+
+  // Accumulate products across pages
+  useEffect(() => {
+    if (productsData?.products) {
+      if (page === 1) {
+        setAllProducts(productsData.products);
+      } else {
+        setAllProducts(prev => {
+          // Avoid duplicates
+          const newProducts = productsData.products.filter(
+            p => !prev.some(existing => existing._id === p._id)
+          );
+          return [...prev, ...newProducts];
+        });
+      }
+    }
+  }, [productsData, page]);
+
+  const products = allProducts;
   const total = productsData?.total || 0;
-  const hasMore = productsData?.pagination?.hasNextPage || false;
+  const hasMore = productsData?.hasNextPage || false;
 
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);

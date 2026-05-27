@@ -22,6 +22,8 @@ const storage = multer.diskStorage({
             folder = 'banners';
         } else if (req.baseUrl.includes('auth') || req.baseUrl.includes('user')) {
             folder = 'users';
+        } else if (req.baseUrl.includes('seller')) {
+            folder = 'sellers';
         }
 
         const uploadPath = path.join(__dirname, '../uploads', folder);
