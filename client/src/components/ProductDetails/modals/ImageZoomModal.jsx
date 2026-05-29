@@ -13,8 +13,8 @@ const ImageZoomModal = ({
   const getImageUrl = (url) => {
     if (!url) return '';
     if (url.startsWith('http') || url.startsWith('data:')) return url;
-    if (url.startsWith('uploads/')) return `https://www.smitox.com/${url}`;
-    if (url.startsWith('/uploads/')) return `https://www.smitox.com${url}`;
+    if (url.startsWith('uploads/')) return `/${url}`;
+    if (url.startsWith('/uploads/')) return url;
     return url;
   };
 

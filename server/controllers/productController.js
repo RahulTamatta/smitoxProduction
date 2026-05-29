@@ -607,14 +607,41 @@ function escapeRegex(str) {
 export const searchProductController = async (req, res) => {
   try {
     const { keyword } = req.params;
-    const isObjectId = mongoose.Types.ObjectId.isValid(keyword);
-    const keywordNumber = Number(keyword);
-    const isNumber = !isNaN(keywordNumber);
 
-    // Escape keyword for regex
+    // Split keyword into individual words for multi-word matching
+    const words = keyword.trim().split(/\s+/).filter(w => w.length > 0);
+
+    // Build per-word search: each word must match at least one field
+    // This allows "T800 watch" to match "T800 ULTRA WIRELESS WATCH"
+    const wordConditions = words.map(word => {
+      const safeWord = escapeRegex(word);
+      const isObjectId = mongoose.Types.ObjectId.isValid(word);
+      const wordNumber = Number(word);
+      const isNumber = !isNaN(wordNumber);
+
+      const conditions = [
+        { name: { $regex: safeWord, $options: "i" } },
+        { description: { $regex: safeWord, $options: "i" } },
+        { tag: { $regex: safeWord, $options: "i" } },
+        { sku: { $regex: safeWord, $options: "i" } },
+        { slug: { $regex: safeWord, $options: "i" } },
+      ];
+
+      if (isObjectId) {
+        conditions.push({ category: word });
+        conditions.push({ subcategory: word });
+        conditions.push({ brand: word });
+      }
+
+      if (isNumber) {
+        conditions.push({ perPiecePrice: wordNumber });
+      }
+
+      return { $or: conditions };
+    });
+
+    // Also search category/subcategory names using full keyword for relevance
     const safeKeyword = escapeRegex(keyword);
-
-    // Fetch category IDs based on name match
     const categories = await categoryModel
       .find({
         name: { $regex: safeKeyword, $options: "i" },
@@ -623,7 +650,6 @@ export const searchProductController = async (req, res) => {
       .lean();
     const categoryIds = categories.map((c) => c._id);
 
-    // Fetch subcategory IDs based on name match
     const subcategories = await subcategoryModel
       .find({
         name: { $regex: safeKeyword, $options: "i" },
@@ -632,39 +658,43 @@ export const searchProductController = async (req, res) => {
       .lean();
     const subcategoryIds = subcategories.map((c) => c._id);
 
-    // Build the search conditions
-    const searchConditions = [
-      { name: { $regex: safeKeyword, $options: "i" } },
-      { description: { $regex: safeKeyword, $options: "i" } },
-      { tag: { $regex: safeKeyword, $options: "i" } },
-      { sku: { $regex: safeKeyword, $options: "i" } },
-      { slug: { $regex: safeKeyword, $options: "i" } },
-      { category: { $in: categoryIds } },
-      { subcategory: { $in: subcategoryIds } },
-    ];
-
-    // Add validation-specific search fields
-    if (isObjectId) {
-      searchConditions.push({ category: keyword });
-      searchConditions.push({ subcategory: keyword });
-      searchConditions.push({ brand: keyword });
+    // Build final query: each word must match AND stock > 0 AND active
+    // Also include category/subcategory matches as an alternative
+    const categoryConditions = [];
+    if (categoryIds.length > 0) {
+      categoryConditions.push({ category: { $in: categoryIds } });
+    }
+    if (subcategoryIds.length > 0) {
+      categoryConditions.push({ subcategory: { $in: subcategoryIds } });
     }
 
-    if (isNumber) {
-      searchConditions.push({ perPiecePrice: keywordNumber });
+    let searchQuery;
+    if (categoryConditions.length > 0) {
+      // Match either all words OR category/subcategory name match
+      searchQuery = {
+        $and: [
+          {
+            $or: [
+              { $and: wordConditions },
+              ...categoryConditions
+            ]
+          },
+          { stock: { $gt: 0 } },
+          { isActive: "1" },
+        ]
+      };
+    } else {
+      searchQuery = {
+        $and: [
+          ...wordConditions,
+          { stock: { $gt: 0 } },
+          { isActive: "1" },
+        ]
+      };
     }
-
-    // Combine with filters for stock and active status
-    const query = {
-      $and: [
-        { $or: searchConditions },
-        { stock: { $gt: 0 } }, // Exclude out-of-stock
-        { isActive: "1" },      // Exclude inactive products
-      ]
-    };
 
     const results = await productModel
-      .find(query)
+      .find(searchQuery)
       .populate("category", "name")
       .populate("subcategory", "name")
       .populate("brand", "name")

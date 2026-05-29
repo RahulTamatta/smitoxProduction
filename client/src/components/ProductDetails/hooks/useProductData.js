@@ -110,6 +110,8 @@ export const useProductData = () => {
             if (img === '/placeholder-image.jpg') return false;
             if (img === 'null' || img === 'undefined' || img === '[null]' || img === '[undefined]') return false;
             if (img === '[]' || img === '{}' || img === 'null' || img === 'false') return false;
+            // Accept relative paths from multer uploads (e.g. "uploads/products/filename.jpg")
+            if (img.startsWith('uploads/')) return true;
             try {
               const url = new URL(img);
               return url.protocol === 'http:' || url.protocol === 'https:';
