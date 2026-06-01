@@ -17,7 +17,7 @@ import Layout from "../../components/Layout/Layout";
 import { useAuth } from "../../context/auth";
 const ProductForYou = () => {
   const getImageUrl = (url) => {
-    if (!url) return '/placeholder-image.png';
+    if (!url) return '/placeholder-product.png';
     if (url.startsWith('data:') || url.startsWith('http')) return url;
     // Prefix with / if it's a relative path like 'uploads/...'
     return url.startsWith('/') ? url : `/${url}`;
@@ -106,7 +106,7 @@ const ProductForYou = () => {
         { ids: selectedForYouIds },
         {
           headers: {
-            Authorization: `Bearer ${auth.user.token}`,
+            Authorization: `Bearer ${auth.token}`,
             "Content-Type": "application/json",
           },
         }
@@ -216,7 +216,7 @@ const ProductForYou = () => {
     try {
       await axios.post("/api/v1/productForYou/createProductForYou", data, {
         headers: {
-          Authorization: `Bearer ${auth.user.token}`,
+          Authorization: `Bearer ${auth.token}`,
           "Content-Type": "multipart/form-data",
         },
       });
@@ -250,7 +250,7 @@ const ProductForYou = () => {
         },
         {
           headers: {
-            Authorization: `Bearer ${auth.user.token}`,
+            Authorization: `Bearer ${auth.token}`,
             "Content-Type": "application/json",
           },
         }
@@ -580,7 +580,7 @@ const ProductForYou = () => {
                                           }}
                                           onError={(e) => {
                                             e.target.onerror = null;
-                                            e.target.src = '/placeholder-image.png';
+                                            e.target.src = '/placeholder-product.png';
                                           }}
                                         />
                                       ) : (
