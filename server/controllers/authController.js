@@ -1183,3 +1183,35 @@ export const refreshTokenController = async (req, res) => {
     });
   }
 };
+
+// Update FCM Token
+export const updateFCMTokenController = async (req, res) => {
+  try {
+    const { fcmToken } = req.body;
+    if (!fcmToken) {
+      return res.status(400).send({ success: false, message: "FCM Token is required" });
+    }
+
+    const user = await userModel.findByIdAndUpdate(
+      req.user._id,
+      { fcmToken },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).send({ success: false, message: "User not found" });
+    }
+
+    res.status(200).send({
+      success: true,
+      message: "FCM Token updated successfully"
+    });
+  } catch (error) {
+    console.error("Error updating FCM token:", error);
+    res.status(500).send({
+      success: false,
+      message: "Error updating FCM token",
+      error: error.message
+    });
+  }
+};

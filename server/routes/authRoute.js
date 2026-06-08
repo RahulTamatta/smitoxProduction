@@ -24,7 +24,8 @@ import {
   sendOTPController,
   updateOrderController,
   updateProfileController,
-  verifyOTPAndLoginController
+  verifyOTPAndLoginController,
+  updateFCMTokenController
 } from '../controllers/authController.js';
 import { upload } from '../middlewares/multer.js';
 import { requireCapability, requireSignIn } from '../middlewares/rbacMiddleware.js';
@@ -111,6 +112,9 @@ router.put("/profile", requireSignIn, upload.fields([
   { name: 'address_proof_image', maxCount: 1 }
 ]), updateProfileController);
 router.get("/profile", requireSignIn, getProfileController);
+
+// update fcm token
+router.post("/update-fcm-token", requireSignIn, updateFCMTokenController);
 
 //orders
 router.get("/orders/:user_id", getOrdersController);

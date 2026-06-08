@@ -20,7 +20,6 @@ root.render(
     <SearchProvider>
       <CartProvider>
         <BrowserRouter>
-          <Toaster />
           <App />
         </BrowserRouter>
       </CartProvider>

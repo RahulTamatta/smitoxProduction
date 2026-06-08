@@ -8,7 +8,7 @@ import Wishlist from '../models/wishlistModel.js';
 // Get all users with populated products, wishlist, and cart
 export const getUsers = async (req, res) => {
   try {
-    let { page = 1, limit = 20, search = '', orderType = 'all' } = req.query;
+    let { page = 1, limit = 20, search = '', orderType = 'all', hasCart } = req.query;
 
     // Ensure page and limit are positive integers
     page = Math.max(1, parseInt(page, 10));
@@ -60,6 +60,38 @@ export const getUsers = async (req, res) => {
       }
     }
 
+    let cartStatsMap = {};
+    
+    console.log('hasCart received:', hasCart);
+    if (hasCart === 'true' || hasCart === true) {
+      const cartsWithProducts = await Cart.find({ 'products.0': { $exists: true } })
+        .populate('products.product', 'perPiecePrice')
+        .lean();
+      
+      const userIdsWithCarts = [];
+      
+      for (const cart of cartsWithProducts) {
+        if (cart.user) {
+          let productCount = 0;
+          let totalAmount = 0;
+          
+          for (const item of cart.products) {
+            if (item && item.product) {
+              productCount += item.quantity;
+              totalAmount += item.quantity * (item.product.perPiecePrice || 0);
+            }
+          }
+          
+          if (productCount > 0) {
+            cartStatsMap[cart.user.toString()] = { productCount, totalAmount };
+            userIdsWithCarts.push(cart.user);
+          }
+        }
+      }
+      
+      searchQuery._id = { $in: userIdsWithCarts };
+    }
+
     const users = await userModel
       .find(searchQuery)
       .skip((page - 1) * limit)
@@ -70,7 +102,22 @@ export const getUsers = async (req, res) => {
 
     const total = await userModel.countDocuments(searchQuery);
 
-    res.json({ status: 'success', list: users, total });
+    let responseList = users.map(u => {
+      const uObj = u.toObject();
+      if ((hasCart === 'true' || hasCart === true) && cartStatsMap[u._id.toString()]) {
+        uObj.cartStats = cartStatsMap[u._id.toString()];
+      }
+      return uObj;
+    });
+
+    let finalTotal = total;
+    if (hasCart === 'true' || hasCart === true) {
+      // Strictly enforce that we only return users with cart stats > 0
+      responseList = responseList.filter(u => u.cartStats && u.cartStats.productCount > 0);
+      finalTotal = responseList.length; // Override total since we filtered post-query
+    }
+
+    res.json({ status: 'success', list: responseList, total: finalTotal });
   } catch (error) {
     res.status(500).json({ status: 'error', message: error.message });
   }

@@ -7,6 +7,7 @@ import path from "path";
 import { fileURLToPath } from 'url'; // To convert import.meta.url to a pathname
 import connectDB from "./config/db.js";
 import { checkConnection as checkElasticsearch, initializeIndex } from "./config/elasticsearch.js";
+import { initializeFirebase } from "./utils/firebaseService.js";
 import { initializeRedis } from "./config/redis.js";
 import { checkPlanExpiry } from "./jobs/planExpiryCheckJob.js";
 import { startPlanExpiryJob } from "./jobs/planExpiryJob.js";
@@ -147,6 +148,9 @@ const PORT = process.env.PORT || 8080;
 // Start the server
 const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running in ${process.env.DEV_MODE || 'development'} mode on port ${PORT}`.cyan);
+
+  // Initialize Firebase Admin
+  initializeFirebase();
 
   // Start Plan Expiry CRON Jobs
   try {

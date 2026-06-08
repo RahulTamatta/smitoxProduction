@@ -255,6 +255,10 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    fcmToken: {
+      type: String,
+      default: "",
+    },
     // New RBAC fields
     roleString: {
       type: String,

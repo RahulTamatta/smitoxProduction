@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FaExpand } from 'react-icons/fa';
 import OptimizedImage from '../OptimizedImage';
 
@@ -11,6 +11,8 @@ const ProductImageGallery = ({
   setLoadedImages,
   isMobile
 }) => {
+  const [failedImages, setFailedImages] = useState(new Set());
+
   const imageStyle = {
     flex: isMobile ? "1 1 100%" : "1 1 300px",
     maxWidth: isMobile ? "100%" : "500px",
@@ -116,6 +118,7 @@ const ProductImageGallery = ({
               };
             })
             .filter(Boolean) // Remove null entries
+            .filter(({ imgUrl }) => !failedImages.has(imgUrl)) // Hide failed images
             .map(({ imgUrl, index, key }) => (
               <div 
                 key={key}
@@ -145,11 +148,7 @@ const ProductImageGallery = ({
                   }}
                   onError={(e) => {
                     console.error(`Failed to load thumbnail image:`, imgUrl);
-                    // Hide the entire thumbnail container if image fails
-                    const container = e.target.closest('[data-thumbnail]');
-                    if (container) {
-                      container.style.display = 'none';
-                    }
+                    setFailedImages(prev => new Set(prev).add(imgUrl));
                   }}
                 />
               </div>

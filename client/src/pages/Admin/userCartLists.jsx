@@ -17,6 +17,7 @@ const UserList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [usersPerPage] = useState(20);
   const [activeRegularFilter, setActiveRegularFilter] = useState('all');
+  const [activeCartFilter, setActiveCartFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState("");
   const [totalUsers, setTotalUsers] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -42,9 +43,9 @@ const UserList = () => {
 
   // --- Fix: Always fetch users when currentPage or debouncedSearchTerm changes ---
   useEffect(() => {
-    fetchUsers(currentPage, debouncedSearchTerm, activeOrderTypeFilter);
+    fetchUsers(currentPage, debouncedSearchTerm, activeOrderTypeFilter, activeCartFilter);
     // eslint-disable-next-line
-  }, [currentPage, debouncedSearchTerm, activeOrderTypeFilter]);
+  }, [currentPage, debouncedSearchTerm, activeOrderTypeFilter, activeCartFilter]);
 
   // --- Fix: When searchTerm changes, reset to page 1 and update URL ---
   useEffect(() => {
@@ -90,7 +91,7 @@ const UserList = () => {
   useEffect(() => {
     filterUsers(users);
     // eslint-disable-next-line
-  }, [users, activeStatusFilter, activeOrderTypeFilter, activeRegularFilter]);
+  }, [users, activeStatusFilter, activeOrderTypeFilter, activeRegularFilter, activeCartFilter]);
 
   // --- Fix: Remove duplicate fetchUsers on mount ---
   useEffect(() => {
@@ -124,6 +125,7 @@ const UserList = () => {
           limit: usersPerPage,
           search: value,
           orderType: activeOrderTypeFilter,
+          hasCart: activeCartFilter === 'withCart',
         }
       });
       setFilteredUsers((data.list || []).map(user => user)); // Ensure filteredUsers is an array
@@ -133,7 +135,7 @@ const UserList = () => {
     }
   };
 
-  const fetchUsers = async (page = currentPage, search = searchTerm, orderType = activeOrderTypeFilter) => {
+  const fetchUsers = async (page = currentPage, search = searchTerm, orderType = activeOrderTypeFilter, cartFilter = activeCartFilter) => {
     setIsLoading(true);
     setError(null);
     try {
@@ -143,6 +145,7 @@ const UserList = () => {
           limit: usersPerPage,
           search, // Pass the search term as-is
           orderType,
+          hasCart: cartFilter === 'withCart',
         },
       });
       const usersList = response.data.list || [];
@@ -600,6 +603,21 @@ const UserList = () => {
   };
 
   const FiltersRedesign = () => (
+    <>
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>
+        <button 
+          onClick={() => setActiveCartFilter('all')} 
+          style={{ background: 'none', border: 'none', padding: '0.5rem 1rem', cursor: 'pointer', borderBottom: activeCartFilter === 'all' ? '2px solid #1a237e' : 'none', fontWeight: activeCartFilter === 'all' ? 'bold' : 'normal', color: activeCartFilter === 'all' ? '#1a237e' : '#666' }}
+        >
+          All Users
+        </button>
+        <button 
+          onClick={() => setActiveCartFilter('withCart')} 
+          style={{ background: 'none', border: 'none', padding: '0.5rem 1rem', cursor: 'pointer', borderBottom: activeCartFilter === 'withCart' ? '2px solid #1a237e' : 'none', fontWeight: activeCartFilter === 'withCart' ? 'bold' : 'normal', color: activeCartFilter === 'withCart' ? '#1a237e' : '#666' }}
+        >
+          Users with Cart Items
+        </button>
+      </div>
     <div style={{
       backgroundColor: '#fff',
       padding: '1.25rem',
@@ -671,6 +689,7 @@ const UserList = () => {
         </div>
       </div>
     </div>
+    </>
   );
 
   const renderContent = () => {
@@ -701,7 +720,10 @@ const UserList = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse', ...styles.tableBorder }}>
             <thead>
               <tr>
-                {['Name', 'Contact', 'Address', 'Status', 'Payment Mode', 'Actions'].map(header => (
+                {(activeCartFilter === 'withCart' 
+                  ? ['Sr No', 'Name', 'Contact', 'Address', 'Product Count', 'Order Value', 'Actions'] 
+                  : ['Name', 'Contact', 'Address', 'Status', 'Payment Mode', 'Actions']
+                ).map(header => (
                   <th
                     key={header}
                     style={{
@@ -732,8 +754,13 @@ const UserList = () => {
                   </td>
                 </tr>
               ) : (
-                currentUsers.map((user) => (
+                currentUsers.map((user, index) => (
                   <tr key={user._id} style={{ borderBottom: '1px solid #e0e0e0' }}>
+                    {activeCartFilter === 'withCart' && (
+                      <td style={styles.tableCell}>
+                        {index + 1 + (currentPage - 1) * usersPerPage}
+                      </td>
+                    )}
                     <td style={styles.tableCell}>
                       <strong>{user.user_fullname}</strong>
                     </td>
@@ -774,35 +801,50 @@ const UserList = () => {
                         )}
                       </div>
                     </td>
-                    <td style={styles.tableCell}>
-                      {renderRegularButton(user)}
-                    </td>
-                    <td style={styles.tableCell}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        {['COD', 'Advance'].map((type) => (
-                          <label key={type} style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            cursor: isLoading ? 'not-allowed' : 'pointer',
-                            color: styles.orderTypeLabel.color,
-                            opacity: isLoading ? 0.6 : 1,
-                            fontSize: isMobile ? '0.8rem' : '0.85rem', // Slightly smaller font
-                            marginBottom: '2px'
-                          }}>
-                            <input
-                              type="radio"
-                              name={`orderType-${user._id}`}
-                              value={type}
-                              checked={getOrderTypeLabel(user.order_type) === type}
-                              onChange={() => !isLoading && updateOrderType(user._id, getOrderTypeValue(type))}
-                              style={{ marginRight: '0.25rem' }}
-                              disabled={isLoading}
-                            />
-                            {type}
-                          </label>
-                        ))}
-                      </div>
-                    </td>
+                    
+                    {activeCartFilter === 'withCart' ? (
+                      <>
+                        <td style={{ ...styles.tableCell, fontWeight: 'bold' }}>
+                          {user.cartStats?.productCount || 0}
+                        </td>
+                        <td style={{ ...styles.tableCell, fontWeight: 'bold', color: '#1a237e' }}>
+                          ₹{user.cartStats?.totalAmount?.toFixed(2) || '0.00'}
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td style={styles.tableCell}>
+                          {renderRegularButton(user)}
+                        </td>
+                        <td style={styles.tableCell}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            {['COD', 'Advance'].map((type) => (
+                              <label key={type} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                cursor: isLoading ? 'not-allowed' : 'pointer',
+                                color: styles.orderTypeLabel.color,
+                                opacity: isLoading ? 0.6 : 1,
+                                fontSize: isMobile ? '0.8rem' : '0.85rem', // Slightly smaller font
+                                marginBottom: '2px'
+                              }}>
+                                <input
+                                  type="radio"
+                                  name={`orderType-${user._id}`}
+                                  value={type}
+                                  checked={getOrderTypeLabel(user.order_type) === type}
+                                  onChange={() => !isLoading && updateOrderType(user._id, getOrderTypeValue(type))}
+                                  style={{ marginRight: '0.25rem' }}
+                                  disabled={isLoading}
+                                />
+                                {type}
+                              </label>
+                            ))}
+                          </div>
+                        </td>
+                      </>
+                    )}
+                    
                     <td style={styles.tableCell}>
                       <div style={styles.actionButtonsContainer}>
                         <button
