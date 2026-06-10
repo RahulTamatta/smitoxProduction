@@ -7,7 +7,6 @@ import { AuthProvider } from "./context/auth";
 import { SearchProvider } from "./context/search";
 import { CartProvider } from "./context/cart";
 import "antd/dist/reset.css";
-import { Toaster } from "react-hot-toast";
 import { Provider } from 'react-redux'; // Import Provider
 import store from './redux/store'; // Import your Redux store
 
@@ -26,7 +25,6 @@ root.render(
       <SearchProvider>
         <CartProvider>
           <BrowserRouter>
-            <Toaster />
             <App />
           </BrowserRouter>
         </CartProvider>

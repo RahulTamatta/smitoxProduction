@@ -60,7 +60,7 @@ const ProductImageGallery = ({
           style={{ 
             borderRadius: "8px",
             width: "100%",
-            height: "auto",
+            height: isMobile ? "300px" : "500px",
             maxHeight: isMobile ? "300px" : "500px"
           }}
           width={isMobile ? 300 : 500}
