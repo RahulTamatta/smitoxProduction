@@ -114,7 +114,7 @@ export const getUsers = async (req, res) => {
     if (hasCart === 'true' || hasCart === true) {
       // Strictly enforce that we only return users with cart stats > 0
       responseList = responseList.filter(u => u.cartStats && u.cartStats.productCount > 0);
-      finalTotal = responseList.length; // Override total since we filtered post-query
+      // finalTotal = total; // Removed override so pagination works across all pages
     }
 
     res.json({ status: 'success', list: responseList, total: finalTotal });

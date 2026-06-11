@@ -151,7 +151,15 @@ export const useCartOperations = (product) => {
       console.log('[Cart] Add to cart response:', response.data);
 
       if (response.data.status === "success") {
-        setCart(response.data.cart);
+        setCart(prevCart => {
+          const cartArray = Array.isArray(prevCart) ? prevCart : [];
+          const existing = cartArray.find(item => (item.product?._id || item.product) === product._id);
+          if (existing) {
+            return cartArray.map(item => (item.product?._id || item.product) === product._id ? { ...item, quantity: initialQuantity } : item);
+          } else {
+            return [...cartArray, { product, quantity: initialQuantity, bulkProductDetails: applicableBulk ? [applicableBulk] : [] }];
+          }
+        });
         toast.success("Product added to cart");
       } else {
         // Rollback optimistic update on failure
@@ -257,11 +265,14 @@ export const useCartOperations = (product) => {
       );
 
       // FIX 9: Use functional updater to avoid stale closure on cart state.
-      setCart(prevCart => prevCart.map(item =>
-        item.product._id === product._id
-          ? { ...item, quantity }
-          : item
-      ));
+      setCart(prevCart => {
+        const cartArray = Array.isArray(prevCart) ? prevCart : [];
+        return cartArray.map(item =>
+          (item.product?._id || item.product) === product._id
+            ? { ...item, quantity }
+            : item
+        );
+      });
 
     } catch (error) {
       console.error("Quantity update error:", error);
@@ -284,7 +295,10 @@ export const useCartOperations = (product) => {
       );
 
       // FIX 10: Use functional updater to avoid stale closure on cart state.
-      setCart(prevCart => prevCart.filter(item => item.product._id !== productId));
+      setCart(prevCart => {
+        const cartArray = Array.isArray(prevCart) ? prevCart : [];
+        return cartArray.filter(item => (item.product?._id || item.product) !== productId);
+      });
 
     } catch (error) {
       console.error("Remove from cart failed:", error.message);
