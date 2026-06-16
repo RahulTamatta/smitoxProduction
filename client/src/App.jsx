@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom"; // Remove ScrollRestoration
+import { Route, Routes, useParams } from "react-router-dom";
 import AdminRoute from "./components/Routes/AdminRoute";
 import PrivateRoute from "./components/Routes/Private";
 import About from "./pages/About";
@@ -70,6 +70,13 @@ const queryClient = new QueryClient({
   },
 });
 
+// When slug changes, React sees a different key → destroys old component → mounts new one.
+// New mount = fresh DOM = page naturally starts at position 0. No scrollTo hacks.
+const ProductDetailsWrapper = () => {
+  const { slug } = useParams();
+  return <ProductDetails key={slug} />;
+};
+
 function App() {
 
   return (
@@ -78,7 +85,7 @@ function App() {
         <ScrollToTop /> {/* Using ScrollToTop component */}
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/product/:slug" element={<ProductDetails />} />
+          <Route path="/product/:slug" element={<ProductDetailsWrapper />} />
           <Route path="/categories" element={<Categories />} />
           <Route path="/cart" element={<CartPage />} />
 

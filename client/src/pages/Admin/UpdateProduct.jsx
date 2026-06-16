@@ -206,11 +206,17 @@ const UpdateProduct = () => {
           }
           // If multipleimages is already an array, use it directly
           else if (Array.isArray(product.multipleimages)) {
-            // Filter out null, undefined, and strings like "null"
-            processedImages = product.multipleimages
+            processedImages = product.multipleimages;
+          }
+
+          // Normalize the images array to extract strings
+          if (Array.isArray(processedImages)) {
+            processedImages = processedImages
               .filter(img => img && img !== 'null' && img !== 'undefined' && img !== '[]')
               .map(img => {
-                // If any array item is a string that needs parsing (like a JSON string)
+                if (typeof img === 'object' && img !== null) {
+                  return img.url || '';
+                }
                 if (typeof img === 'string' && img.startsWith('{')) {
                   try {
                     const parsed = JSON.parse(img);
@@ -220,7 +226,10 @@ const UpdateProduct = () => {
                   }
                 }
                 return img;
-              });
+              })
+              .filter(img => typeof img === 'string' && img.trim() !== '');
+          } else {
+            processedImages = [];
           }
 
           console.log('Processed multipleimages:', processedImages);

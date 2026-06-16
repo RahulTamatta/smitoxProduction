@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Toaster } from "react-hot-toast";
 import { useLocation } from "react-router-dom";
@@ -11,12 +11,11 @@ const Layout = ({ children, title, description, keywords, author }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const location = useLocation();
   const isAdminRoute = location.pathname.toLowerCase().startsWith("/dashboard/admin");
+  const headerRef = useRef(null);
 
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth <= 768);
-      // Adjust header height to exactly match Header component heights
-      setHeaderHeight(window.innerWidth <= 768 ? 60 : 70);
     };
 
     window.addEventListener('resize', handleResize);
@@ -25,6 +24,37 @@ const Layout = ({ children, title, description, keywords, author }) => {
 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    if (isAdminRoute) return;
+    
+    // Dynamically measure header height
+    const updateHeaderHeight = () => {
+      if (headerRef.current) {
+        setHeaderHeight(headerRef.current.offsetHeight);
+      }
+    };
+
+    // Initial measurement
+    updateHeaderHeight();
+
+    // Use ResizeObserver to detect changes in header size
+    const resizeObserver = new ResizeObserver(() => {
+      updateHeaderHeight();
+    });
+
+    const currentHeaderRef = headerRef.current;
+    if (currentHeaderRef) {
+      resizeObserver.observe(currentHeaderRef);
+    }
+
+    return () => {
+      if (currentHeaderRef) {
+        resizeObserver.unobserve(currentHeaderRef);
+      }
+      resizeObserver.disconnect();
+    };
+  }, [isAdminRoute, isMobile]);
 
   const layoutStyles = {
     display: "flex",
@@ -52,7 +82,7 @@ const Layout = ({ children, title, description, keywords, author }) => {
   const mainContentStyles = {
     flex: 1,
     marginTop: `${effectiveHeaderHeight}px`, // Dynamic margin based on header height (0 on admin routes)
-    padding: isAdminRoute ? "0" : (isMobile ? "0" : "2rem 1rem"), // No extra padding on admin shell
+    padding: isAdminRoute ? "0" : (isMobile ? "0" : "0.5rem 1rem"), // Reduced top padding so product starts near header
     display: "flex",
     flexDirection: "column",
     width: "100%",
@@ -61,7 +91,7 @@ const Layout = ({ children, title, description, keywords, author }) => {
     backgroundColor: isMobile ? "#f8f9fa" : "#ffffff", // Use lighter background on mobile
     boxSizing: "border-box",
     position: "relative",
-    overflow: "auto" // Allow scrolling for content
+    // NO overflow:auto here — let the window be the scroll container so ScrollToTop works
   };
 
   const toasterContainerStyles = {
@@ -98,7 +128,7 @@ const Layout = ({ children, title, description, keywords, author }) => {
 
       {/* Header - Fixed position (hidden on admin routes) */}
       {!isAdminRoute && (
-        <div style={headerContainerStyles}>
+        <div ref={headerRef} style={headerContainerStyles}>
           <Header />
         </div>
       )}

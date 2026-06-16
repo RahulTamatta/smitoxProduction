@@ -26,110 +26,76 @@ const QuantitySelector = ({
     addToCart();
   };
 
-  const quantitySelectorStyle = {
-    display: "flex",
-    alignItems: "center",
-    marginBottom: isMobile ? "15px" : "20px",
-  };
 
-  const buttonStyle = {
-    padding: isMobile ? "8px 16px" : "10px 20px",
-    fontSize: isMobile ? "14px" : "16px",
-    cursor: "pointer",
-    backgroundColor: "red",
-    color: "#111111",
-    border: "none",
-    borderRadius: "20px",
-    transition: "background-color 0.3s",
-    // Prevent text/image selection on rapid tap
-    userSelect: "none",
-    WebkitUserSelect: "none",
-    // Prevent 300ms tap delay on mobile browsers
-    touchAction: "manipulation",
-  };
-
-  const inputStyle = {
-    width: isMobile ? "40px" : "50px",
-    height: isMobile ? "36px" : "40px",
-    textAlign: "center",
-    margin: "0 10px",
-    padding: "5px",
-    border: "1px solid #ddd",
-    borderRadius: "4px",
-    fontSize: isMobile ? "16px" : "14px",
-  };
 
   return (
-    <div style={quantitySelectorStyle}>
-      {/* MINUS button */}
-      <button
-        onTouchStart={(e) => {
-          e.preventDefault(); // prevent ghost click
-          safeHandleQuantityChange(false, 'touch');
-        }}
-        onClick={(e) => {
-          safeHandleQuantityChange(false, 'click');
-        }}
-        style={{
-          ...buttonStyle,
-          minWidth: isMobile ? "36px" : "40px",
-          height: isMobile ? "36px" : "40px",
-          padding: "0",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center"
-        }}
-        aria-label="Decrease quantity"
-      >
-        <span style={{ fontSize: isMobile ? "18px" : "20px" }}>-</span>
-      </button>
+    <div className="flex flex-col gap-4 w-full mb-4">
+      <div className="flex gap-4 h-14 w-full">
+        {displayQuantity === 0 ? (
+          <button 
+            onTouchStart={(e) => {
+              e.preventDefault();
+              safeAddToCart('touch');
+            }}
+            onClick={(e) => {
+              safeAddToCart('click');
+            }}
+            className={`w-full bg-primary text-on-primary font-label-md text-label-md rounded-full flex items-center justify-center gap-2 h-14 hover:bg-primary/90 transition-all active:scale-95 inner-glow ambient-shadow ${isAddingToCartRef.current ? 'opacity-60 pointer-events-none' : ''}`}
+          >
+            <span className="material-symbols-outlined">shopping_cart_checkout</span>
+            Add to Bulk Cart
+          </button>
+        ) : (
+          <div className="flex items-center justify-between bg-surface-container-high rounded-full px-2 w-full border border-outline-variant/50">
+            {/* MINUS button */}
+            <button
+              onTouchStart={(e) => {
+                e.preventDefault();
+                safeHandleQuantityChange(false, 'touch');
+              }}
+              onClick={(e) => {
+                safeHandleQuantityChange(false, 'click');
+              }}
+              className="w-10 h-10 rounded-full hover:bg-surface-container-highest flex items-center justify-center text-on-surface transition-colors select-none touch-manipulation"
+              aria-label="Decrease quantity"
+            >
+              <span className="material-symbols-outlined text-lg font-bold">-</span>
+            </button>
 
-      <input
-        type="number"
-        value={displayQuantity}
-        readOnly
-        style={{
-          ...inputStyle,
-          width: `${Math.max(displayQuantity.toString().length, 2) * (isMobile ? 16 : 14)}px`,
-          minWidth: isMobile ? "40px" : "50px"
-        }}
-        aria-label="Current quantity"
-      />
+            <input
+              type="number"
+              value={displayQuantity}
+              readOnly
+              className="w-full text-center bg-transparent border-none p-0 font-label-md text-label-md text-on-surface focus:ring-0 appearance-none m-0"
+              style={{ MozAppearance: "textfield" }}
+              aria-label="Current quantity"
+            />
 
-      {/* PLUS button */}
-      <button
-        onTouchStart={(e) => {
-          e.preventDefault(); // prevent ghost click
-          if (displayQuantity === 0) {
-            safeAddToCart('touch');
-          } else {
-            safeHandleQuantityChange(true, 'touch');
-          }
+            {/* PLUS button */}
+            <button
+              onTouchStart={(e) => {
+                e.preventDefault();
+                safeHandleQuantityChange(true, 'touch');
+              }}
+              onClick={(e) => {
+                safeHandleQuantityChange(true, 'click');
+              }}
+              className="w-10 h-10 rounded-full hover:bg-surface-container-highest flex items-center justify-center text-on-surface transition-colors select-none touch-manipulation"
+              aria-label="Increase quantity"
+            >
+              <span className="material-symbols-outlined text-lg font-bold">+</span>
+            </button>
+          </div>
+        )}
+      </div>
+      
+      <button 
+        onClick={() => {
+          window.open(`https://wa.me/+918850832942?text=${encodeURIComponent("Hi, I am interested in requesting a custom quote.")}`, '_blank');
         }}
-        onClick={(e) => {
-          if (displayQuantity === 0) {
-            safeAddToCart('click');
-          } else {
-            safeHandleQuantityChange(true, 'click');
-          }
-        }}
-        style={{
-          ...buttonStyle,
-          minWidth: isMobile ? "36px" : "40px",
-          height: isMobile ? "36px" : "40px",
-          padding: "0",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          // FIX: Use isAddingToCart state (not the ref) for disabled so React
-          // re-renders correctly. The ref is only used for internal logic guards.
-          opacity: isAddingToCartRef.current ? 0.6 : 1,
-          pointerEvents: isAddingToCartRef.current ? "none" : "auto",
-        }}
-        aria-label="Increase quantity"
-        aria-disabled={isAddingToCartRef.current}
+        className="w-full h-12 rounded-full border-2 border-primary text-primary font-label-md text-label-md flex items-center justify-center gap-2 hover:bg-primary-fixed/30 transition-colors"
       >
-        <span style={{ fontSize: isMobile ? "18px" : "20px" }}>+</span>
+        <span className="material-symbols-outlined">chat_bubble</span> Request Custom Quote
       </button>
     </div>
   );

@@ -37,7 +37,7 @@
   /* Ensure no extra spacing on mobile */
   .layout-container main {
     padding: 0 !important;
-    margin-top: 60px !important; /* Just the header height */
+    /* margin-top is handled dynamically in React */
   }
   
   /* Fix specific spacing issues on mobile */

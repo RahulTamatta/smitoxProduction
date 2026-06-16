@@ -2,46 +2,28 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
 /**
- * This component handles scrolling to top when navigating between routes
- * and preserves scroll position when using browser back/forward navigation
+ * ScrollToTop - fires on every route/pathname change and scrolls to the top.
+ * Works like Amazon/Flipkart: browser scroll restoration is set to 'manual'
+ * in index.jsx, so this has full, uncontested control.
  */
 const ScrollToTop = () => {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    // Keep track of how the user got to this page
-    const popStateHandler = () => {
-      // If navigating via browser back/forward buttons, try to restore scroll position
-      const scrollY = sessionStorage.getItem(`scrollPos:${pathname}`);
-      if (scrollY) {
-        window.scrollTo(0, parseInt(scrollY, 10));
-      }
-    };
-
-    const saveScrollPosition = () => {
-      // Save scroll position for current path before leaving
-      sessionStorage.setItem(`scrollPos:${pathname}`, window.scrollY);
-    };
-
-    // Add event listeners
-    window.addEventListener('popstate', popStateHandler);
-    window.addEventListener('beforeunload', saveScrollPosition);
-
-    // On regular navigation (not back/forward), scroll to top
-    if (window.history.state && window.history.state.type !== 'popstate') {
-      window.scrollTo(0, 0);
+    // Use 'instant' (no animation) so it feels like a real page load.
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    
+    // Fallback for browsers/CSS configurations where body or documentElement 
+    // acts as the scroll container instead of the window.
+    if (document.body) {
+      document.body.scrollTop = 0;
     }
-
-    // Clean up event listeners
-    return () => {
-      window.removeEventListener('popstate', popStateHandler);
-      window.removeEventListener('beforeunload', saveScrollPosition);
-      saveScrollPosition(); // Save position when unmounting as well
-    };
+    if (document.documentElement) {
+      document.documentElement.scrollTop = 0;
+    }
   }, [pathname]);
 
   return null;
 };
 
-// Make sure to use default export
 export default ScrollToTop;

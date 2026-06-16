@@ -9,9 +9,10 @@ import { CartProvider } from "./context/cart";
 import "antd/dist/reset.css";
 import { Toaster } from "react-hot-toast";
 
-// Enable browser's automatic scroll restoration - using window.history instead of direct history reference
+// CRITICAL: Disable browser's automatic scroll restoration so we control it
+// Amazon/Flipkart pattern: manual control prevents browser from restoring old positions
 if ('scrollRestoration' in window.history) {
-  window.history.scrollRestoration = 'auto';
+  window.history.scrollRestoration = 'manual';
 }
 
 const root = ReactDOM.createRoot(document.getElementById("root"));

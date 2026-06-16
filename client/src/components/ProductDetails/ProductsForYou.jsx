@@ -29,7 +29,7 @@ const ProductsForYou = ({
         {productsForYou.map((item) => (
           <div
             key={item.productId?._id}
-            className={isMobile ? "col-6 mb-2" : "col-lg-4 col-md-4 col-sm-6 mb-3"}
+            className={isMobile ? "col-12 mb-2" : "col-lg-4 col-md-4 col-sm-6 mb-3"}
           >
             <ProductCard
               product={normalizeProductForCard(item.productId)}

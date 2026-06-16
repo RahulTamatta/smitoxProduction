@@ -113,7 +113,7 @@ const Search = () => {
                 <>
                   <div className="row g-3 g-md-4">
                     {products.map((p) => (
-                      <div className="col-6 col-md-4 col-lg-2" key={p._id}>
+                      <div className="col-12 col-md-4 col-lg-2" key={p._id}>
                         <ProductCard product={p} />
                       </div>
                     ))}

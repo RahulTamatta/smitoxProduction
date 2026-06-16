@@ -21,18 +21,6 @@ export const useUIState = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Handle scroll position restoration
-  useEffect(() => {
-    const scrollPosition = sessionStorage.getItem("productDetailsScrollPosition");
-    if (scrollPosition) {
-      window.scrollTo(0, parseInt(scrollPosition, 10));
-      sessionStorage.removeItem("productDetailsScrollPosition");
-    }
-
-    return () => {
-      sessionStorage.setItem("productDetailsScrollPosition", window.scrollY);
-    };
-  }, [params?.slug]);
 
   // Reset UI state when slug changes
   useEffect(() => {

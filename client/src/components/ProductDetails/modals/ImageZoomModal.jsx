@@ -211,14 +211,17 @@ const ImageZoomModal = ({
             }}>
               {product.name}
             </h2>
-            {product.price && (
-              <div style={{ fontSize: "24px", color: "#B12704", fontWeight: "400", marginBottom: "5px" }}>
-                ₹{product.price}
-              </div>
-            )}
-            {product.custom_order !== undefined && (
+            <div style={{ fontSize: "24px", color: "#d32f2f", fontWeight: "400", marginBottom: "5px" }}>
+              {product.mrp && (
+                <span style={{ textDecoration: 'line-through', color: '#666', fontSize: '16px', marginRight: '8px' }}>
+                  ₹{product.mrp}
+                </span>
+              )}
+              ₹{product.perPiecePrice || product.price}
+            </div>
+            {product.sku && (
               <div style={{ fontSize: "14px", color: "#565959", marginBottom: "5px" }}>
-                SKU: {product.sku || product.custom_order}
+                SKU: {product.sku}
               </div>
             )}
           </div>

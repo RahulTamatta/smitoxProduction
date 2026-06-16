@@ -93,15 +93,6 @@ const HomePage = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const mobileSearchStyle = {
-    position: 'sticky',
-    top: 0,
-    zIndex: 1000,
-    backgroundColor: '#2874f0',
-    padding: '0px 0px 0px 0px',
-    display: isMobile ? 'block' : 'none',
-  };
-
   // Filter and sort handlers
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);
@@ -132,37 +123,6 @@ const HomePage = () => {
     } else {
       //toast.error("Banner is not linked to a category");
     }
-  };
-
-  const settings = {
-    dots: false,
-    infinite: false,
-    speed: 500,
-    slidesToShow: 6,
-    slidesToScroll: 1,
-    responsive: [
-      {
-        breakpoint: 1024,
-        settings: {
-          slidesToShow: 4,
-          slidesToScroll: 1,
-        }
-      },
-      {
-        breakpoint: 600,
-        settings: {
-          slidesToShow: 3,
-          slidesToScroll: 1,
-        }
-      },
-      {
-        breakpoint: 480,
-        settings: {
-          slidesToShow: 2,
-          slidesToScroll: 1
-        }
-      }
-    ]
   };
 
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -256,11 +216,6 @@ const HomePage = () => {
     )
 
   };
-  const handleProductClick = (product) => {
-    // Save current scroll position before navigating
-    sessionStorage.setItem(`scrollPosition_${location.pathname}`, window.scrollY.toString());
-    navigate(`/product/${product.slug}`);
-  };
   useEffect(() => {
     // Restore scroll position on component mount
     const savedScrollPosition = sessionStorage.getItem(`scrollPosition_${location.pathname}`);
@@ -313,119 +268,138 @@ const HomePage = () => {
 
       {/* Banner Section */}
       <div
-        className="banner-container"
-        style={{
-          height: 'auto', // Remove fixed height
-          overflow: 'hidden',
-          margin: isMobile ? '10px' : '20px',
-          borderRadius: '15px',
-          position: 'relative',
-        }}
+        className="banner-container container-fluid px-2 px-md-4 mt-3"
       >
-        <Slider {...{
-          ...bannerSettings,
-          // Update banner settings for better responsiveness
-          responsive: [
-            {
-              breakpoint: 768, // Mobile breakpoint
-              settings: {
-                arrows: false, // Hide arrows on mobile
-                dots: true,
-                autoplay: true,
-                autoplaySpeed: 3000,
-              }
-            }
-          ]
+        <div style={{
+          borderRadius: 'var(--radius-xl)',
+          overflow: 'hidden',
+          boxShadow: 'var(--shadow-md)',
+          position: 'relative',
+          backgroundColor: '#fff',
         }}>
-          {banners.map((banner) => (
-            <div key={banner._id} onClick={() => handleBannerClick(banner)}>
-              <div style={{
-                position: 'relative',
-                paddingTop: isMobile ? '56.25%' : '35%', // 16:9 aspect ratio for mobile, wider for desktop
-                width: '100%',
-              }}>
-                <OptimizedImage
-                  src={banner.photos}
-                  alt={banner.bannerName}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'fill',
-                    borderRadius: '15px',
-                  }}
-                />
+          <Slider {...{
+            ...bannerSettings,
+            // Update banner settings for better responsiveness
+            responsive: [
+              {
+                breakpoint: 768, // Mobile breakpoint
+                settings: {
+                  arrows: false, // Hide arrows on mobile
+                  dots: true,
+                  autoplay: true,
+                  autoplaySpeed: 3000,
+                }
+              }
+            ]
+          }}>
+            {banners.map((banner) => (
+              <div key={banner._id} onClick={() => handleBannerClick(banner)}>
+                <div style={{
+                  position: 'relative',
+                  paddingTop: isMobile ? '65%' : '40%', // Increased aspect ratios for taller banners
+                  width: '100%',
+                  backgroundColor: '#fff',
+                }}>
+                  <OptimizedImage
+                    src={banner.photos}
+                    alt={banner.bannerName}
+                    objectFit="contain"
+                    backgroundColor="#fff"
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-          ))}
-        </Slider>
+            ))}
+          </Slider>
+        </div>
       </div>
 
       {/* Categories Section */}
-      <div style={{ padding: '20px 0', marginTop: '20px' }}>
+      <div style={{ padding: '40px 0', backgroundColor: "var(--surface)", marginTop: '20px' }}>
         <h2 style={{
           textAlign: 'center',
-          marginBottom: '20px',
-          fontSize: isMobile ? '1.5rem' : '2rem'
+          marginBottom: '32px',
+          fontSize: isMobile ? '1.5rem' : '2.25rem',
+          color: "var(--text-primary)"
         }}>
-          Shop by Category
+          Explore Categories
         </h2>
         <div style={{
           overflowX: 'auto',
           WebkitOverflowScrolling: 'touch',
-          padding: '0 10px'
+          padding: '0 16px',
+          msOverflowStyle: 'none',
+          scrollbarWidth: 'none'
         }}>
           <div style={{
             display: 'flex',
-            gap: '15px',
+            gap: isMobile ? '16px' : '32px',
             padding: '10px',
-            minWidth: 'fit-content'
+            minWidth: 'fit-content',
+            justifyContent: 'center'
           }}>
-            {categories.map((c) => (
-              <div
-                key={c._id}
-                onClick={() => navigate(`/category/${c.slug}`)}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  minWidth: isMobile ? '90px' : '120px',
-                  cursor: 'pointer',
-                  transition: 'transform 0.2s'
-                }}
-              >
-                <div style={{
-                  width: isMobile ? '70px' : '80px',
-                  height: isMobile ? '70px' : '80px',
-                  borderRadius: '50%',
-                  overflow: 'hidden',
-                  border: '2px solid #f0f0f0'
-                }}>
-                  <OptimizedImage
-                    src={c.photos}
-                    alt={c.name}
-                    width={isMobile ? 70 : 80}
-                    height={isMobile ? 70 : 80}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover'
-                    }}
-                  />
+            {categories.map((c, index) => {
+              // Soft pastel backgrounds for category circles
+              const bgColors = ['#f8d7da', '#d1ecf1', '#d4edda', '#fff3cd', '#e2e3e5', '#cce5ff'];
+              const bgColor = bgColors[index % bgColors.length];
+
+              return (
+                <div
+                  key={c._id}
+                  onClick={() => navigate(`/category/${c.slug}`)}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    minWidth: isMobile ? '80px' : '120px',
+                    cursor: 'pointer',
+                    transition: 'transform 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  <div style={{
+                    width: isMobile ? '80px' : '120px',
+                    height: isMobile ? '80px' : '120px',
+                    borderRadius: '50%',
+                    backgroundColor: bgColor,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: "var(--shadow-sm)",
+                    border: `1px solid rgba(0,0,0,0.05)`,
+                    overflow: 'hidden',
+                    marginBottom: '12px',
+                    padding: '16px'
+                  }}>
+                    <OptimizedImage
+                      src={c.photos}
+                      alt={c.name}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                        mixBlendMode: 'multiply'
+                      }}
+                    />
+                  </div>
+                  <h6 style={{
+                    fontSize: isMobile ? '12px' : '14px',
+                    textAlign: 'center',
+                    fontWeight: '700',
+                    color: "var(--text-primary)"
+                  }}>
+                    {c.name}
+                  </h6>
                 </div>
-                <h6 style={{
-                  marginTop: '10px',
-                  fontSize: isMobile ? '12px' : '14px',
-                  textAlign: 'center',
-                  fontWeight: '500',
-                  color: '#333'
-                }}>
-                  {c.name}
-                </h6>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -454,12 +428,12 @@ const HomePage = () => {
         </div>
 
         {/* Products Grid */}
-        <div className="row g-1">
+        <div className={isMobile ? "" : "row g-1"}>
           {products.map((p) => (
             <div
               key={p._id}
-              className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3"
-              style={{ padding: '2px' }} // Minimal padding
+              className={isMobile ? "" : "col-sm-6 col-md-4 col-lg-3 col-xl-3"}
+              style={{ padding: isMobile ? '0 4px' : '2px' }}
             >
               <ProductCard
                 product={p}
@@ -518,20 +492,16 @@ const HomePage = () => {
           <h2 className="text-center mb-4" style={{ fontSize: isMobile ? '1.5rem' : '2rem' }}>
             Recommended for You
           </h2>
-          <div className="row g-3">
+          <div className={isMobile ? "" : "row g-3"}>
             {productsForYou.map((item, index) => (
               <div
                 key={item.productId?._id || index}
-                className="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-2"
-                style={{ padding: '8px' }}
+                className={isMobile ? "" : "col-sm-6 col-md-4 col-lg-3 col-xl-2"}
+                style={{ padding: isMobile ? '0 4px' : '8px' }}
               >
                 <ProductCard
                   product={item.productId}
                   photoUrl={item.productId?.photoUrl}
-                  style={{
-                    height: '100%',
-                    borderRadius: '12px'
-                  }}
                 />
               </div>
             ))}

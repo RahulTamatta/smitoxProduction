@@ -13,42 +13,16 @@ const ProductImageGallery = ({
 }) => {
   const [failedImages, setFailedImages] = useState(new Set());
 
-  const imageStyle = {
-    flex: isMobile ? "1 1 100%" : "1 1 300px",
-    maxWidth: isMobile ? "100%" : "500px",
-    margin: isMobile ? "0 auto" : "0",
-  };
-
   return (
-    <div style={imageStyle}>
+    <div className="flex flex-col gap-4 w-full">
       {/* Main large image display */}
       <div 
         onClick={() => setShowImageZoom(true)}
-        style={{ 
-          marginBottom: "10px", 
-          borderRadius: "8px",
-          overflow: "hidden",
-          boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
-          position: "relative",
-          cursor: "zoom-in",
-          paddingTop: isMobile ? "16px" : "28px"
-        }}
+        className="w-full aspect-square md:aspect-video lg:aspect-[4/3] bg-surface-container-lowest rounded-[16px] md:rounded-[24px] overflow-hidden ambient-shadow border border-surface-container flex items-center justify-center p-4 md:p-8 relative group cursor-zoom-in"
       >
+        <span className="absolute top-4 left-4 bg-tertiary-container text-on-tertiary-container font-label-sm text-label-sm px-3 py-1 rounded-lg z-10">Premium</span>
         <div
-          style={{
-            position: "absolute",
-            top: "10px",
-            right: "10px",
-            zIndex: 2,
-            backgroundColor: "rgba(255,255,255,0.7)",
-            borderRadius: "50%",
-            width: "30px",
-            height: "30px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer"
-          }}
+          className="absolute top-4 right-4 z-10 bg-white/70 rounded-full w-[30px] h-[30px] flex items-center justify-center cursor-pointer shadow-sm"
         >
           <FaExpand color="#333" size={16} />
         </div>
@@ -57,16 +31,12 @@ const ProductImageGallery = ({
                 (product.multipleimages && Array.isArray(product.multipleimages) && product.multipleimages.length > 0 && selectedImage <= product.multipleimages.length) ? 
                 product.multipleimages[selectedImage - 1] : product.photos}
           alt={product.name}
-          style={{ 
-            borderRadius: "8px",
-            width: "100%",
-            height: isMobile ? "300px" : "500px",
-            maxHeight: isMobile ? "300px" : "500px"
-          }}
+          className="w-full h-full object-contain mix-blend-multiply hover:scale-105 transition-transform duration-500"
+          style={{ width: "100%", height: "100%" }}
           width={isMobile ? 300 : 500}
           height={isMobile ? 300 : 500}
           objectFit="contain"
-          backgroundColor="#ffffff"
+          backgroundColor="transparent"
           quality={isMobile ? 75 : 85}
           loading="eager"
         />
@@ -74,72 +44,47 @@ const ProductImageGallery = ({
       
       {/* Thumbnail gallery */}
       {(product.multipleimages && Array.isArray(product.multipleimages) && product.multipleimages.length > 0) && (
-        <div style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "8px",
-          justifyContent: isMobile ? "center" : "flex-start"
-        }}>
+        <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2">
           {/* Main product image thumbnail */}
-          <div 
+          <button 
             onClick={() => setSelectedImage(0)}
-            style={{
-              width: isMobile ? "60px" : "80px",
-              height: isMobile ? "60px" : "80px",
-              border: selectedImage === 0 ? "2px solid #ffa41c" : "1px solid #ddd",
-              borderRadius: "4px",
-              overflow: "hidden",
-              cursor: "pointer"
-            }}
+            className={`w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-[16px] bg-surface-container-lowest overflow-hidden p-2 transition-colors ${selectedImage === 0 ? 'border-2 border-primary' : 'border border-surface-container hover:border-outline-variant'}`}
           >
             <OptimizedImage
               src={product.photos}
               alt={`${product.name} - Main`}
+              className="w-full h-full object-contain"
               style={{ width: "100%", height: "100%" }}
-              width={isMobile ? 60 : 80}
-              height={isMobile ? 60 : 80}
+              width={isMobile ? 80 : 96}
+              height={isMobile ? 80 : 96}
               objectFit="cover"
               quality={60}
             />
-          </div>
+          </button>
           {/* Additional images thumbnails */}
           {product.multipleimages
             .map((imgUrl, index) => {
-              // Skip if imgUrl is invalid
               if (!imgUrl || typeof imgUrl !== 'string' || !imgUrl.trim()) {
-                console.warn(`Invalid image URL at index ${index}:`, imgUrl);
                 return null;
               }
-              
-              return {
-                imgUrl,
-                index,
-                key: `thumb-${index}`
-              };
+              return { imgUrl, index, key: `thumb-${index}` };
             })
-            .filter(Boolean) // Remove null entries
-            .filter(({ imgUrl }) => !failedImages.has(imgUrl)) // Hide failed images
+            .filter(Boolean)
+            .filter(({ imgUrl }) => !failedImages.has(imgUrl))
             .map(({ imgUrl, index, key }) => (
-              <div 
+              <button 
                 key={key}
                 data-thumbnail="true"
                 onClick={() => setSelectedImage(index + 1)}
-                style={{
-                  width: isMobile ? "60px" : "80px",
-                  height: isMobile ? "60px" : "80px",
-                  border: selectedImage === index + 1 ? "2px solid #ffa41c" : "1px solid #ddd",
-                  borderRadius: "4px",
-                  overflow: "hidden",
-                  cursor: "pointer",
-                  backgroundColor: "#f8f9fa"
-                }}
+                className={`w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-[16px] bg-surface-container-lowest overflow-hidden p-2 transition-colors ${selectedImage === index + 1 ? 'border-2 border-primary' : 'border border-surface-container hover:border-outline-variant'}`}
               >
                 <OptimizedImage
                   src={imgUrl}
                   alt={`${product.name} - ${index + 1}`}
+                  className="w-full h-full object-contain"
                   style={{ width: "100%", height: "100%" }}
-                  width={isMobile ? 60 : 80}
-                  height={isMobile ? 60 : 80}
+                  width={isMobile ? 80 : 96}
+                  height={isMobile ? 80 : 96}
                   objectFit="cover"
                   quality={60}
                   backgroundColor="transparent"
@@ -147,11 +92,10 @@ const ProductImageGallery = ({
                     setLoadedImages(prev => new Set([...prev, imgUrl]));
                   }}
                   onError={(e) => {
-                    console.error(`Failed to load thumbnail image:`, imgUrl);
                     setFailedImages(prev => new Set(prev).add(imgUrl));
                   }}
                 />
-              </div>
+              </button>
             ))}
         </div>
       )}

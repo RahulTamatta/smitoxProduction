@@ -61,7 +61,7 @@ const WishlistPage = () => {
               item?.product && (
                 <div
                   key={item.product._id}
-                  className="col-lg-4 col-md-6 col-sm-12 mb-3"
+                  className="col-lg-4 col-md-6 col-12 mb-3"
                 >
                   <ProductCard
                     product={item.product}

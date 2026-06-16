@@ -60,20 +60,23 @@ const Header = () => {
 
   // Styles
   const logoStyles = {
-    height: isMobile ? "45px" : "60px",
+    height: isMobile ? "40px" : "50px",
     maxWidth: "100%",
     objectFit: "contain",
     transition: "height 0.3s ease"
   };
 
   const mainNavStyles = {
-    backgroundColor: "#d32f2f",
+    backgroundColor: "var(--primary)",
     borderBottom: "none",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-    height: isMobile ? "55px" : "70px",
-    padding: isMobile ? "0.5rem 1rem" : "0.75rem 1.5rem",
+    boxShadow: "var(--shadow-md)",
+    height: isMobile ? "60px" : "80px",
+    padding: isMobile ? "0.5rem 1rem" : "0 2rem",
     display: "flex",
-    alignItems: "center"
+    alignItems: "center",
+    position: "sticky",
+    top: 0,
+    zIndex: 1000
   };
 
   const containerStyles = {
@@ -81,7 +84,7 @@ const Header = () => {
     alignItems: "center",
     justifyContent: "space-between",
     width: "100%",
-    maxWidth: "100%",
+    maxWidth: "1400px",
     margin: "0 auto",
     padding: "0"
   };
@@ -90,21 +93,20 @@ const Header = () => {
     display: "flex",
     alignItems: "center",
     flexShrink: 0,
-    marginRight: isMobile ? "0.5rem" : "1rem"
+    marginRight: isMobile ? "0.5rem" : "2rem"
   };
 
   const desktopSearchStyles = {
     flex: "1",
     display: isMobile ? "none" : "flex",
-    maxWidth: "600px",
-    minWidth: "200px",
-    margin: "0 1rem"
+    maxWidth: "700px",
+    margin: "0 2rem"
   };
 
   const navItemsStyles = {
     display: "flex",
     alignItems: "center",
-    gap: isMobile ? "0.5rem" : "1rem",
+    gap: "1.5rem",
     margin: "0",
     padding: "0",
     listStyle: "none"
@@ -113,24 +115,20 @@ const Header = () => {
   const mobileNavStyles = {
     display: isMobile ? "flex" : "none",
     alignItems: "center",
-    gap: "0.5rem",
+    gap: "1rem",
     flexShrink: 0
   };
 
   const desktopNavStyles = {
     display: isMobile ? "none" : "flex",
     alignItems: "center",
-    gap: "1rem"
+    gap: "1.5rem"
   };
 
   const mobileSearchBarStyles = {
-    backgroundColor: "#d32f2f",
-    borderTop: "1px solid rgba(255,255,255,0.1)",
-    padding: "0.75rem 1rem",
+    backgroundColor: "var(--primary)",
+    padding: "0.5rem 1rem 1rem 1rem",
     display: isMobile ? "block" : "none",
-    position: "sticky",
-    top: 0,
-    zIndex: 1000
   };
 
   return (
@@ -158,14 +156,14 @@ const Header = () => {
           <div style={desktopNavStyles}>
             <ul className="navbar-nav" style={navItemsStyles}>
               <li className="nav-item">
-                <NavLink to="/" className="nav-link d-flex align-items-center" onClick={handleHomeClick}>
+                <NavLink to="/" className="nav-link d-flex align-items-center" onClick={handleHomeClick} style={{ color: "white" }}>
                   <HomeOutlined style={{ marginRight: "5px", color: "white" }} />
                   Home
                 </NavLink>
               </li>
 
               <li className="nav-item">
-                <NavLink to="/seller-wizard" className="nav-link d-flex align-items-center">
+                <NavLink to="/seller-wizard" className="nav-link d-flex align-items-center" style={{ color: "white" }}>
                   <span style={{ marginRight: "5px", color: "white" }}>📦</span>
                   Become a Seller
                 </NavLink>
@@ -173,7 +171,7 @@ const Header = () => {
 
               {!auth?.user ? (
                 <li className="nav-item">
-                  <NavLink to="/login" className="nav-link d-flex align-items-center">
+                  <NavLink to="/login" className="nav-link d-flex align-items-center" style={{ color: "white" }}>
                     <LoginOutlined style={{ marginRight: "5px", color: "white" }} />
                     Login
                   </NavLink>
@@ -216,7 +214,7 @@ const Header = () => {
               {auth?.user && (
                 <>
                   <li className="nav-item">
-                    <NavLink to="/wishlist" className="nav-link d-flex align-items-center">
+                    <NavLink to="/wishlist" className="nav-link d-flex align-items-center" style={{ color: "white" }}>
                       <Badge count={wishlistCount} showZero offset={[10, -5]}>
                         <HeartOutlined style={{ marginRight: "5px", color: "white", fontSize: "15px" }} />
                       </Badge>
@@ -224,7 +222,7 @@ const Header = () => {
                     </NavLink>
                   </li>
                   <li className="nav-item">
-                    <NavLink to="/cart" className="nav-link d-flex align-items-center">
+                    <NavLink to="/cart" className="nav-link d-flex align-items-center" style={{ color: "white" }}>
                       <Badge count={cartCount} showZero offset={[10, -5]}>
                         <ShoppingCartOutlined style={{ marginRight: "5px", color: "white", fontSize: "15px" }} />
                       </Badge>

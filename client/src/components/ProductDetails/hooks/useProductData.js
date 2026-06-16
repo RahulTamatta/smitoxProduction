@@ -10,6 +10,7 @@ export const useProductData = () => {
   const [product, setProduct] = useState({});
   const [productsForYou, setProductsForYou] = useState([]);
   const [isNetworkError, setIsNetworkError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [retryAttempts, setRetryAttempts] = useState(0);
   const prevSlugRef = useRef(params?.slug);
   const MAX_RETRIES = 3;
@@ -25,10 +26,11 @@ export const useProductData = () => {
   // Reset product-specific state when slug changes
   useEffect(() => {
     if (prevSlugRef.current !== params?.slug) {
-      setProduct({});
+      setIsLoading(true);
+      // We no longer setProduct({}) here so the old product stays visible 
+      // under the loading overlay until the new one arrives.
       setProductsForYou([]);
       prevSlugRef.current = params?.slug;
-      window.scrollTo(0, 0);
     }
 
     if (params?.slug) {
@@ -78,6 +80,7 @@ export const useProductData = () => {
   const getProduct = async () => {
     if (!navigator.onLine) {
       setIsNetworkError(true);
+      setIsLoading(false);
       toast.error("No internet connection");
       return;
     }
@@ -125,7 +128,10 @@ export const useProductData = () => {
 
         console.log('[Product] Processed multipleimages:', processedProduct.multipleimages);
         setProduct(processedProduct);
+        setIsLoading(false);
         setRetryAttempts(0);
+      } else {
+        setIsLoading(false);
       }
     } catch (error) {
       console.error('[Product] Error fetching product:', error);
@@ -141,6 +147,7 @@ export const useProductData = () => {
         setRetryAttempts(prev => prev + 1);
         setTimeout(getProduct, 2000);
       } else {
+        setIsLoading(false);
         toast.error("Failed to load product details. Please try again later.");
       }
     }
@@ -210,6 +217,7 @@ export const useProductData = () => {
     product,
     productsForYou,
     isNetworkError,
+    isLoading,
     normalizeProductForCard
   };
 };
