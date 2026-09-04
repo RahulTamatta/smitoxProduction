@@ -29,10 +29,120 @@
       integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD"
       crossorigin="anonymous"
     />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+    </style>
     <link
       rel="stylesheet"
       href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.css"
     />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary": "#d32f2f",
+                        "on-primary": "#ffffff",
+                        "primary-container": "#b71c1c",
+                        "on-primary-container": "#ffffff",
+                        "primary-fixed": "#ffdad6",
+                        "on-primary-fixed": "#410002",
+                        "primary-fixed-dim": "#ffb4ab",
+                        "on-primary-fixed-variant": "#93000a",
+                        "secondary": "#27313e",
+                        "on-secondary": "#ffffff",
+                        "secondary-container": "#3f4850",
+                        "on-secondary-container": "#ffffff",
+                        "secondary-fixed": "#d1dbec",
+                        "on-secondary-fixed": "#121c28",
+                        "secondary-fixed-dim": "#bfc7d1",
+                        "on-secondary-fixed-variant": "#27313e",
+                        "tertiary": "#765700",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-container": "#ffdf9f",
+                        "on-tertiary-container": "#261a00",
+                        "tertiary-fixed": "#ffdf9f",
+                        "on-tertiary-fixed": "#261a00",
+                        "tertiary-fixed-dim": "#f9bd22",
+                        "on-tertiary-fixed-variant": "#5c4300",
+                        "error": "#ba1a1a",
+                        "on-error": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "on-error-container": "#93000a",
+                        "outline": "#6f7881",
+                        "background": "#f8f9ff",
+                        "on-background": "#121c28",
+                        "surface": "#ffffff",
+                        "on-surface": "#121c28",
+                        "surface-variant": "#e5e7eb",
+                        "on-surface-variant": "#3f4850",
+                        "inverse-surface": "#121c28",
+                        "inverse-on-surface": "#f8f9ff",
+                        "inverse-primary": "#ffb4ab",
+                        "surface-tint": "#d32f2f",
+                        "outline-variant": "#bfc7d1",
+                        "surface-container-highest": "#d1dbec",
+                        "surface-container-high": "#dfe9fa",
+                        "surface-container": "#e5eeff",
+                        "surface-container-low": "#eef4ff",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-bright": "#ffffff",
+                        "surface-dim": "#f8f9ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "8px",
+                        "stack-lg": "48px",
+                        "stack-sm": "12px",
+                        "stack-md": "24px",
+                        "margin-mobile": "16px",
+                        "container-max": "1280px",
+                        "margin-desktop": "40px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "headline-xl": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "label-sm": ["Be Vietnam Pro"],
+                        "label-md": ["Be Vietnam Pro"],
+                        "body-md": ["Be Vietnam Pro"],
+                        "body-lg": ["Be Vietnam Pro"]
+                    },
+                    "fontSize": {
+                        "headline-xl": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "34px", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "700" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .ambient-shadow { box-shadow: 0 8px 30px rgba(211, 47, 47, 0.08); }
+        .inner-glow { box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.3); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

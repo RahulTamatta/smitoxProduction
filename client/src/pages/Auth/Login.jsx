@@ -10,6 +10,7 @@ const Login = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otp, setOtp] = useState("");
   const [showOtpInput, setShowOtpInput] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState("");
   const [auth, setAuth] = useAuth();
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ const Login = () => {
   }, []);
 
   const verifyOTPAndLogin = async () => {
+    setIsLoading(true);
     try {
       const res = await axios.post("/api/v1/auth/verify-otp", {
         sessionId,
@@ -66,9 +68,12 @@ const Login = () => {
     } catch (error) {
       console.log(error);
       ////toast.error("Something went wrong");
+    } finally {
+      setIsLoading(false);
     }
   }
   const sendOTP = async () => {
+    setIsLoading(true);
     try {
       const response = await axios.post("/api/v1/auth/send-otp", { phoneNumber });
       if (response.data.success) {
@@ -81,6 +86,8 @@ const Login = () => {
     } catch (error) {
       console.log(error);
       ////toast.error("Error sending OTP");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -122,8 +129,17 @@ const Login = () => {
             </div>
           )}
           {/* Removed Forgot Password button */}
-          <button type="submit" className="btn btn-primary">
-            {showOtpInput ? "VERIFY OTP & LOGIN" : "SEND OTP"}
+          <button type="submit" className="btn btn-primary" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" style={{ marginRight: '8px' }}></span>
+                Please wait...
+              </>
+            ) : showOtpInput ? (
+              "VERIFY OTP & LOGIN"
+            ) : (
+              "SEND OTP"
+            )}
           </button>
         </form>
       </div>

@@ -251,10 +251,10 @@ export const getOrdersAnalytics = async (req, res) => {
                     { $group: { _id: null, avg: { $avg: "$amount" } } },
                 ]),
 
-                // Recent orders (last 10)
-                Order.find()
+                // Orders within selected period
+                Order.find({ createdAt: { $gte: start, $lte: end } })
                     .sort({ createdAt: -1 })
-                    .limit(10)
+                    .limit(500) // Reasonable limit to prevent massive payloads
                     .populate("buyer", "user_fullname email_id mobile_no")
                     .select("amount status createdAt payment"),
 
@@ -294,7 +294,7 @@ export const getOrdersAnalytics = async (req, res) => {
                 statusBreakdown: statusWithPercentage,
                 trends: orderTrends,
                 averageOrderValue: Math.round(avgOrderValue[0]?.avg || 0),
-                recentOrders,
+                periodOrders: recentOrders,
                 paymentMethodBreakdown,
             },
             period: { from: start, to: end, groupBy: timeUnit },

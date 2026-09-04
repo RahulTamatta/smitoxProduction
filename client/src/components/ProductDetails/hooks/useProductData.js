@@ -34,9 +34,6 @@ export const useProductData = () => {
     }
 
     if (params?.slug) {
-      if (auth?.user?.pincode) {
-        checkPincode(auth.user.pincode);
-      }
       getProduct();
     }
   }, [params?.slug, auth?.user?.pincode]);

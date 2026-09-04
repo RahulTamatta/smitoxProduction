@@ -245,22 +245,22 @@ const QuickStats = ({ data }) => (
     <div className="quick-stat">
       <span className="quick-stat-icon">📅</span>
       <div>
-        <div className="quick-stat-value">{formatNumber(data?.todayOrders || 0)}</div>
-        <div className="quick-stat-label">Today's Orders</div>
+        <div className="quick-stat-value">{formatNumber(data?.periodOrders || 0)}</div>
+        <div className="quick-stat-label">{data?.ordersLabel || "Orders"}</div>
       </div>
     </div>
     <div className="quick-stat">
       <span className="quick-stat-icon">💰</span>
       <div>
-        <div className="quick-stat-value">{formatCurrency(data?.todayRevenue || 0)}</div>
-        <div className="quick-stat-label">Today's Revenue</div>
+        <div className="quick-stat-value">{formatCurrency(data?.periodRevenue || 0)}</div>
+        <div className="quick-stat-label">{data?.revenueLabel || "Revenue"}</div>
       </div>
     </div>
     <div className="quick-stat">
       <span className="quick-stat-icon">👤</span>
       <div>
-        <div className="quick-stat-value">{formatNumber(data?.newUsersToday || 0)}</div>
-        <div className="quick-stat-label">New Users Today</div>
+        <div className="quick-stat-value">{formatNumber(data?.newUsersPeriod || 0)}</div>
+        <div className="quick-stat-label">{data?.usersLabel || "New Users"}</div>
       </div>
     </div>
     <div className="quick-stat">
@@ -374,12 +374,18 @@ const AdminDashboard = () => {
   const auditData = data.auditLogs?.data || {};
   const healthData = data.systemHealth?.data || {};
 
-  // Quick stats for today
+  const isSingleDay = dateRange.from === dateRange.to;
+  const labelPrefix = isSingleDay ? "Day's" : "Period's";
+
+  // Quick stats for selected period
   const quickStats = {
-    todayOrders: overview.orders?.today || 0,
-    todayRevenue: overview.revenue?.today || 0,
-    newUsersToday: overview.users?.today || 0,
+    periodOrders: overview.orders?.periodCount || 0,
+    periodRevenue: overview.revenue?.total || 0,
+    newUsersPeriod: overview.users?.new || 0,
     pendingOrders: overview.orders?.pending || 0,
+    ordersLabel: `${labelPrefix} Orders`,
+    revenueLabel: `${labelPrefix} Revenue`,
+    usersLabel: `New Users (${isSingleDay ? 'Day' : 'Period'})`,
   };
 
   return (
@@ -479,6 +485,29 @@ const AdminDashboard = () => {
               label="Active Sellers"
               sublabel={`${overview.sellers?.pending || 0} pending review`}
             />
+          </div>
+
+          {/* ============ SELECTED PERIOD ORDERS SECTION ============ */}
+          <div className="dashboard-section">
+            <h2 className="dashboard-section-title"><span>📋</span> {quickStats.ordersLabel} Details</h2>
+            <DashboardCard
+              title={`Orders for ${isSingleDay ? formatDate(dateRange.from) : `${formatDate(dateRange.from)} to ${formatDate(dateRange.to)}`}`}
+              subtitle="All transactions during the chosen date range"
+            >
+              <div style={{ maxHeight: "400px", overflowY: "auto" }}>
+                <DataTable
+                  columns={[
+                    { key: "createdAt", label: "Date", render: (v) => new Date(v).toLocaleString("en-IN") },
+                    { key: "buyer", label: "Customer", render: (v) => v?.user_fullname || "Unknown" },
+                    { key: "amount", label: "Amount", render: (v) => formatCurrency(v) },
+                    { key: "status", label: "Status", render: (v) => <span className={`status-badge ${v?.replace(" ", "")}`}>{v}</span> },
+                    { key: "payment", label: "Payment", render: (v) => v?.paymentMethod || "Unknown" },
+                  ]}
+                  data={ordersData.periodOrders || []}
+                  emptyMessage="No orders found for the selected period"
+                />
+              </div>
+            </DashboardCard>
           </div>
 
           {/* ============ ORDERS SECTION ============ */}

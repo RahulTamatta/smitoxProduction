@@ -130,7 +130,11 @@ export const createProductController = async (req, res) => {
       }
     };
 
-    const finalMultipleImages = [...parseJSON(multipleimages), ...imageUrls];
+    const rawMultipleImages = parseJSON(multipleimages);
+    const validMultipleImages = Array.isArray(rawMultipleImages)
+      ? rawMultipleImages.filter(img => typeof img === 'string' && img.trim() !== '')
+      : [];
+    const finalMultipleImages = [...validMultipleImages, ...imageUrls];
     const formattedBulkProducts = parseJSON(bulkProducts);
     const parsedFkTags = parseJSON(fk_tags);
     const parsedVariants = parseJSON(variants);
@@ -298,7 +302,12 @@ export const updateProductController = async (req, res) => {
       }
     };
 
-    const existingMultipleImages = parseJSON(multipleimages);
+    // Parse existing images and combine with newly uploaded ones.
+    // CRITICAL: Filter out null/undefined/non-string values that corrupt the DB.
+    const rawExistingImages = parseJSON(multipleimages);
+    const existingMultipleImages = Array.isArray(rawExistingImages)
+      ? rawExistingImages.filter(img => typeof img === 'string' && img.trim() !== '')
+      : [];
     const finalMultipleImages = [...existingMultipleImages, ...newImageUrls];
 
     // Preserve original custom order logic
