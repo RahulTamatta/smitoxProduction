@@ -60,6 +60,10 @@ const Profile = () => {
         city,
         state,
         landmark
+      }, {
+        headers: {
+          Authorization: auth?.token
+        }
       });
       
       if (data?.error) {
