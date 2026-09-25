@@ -1,9 +1,17 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Layout from "./../components/Layout/Layout";
+import api from "../services/api";
 
 const Policy = () => {
   // State to manage the expanded/collapsed state of policy content
   const [expanded, setExpanded] = useState(false);
+  const [savedPolicy, setSavedPolicy] = useState("");
+
+  useEffect(() => {
+    api.get("/app-content/get-content")
+      .then((response) => setSavedPolicy(response.data.content?.privacyPolicy || ""))
+      .catch((error) => console.error("Unable to load privacy policy:", error));
+  }, []);
 
   // Dummy privacy policy content (you should replace this with your actual content)
   const privacyPolicyContent = [
@@ -61,7 +69,7 @@ const Policy = () => {
         </div> */}
         <div className="col-md-4" style={{ maxHeight: "400px", overflowY: "auto",padding:"40px",width: "100%" }}>
         <h1 className="bg-dark p-2 text-white text-center">Privacy Policy</h1>
-          {privacyPolicyContent.map((paragraph, index) => (
+          {(savedPolicy ? savedPolicy.split(/\n+/) : privacyPolicyContent).map((paragraph, index) => (
             <p key={index}>{paragraph}</p>
           ))}
      

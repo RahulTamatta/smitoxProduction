@@ -1,9 +1,17 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Layout from "./../components/Layout/Layout";
+import api from "../services/api";
 
 const Terms = () => {
   // State to manage the expanded/collapsed state of policy content
   const [expanded, setExpanded] = useState(false);
+  const [savedTerms, setSavedTerms] = useState("");
+
+  useEffect(() => {
+    api.get("/app-content/get-content")
+      .then((response) => setSavedTerms(response.data.content?.termsAndConditions || ""))
+      .catch((error) => console.error("Unable to load terms:", error));
+  }, []);
 
   // Privacy policy content
   const privacyPolicyContent = [
@@ -78,7 +86,7 @@ const Terms = () => {
           <h1 className="bg-dark p-2 text-white text-center">
             Terms & Conditions
           </h1>
-          {privacyPolicyContent.map((paragraph, index) => (
+          {(savedTerms ? savedTerms.split(/\n+/) : privacyPolicyContent).map((paragraph, index) => (
             <p key={index}>{paragraph}</p>
           ))}
         </div>

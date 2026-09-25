@@ -1,6 +1,15 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Layout from "./../components/Layout/Layout";
+import api from "../services/api";
 const About = () => {
+  const [aboutContent, setAboutContent] = useState("");
+
+  useEffect(() => {
+    api.get("/app-content/get-content")
+      .then((response) => setAboutContent(response.data.content?.aboutUs || ""))
+      .catch((error) => console.error("Unable to load About Us content:", error));
+  }, []);
+
   return (
     <Layout title={"About us - Smitox"}>
       {/* Image Background Banner */}
@@ -41,7 +50,9 @@ const About = () => {
             Transform Your Business with Smitox
           </h2>
           
-          <div style={{
+          {aboutContent ? aboutContent.split(/\n+/).map((paragraph, index) => (
+            <p key={index} style={{ marginBottom: "20px" }}>{paragraph}</p>
+          )) : <div style={{
             fontSize: "1.1rem",
             lineHeight: "1.8",
             color: "#555",
@@ -66,7 +77,7 @@ const About = () => {
               We focus on generating quality leads and orders while letting 
               businesses maintain control over their transactions.
             </p>
-          </div>
+          </div>}
         </div>
       </div>
     </Layout>

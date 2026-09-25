@@ -50,6 +50,7 @@ import SellerWizardV2 from "./pages/Seller/SellerWizardV2";
 import CheckoutPage from "./pages/Checkout/CheckoutPage";
 
 import AdminLogin from "./pages/Auth/AdminLog.jsx";
+import AppContent from "./pages/Admin/AppContent.jsx";
 // Import Redux provider and store
 import { Provider } from 'react-redux';
 import ScrollToTop from './components/ScrollToTop'; // Ensure correct import
@@ -102,6 +103,7 @@ function App() {
             <Route path="admin/create-subcategory" element={<SubcategoryList />} />
             <Route path="admin/brand" element={<BrandList />} />
             <Route path="admin/minimumOrder" element={<MinimumOrder />} />
+            <Route path="admin/app-content" element={<AppContent />} />
 
             <Route path="admin/create-product" element={<CreateProduct />} />
             <Route path="admin/create-banner" element={<BannerManagement />} />

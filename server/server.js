@@ -13,6 +13,7 @@ import { checkPlanExpiry } from "./jobs/planExpiryCheckJob.js";
 import { startPlanExpiryJob } from "./jobs/planExpiryJob.js";
 import { startPlanExpiryJob as startScheduledPlanExpiryJob } from "./jobs/schedulePlanExpiryJob.js";
 import adminAnalyticsRoutes from "./routes/adminAnalyticsRoutes.js";
+import appContentRoutes from "./routes/appContentRoutes.js";
 import adsbannerRoutes from "./routes/adsRoutes.js";
 import authRoutes from "./routes/authRoute.js";
 import bannerRoutes from "./routes/bannerRoutes.js";
@@ -88,6 +89,7 @@ app.use("/api/v1/brand", brandRoutes); // Use brand routes
 app.use("/api/v1/usersLists", usersListsRoutes);
 app.use('/api/v1/pincodes', pincodeRoutes);
 app.use('/api/v1/carts', cartRoutes);
+app.use('/api/v1/app-content', appContentRoutes);
 
 // RBAC - Seller Applications & Subscription Plans (V1 - Legacy)
 app.use('/api/v1/sellers/applications', sellerApplicationRoutes);

@@ -1,9 +1,22 @@
 import React, { useState, useEffect } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { FaFacebook, FaInstagram, FaLinkedin, FaYoutube } from "react-icons/fa";
+import api from "../../services/api";
 
 const Footer = () => {
+  const [content, setContent] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const location = useLocation();
+  const isAdminRoute = location.pathname.toLowerCase().startsWith("/dashboard/admin");
+  const adminContentOffset = isAdminRoute && !isMobile
+    ? "var(--admin-sidebar-width, 250px)"
+    : "0";
+
+  useEffect(() => {
+    api.get("/app-content/get-content")
+      .then((response) => setContent(response.data.content))
+      .catch((error) => console.error("Unable to load footer content:", error));
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -34,7 +47,8 @@ const Footer = () => {
     backgroundColor: "#d32f2f", // Matching header color
     color: "white",
     marginTop: "auto", // Push footer to bottom
-    width: "100%",
+    width: isAdminRoute ? `calc(100% - ${adminContentOffset})` : "100%",
+    marginLeft: adminContentOffset,
     borderTop: "1px solid #b71c1c"
   };
 
@@ -96,6 +110,18 @@ const Footer = () => {
         <div style={copyrightStyle}>
           All Rights Reserved &copy; {new Date().getFullYear()} Smitox B2B
         </div>
+
+        {content && (
+          <div className="footer-business-details">
+            <strong>{content.tradeName || content.legalName}</strong>
+            <span>{content.registeredAddress}</span>
+            <span>GST: {content.gstNumber || "Not provided"}</span>
+            <a href={`mailto:${content.businessEmail}`}>{content.businessEmail}</a>
+            <a href={`https://wa.me/${(content.whatsappNumber || "").replace(/\D/g, "")}`}>
+              WhatsApp: {content.whatsappNumber}
+            </a>
+          </div>
+        )}
 
         {/* Navigation Links */}
         <div style={linksContainerStyle}>

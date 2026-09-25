@@ -1,13 +1,28 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Layout from "./../components/Layout/Layout";
+import api from "../services/api";
 
 const ReturnPolicy = () => {
+  const [returnContent, setReturnContent] = useState("");
+
+  useEffect(() => {
+    api.get("/app-content/get-content")
+      .then((response) => setReturnContent(response.data.content?.returnPolicy || ""))
+      .catch((error) => console.error("Unable to load return policy:", error));
+  }, []);
+
   return (
     <Layout title={"Return Policy - Smitox"}>
       <div className="container mt-4 mb-4" style={{ maxWidth: "800px", margin: "0 auto", padding: "0 15px" }}>
         <h2 className="text-center mb-4" style={{ color: "#00416a" }}>Return Policy</h2>
         
-        <div style={{ 
+        {returnContent ? (
+          <div style={{ background: "#f8f9fa", borderRadius: "8px", padding: "30px", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>
+            {returnContent.split(/\n+/).map((paragraph, index) => (
+              <p key={index} style={{ lineHeight: "1.6", marginBottom: "20px", whiteSpace: "pre-wrap" }}>{paragraph}</p>
+            ))}
+          </div>
+        ) : <div style={{ 
           background: "#f8f9fa", 
           borderRadius: "8px", 
           padding: "30px",
@@ -85,7 +100,7 @@ const ReturnPolicy = () => {
             We assume <strong>no responsibility</strong> for return claims, product conditions, 
             or any disputes arising from return processes.
           </div>
-        </div>
+        </div>}
       </div>
     </Layout>
   );

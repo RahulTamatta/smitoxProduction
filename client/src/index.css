@@ -120,6 +120,28 @@ h1, h2, h3, h4, h5, h6 {
   border-bottom: 1px solid #ffefba;
 }
 
+.footer-business-details {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 0 auto 1.5rem;
+  max-width: 1000px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.86rem;
+  text-align: center;
+}
+
+.footer-business-details strong {
+  flex-basis: 100%;
+  font-size: 1rem;
+}
+
+.footer-business-details a {
+  padding: 0;
+}
+
 /* =================================
 ======== page not found css ======= */
 .pnf {

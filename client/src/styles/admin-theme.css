@@ -93,8 +93,8 @@ html, body {
   font-family: var(--admin-font-family);
   font-size: clamp(12px, 0.9vw, 13.5px);
   padding: clamp(12px, 2vw, 24px);
-  /* Reserve space for the fixed sidebar using padding so we don't create horizontal overflow */
-  padding-left: calc(260px + clamp(12px, 2vw, 24px));
+  /* Layout reserves space for the fixed sidebar; keep page padding local. */
+  padding-left: clamp(12px, 2vw, 24px);
   margin-top: 0 !important;
   transition: padding-left 0.3s ease;
   min-height: 100vh;
@@ -102,27 +102,15 @@ html, body {
 }
 
 /* When sidebar is collapsed, reduce reserved space */
-.admin-sidebar.collapsed ~ .container-fluid.dashboard {
-  padding-left: calc(64px + clamp(12px, 2vw, 24px));
-}
-
-/* Responsive dashboard paddings */
 @media (max-width: 1024px) {
-  /* On tablet and below we always treat sidebar as narrow */
-  .container-fluid.dashboard,
-  .admin-sidebar.expanded ~ .container-fluid.dashboard,
-  .admin-sidebar.collapsed ~ .container-fluid.dashboard {
-    padding-left: calc(64px + clamp(12px, 2vw, 24px));
+  .container-fluid.dashboard {
+    padding: 16px;
   }
 }
 
 @media (max-width: 768px) {
-  /* Mobile: sidebar becomes overlay, content should use normal padding */
-  .container-fluid.dashboard,
-  .admin-sidebar.expanded ~ .container-fluid.dashboard,
-  .admin-sidebar.collapsed ~ .container-fluid.dashboard {
+  .container-fluid.dashboard {
     padding: clamp(8px, 1.5vw, 16px);
-    padding-left: clamp(8px, 1.5vw, 16px);
   }
 }
 

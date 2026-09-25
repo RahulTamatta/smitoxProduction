@@ -78,6 +78,9 @@ const Layout = ({ children, title, description, keywords, author }) => {
   };
 
   const effectiveHeaderHeight = isAdminRoute ? 0 : headerHeight;
+  const adminContentOffset = isAdminRoute && !isMobile
+    ? "var(--admin-sidebar-width, 250px)"
+    : "0";
 
   const mainContentStyles = {
     flex: 1,
@@ -85,7 +88,8 @@ const Layout = ({ children, title, description, keywords, author }) => {
     padding: isAdminRoute ? "0" : (isMobile ? "0" : "0.5rem 1rem"), // Reduced top padding so product starts near header
     display: "flex",
     flexDirection: "column",
-    width: "100%",
+    width: isAdminRoute ? `calc(100% - ${adminContentOffset})` : "100%",
+    marginLeft: adminContentOffset,
     maxWidth: "100%",
     minHeight: `calc(100vh - ${effectiveHeaderHeight}px)`, // Ensure content fills remaining space
     backgroundColor: isMobile ? "#f8f9fa" : "#ffffff", // Use lighter background on mobile

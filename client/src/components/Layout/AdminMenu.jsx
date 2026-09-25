@@ -28,6 +28,13 @@ const AdminMenu = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--admin-sidebar-width",
+      isCollapsed ? "60px" : "250px"
+    );
+  }, [isCollapsed]);
+
   const toggleMenu = (menuId) => {
     if (expandedMenu === menuId) {
       setExpandedMenu(null);
