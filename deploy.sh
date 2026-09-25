@@ -19,13 +19,14 @@ npm install
 npm run build
 cd ..
 
-echo "[3/4] Rebuilding Docker Image for Client (without cache)..."
-# This copies the newly generated "build" folder into the docker image
+echo "[3/4] Rebuilding Docker Images for Client and Server..."
+# Rebuild both frontend and backend images so code changes in both are deployed
 docker compose build --no-cache client
+docker compose build server
 
 echo "[4/4] Restarting Docker Services..."
-# Recreate the container to serve the newly built image
-docker compose up -d
+# Recreate containers to serve the newly built images
+docker compose up -d --force-recreate
 
 # Optional: Restart pm2 if you're running any bare-metal node apps outside Docker
 echo "Checking for pm2 processes..."
