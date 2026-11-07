@@ -25,7 +25,19 @@ const emptyContent = {
   termsAndConditions: "",
   aboutUs: "",
   returnPolicy: "",
+  checkoutNote: "",
+  razorpayEnabled: true,
 };
+
+const CHECKOUT_NOTE_MAX = 5000;
+
+// Normalise API content so the toggle is always a real boolean and the note a string
+const normaliseContent = (raw = {}) => ({
+  ...emptyContent,
+  ...raw,
+  checkoutNote: raw.checkoutNote || "",
+  razorpayEnabled: raw.razorpayEnabled !== false,
+});
 
 const AppContent = () => {
   const [content, setContent] = useState(emptyContent);
@@ -37,7 +49,7 @@ const AppContent = () => {
     try {
       setLoading(true);
       const response = await api.get("/app-content/get-content");
-      const nextContent = { ...emptyContent, ...response.data.content };
+      const nextContent = normaliseContent(response.data.content);
       setContent(nextContent);
       setSavedContent(nextContent);
     } catch (error) {
@@ -58,11 +70,19 @@ const AppContent = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    if (savedContent.razorpayEnabled && !content.razorpayEnabled) {
+      const confirmed = window.confirm(
+        "Turn off Razorpay? Customers will only see a Place Order button and you will collect payment manually (GPay or COD)."
+      );
+      if (!confirmed) return;
+    }
+
     setSaving(true);
 
     try {
       const response = await api.put("/app-content/update-content", content);
-      const nextContent = { ...emptyContent, ...response.data.content };
+      const nextContent = normaliseContent(response.data.content);
       setContent(nextContent);
       setSavedContent(nextContent);
       toast.success("App content updated successfully");
@@ -91,6 +111,56 @@ const AppContent = () => {
         </div>
 
         <form className="app-content-form" onSubmit={handleSubmit}>
+          <div className="app-content-section">
+            <div className="app-content-section-heading">
+              <h2>Checkout settings</h2>
+              <span>Shown on the website and app cart, above the Place Order button</span>
+            </div>
+
+            <div className="app-content-toggle-row">
+              <label className="app-content-toggle">
+                <input
+                  type="checkbox"
+                  role="switch"
+                  name="razorpayEnabled"
+                  checked={content.razorpayEnabled}
+                  onChange={(e) => setContent((current) => ({ ...current, razorpayEnabled: e.target.checked }))}
+                  disabled={loading || saving}
+                  aria-describedby="razorpay-toggle-help"
+                />
+                <span className="app-content-toggle-track" aria-hidden="true" />
+                <span className="app-content-toggle-text">
+                  <strong>Razorpay online payment</strong>
+                  <small id="razorpay-toggle-help">
+                    {content.razorpayEnabled
+                      ? "Customers choose Razorpay / COD / Advance as per their account."
+                      : "Customers only see a Place Order button. Orders show payment as \"Order Placed\" and you collect payment manually (GPay or COD)."}
+                  </small>
+                </span>
+              </label>
+              <span className={`app-content-pill ${content.razorpayEnabled ? "is-on" : "is-off"}`}>
+                {content.razorpayEnabled ? "Enabled" : "Disabled"}
+              </span>
+            </div>
+
+            <label className="app-content-field">
+              <span>Checkout note</span>
+              <textarea
+                name="checkoutNote"
+                value={content.checkoutNote}
+                onChange={handleChange}
+                placeholder="e.g. Courier charges are extra. Orders are dispatched within 48 hours."
+                rows="6"
+                maxLength={CHECKOUT_NOTE_MAX}
+                disabled={loading || saving}
+              />
+              <small className="app-content-hint">
+                {content.checkoutNote.length}/{CHECKOUT_NOTE_MAX} · Long notes are shortened at checkout with a
+                “Show more” link. Leave empty to hide the note.
+              </small>
+            </label>
+          </div>
+
           <div className="app-content-section">
             <div className="app-content-section-heading">
               <h2>Business information</h2>

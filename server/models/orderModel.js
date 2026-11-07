@@ -55,7 +55,8 @@ const orderSchema = new mongoose.Schema(
     payment: {
       paymentMethod: {
         type: String,
-        enum: ["COD", "Razorpay", "Advance"],
+        // "Order Placed" = placed while Razorpay was disabled; admin decides GPay / COD manually
+        enum: ["COD", "Razorpay", "Advance", "Order Placed"],
         // required: true,
       },
       transactionId: String,

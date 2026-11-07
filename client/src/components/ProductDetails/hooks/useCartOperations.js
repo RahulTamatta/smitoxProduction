@@ -1,103 +1,86 @@
 import axios from 'axios';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/auth';
-import { useCart } from '../../../context/cart';
+import useCartStore from '../../../store/cart.store';
 
+/**
+ * Product page cart logic.
+ *
+ * The quantity lives in the shared cart store (store/cart.store.js), so a
+ * change here shows up on every product card, the cart page and the header —
+ * and a change on a product card shows up here.
+ */
 export const useCartOperations = (product) => {
   const navigate = useNavigate();
   const [auth] = useAuth();
-  const [cart, setCart] = useCart();
-  const [selectedQuantity, setSelectedQuantity] = useState(0);
-  const [selectedBulk, setSelectedBulk] = useState(null);
-  const [totalPrice, setTotalPrice] = useState(0);
+  const [selectedQuantity] = useState(0);
   const [isInWishlist, setIsInWishlist] = useState(false);
-  const [unitSet, setUnitSet] = useState(1);
-  const [quantity, setQuantity] = useState(1);
-  const [displayQuantity, setDisplayQuantity] = useState(0);
-  const [showQuantitySelector, setShowQuantitySelector] = useState(false);
+  const [quantity] = useState(1);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [showStockPopup, setShowStockPopup] = useState(false);
-
-  // FIX 1: Track in-flight state via a ref BUT also mirror it to state so the
-  // button can correctly re-render disabled/enabled without stale closure issues.
   const isAddingToCartRef = useRef(false);
 
-  // FIX 2: Use a ref to hold the LATEST displayQuantity so async callbacks
-  // always operate on the correct value without stale closures.
-  const displayQuantityRef = useRef(0);
-  useEffect(() => {
-    displayQuantityRef.current = displayQuantity;
-  }, [displayQuantity]);
+  const unitSet = Math.max(1, Number(product?.unitSet) || 1);
 
-  // FIX 3: Serialise quantity-change operations so rapid clicks are queued
-  // rather than dropped. Each click is processed in order.
-  const pendingOpsRef = useRef(Promise.resolve());
-  const enqueueOp = useCallback((opFn) => {
-    pendingOpsRef.current = pendingOpsRef.current
-      .then(opFn)
-      .catch((err) => console.error('[Cart] Queued op failed:', err));
-  }, []);
+  // Shared quantity for this product (re-renders when any page changes it)
+  const displayQuantity = useCartStore((state) => {
+    const item = (state.cart || []).find(
+      (i) => (i.product?._id || i.product) === product?._id
+    );
+    return item ? item.quantity : 0;
+  });
+  const showQuantitySelector = displayQuantity > 0;
 
-  // FIX 4: Track last touch timestamp to prevent double-fire on touch + click
+  // Guard against touch + click double-fire (same as before)
   const lastTouchRef = useRef(0);
   const TOUCH_CLICK_THRESHOLD_MS = 350;
-
-  const axiosConfig = {
-    timeout: 30000,
-    headers: {
-      'Content-Type': 'application/json',
-      'Connection': 'keep-alive'
-    }
-  };
 
   useEffect(() => {
     if (product._id && auth?.user?._id) {
       checkWishlistStatus(product._id);
       fetchInitialQuantity(product._id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product._id, auth?.user?._id]);
 
-  useEffect(() => {
-    setUnitSet(product?.unitSet || 1);
-  }, [product?.unitSet]);
-
-  const getApplicableBulkProduct = (quantity) => {
+  const getApplicableBulkProduct = useCallback((qty) => {
     if (!product.bulkProducts || product.bulkProducts.length === 0) return null;
 
     const sortedBulkProducts = [...product.bulkProducts]
       .filter((bulk) => bulk && bulk.minimum)
       .sort((a, b) => b.minimum - a.minimum);
 
-    if (
-      sortedBulkProducts.length > 0 &&
-      quantity >= sortedBulkProducts[0].minimum * unitSet
-    ) {
+    if (sortedBulkProducts.length > 0 && qty >= sortedBulkProducts[0].minimum * unitSet) {
       return sortedBulkProducts[0];
     }
 
     for (let i = 0; i < sortedBulkProducts.length; i++) {
       const bulk = sortedBulkProducts[i];
-      if (
-        quantity >= bulk.minimum * unitSet &&
-        (!bulk.maximum || quantity <= bulk.maximum * unitSet)
-      ) {
+      if (qty >= bulk.minimum * unitSet && (!bulk.maximum || qty <= bulk.maximum * unitSet)) {
         return bulk;
       }
     }
 
     return null;
-  };
+  }, [product.bulkProducts, unitSet]);
 
-  const calculateTotalPrice = (bulk, quantity) => {
-    if (bulk) {
-      setTotalPrice(quantity * parseFloat(bulk.selling_price_set));
-    } else {
-      setTotalPrice(quantity * parseFloat(product.perPiecePrice || 0));
-    }
-  };
+  // Bulk tier + total derived from the shared quantity
+  const selectedBulk = useMemo(
+    () => (displayQuantity > 0 ? getApplicableBulkProduct(displayQuantity) : null),
+    [displayQuantity, getApplicableBulkProduct]
+  );
+  const totalPrice = useMemo(() => {
+    if (displayQuantity <= 0) return 0;
+    return selectedBulk
+      ? displayQuantity * parseFloat(selectedBulk.selling_price_set)
+      : displayQuantity * parseFloat(product.perPiecePrice || 0);
+  }, [displayQuantity, selectedBulk, product.perPiecePrice]);
+
+  // Kept for backwards compatibility with callers; totals are now derived.
+  const calculateTotalPrice = () => {};
 
   const addToCart = async () => {
     if (!auth.user) {
@@ -105,207 +88,66 @@ export const useCartOperations = (product) => {
       navigate('/login');
       return;
     }
-
-    if (isAddingToCartRef.current) {
-      console.log('[Cart] Add to cart operation in progress');
-      return;
-    }
-
+    if (isAddingToCartRef.current) return;
     if (!navigator.onLine) {
       toast.error("No internet connection. Please check your network.");
+      return;
+    }
+    if (unitSet > product.stock) {
+      setShowStockPopup(true);
       return;
     }
 
     isAddingToCartRef.current = true;
     setIsAddingToCart(true);
-
     try {
-      console.log('[Cart] Adding product to cart');
-      const initialQuantity = unitSet * 1;
-      const applicableBulk = getApplicableBulkProduct(initialQuantity);
-
-      // Check stock before adding
-      if (initialQuantity > product.stock) {
+      const store = useCartStore.getState();
+      // Optimistic: the quantity selector appears immediately
+      const result = store.setProductQuantity(product, unitSet);
+      if (result === 'exceedsStock') {
         setShowStockPopup(true);
         return;
       }
-
-      // FIX 5: Optimistic UI update — show quantity immediately so the user
-      // gets instant feedback, even before the server responds.
-      setDisplayQuantity(initialQuantity);
-      setSelectedBulk(applicableBulk);
-      calculateTotalPrice(applicableBulk, initialQuantity);
-      setShowQuantitySelector(true);
-
-      const response = await axios.post(
-        `/api/v1/carts/users/${auth.user._id}/cart`,
-        {
-          productId: product._id,
-          quantity: initialQuantity,
-          price: applicableBulk ? parseFloat(applicableBulk.selling_price_set) : parseFloat(product.price),
-          bulkProductDetails: applicableBulk,
-        },
-        axiosConfig
-      );
-
-      console.log('[Cart] Add to cart response:', response.data);
-
-      if (response.data.status === "success") {
-        setCart(prevCart => {
-          const cartArray = Array.isArray(prevCart) ? prevCart : [];
-          const existing = cartArray.find(item => (item.product?._id || item.product) === product._id);
-          if (existing) {
-            return cartArray.map(item => (item.product?._id || item.product) === product._id ? { ...item, quantity: initialQuantity } : item);
-          } else {
-            return [...cartArray, { product, quantity: initialQuantity, bulkProductDetails: applicableBulk ? [applicableBulk] : [] }];
-          }
-        });
+      await store.flushProduct(product._id);
+      if (useCartStore.getState().getQuantity(product._id) > 0) {
         toast.success("Product added to cart");
       } else {
-        // Rollback optimistic update on failure
-        setDisplayQuantity(0);
-        setShowQuantitySelector(false);
-        setSelectedBulk(null);
-        setTotalPrice(0);
+        toast.error(useCartStore.getState().error || "Failed to add product to cart");
       }
-    } catch (error) {
-      console.error('[Cart] Error adding to cart:', error);
-
-      // Rollback optimistic update on error
-      setDisplayQuantity(0);
-      setShowQuantitySelector(false);
-      setSelectedBulk(null);
-      setTotalPrice(0);
-
-      let errorMessage = "Failed to add product to cart";
-
-      if (!navigator.onLine) {
-        errorMessage = "No internet connection. Please check your network.";
-      } else if (error.code === 'ECONNABORTED') {
-        errorMessage = "Request timed out. Please try again.";
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      }
-
-      toast.error(errorMessage);
     } finally {
       isAddingToCartRef.current = false;
       setIsAddingToCart(false);
     }
   };
 
-  // FIX 6: Wrap handleQuantityChange so it guards against touch/click double-fire
-  // and queues operations so rapid taps are all processed in order.
   const handleQuantityChange = useCallback((increment, eventType = 'click') => {
     // Ignore click events that fired within 350ms of a touchstart (double-fire guard)
-    if (eventType === 'click') {
-      const now = Date.now();
-      if (now - lastTouchRef.current < TOUCH_CLICK_THRESHOLD_MS) {
-        console.log('[Cart] Ignoring click — already handled by touchstart');
-        return;
-      }
+    if (eventType === 'click' && Date.now() - lastTouchRef.current < TOUCH_CLICK_THRESHOLD_MS) {
+      return;
     }
     if (eventType === 'touch') {
       lastTouchRef.current = Date.now();
     }
-
     if (!navigator.onLine) {
       toast.error("No internet connection. Please check your network.");
       return;
     }
 
-    // FIX 7: Compute the next quantity from the ref (not stale closure) so
-    // multiple rapid clicks each see the correct running total.
-    const currentQty = displayQuantityRef.current;
-    const newQuantity = currentQty + (increment ? 1 : -1) * unitSet;
-    const updatedQuantity = Math.max(0, newQuantity);
+    const store = useCartStore.getState();
+    // Read the latest value from the store (never a stale closure)
+    const currentQty = store.getQuantity(product._id);
+    const updatedQuantity = Math.max(0, currentQty + (increment ? 1 : -1) * unitSet);
 
-    // Check stock limit BEFORE optimistic update
     if (increment && updatedQuantity > product.stock) {
       setShowStockPopup(true);
       return;
     }
 
-    // FIX 8: Optimistic UI — update the display immediately so taps feel instant.
-    displayQuantityRef.current = updatedQuantity;
-    setDisplayQuantity(updatedQuantity);
-
-    if (updatedQuantity === 0) {
-      setShowQuantitySelector(false);
-      setSelectedBulk(null);
-      setTotalPrice(0);
-      // Enqueue the actual removal
-      enqueueOp(() => removeFromCart(product._id));
-      return;
-    }
-
-    const applicableBulk = getApplicableBulkProduct(updatedQuantity);
-    setSelectedBulk(applicableBulk);
-    calculateTotalPrice(applicableBulk, updatedQuantity);
-
-    // Enqueue the API sync — if user clicks fast, all changes are applied in order
-    enqueueOp(() => updateQuantity(updatedQuantity, applicableBulk));
-  }, [unitSet, product.stock, product._id, enqueueOp]);
-
-  const updateQuantity = async (quantity, applicableBulk) => {
-    if (!auth?.user?._id) {
-      return;
-    }
-
-    try {
-      await axios.post(
-        `/api/v1/carts/users/${auth.user._id}/cartq/${product._id}`,
-        { quantity },
-        {
-          headers: {
-            Authorization: `Bearer ${auth.token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      // FIX 9: Use functional updater to avoid stale closure on cart state.
-      setCart(prevCart => {
-        const cartArray = Array.isArray(prevCart) ? prevCart : [];
-        return cartArray.map(item =>
-          (item.product?._id || item.product) === product._id
-            ? { ...item, quantity }
-            : item
-        );
-      });
-
-    } catch (error) {
-      console.error("Quantity update error:", error);
-      // On API failure, re-fetch the real quantity from the server to re-sync
-      await fetchInitialQuantity(product._id);
-    }
-  };
-
-  const removeFromCart = async (productId) => {
-    if (!auth.user._id) return;
-
-    try {
-      await axios.delete(
-        `/api/v1/carts/users/${auth.user._id}/cart/${productId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${auth.token}`,
-          },
-        }
-      );
-
-      // FIX 10: Use functional updater to avoid stale closure on cart state.
-      setCart(prevCart => {
-        const cartArray = Array.isArray(prevCart) ? prevCart : [];
-        return cartArray.filter(item => (item.product?._id || item.product) !== productId);
-      });
-
-    } catch (error) {
-      console.error("Remove from cart failed:", error.message);
-      // Re-sync on failure
-      await fetchInitialQuantity(productId);
-    }
-  };
+    // Optimistic update + debounced, serialised server sync (in the store)
+    const result = store.setProductQuantity(product, updatedQuantity);
+    if (result === 'exceedsStock') setShowStockPopup(true);
+    if (result === 'notLoggedIn') navigate('/login');
+  }, [unitSet, product, navigate]);
 
   const fetchInitialQuantity = async (productId) => {
     if (!auth?.user?._id || !productId) return;
@@ -319,30 +161,10 @@ export const useCartOperations = (product) => {
           },
         }
       );
-
-      if (data.quantity) {
-        const quantity = data.quantity;
-        displayQuantityRef.current = quantity;
-        setDisplayQuantity(quantity);
-        setShowQuantitySelector(quantity > 0);
-
-        const applicableBulk = getApplicableBulkProduct(quantity);
-        setSelectedBulk(applicableBulk);
-        calculateTotalPrice(applicableBulk, quantity);
-      } else {
-        displayQuantityRef.current = 0;
-        setDisplayQuantity(0);
-        setShowQuantitySelector(false);
-        setSelectedBulk(null);
-        setTotalPrice(0);
-      }
+      // Share the server value (ignored if the user already changed it)
+      useCartStore.getState().applyServerQuantity(product, Number(data?.quantity) || 0);
     } catch (error) {
       console.error("Error fetching quantity:", error);
-      displayQuantityRef.current = 0;
-      setDisplayQuantity(0);
-      setShowQuantitySelector(false);
-      setSelectedBulk(null);
-      setTotalPrice(0);
     }
   };
 

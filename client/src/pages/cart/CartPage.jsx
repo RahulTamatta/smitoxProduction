@@ -2,10 +2,12 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import { AiFillWarning } from "react-icons/ai";
 import { useNavigate } from "react-router-dom";
+import CheckoutNote from "../../components/CheckoutNote/CheckoutNote";
 import Layout from "../../components/Layout/Layout";
 import OptimizedImage from "../../components/OptimizedImage";
 import { useAuth } from "../../context/auth";
-import { useCart } from "../../context/cart";
+import { flushPendingCartChanges, useCart } from "../../context/cart";
+import useCartStore from "../../store/cart.store";
 import "./cartPage.css";
 import StockPopup from "./StockPopup"; // Import the StockPopup component
 //new build
@@ -27,6 +29,9 @@ const CartPage = () => {
   const [networkError, setNetworkError] = useState(false); // Track network errors
   const [showStockPopup, setShowStockPopup] = useState(false); // State for stock popup visibility
   const [exceededProduct, setExceededProduct] = useState(null); // State for the product that exceeded stock
+  // Admin > App Content > Checkout settings
+  const [razorpayEnabled, setRazorpayEnabled] = useState(true);
+  const [checkoutNote, setCheckoutNote] = useState("");
 
   const navigate = useNavigate();
 
@@ -79,6 +84,25 @@ const CartPage = () => {
     }
   }, [auth?.token, auth?.user?._id]);
 
+  const fetchCheckoutSettings = async () => {
+    try {
+      const { data } = await axios.get("/api/v1/app-content/checkout-settings", {
+        headers: { "Cache-Control": "no-cache" },
+      });
+      if (data?.success) {
+        setRazorpayEnabled(data.razorpayEnabled !== false);
+        setCheckoutNote(data.checkoutNote || "");
+      }
+    } catch (error) {
+      // Keep current behaviour (Razorpay enabled); the server still enforces the real setting
+      console.error("Error fetching checkout settings:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchCheckoutSettings();
+  }, []);
+
   // Refresh auth once on mount to fetch latest user info (e.g., updated order_type)
   useEffect(() => {
     // Only attempt if we have a refresh function
@@ -93,23 +117,30 @@ const CartPage = () => {
     const ot = typeof auth?.user?.order_type === 'string' ? parseInt(auth.user.order_type) : auth?.user?.order_type;
     // Determine preferred default based on order type
     let desired = paymentMethod;
-    if (ot === 2 && advancePercentage > 0) desired = "Advance";
+    // Razorpay switched off by admin: single "Place Order", admin decides GPay / COD later
+    if (!razorpayEnabled) desired = "Order Placed";
+    else if (ot === 2 && advancePercentage > 0) desired = "Advance";
     else if (ot === 0 || ot === undefined || ot === null) desired = "COD";
     else desired = "Razorpay";
 
     if (desired !== paymentMethod) setPaymentMethod(desired);
-  }, [auth?.user?.order_type, advancePercentage]);
+  }, [auth?.user?.order_type, advancePercentage, razorpayEnabled]);
 
   const getCart = async () => {
     try {
+      // Send quantity taps from product cards / product page that are still
+      // waiting for their debounce, so the server cart is up to date.
+      await flushPendingCartChanges();
       const { data } = await axios.get(`/api/v1/carts/users/${auth.user._id}/cart`);
       // Filter out items with null products to prevent errors
       const validCartItems = (data.cart || []).filter(item => item.product !== null);
-      setCart(validCartItems);
+      // Server cart becomes the shared state (product cards + product page follow)
+      useCartStore.getState().replaceFromServer(validCartItems);
     } catch (error) {
       console.log(error);
       ////toast.error("Error fetching cart");
-      setCart([]);
+      // Keep the last known cart: the store is shared with every page, so a
+      // network blip must not wipe quantities shown on product cards.
     }
   };
 
@@ -146,7 +177,7 @@ const CartPage = () => {
       const response = await axios.delete(`/api/v1/carts/users/${auth.user._id}/cart`);
 
       if (response.data.status === 'success') {
-        setCart([]);
+        useCartStore.getState().replaceFromServer([]);
         //toast.success("Cart cleared successfully");
       } else {
         ////toast.error("Failed to clear cart");
@@ -206,6 +237,9 @@ const CartPage = () => {
           }
         }
       );
+
+      // Tell the shared store the server now has this quantity
+      useCartStore.getState().applyServerQuantity(productId, newQuantity);
 
       const updatedCart = cart.map(item =>
         item.product && item.product._id === productId
@@ -364,7 +398,7 @@ const CartPage = () => {
         amountPending
       };
 
-      if (paymentMethod === "COD") {
+      if (paymentMethod === "COD" || paymentMethod === "Order Placed") {
         // Configure timeout for the API request
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
@@ -402,6 +436,10 @@ const CartPage = () => {
           }
 
           if (error.response) {
+            // Admin toggled Razorpay while this page was open: reload checkout settings to switch flow
+            if (typeof error.response.data?.razorpayEnabled === "boolean") {
+              fetchCheckoutSettings();
+            }
             // The server responded with a status code outside the 2xx range
             throw new Error(error.response.data.message || "Server responded with an error");
           } else if (error.request) {
@@ -533,13 +571,17 @@ const CartPage = () => {
         }
       }
     } catch (error) {
+      // Admin toggled Razorpay while this page was open: reload checkout settings to switch flow
+      if (typeof error.response?.data?.razorpayEnabled === "boolean") {
+        fetchCheckoutSettings();
+      }
       const errorMessage = error.response?.data?.message || error.message || "Payment processing failed";
       setOrderErrorMessage(errorMessage);
       //toast.error(errorMessage);
       console.error("Payment error:", error);
       throw error; // Rethrow for retry mechanism
     } finally {
-      if (paymentMethod === "COD" || paymentMethod === "Advance") {
+      if (paymentMethod === "COD" || paymentMethod === "Advance" || paymentMethod === "Order Placed") {
         setLoading(false);
         setOrderPlacementInProgress(false);
       }
@@ -743,6 +785,7 @@ const CartPage = () => {
                   )}
                 </ul>
               </p>}
+            {razorpayEnabled && (
             <div className="mb-3">
               <label className="form-label">Payment Method</label>
               <select
@@ -764,6 +807,10 @@ const CartPage = () => {
                 )}
               </select>
             </div>
+            )}
+
+            {/* Admin-managed note, directly above Place Order */}
+            <CheckoutNote note={checkoutNote} />
 
             <button
               className="btn btn-primary w-100"

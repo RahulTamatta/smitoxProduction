@@ -1,6 +1,7 @@
 import express from "express";
 import {
   getAppContentController,
+  getCheckoutSettingsController,
   updateAppContentController,
 } from "../controllers/appContentController.js";
 import { requireSignIn } from "../middlewares/rbacMiddleware.js";
@@ -36,6 +37,9 @@ const requireAdminOrSettingsWrite = (req, res, next) => {
 
 // Public route to get app content (used by footer, privacy policy, terms pages)
 router.get("/get-content", getAppContentController);
+
+// Public route for checkout: admin note + whether Razorpay is enabled
+router.get("/checkout-settings", getCheckoutSettingsController);
 
 // Protected route to update app content (admin only)
 router.put(

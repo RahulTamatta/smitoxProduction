@@ -48,6 +48,19 @@ const appContentSchema = new mongoose.Schema(
       type: String,
       default: "Returns are accepted only when explicitly allowed for the order. Buyers must provide a complete unboxing video and coordinate return claims directly with the seller.",
     },
+    // Admin-managed note shown above the "Place Order" button on web + app checkout.
+    checkoutNote: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 5000,
+    },
+    // When false, checkout shows only "Place Order" and orders are created with
+    // payment.paymentMethod = "Order Placed"; admin collects payment manually (GPay / COD).
+    razorpayEnabled: {
+      type: Boolean,
+      default: true,
+    },
   },
   { timestamps: true }
 );

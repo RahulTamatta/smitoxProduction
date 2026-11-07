@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import path from "path";
 import Razorpay from "razorpay";
 import slugify from "slugify";
+import { getCheckoutSettings } from "./appContentController.js";
 import { enrichOrderProducts } from "../helpers/orderSnapshotHelper.js";
 import cartModel from "../models/cartModel.js";
 import categoryModel from "../models/categoryModel.js";
@@ -433,7 +434,7 @@ export const getProductController = async (req, res) => {
       .populate("category", "name")
       .populate("subcategory", "name")
       .select(
-        "name category subcategory isActive perPiecePrice slug stock photos custom_order"
+        "name category subcategory isActive perPiecePrice mrp slug stock unitSet photos custom_order"
       )
       .sort(sortQuery) // Apply sorting here
       .skip(skip)
@@ -571,7 +572,7 @@ export const productListController = async (req, res) => {
 
     // Fetch products with pagination and sorting
     const products = await productModel
-      .find(filterQuery, "name photo photos _id perPiecePrice mrp stock slug custom_order")
+      .find(filterQuery, "name photo photos _id perPiecePrice mrp stock unitSet slug custom_order") // unitSet: card "Add" starts at the set size
       .skip(skip)
       .limit(perPage)
       .sort(sortQuery);
@@ -977,7 +978,8 @@ export const processPaymentController = async (req, res) => {
       });
     }
 
-    const { products, paymentMethod, amount, amountPending } = req.body;
+    const { products, amount, amountPending } = req.body;
+    let { paymentMethod } = req.body;
 
     // Enhanced validation with detailed error messages
     if (!products || !Array.isArray(products)) {
@@ -1033,8 +1035,55 @@ export const processPaymentController = async (req, res) => {
       });
     }
 
-    // For COD orders, allow zero amount with non-zero amountPending
-    if (paymentMethod === "COD") {
+    // Admin placing an order on behalf of a customer (admin cart) is exempt from the Razorpay toggle
+    const isAdmin = req.user.role === 1 ||
+      req.user.role === '1' ||
+      req.user.role === 'admin' ||
+      req.user.role === 'super_admin';
+    const isAdminPlacedOrder = isAdmin && !!req.body.userId;
+
+    // Razorpay on/off switch (Admin > App Content > Checkout)
+    let razorpayEnabled = true;
+    try {
+      ({ razorpayEnabled } = await getCheckoutSettings());
+    } catch (settingsError) {
+      console.error(`[Payment] Could not read checkout settings, assuming Razorpay enabled | Error: ${settingsError.message}`);
+    }
+
+    if (!isAdminPlacedOrder) {
+      if (razorpayEnabled && paymentMethod === "Order Placed") {
+        return res.status(400).json({
+          success: false,
+          message: "Online payment is available again. Please select a payment method to place your order.",
+          reason: "Payment method required",
+          razorpayEnabled: true,
+          requestId: `req-${Date.now()}`
+        });
+      }
+
+      if (!razorpayEnabled) {
+        if (paymentMethod !== "COD" && paymentMethod !== "Order Placed") {
+          // Razorpay / Advance (or anything online). Old app builds may still offer online payment; refuse instead of creating an unpaid Razorpay flow
+          return res.status(400).json({
+            success: false,
+            message: "Online payment is currently unavailable. Please refresh the cart (or update the app) and tap Place Order — our team will contact you for payment.",
+            reason: "Online payment disabled",
+            razorpayEnabled: false,
+            requestId: `req-${Date.now()}`
+          });
+        }
+        if (paymentMethod === "COD") {
+          // Admin decides GPay vs COD manually for every order while Razorpay is off
+          paymentMethod = "Order Placed";
+        }
+      }
+    }
+
+    // Orders created immediately without an online payment
+    const isOfflineOrder = paymentMethod === "COD" || paymentMethod === "Order Placed";
+
+    // For COD / manual orders, allow zero amount with non-zero amountPending
+    if (isOfflineOrder) {
       if ((isNaN(amount) || amount < 0) || (isNaN(amountPending) || amountPending <= 0)) {
         console.error(`[Payment] Validation failed | Invalid amount combination: amount=${amount}, amountPending=${amountPending}`);
         return res.status(400).json({
@@ -1059,8 +1108,8 @@ export const processPaymentController = async (req, res) => {
 
     console.log(`[Payment] Processing payment for user: ${req.user._id} | Method: ${paymentMethod} | Amount: ${amount} | Pending: ${amountPending || 0}`);
 
-    // Handle COD orders immediately
-    if (paymentMethod === "COD") {
+    // Handle COD / manual ("Order Placed") orders immediately
+    if (isOfflineOrder) {
       console.log(`[Payment] Processing ${paymentMethod} order`);
 
       try {
@@ -1141,13 +1190,7 @@ export const processPaymentController = async (req, res) => {
         // Otherwise use the authenticated user's ID
         let buyerId = req.user._id;
 
-        // Check if user is admin - handle both numeric (1) and string ('admin', 'super_admin') roles
-        const isAdmin = req.user.role === 1 ||
-          req.user.role === '1' ||
-          req.user.role === 'admin' ||
-          req.user.role === 'super_admin';
-
-        if (isAdmin && req.body.userId) {
+        if (isAdminPlacedOrder) {
           console.log(`[Payment] Admin placing order for customer user: ${req.body.userId}`);
           buyerId = req.body.userId;
         }
@@ -1156,8 +1199,8 @@ export const processPaymentController = async (req, res) => {
           products: enrichedProducts,
           payment: {
             paymentMethod,
-            transactionId: `${paymentMethod}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-            status: paymentMethod === "COD" ? false : true,
+            transactionId: `${paymentMethod === "Order Placed" ? "MANUAL" : paymentMethod}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            status: false,
           },
           buyer: buyerId,
           amount: amount,
@@ -1220,7 +1263,7 @@ export const processPaymentController = async (req, res) => {
 
         return res.json({
           success: true,
-          message: `${paymentMethod} order placed successfully`,
+          message: paymentMethod === "Order Placed" ? "Order placed successfully" : `${paymentMethod} order placed successfully`,
           order,
           requestId: `req-${Date.now()}`
         });
@@ -1606,6 +1649,14 @@ export const getPaymentStatusController = async (req, res) => {
       });
     }
 
+    if (order.payment.paymentMethod === "Order Placed") {
+      return res.json({
+        success: true,
+        status: "Order Placed",
+        order,
+      });
+    }
+
     if (order.payment.paymentMethod === "Advance") {
       console.log(`[Status] Advance payment order status returned | Order ID: ${orderId}`);
       return res.json({
@@ -1730,7 +1781,7 @@ export const productCategoryController = async (req, res) => {
       .find(filterQuery)
       .populate("category", "name") // Populate category name for context
       .sort(sortQuery)
-      .select("name category photos _id perPiecePrice mrp stock slug custom_order isActive") // Select necessary fields
+      .select("name category photos _id perPiecePrice mrp stock unitSet slug custom_order isActive") // Select necessary fields (unitSet: card quantity steps)
       .skip(skip)
       .limit(limit);
 
@@ -1823,7 +1874,7 @@ export const productSubcategoryController = async (req, res) => {
     const products = await productModel
       .find(filterQuery)
       .sort(sortQuery)
-      .select("name photos _id perPiecePrice mrp stock slug custom_order isActive") // Select fields
+      .select("name photos _id perPiecePrice mrp stock unitSet slug custom_order isActive") // Select fields (unitSet: card quantity steps)
       .skip(skip)
       .limit(limit);
 

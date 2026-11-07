@@ -1,6 +1,7 @@
-import { Heart, ShoppingCart } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import CartQuantityControl from '../components/CartQuantityControl/CartQuantityControl';
 import OptimizedImage from '../components/OptimizedImage';
 import useWishlist from '../hooks/useWishlist';
 
@@ -183,30 +184,10 @@ const ProductCard = ({ product, onClick }) => {
               </div>
             </div>
 
-            {/* Cart icon - bottom right */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleProductClick();
-              }}
-              style={{
-                position: "absolute",
-                bottom: "10px",
-                right: "10px",
-                width: "40px",
-                height: "40px",
-                borderRadius: "50%",
-                border: "1px solid #eee",
-                backgroundColor: "#fff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
-              }}
-            >
-              <ShoppingCart size={18} color="var(--text-secondary, #666)" />
-            </button>
+            {/* Quantity controller — shared with the product page via the cart store */}
+            <div style={{ marginTop: "4px" }}>
+              <CartQuantityControl product={product} size="sm" />
+            </div>
           </div>
         </div>
       </div>
@@ -335,22 +316,8 @@ const ProductCard = ({ product, onClick }) => {
             </div>
           </div>
 
-          {/* Action Button */}
-          <button 
-            className="btn-pill w-100"
-            style={{ 
-              backgroundColor: "var(--primary)", 
-              color: "white",
-              border: "none"
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleProductClick();
-            }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>shopping_cart</span>
-            Add to Cart
-          </button>
+          {/* Quantity controller — shared with the product page via the cart store */}
+          <CartQuantityControl product={product} />
         </div>
       </div>
     </div>

@@ -43,8 +43,8 @@ const Header = () => {
       token: "",
     });
     localStorage.removeItem("auth");
-    // Clear Zustand stores on logout
-    useCartStore.getState().clearCart();
+    // Clear local cart state on logout (never deletes the user's server cart)
+    useCartStore.getState().resetLocal();
     useWishlistStore.getState().clearWishlist();
   };
 

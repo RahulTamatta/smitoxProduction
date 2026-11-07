@@ -55,6 +55,34 @@ Key conditions
 Disclaimer
 Smitox acts as a platform connector and is not responsible for disputes between buyers and sellers.`;
 
+// Checkout settings used by web + app checkout and by order creation.
+// Missing document / field => Razorpay enabled (preserves pre-existing behaviour).
+export const getCheckoutSettings = async () => {
+  const content = await AppContent.findOne()
+    .select("checkoutNote razorpayEnabled")
+    .lean();
+  return {
+    checkoutNote: content?.checkoutNote || "",
+    razorpayEnabled: content?.razorpayEnabled !== false,
+  };
+};
+
+// Get Checkout Settings (Public, lightweight)
+export const getCheckoutSettingsController = async (req, res) => {
+  try {
+    const settings = await getCheckoutSettings();
+    res.set("Cache-Control", "no-store");
+    res.status(200).send({ success: true, ...settings });
+  } catch (error) {
+    console.error("Error fetching checkout settings:", error);
+    res.status(500).send({
+      success: false,
+      message: "Error fetching checkout settings",
+      error: error.message,
+    });
+  }
+};
+
 // Get App Content (Public)
 export const getAppContentController = async (req, res) => {
   try {
@@ -125,7 +153,19 @@ export const updateAppContentController = async (req, res) => {
       termsAndConditions,
       aboutUs,
       returnPolicy,
+      checkoutNote,
+      razorpayEnabled,
     } = req.body;
+
+    if (checkoutNote !== undefined && typeof checkoutNote !== "string") {
+      return res.status(400).send({ success: false, message: "Checkout note must be text" });
+    }
+    if (checkoutNote !== undefined && checkoutNote.length > 5000) {
+      return res.status(400).send({ success: false, message: "Checkout note must be 5000 characters or fewer" });
+    }
+    if (razorpayEnabled !== undefined && typeof razorpayEnabled !== "boolean") {
+      return res.status(400).send({ success: false, message: "razorpayEnabled must be true or false" });
+    }
 
     let content = await AppContent.findOne();
     if (!content) {
@@ -142,6 +182,8 @@ export const updateAppContentController = async (req, res) => {
     if (termsAndConditions !== undefined) content.termsAndConditions = termsAndConditions;
     if (aboutUs !== undefined) content.aboutUs = aboutUs;
     if (returnPolicy !== undefined) content.returnPolicy = returnPolicy;
+    if (checkoutNote !== undefined) content.checkoutNote = checkoutNote;
+    if (razorpayEnabled !== undefined) content.razorpayEnabled = razorpayEnabled;
 
     await content.save();
 

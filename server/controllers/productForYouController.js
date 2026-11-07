@@ -66,7 +66,8 @@ export const getProductsForYouController = async (req, res) => {
     // Try to fetch from ProductForYou collection first
     let pfyItems = await productForYouModel
       .find(filter)
-      .populate("productId", "name photos price slug perPiecePrice isActive")
+      // stock/unitSet/mrp: product cards need them for the quantity controller
+      .populate("productId", "name photos price slug perPiecePrice mrp stock unitSet isActive")
       .select("productId")
       .sort({ createdAt: -1 });
 
@@ -90,7 +91,7 @@ export const getProductsForYouController = async (req, res) => {
           isActive: "1",
           _id: { $nin: existingIds }
         })
-        .select("name photos price slug perPiecePrice isActive")
+        .select("name photos price slug perPiecePrice mrp stock unitSet isActive")
         .limit(remainingCount);
 
       products = [...products, ...fallbackProducts.map(p => p.toObject())];
@@ -132,7 +133,7 @@ export const getAllProductsForYouController = async (req, res) => {
     const products = await productForYouModel.find()
       .populate("categoryId", "name")
       .populate("subcategoryId", "name")
-      .populate("productId", "name photos price slug perPiecePrice custom_order")
+      .populate("productId", "name photos price slug perPiecePrice mrp stock unitSet custom_order")
       .select("categoryId subcategoryId productId")
       .sort({ "productId.custom_order": 1, createdAt: -1 });
 
@@ -355,7 +356,7 @@ export const getBannersController = async (req, res) => {
       .find(query)
       .populate("categoryId", "name")
       .populate("subcategoryId", "name")
-      .populate("productId", "name photos perPiecePrice price slug")
+      .populate("productId", "name photos perPiecePrice price slug mrp stock unitSet")
       .select("categoryId subcategoryId productId isActive")
       .sort({ createdAt: -1 });
 

@@ -1,0 +1,87 @@
+.checkout-note {
+  margin: 12px 0;
+  padding: 12px 14px;
+  min-width: 0;
+  background: #fff8e6;
+  border: 1px solid #f5d48a;
+  border-left: 4px solid #f59e0b;
+  border-radius: 8px;
+  color: #4a3500;
+  overflow-wrap: anywhere;
+}
+
+.checkout-note-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.checkout-note-header svg {
+  flex: 0 0 auto;
+  color: #b45309;
+}
+
+.checkout-note-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.checkout-note-text.is-clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.checkout-note-more {
+  padding: 4px 0 0;
+  background: none;
+  border: 0;
+  color: #b45309;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.checkout-note-more:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.checkout-note-full {
+  margin: 0;
+  line-height: 1.6;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * Global admin styles (sellerApplications.css: `.modal { z-index: 1001 }`,
+ * OrderModal.css: `.modal-backdrop { z-index: 1040 !important }`) leak into the
+ * storefront bundle and put Bootstrap modals *under* their backdrop.
+ * Keep this modal above its backdrop without touching those admin files.
+ */
+.modal.checkout-note-modal {
+  z-index: 1060 !important;
+  background-color: transparent;
+}
+
+/* sellerApplications.css also sets a global `.btn-close { background: none }`,
+   which hides Bootstrap's close "×" icon. Restore it for this modal only. */
+.checkout-note-modal .btn-close {
+  width: 1em;
+  height: 1em;
+  padding: 0.25em;
+  opacity: 0.6;
+  background: transparent url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e") center / 1em auto no-repeat;
+}
+
+.checkout-note-modal .btn-close:hover,
+.checkout-note-modal .btn-close:focus-visible {
+  opacity: 1;
+}
