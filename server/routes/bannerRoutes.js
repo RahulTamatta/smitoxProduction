@@ -4,7 +4,9 @@ import {
   createBannerController,
   deleteBannerController,
   getBannerProductsController,
-  getBannersController, updateBannerController
+  getBannersController,
+  toggleBannerStatusController,
+  updateBannerController
 } from "../controllers/bannerController.js";
 import { requireSignIn } from "../middlewares/authMiddleware.js";
 import { upload } from "../middlewares/multer.js";
@@ -34,6 +36,20 @@ router.put(
   requireCapability("banners:write"),
   upload.single('photo'),
   updateBannerController
+);
+
+// Toggle banner status (active / inactive)
+router.put(
+  "/toggle-banner-status/:id",
+  requireSignIn,
+  requireCapability("banners:write"),
+  toggleBannerStatusController
+);
+router.patch(
+  "/toggle-banner-status/:id",
+  requireSignIn,
+  requireCapability("banners:write"),
+  toggleBannerStatusController
 );
 
 // Get all banners

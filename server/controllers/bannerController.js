@@ -6,7 +6,7 @@ import productModel from "../models/productModel.js";
 // Create Banner
 export const createBannerController = async (req, res) => {
   try {
-    const { bannerName, categoryId, subcategoryId } = req.body;
+    const { bannerName, categoryId, subcategoryId, isActive } = req.body;
     const photo = req.file;
 
     // Validations
@@ -45,6 +45,7 @@ export const createBannerController = async (req, res) => {
       categoryId,
       subcategoryId,
       photos: photoPath,
+      isActive: isActive === undefined ? true : (isActive === 'true' || isActive === true || isActive === '1' || isActive === 1),
     }).save();
 
     res.status(201).send({
@@ -65,7 +66,7 @@ export const createBannerController = async (req, res) => {
 // Update Banner
 export const updateBannerController = async (req, res) => {
   try {
-    const { bannerName, categoryId, subcategoryId } = req.body;
+    const { bannerName, categoryId, subcategoryId, isActive } = req.body;
     const { id } = req.params;
     const photo = req.file;
 
@@ -85,6 +86,9 @@ export const updateBannerController = async (req, res) => {
 
     // Update data object
     const updateData = { bannerName, categoryId, subcategoryId };
+    if (isActive !== undefined) {
+      updateData.isActive = isActive === 'true' || isActive === true || isActive === '1' || isActive === 1;
+    }
     if (photo) {
       updateData.photos = `uploads/banners/${path.basename(photo.path)}`;
     }
@@ -94,7 +98,7 @@ export const updateBannerController = async (req, res) => {
       id,
       updateData,
       { new: true }
-    ).populate("categoryId subcategoryId");
+    ).populate("categoryId", "name isActive").populate("subcategoryId", "name isActive");
 
     res.status(200).send({
       success: true,
@@ -106,6 +110,42 @@ export const updateBannerController = async (req, res) => {
     res.status(500).send({
       success: false,
       message: "Error in updating banner",
+      error: error.message,
+    });
+  }
+};
+
+// Toggle Banner Status (Active / Inactive)
+export const toggleBannerStatusController = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).send({ success: false, message: "Invalid banner ID" });
+    }
+
+    const banner = await bannerModel.findById(id);
+    if (!banner) {
+      return res.status(404).send({
+        success: false,
+        message: "Banner not found",
+      });
+    }
+
+    // Toggle status (default undefined to true, so toggling makes it false)
+    banner.isActive = banner.isActive === false ? true : false;
+    await banner.save();
+
+    res.status(200).send({
+      success: true,
+      message: `Banner status set to ${banner.isActive ? 'Active' : 'Inactive'}`,
+      banner,
+    });
+  } catch (error) {
+    console.error("Error in toggleBannerStatusController:", error);
+    res.status(500).send({
+      success: false,
+      message: "Error in toggling banner status",
       error: error.message,
     });
   }
@@ -158,14 +198,37 @@ export const getBannersByCategoryController = async (req, res) => {
       return res.status(400).send({ success: false, message: "Invalid category or subcategory ID" });
     }
 
-    const banners = await bannerModel
-      .find({
-        categoryId,
-        subcategoryId,
-      })
-      .populate("categoryId", "name")
-      .populate("subcategoryId", "name")
+    const showAll = req.query.all === "true";
+    const query = {
+      categoryId,
+      subcategoryId,
+    };
+    if (!showAll) {
+      query.$or = [
+        { isActive: true },
+        { isActive: { $exists: false } },
+        { isActive: "1" },
+      ];
+    }
+
+    let banners = await bannerModel
+      .find(query)
+      .populate("categoryId", "name isActive")
+      .populate("subcategoryId", "name isActive")
       .sort({ createdAt: -1 });
+
+    if (!showAll) {
+      banners = banners.filter((banner) => {
+        if (banner.isActive === false || banner.isActive === "0") return false;
+        if (banner.categoryId && (banner.categoryId.isActive === false || banner.categoryId.isActive === "0")) {
+          return false;
+        }
+        if (banner.subcategoryId && (banner.subcategoryId.isActive === false || banner.subcategoryId.isActive === "0")) {
+          return false;
+        }
+        return true;
+      });
+    }
 
     res.status(200).send({
       success: true,
@@ -192,15 +255,41 @@ export const getBannersByCategoryController = async (req, res) => {
 // Get All Banners
 export const getBannersController = async (req, res) => {
   try {
-    const banners = await bannerModel
-      .find({})
-      .populate("categoryId", "name")
-      .populate("subcategoryId", "name")
+    const showAll = req.query.all === "true";
+    let query = {};
+    if (!showAll) {
+      query = {
+        $or: [
+          { isActive: true },
+          { isActive: { $exists: false } },
+          { isActive: "1" },
+        ],
+      };
+    }
+
+    let banners = await bannerModel
+      .find(query)
+      .populate("categoryId", "name isActive")
+      .populate("subcategoryId", "name isActive")
       .sort({ createdAt: -1 });
+
+    if (!showAll) {
+      // Exclude inactive banners and banners whose parent category/subcategory is inactive
+      banners = banners.filter((banner) => {
+        if (banner.isActive === false || banner.isActive === "0") return false;
+        if (banner.categoryId && (banner.categoryId.isActive === false || banner.categoryId.isActive === "0")) {
+          return false;
+        }
+        if (banner.subcategoryId && (banner.subcategoryId.isActive === false || banner.subcategoryId.isActive === "0")) {
+          return false;
+        }
+        return true;
+      });
+    }
 
     res.status(200).send({
       success: true,
-      message: "All Banners fetched successfully",
+      message: showAll ? "All Banners fetched successfully" : "Active Banners fetched successfully",
       count: banners.length,
       banners,
     });
@@ -269,7 +358,8 @@ export const getBannerProductsController = async (req, res) => {
 
     const products = await productModel.find({
       category: categoryId,
-      subcategory: subcategoryId
+      subcategory: subcategoryId,
+      isActive: "1",
     }).populate("category subcategory");
 
     res.status(200).send({

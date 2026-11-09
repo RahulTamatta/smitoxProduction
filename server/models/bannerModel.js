@@ -25,9 +25,13 @@ const bannerSchema = new mongoose.Schema(
       data: Buffer,
       contentType: String,
     },
- photos: {
+    photos: {
       type: String, // Changed from Buffer to String to store Cloudinary URL
       required: false
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
   },
   { timestamps: true }

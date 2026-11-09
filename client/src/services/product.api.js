@@ -89,11 +89,18 @@ export const checkInventory = async (productId) => {
 };
 
 /**
- * Fetch banners
+ * Fetch banners (only active banners with active category/subcategory)
  */
 export const fetchBanners = async () => {
     const { data } = await api.get('/bannerManagement/get-banners');
-    return data.banners || [];
+    const banners = data.banners || [];
+    return banners.filter((b) => {
+        if (!b) return false;
+        if (b.isActive === false || b.isActive === '0') return false;
+        if (b.categoryId && (b.categoryId.isActive === false || b.categoryId.isActive === '0')) return false;
+        if (b.subcategoryId && (b.subcategoryId.isActive === false || b.subcategoryId.isActive === '0')) return false;
+        return true;
+    });
 };
 
 /**

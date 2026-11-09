@@ -16,7 +16,8 @@ const BannerManagement = () => {
     bannerName: '',
     categoryId: '',
     subcategoryId: '',
-    image: null
+    image: null,
+    isActive: true
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,7 +32,7 @@ const BannerManagement = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get('/api/v1/bannerManagement/get-banners');
+      const response = await axios.get('/api/v1/bannerManagement/get-banners?all=true');
 
       setBanners(response.data.banners || []);
     } catch (error) {
@@ -100,6 +101,7 @@ const BannerManagement = () => {
       bannerData.append("bannerName", formData.bannerName);
       bannerData.append("categoryId", formData.categoryId);
       bannerData.append("subcategoryId", formData.subcategoryId);
+      bannerData.append("isActive", formData.isActive);
       if (formData.image) {
         bannerData.append("photo", formData.image);
       }
@@ -125,14 +127,36 @@ const BannerManagement = () => {
       toast.error('Failed to submit banner');
     }
   };
+
+  const handleToggleStatus = async (banner) => {
+    const newStatus = banner.isActive === false ? true : false;
+    // Optimistic Update
+    setBanners(prev => prev.map(b =>
+      b._id === banner._id ? { ...b, isActive: newStatus } : b
+    ));
+    try {
+      const { data } = await axios.put(`/api/v1/bannerManagement/toggle-banner-status/${banner._id}`);
+      if (data.success) {
+        toast.success(data.message || `Banner set to ${newStatus ? 'Active' : 'Inactive'}`);
+      }
+    } catch (error) {
+      console.error('Error toggling banner status:', error);
+      // Revert on error
+      setBanners(prev => prev.map(b =>
+        b._id === banner._id ? { ...b, isActive: banner.isActive } : b
+      ));
+      toast.error('Failed to update banner status');
+    }
+  };
+
   const handleDelete = async (id) => {
     try {
       await axios.delete(`/api/v1/bannerManagement/delete-banner/${id}`);
       fetchBanners();
-      //toast.success('Banner deleted successfully');
+      toast.success('Banner deleted successfully');
     } catch (error) {
       console.error('Error deleting banner:', error);
-      //toast.error('Failed to delete banner');
+      toast.error('Failed to delete banner');
     }
   };
 
@@ -140,16 +164,17 @@ const BannerManagement = () => {
     setShowAddModal(false);
     setShowEditModal(false);
     setCurrentBanner(null);
-    setFormData({ bannerName: '', categoryId: '', subcategoryId: '', image: null });
+    setFormData({ bannerName: '', categoryId: '', subcategoryId: '', image: null, isActive: true });
   };
 
   const handleEdit = (banner) => {
     setCurrentBanner(banner);
     setFormData({
       bannerName: banner.bannerName,
-      categoryId: banner.categoryId,
-      subcategoryId: banner.subcategoryId,
-      image: null
+      categoryId: banner.categoryId?._id || banner.categoryId,
+      subcategoryId: banner.subcategoryId?._id || banner.subcategoryId,
+      image: null,
+      isActive: banner.isActive !== false
     });
     setShowEditModal(true);
   };
@@ -198,6 +223,7 @@ const BannerManagement = () => {
                         <th>Banner Name</th>
                         <th>Category</th>
                         <th>Subcategory</th>
+                        <th>Status</th>
                         <th>Image</th>
                         <th>Action</th>
                       </tr>
@@ -209,6 +235,16 @@ const BannerManagement = () => {
                           <td>{banner.bannerName}</td>
                           <td>{banner.categoryId?.name}</td>
                           <td>{banner.subcategoryId?.name}</td>
+                          <td>
+                            <Button
+                              size="sm"
+                              variant={banner.isActive !== false ? "success" : "danger"}
+                              onClick={() => handleToggleStatus(banner)}
+                              style={{ width: '90px' }}
+                            >
+                              {banner.isActive !== false ? "Active" : "Inactive"}
+                            </Button>
+                          </td>
                           <td>
                             <OptimizedImage
                               src={banner.photos}
@@ -280,6 +316,15 @@ const BannerManagement = () => {
             <Form.Group>
               <Form.Label>Image</Form.Label>
               <Form.Control type="file" name="image" onChange={handleImageChange} accept="image/*" required={!currentBanner} />
+            </Form.Group>
+            <Form.Group className="mt-3">
+              <Form.Check
+                type="switch"
+                id="banner-active-switch"
+                label={formData.isActive ? "Active (visible on website & app)" : "Inactive (hidden from website & app)"}
+                checked={formData.isActive}
+                onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
+              />
             </Form.Group>
           </Modal.Body>
           <Modal.Footer>
