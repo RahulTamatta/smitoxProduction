@@ -41,7 +41,7 @@ const mongoFallbackSearch = async (query, page = 1, limit = 20, includeInactive 
     const [products, total] = await Promise.all([
         productModel
             .find(searchQuery)
-            .select('name slug photos perPiecePrice mrp stock category subcategory brand')
+            .select('name slug photos perPiecePrice mrp stock unitSet category subcategory brand')
             .populate('category', 'name')
             .populate('subcategory', 'name')
             .populate('brand', 'name')
@@ -60,6 +60,7 @@ const mongoFallbackSearch = async (query, page = 1, limit = 20, includeInactive 
         perPiecePrice: p.perPiecePrice,
         mrp: p.mrp,
         stock: p.stock,
+        unitSet: p.unitSet,
         categoryName: p.category?.name,
         subcategoryName: p.subcategory?.name,
         brandName: p.brand?.name

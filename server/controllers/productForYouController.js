@@ -11,7 +11,7 @@ export const adminGetProductsForYouController = async (req, res) => {
       .find({})
       .populate("categoryId", "name")
       .populate("subcategoryId", "name")
-      .populate("productId", "name photos price slug perPiecePrice")
+      .populate("productId", "name photos price slug perPiecePrice mrp stock unitSet")
       .select("categoryId subcategoryId productId")
       .sort({ createdAt: -1 });
 

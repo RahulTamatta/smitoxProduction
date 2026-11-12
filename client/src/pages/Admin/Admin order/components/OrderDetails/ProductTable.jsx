@@ -239,7 +239,7 @@ const ProductTable = ({
           </tr>
           <tr>
             <td colSpan="4"></td>
-            <td>COD Charges:</td>
+            <td>Extra Charges:</td>
             <td>
               <Form.Control
                 type="number"

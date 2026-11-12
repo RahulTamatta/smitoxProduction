@@ -214,7 +214,7 @@ export const generateInvoicePDF = async (selectedOrder, calculateTotals, convert
     }
     
     if (codCharges > 0) {
-      doc.text("COD Charges:", totalsX, totalsY);
+      doc.text("Extra Charges:", totalsX, totalsY);
       doc.text("Rs " + codCharges.toFixed(2), totalsRightX, totalsY, { align: 'right' });
       totalsY += 4;
     }

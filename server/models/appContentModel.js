@@ -55,6 +55,26 @@ const appContentSchema = new mongoose.Schema(
       trim: true,
       maxlength: 5000,
     },
+    // Admin-managed cart notices (web + app). Placeholders: {amount}, {percent}.
+    // An empty string hides that line.
+    minimumOrderNotice: {
+      type: String,
+      default: "Order total is below the minimum order amount {amount}.",
+      trim: true,
+      maxlength: 500,
+    },
+    courierChargeNotice: {
+      type: String,
+      default: "Courier charge will be added (depends on weight and COD amount).",
+      trim: true,
+      maxlength: 500,
+    },
+    advancePaymentNotice: {
+      type: String,
+      default: "{percent}% advance payment is available to confirm the order.",
+      trim: true,
+      maxlength: 500,
+    },
     // When false, checkout shows only "Place Order" and orders are created with
     // payment.paymentMethod = "Order Placed"; admin collects payment manually (GPay / COD).
     razorpayEnabled: {

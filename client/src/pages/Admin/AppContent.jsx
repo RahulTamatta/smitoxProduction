@@ -27,7 +27,17 @@ const emptyContent = {
   returnPolicy: "",
   checkoutNote: "",
   razorpayEnabled: true,
+  minimumOrderNotice: "",
+  courierChargeNotice: "",
+  advancePaymentNotice: "",
 };
+
+// Cart notices shown on web + app cart. Empty => hidden.
+const CART_NOTICES = [
+  { key: "minimumOrderNotice", label: "Below minimum order notice", hint: "Shown when cart total is below the minimum. {amount} = minimum order amount." },
+  { key: "courierChargeNotice", label: "Courier charge notice", hint: "Always shown in the cart." },
+  { key: "advancePaymentNotice", label: "Advance payment notice", hint: "Shown when advance payment is set. {percent} = advance %." },
+];
 
 const CHECKOUT_NOTE_MAX = 5000;
 
@@ -159,6 +169,21 @@ const AppContent = () => {
                 “Show more” link. Leave empty to hide the note.
               </small>
             </label>
+
+            {CART_NOTICES.map((notice) => (
+              <label className="app-content-field" key={notice.key}>
+                <span>{notice.label}</span>
+                <input
+                  name={notice.key}
+                  type="text"
+                  value={content[notice.key] || ""}
+                  onChange={handleChange}
+                  maxLength={500}
+                  disabled={loading || saving}
+                />
+                <small className="app-content-hint">{notice.hint} Leave empty to hide.</small>
+              </label>
+            ))}
           </div>
 
           <div className="app-content-section">

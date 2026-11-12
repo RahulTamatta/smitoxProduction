@@ -34,7 +34,7 @@ Date: ${moment().format("DD/MM/YYYY")}
 Subtotal: Rs. ${totals.subtotal.toFixed(2)}
 GST: Rs. ${totals.gst.toFixed(2)}
 Delivery Charges: Rs. ${Number(selectedOrder.deliveryCharges || 0).toFixed(2)}
-COD Charges: Rs. ${Number(selectedOrder.codCharges || 0).toFixed(2)}
+Extra Charges: Rs. ${Number(selectedOrder.codCharges || 0).toFixed(2)}
 Discount: Rs. ${Number(selectedOrder.discount || 0).toFixed(2)}
 *Total Amount: Rs. ${totals.total.toFixed(2)}*
 Amount Paid: Rs. ${Number(selectedOrder.amount || 0).toFixed(2)}

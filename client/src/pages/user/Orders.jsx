@@ -172,7 +172,7 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
                         <td className="text-end">₹{(order.deliveryCharges || 0).toFixed(2)}</td>
                       </tr>
                       <tr>
-                        <td><strong>COD Charges</strong></td>
+                        <td><strong>Extra Charges</strong></td>
                         <td className="text-end">₹{(order.codCharges || 0).toFixed(2)}</td>
                       </tr>
 

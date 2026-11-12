@@ -55,15 +55,30 @@ Key conditions
 Disclaimer
 Smitox acts as a platform connector and is not responsible for disputes between buyers and sellers.`;
 
+export const CART_NOTICE_FIELDS = {
+  minimumOrderNotice: "Order total is below the minimum order amount {amount}.",
+  courierChargeNotice: "Courier charge will be added (depends on weight and COD amount).",
+  advancePaymentNotice: "{percent}% advance payment is available to confirm the order.",
+};
+
+// Field never saved => default text; saved as "" => hidden.
+const noticeOrDefault = (value, key) =>
+  typeof value === "string" ? value : CART_NOTICE_FIELDS[key];
+
 // Checkout settings used by web + app checkout and by order creation.
 // Missing document / field => Razorpay enabled (preserves pre-existing behaviour).
 export const getCheckoutSettings = async () => {
   const content = await AppContent.findOne()
-    .select("checkoutNote razorpayEnabled")
+    .select(`checkoutNote razorpayEnabled ${Object.keys(CART_NOTICE_FIELDS).join(" ")}`)
     .lean();
+  const notices = {};
+  for (const key of Object.keys(CART_NOTICE_FIELDS)) {
+    notices[key] = noticeOrDefault(content?.[key], key);
+  }
   return {
     checkoutNote: content?.checkoutNote || "",
     razorpayEnabled: content?.razorpayEnabled !== false,
+    ...notices,
   };
 };
 
@@ -157,6 +172,17 @@ export const updateAppContentController = async (req, res) => {
       razorpayEnabled,
     } = req.body;
 
+    for (const key of Object.keys(CART_NOTICE_FIELDS)) {
+      const value = req.body[key];
+      if (value === undefined) continue;
+      if (typeof value !== "string") {
+        return res.status(400).send({ success: false, message: `${key} must be text` });
+      }
+      if (value.length > 500) {
+        return res.status(400).send({ success: false, message: `${key} must be 500 characters or fewer` });
+      }
+    }
+
     if (checkoutNote !== undefined && typeof checkoutNote !== "string") {
       return res.status(400).send({ success: false, message: "Checkout note must be text" });
     }
@@ -184,6 +210,9 @@ export const updateAppContentController = async (req, res) => {
     if (returnPolicy !== undefined) content.returnPolicy = returnPolicy;
     if (checkoutNote !== undefined) content.checkoutNote = checkoutNote;
     if (razorpayEnabled !== undefined) content.razorpayEnabled = razorpayEnabled;
+    for (const key of Object.keys(CART_NOTICE_FIELDS)) {
+      if (req.body[key] !== undefined) content[key] = req.body[key];
+    }
 
     await content.save();
 

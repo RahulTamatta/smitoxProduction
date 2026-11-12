@@ -10,6 +10,7 @@
 
 import client, { ELASTICSEARCH_INDEX } from '../config/elasticsearch.js';
 import { getCachedSearch, setCachedSearch } from '../config/redis.js';
+import productModel from '../models/productModel.js';
 
 /**
  * Search products with autocomplete and fuzzy matching
@@ -117,12 +118,25 @@ export const searchProducts = async (query, options = {}) => {
             ? response.hits.total.value
             : response.hits.total;
 
-        const results = hits.map(hit => ({
-            _id: hit._id,
-            ...hit._source,
-            _score: hit._score,
-            highlights: hit.highlight || {}
-        }));
+        // unitSet is not in the search index: read it (and live stock) from
+        // Mongo so card quantity steps match the product page.
+        const live = await productModel
+            .find({ _id: { $in: hits.map(h => h._id) } })
+            .select('unitSet stock')
+            .lean()
+            .catch(() => []);
+        const liveById = new Map(live.map(p => [String(p._id), p]));
+
+        const results = hits.map(hit => {
+            const lp = liveById.get(String(hit._id));
+            return {
+                _id: hit._id,
+                ...hit._source,
+                ...(lp ? { unitSet: lp.unitSet, stock: lp.stock } : {}),
+                _score: hit._score,
+                highlights: hit.highlight || {}
+            };
+        });
 
         const responseData = {
             success: true,

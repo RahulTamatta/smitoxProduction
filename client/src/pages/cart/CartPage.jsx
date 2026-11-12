@@ -32,6 +32,12 @@ const CartPage = () => {
   // Admin > App Content > Checkout settings
   const [razorpayEnabled, setRazorpayEnabled] = useState(true);
   const [checkoutNote, setCheckoutNote] = useState("");
+  // Admin > App Content > cart notices ("" hides a line)
+  const [cartNotices, setCartNotices] = useState({
+    minimumOrderNotice: "Order total is below the minimum order amount {amount}.",
+    courierChargeNotice: "Courier charge will be added (depends on weight and COD amount).",
+    advancePaymentNotice: "{percent}% advance payment is available to confirm the order.",
+  });
 
   const navigate = useNavigate();
 
@@ -92,6 +98,13 @@ const CartPage = () => {
       if (data?.success) {
         setRazorpayEnabled(data.razorpayEnabled !== false);
         setCheckoutNote(data.checkoutNote || "");
+        setCartNotices((current) => {
+          const next = { ...current };
+          for (const key of Object.keys(current)) {
+            if (typeof data[key] === "string") next[key] = data[key];
+          }
+          return next;
+        });
       }
     } catch (error) {
       // Keep current behaviour (Razorpay enabled); the server still enforces the real setting
@@ -765,26 +778,31 @@ const CartPage = () => {
                 currency: minimumOrderCurrency || "INR",
               })}
             </p>
-            {
-              <p className="text-danger">
-
-                {totalPrice() < minimumOrder && (
-                  <p className="text-danger">
-                    Order total is below the minimum order amount.
-                  </p>
-                )}
-
-              </p>}
-            {
-              <p className="text-danger">
-                <ul>
-
-                  <li>Courier charge will be added (depends on weight and COD amount).</li>
-                  {advancePercentage > 0 && (
-                    <li>{advancePercentage}% advance payment is available to confirm the order.</li>
+            {(() => {
+              const fill = (text) =>
+                (text || "")
+                  .replaceAll("{amount}", minimumOrder.toLocaleString("en-US", {
+                    style: "currency",
+                    currency: minimumOrderCurrency || "INR",
+                  }))
+                  .replaceAll("{percent}", String(advancePercentage));
+              const lines = [
+                cartNotices.courierChargeNotice,
+                advancePercentage > 0 ? cartNotices.advancePaymentNotice : "",
+              ].filter((t) => t && t.trim());
+              return (
+                <>
+                  {totalPrice() < minimumOrder && cartNotices.minimumOrderNotice?.trim() && (
+                    <p className="text-danger">{fill(cartNotices.minimumOrderNotice)}</p>
                   )}
-                </ul>
-              </p>}
+                  {lines.length > 0 && (
+                    <ul className="text-danger">
+                      {lines.map((t, i) => <li key={i}>{fill(t)}</li>)}
+                    </ul>
+                  )}
+                </>
+              );
+            })()}
             {razorpayEnabled && (
             <div className="mb-3">
               <label className="form-label">Payment Method</label>
