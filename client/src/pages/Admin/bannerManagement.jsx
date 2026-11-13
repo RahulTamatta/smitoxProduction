@@ -46,7 +46,7 @@ const BannerManagement = () => {
 
   const fetchCategories = async () => {
     try {
-      const { data } = await axios.get("/api/v1/category/get-category");
+      const { data } = await axios.get("/api/v1/category/get-category?all=true");
       if (data?.success) {
         setCategories(data.category || []);
       } else {
@@ -61,7 +61,7 @@ const BannerManagement = () => {
 
   const fetchSubcategories = async () => {
     try {
-      const { data } = await axios.get("/api/v1/subcategory/get-subcategories");
+      const { data } = await axios.get("/api/v1/subcategory/get-subcategories?all=true");
       if (data?.success) {
         setSubcategories(data.subcategories || []);
       } else {

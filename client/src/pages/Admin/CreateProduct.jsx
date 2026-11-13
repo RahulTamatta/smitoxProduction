@@ -61,7 +61,7 @@ const CreateProduct = () => {
 
   const getAllCategories = async () => {
     try {
-      const { data } = await axios.get("/api/v1/category/get-category");
+      const { data } = await axios.get("/api/v1/category/get-category?all=true");
       if (data?.success) {
         setCategories(data?.category);
       }
@@ -73,7 +73,7 @@ const CreateProduct = () => {
 
   const getSubcategories = async () => {
     try {
-      const { data } = await axios.get("/api/v1/subcategory/get-subcategories");
+      const { data } = await axios.get("/api/v1/subcategory/get-subcategories?all=true");
       if (data?.success) {
         setSubcategories(data?.subcategories || []);
       } else {

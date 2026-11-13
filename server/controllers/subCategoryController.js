@@ -1,6 +1,7 @@
 import path from "path";
 import slugify from "slugify";
 import subcategoryModel from "../models/subcategoryModel.js";
+import categoryModel from "../models/categoryModel.js";
 
 // Create Subcategory Controller
 export const createSubcategoryController = async (req, res) => {
@@ -18,7 +19,11 @@ export const createSubcategoryController = async (req, res) => {
       return res.status(401).send({ message: "Parent category is required" });
     }
 
-    const existingCategory = await subcategoryModel.findOne({ name });
+    // Same name is fine under a different parent category (e.g. "Accessories").
+    const existingCategory = await subcategoryModel.findOne({
+      name,
+      category: parentCategoryId,
+    });
     if (existingCategory) {
       return res.status(200).send({
         success: false,
@@ -159,11 +164,24 @@ export const deleteSubcategoryController = async (req, res) => {
 // Get All Subcategories Controller with Active Status Filter
 export const getAllSubcategoriesController = async (req, res) => {
   try {
-    const { active } = req.query;
+    // Public default: active only, plus subcategories whose parent category is
+    // active, so the website and every app build hide inactive ones.
+    // Admin screens pass ?all=true.
+    const { active, all } = req.query;
     let query = {};
 
-    if (active !== undefined) {
-      query.isActive = active === 'true';
+    if (all !== 'true') {
+      if (active === 'false') {
+        query.isActive = false;
+      } else {
+        query.isActive = { $ne: false };
+        const inactiveCategories = await categoryModel
+          .find({ isActive: false })
+          .distinct('_id');
+        if (inactiveCategories.length) {
+          query.category = { $nin: inactiveCategories };
+        }
+      }
     }
 
     const subcategories = await subcategoryModel.find(query);

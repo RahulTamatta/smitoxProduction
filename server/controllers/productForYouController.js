@@ -354,15 +354,15 @@ export const getBannersController = async (req, res) => {
     // Fetch banners with population, selection, and sorting
     const banners = await productForYouModel
       .find(query)
-      .populate("categoryId", "name")
-      .populate("subcategoryId", "name")
-      .populate("productId", "name photos perPiecePrice price slug mrp stock unitSet")
+      .populate("categoryId", "name isActive")
+      .populate("subcategoryId", "name isActive")
+      .populate("productId", "name photos perPiecePrice price slug mrp stock unitSet isActive")
       .select("categoryId subcategoryId productId isActive")
       .sort({ createdAt: -1 });
 
     // Get all unique category IDs from the banners
     const categoryIds = [...new Set(banners
-      .filter(banner => banner.categoryId)
+      .filter(banner => banner.categoryId && banner.categoryId.isActive !== false)
       .map(banner => banner.categoryId._id.toString()))];
 
     // Fetch all subcategories related to these categories
@@ -373,7 +373,8 @@ export const getBannersController = async (req, res) => {
 
       // Fetch subcategories for all categories in one query
       const relatedSubcategories = await subcategoryModel.find({
-        category: { $in: categoryIds }
+        category: { $in: categoryIds },
+        isActive: { $ne: false },
       }).select('name category');
 
       // Organize subcategories by category
@@ -391,7 +392,12 @@ export const getBannersController = async (req, res) => {
 
     // Shuffle the banners array for random display and filter active ones
     const shuffledBanners = [...banners]
-      .filter((b) => b.productId && b.productId.isActive === "1")
+      .filter((b) =>
+        b.productId &&
+        b.productId.isActive === "1" &&
+        b.categoryId?.isActive !== false &&
+        b.subcategoryId?.isActive !== false
+      )
       .sort(() => Math.random() - 0.5);
 
     res.status(200).send({

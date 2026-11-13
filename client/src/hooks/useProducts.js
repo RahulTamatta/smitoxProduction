@@ -72,8 +72,10 @@ export const useCategories = () => {
     return useQuery({
         queryKey: ['categories'],
         queryFn: fetchCategories,
-        staleTime: 30 * 60 * 1000, // 30 minutes (categories don't change often)
-        cacheTime: 60 * 60 * 1000, // 1 hour
+        // Admin can switch these on/off: keep the website close to live.
+        staleTime: 30 * 1000,
+        refetchOnWindowFocus: true,
+        refetchOnMount: 'always',
     });
 };
 
@@ -109,8 +111,10 @@ export const useBanners = () => {
     return useQuery({
         queryKey: ['banners'],
         queryFn: fetchBanners,
-        staleTime: 15 * 60 * 1000, // 15 minutes
-        cacheTime: 30 * 60 * 1000, // 30 minutes
+        // Admin can switch these on/off: keep the website close to live.
+        staleTime: 30 * 1000,
+        refetchOnWindowFocus: true,
+        refetchOnMount: 'always',
     });
 };
 
@@ -121,7 +125,9 @@ export const useSubcategories = () => {
     return useQuery({
         queryKey: ['subcategories'],
         queryFn: fetchSubcategories,
-        staleTime: 30 * 60 * 1000, // 30 minutes
-        cacheTime: 60 * 60 * 1000, // 1 hour
+        // Admin can switch these on/off: keep the website close to live.
+        staleTime: 30 * 1000,
+        refetchOnWindowFocus: true,
+        refetchOnMount: 'always',
     });
 };

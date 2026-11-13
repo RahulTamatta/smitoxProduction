@@ -27,7 +27,7 @@ const SubcategoryList = () => {
   // Get all categories for dropdown
   const getAllCategories = async () => {
     try {
-      const { data } = await api.get("/api/v1/category/get-category");
+      const { data } = await api.get("/api/v1/category/get-category?all=true");
       setCategories(data?.category || []);
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -38,7 +38,7 @@ const SubcategoryList = () => {
   // Get all subcategories
   const getAllSubcategories = async () => {
     try {
-      const { data } = await api.get("/api/v1/subcategory/get-subcategories");
+      const { data } = await api.get("/api/v1/subcategory/get-subcategories?all=true");
       setSubcategories(data.subcategories || []);
       setLoading(false);
     } catch (error) {

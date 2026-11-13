@@ -54,7 +54,7 @@ const CreateCategory = () => {
   // get all categories
   const getAllCategory = async () => {
     try {
-      const { data } = await api.get("/api/v1/category/get-category");
+      const { data } = await api.get("/api/v1/category/get-category?all=true");
       if (data?.success) {
         setCategories(data?.category);
       }

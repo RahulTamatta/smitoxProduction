@@ -98,12 +98,15 @@ export const updateCategoryController = async (req, res) => {
 // get all category
 export const categoryControlller = async (req, res) => {
   try {
-    const { active } = req.query;
+    // Public default: active only (true or legacy-missing), so the website and
+    // every app build hide inactive categories. Admin screens pass ?all=true.
+    const { active, all } = req.query;
     const query = {};
-
-    // If active query param is present, filter by isActive
-    // Include true OR missing (legacy data)
-    if (active) {
+    if (all === "true") {
+      // no filter
+    } else if (active === "false") {
+      query.isActive = false;
+    } else {
       query.$or = [{ isActive: true }, { isActive: { $exists: false } }];
     }
 

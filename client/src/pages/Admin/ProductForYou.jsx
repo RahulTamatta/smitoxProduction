@@ -125,7 +125,7 @@ const ProductForYou = () => {
 
   const fetchCategories = async () => {
     try {
-      const { data } = await axios.get("/api/v1/category/get-category", {
+      const { data } = await axios.get("/api/v1/category/get-category?all=true", {
         headers: {
           'Authorization': `Bearer ${auth.token}`,
           'Content-Type': 'application/json'
@@ -145,7 +145,7 @@ const ProductForYou = () => {
 
   const fetchSubcategories = async () => {
     try {
-      const { data } = await axios.get("/api/v1/subcategory/get-subcategories", {
+      const { data } = await axios.get("/api/v1/subcategory/get-subcategories?all=true", {
         headers: {
           'Authorization': `Bearer ${auth.token}`,
           'Content-Type': 'application/json'
