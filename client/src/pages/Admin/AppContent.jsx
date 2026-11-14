@@ -169,6 +169,13 @@ const AppContent = () => {
                 “Show more” link. Leave empty to hide the note.
               </small>
             </label>
+          </div>
+
+          <div className="app-content-section">
+            <div className="app-content-section-heading">
+              <h2>Cart page notes</h2>
+              <span>The red lines under the cart total (website, app, and the customer's Orders view)</span>
+            </div>
 
             {CART_NOTICES.map((notice) => (
               <label className="app-content-field" key={notice.key}>
@@ -184,6 +191,20 @@ const AppContent = () => {
                 <small className="app-content-hint">{notice.hint} Leave empty to hide.</small>
               </label>
             ))}
+
+            <div className="app-content-field">
+              <span>Preview (sample: minimum ₹8,000, advance 10%)</span>
+              <ul style={{ color: "#c62828", margin: 0, paddingLeft: "1.2rem" }}>
+                {CART_NOTICES.map((notice) => {
+                  const text = (content[notice.key] || "")
+                    .replaceAll("{amount}", "₹8,000.00")
+                    .replaceAll("{percent}", "10")
+                    .trim();
+                  return text ? <li key={notice.key}>{text}</li> : null;
+                })}
+              </ul>
+              <small className="app-content-hint">Remember to press Save at the bottom to publish changes.</small>
+            </div>
           </div>
 
           <div className="app-content-section">
