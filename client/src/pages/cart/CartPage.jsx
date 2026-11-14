@@ -7,6 +7,7 @@ import Layout from "../../components/Layout/Layout";
 import OptimizedImage from "../../components/OptimizedImage";
 import { useAuth } from "../../context/auth";
 import { flushPendingCartChanges, useCart } from "../../context/cart";
+import { DEFAULT_CART_NOTICES } from "../../hooks/useCartNotices";
 import useCartStore from "../../store/cart.store";
 import "./cartPage.css";
 import StockPopup from "./StockPopup"; // Import the StockPopup component
@@ -34,9 +35,9 @@ const CartPage = () => {
   const [checkoutNote, setCheckoutNote] = useState("");
   // Admin > App Content > cart notices ("" hides a line)
   const [cartNotices, setCartNotices] = useState({
-    minimumOrderNotice: "Order total is below the minimum order amount {amount}.",
-    courierChargeNotice: "Courier charge will be added (depends on weight and COD amount).",
-    advancePaymentNotice: "{percent}% advance payment is available to confirm the order.",
+    minimumOrderNotice: "",
+    courierChargeNotice: "",
+    advancePaymentNotice: "",
   });
 
   const navigate = useNavigate();
@@ -109,6 +110,8 @@ const CartPage = () => {
     } catch (error) {
       // Keep current behaviour (Razorpay enabled); the server still enforces the real setting
       console.error("Error fetching checkout settings:", error);
+      // Settings unreachable: fall back to the standard wording
+      setCartNotices(DEFAULT_CART_NOTICES);
     }
   };
 

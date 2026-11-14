@@ -78,12 +78,10 @@ const BannerManagement = () => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
 
+    // Changing the category clears the subcategory. The master list is kept
+    // intact: the dropdown filters it for display (see visibleSubcategories).
     if (name === 'categoryId') {
-      const filteredSubcategories = subcategories.filter(
-        (subcat) => subcat.category === value
-      );
-      setSubcategories(filteredSubcategories);
-      setFormData(prev => ({ ...prev, subcategoryId: '' }));
+      setFormData(prev => ({ ...prev, categoryId: value, subcategoryId: '' }));
     }
   };
 
@@ -304,7 +302,10 @@ const BannerManagement = () => {
               <Form.Label>Subcategory Name</Form.Label>
               <Form.Control as="select" name="subcategoryId" value={formData.subcategoryId} onChange={handleInputChange} required>
                 <option value="">Select a subcategory</option>
-                {subcategories.map(subcategory => (
+                {subcategories
+                  .filter(subcategory => !formData.categoryId ||
+                    String(subcategory.category?._id || subcategory.category) === String(formData.categoryId))
+                  .map(subcategory => (
                   <option key={subcategory._id} value={subcategory._id}>{subcategory.name}</option>
                 ))}
               </Form.Control>

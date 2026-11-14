@@ -85,7 +85,20 @@ export const updateBannerController = async (req, res) => {
     }
 
     // Update data object
-    const updateData = { bannerName, categoryId, subcategoryId };
+    const updateData = {};
+    if (bannerName) updateData.bannerName = bannerName;
+    if (categoryId) {
+      if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+        return res.status(400).send({ success: false, message: "Invalid category ID" });
+      }
+      updateData.categoryId = categoryId;
+    }
+    if (subcategoryId) {
+      if (!mongoose.Types.ObjectId.isValid(subcategoryId)) {
+        return res.status(400).send({ success: false, message: "Invalid subcategory ID" });
+      }
+      updateData.subcategoryId = subcategoryId;
+    }
     if (isActive !== undefined) {
       updateData.isActive = isActive === 'true' || isActive === true || isActive === '1' || isActive === 1;
     }

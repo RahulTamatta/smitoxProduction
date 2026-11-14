@@ -31,14 +31,31 @@ docker compose build --no-cache server
 
 echo "[4/4] Restarting Docker Services..."
 # Recreate containers to serve the newly built images
-docker compose up -d --force-recreate
-
-# Optional: Restart pm2 if you're running any bare-metal node apps outside Docker
-echo "Checking for pm2 processes..."
-if command -v pm2 &> /dev/null
-then
-    pm2 restart all || echo "No pm2 apps running"
+if ! docker compose up -d --force-recreate; then
+  echo ""
+  echo "❌ docker compose failed to start the containers."
+  echo "Most common cause: port 8080 is already in use by a non-Docker process."
+  echo "--- Who is listening on 8080:"
+  ss -lptn 'sport = :8080' || true
+  echo "--- pm2 processes (a bare-metal smitox-server would clash with Docker):"
+  command -v pm2 >/dev/null 2>&1 && pm2 list || true
+  echo "--- containers:"
+  docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+  echo "Free the port, then run: docker compose up -d"
+  exit 1
 fi
+
+# The app runs in Docker. Do NOT 'pm2 restart all' here: it can resurrect an
+# old bare-metal smitox-server that grabs port 8080 and blocks the container.
+
+echo "Waiting for the API to answer..."
+for i in 1 2 3 4 5 6 7 8 9 10; do
+  code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/v1/bannerManagement/get-banners || true)
+  [ "$code" = "200" ] && break
+  sleep 3
+done
+echo "API health check: HTTP $code"
+[ "$code" = "200" ] || { echo "❌ API not healthy. See: docker logs smitox-server --tail 50"; exit 1; }
 
 echo "=========================================="
 echo "      ✅ Deployment Successful! ✅        "

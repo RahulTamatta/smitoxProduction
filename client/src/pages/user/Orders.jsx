@@ -5,9 +5,12 @@ import Layout from "../../components/Layout/Layout";
 import UserMenu from "../../components/Layout/UserMenu";
 import OptimizedImage from "../../components/OptimizedImage";
 import { useAuth } from "../../context/auth";
+import useCartNotices from "../../hooks/useCartNotices";
 
 const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
   const [order, setOrder] = useState(selectedOrder);
+  // Notes under the totals come from Admin > App Content
+  const { notices, minimumOrder, advancePercentage, fill } = useCartNotices();
 
   // Calculation functions
   const calculateSubtotal = () => {
@@ -195,22 +198,27 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
                     </tbody>
 
                   </table>
-                  <p className="text-danger">
-                    <ul>
-
-                      <li>Courier charge will be added (depends on weight and COD amount).</li>
-                      <li>10% advance payment is required to confirm the order.</li>
-                    </ul>
-                  </p>
+                  {notices && (() => {
+                    const lines = [
+                      notices.courierChargeNotice,
+                      advancePercentage > 0 ? notices.advancePaymentNotice : "",
+                    ].filter((t) => t && t.trim());
+                    return lines.length > 0 ? (
+                      <ul className="text-danger">
+                        {lines.map((t, i) => <li key={i}>{fill(t)}</li>)}
+                      </ul>
+                    ) : null;
+                  })()}
 
                 </div>
               </div>
             </div>
 
-            {calculateTotal() < 500 && (
+            {notices && notices.minimumOrderNotice?.trim() &&
+              minimumOrder > 0 && calculateTotal() < minimumOrder && (
               <div className="alert alert-warning mt-3">
                 <i className="bi bi-exclamation-triangle me-2"></i>
-                Order total is below minimum order amount. Courier charges may apply based on weight and COD amount.
+                {fill(notices.minimumOrderNotice)}
               </div>
             )}
           </div>
