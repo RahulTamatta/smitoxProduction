@@ -6,13 +6,22 @@ import { computeCapabilities, ROLE_CAPABILITIES, NUMBER_TO_ROLE } from "../confi
  * @param {object} user - User object with _id, email_id, roleString, permissions
  * @returns {string} JWT token
  */
-export const generateToken = (user) => {
-  // Determine role: prefer roleString, fallback to numeric role conversion
-  let userRole = user.roleString;
-  if (!userRole && user.role !== undefined && user.role !== null) {
-    userRole = NUMBER_TO_ROLE[user.role];
+/**
+ * Resolve a user's effective role.
+ * `roleString` defaults to "user" in the schema, so legacy admins (numeric
+ * role=1) carry roleString "user". Treat the default as "not set" and fall
+ * back to the numeric role, otherwise those admins lose all write access.
+ */
+export const resolveUserRole = (user) => {
+  if (user?.roleString && user.roleString !== "user") return user.roleString;
+  if (user?.role !== undefined && user?.role !== null && NUMBER_TO_ROLE[user.role]) {
+    return NUMBER_TO_ROLE[user.role];
   }
-  userRole = userRole || "user";
+  return user?.roleString || "user";
+};
+
+export const generateToken = (user) => {
+  const userRole = resolveUserRole(user);
 
   // Compute capabilities with deny-over-grant precedence
   const baseCaps = ROLE_CAPABILITIES[userRole] || [];

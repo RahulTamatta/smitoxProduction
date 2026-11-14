@@ -2,12 +2,12 @@ import JWT from "jsonwebtoken";
 import {
     computeCapabilities,
     hasAnyCapability,
-    NUMBER_TO_ROLE,
     ROLE_CAPABILITIES,
     ROLES
 } from "../config/rbac-policy.js";
 import auditLogModel from "../models/auditLogModel.js";
 import userModel from "../models/userModel.js";
+import { resolveUserRole } from "../helpers/tokenHelper.js";
 
 /**
  * Enhanced authentication middleware with user enrichment
@@ -54,19 +54,7 @@ export const requireSignIn = async (req, res, next) => {
 
     // Determine role
     // Prefer numeric role (legacy field) so existing admins with role=1 are treated as admin
-    let userRole = null;
-
-    if (user.role !== undefined && user.role !== null) {
-      userRole = NUMBER_TO_ROLE[user.role] || null;
-    }
-
-    // Fallback to roleString if numeric role is not set or not mapped
-    if (!userRole && user.roleString) {
-      userRole = user.roleString;
-    }
-
-    // Final fallback to regular user
-    userRole = userRole || ROLES.USER;
+    const userRole = resolveUserRole(user) || ROLES.USER;
 
     // Compute capabilities with deny-over-grant precedence
     const baseCaps = ROLE_CAPABILITIES[userRole] || [];
@@ -143,6 +131,29 @@ export const requireRole = (allowedRoles) => {
 };
 
 /**
+ * Tokens carry a snapshot of the user's capabilities (up to 7 days old, and
+ * possibly issued before the role was fixed). When a check fails against the
+ * token, re-read the user from the database once and use that instead.
+ */
+const refreshAccessFromDb = async (req) => {
+  if (!req.user?._id || req.user.__fresh) return;
+  const user = await userModel.findById(req.user._id);
+  if (!user || user.isActive === false) return;
+  const role = resolveUserRole(user);
+  req.user = {
+    ...req.user,
+    role,
+    capabilities: computeCapabilities(
+      ROLE_CAPABILITIES[role] || [],
+      user.permissions?.grantedCapabilities || [],
+      user.permissions?.deniedCapabilities || []
+    ),
+    permissions: user.permissions || {},
+    __fresh: true,
+  };
+};
+
+/**
  * Require specific capability or capabilities
  * Uses pre-computed capabilities from req.user.capabilities
  */
@@ -156,14 +167,19 @@ export const requireCapability = (capabilities) => {
         });
       }
 
-      const userRole = req.user.role;
-      const userCaps = req.user.capabilities || [];
       const requiredCaps = Array.isArray(capabilities)
         ? capabilities
         : [capabilities];
 
-      // Check if user has all required capabilities
-      const hasAllCaps = requiredCaps.every((cap) => userCaps.includes(cap));
+      // Check if user has all required capabilities (token first, then DB)
+      let userCaps = req.user.capabilities || [];
+      let hasAllCaps = requiredCaps.every((cap) => userCaps.includes(cap));
+      if (!hasAllCaps) {
+        await refreshAccessFromDb(req);
+        userCaps = req.user.capabilities || [];
+        hasAllCaps = requiredCaps.every((cap) => userCaps.includes(cap));
+      }
+      const userRole = req.user.role;
 
       if (!hasAllCaps) {
         const missingCaps = requiredCaps.filter((cap) => !userCaps.includes(cap));
@@ -212,17 +228,17 @@ export const requireAnyCapability = (capabilities) => {
         });
       }
 
-      const userRole = req.user.role;
-      const userPermissions = req.user.permissions || {};
       const requiredCaps = Array.isArray(capabilities)
         ? capabilities
         : [capabilities];
 
-      const hasAnyCap = hasAnyCapability(
-        userRole,
-        requiredCaps,
-        userPermissions
-      );
+      const check = () =>
+        hasAnyCapability(req.user.role, requiredCaps, req.user.permissions || {});
+      let hasAnyCap = check();
+      if (!hasAnyCap) {
+        await refreshAccessFromDb(req);
+        hasAnyCap = check();
+      }
 
       if (!hasAnyCap) {
         return res.status(403).send({
