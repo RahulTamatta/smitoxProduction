@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { api } from '../../context/auth';
 import { Pencil, PlusCircle, Trash } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Alert, Button, Form, Modal, Spinner, Table } from 'react-bootstrap';
@@ -32,7 +32,7 @@ const BannerManagement = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get('/api/v1/bannerManagement/get-banners?all=true');
+      const response = await api.get('/api/v1/bannerManagement/get-banners?all=true');
 
       setBanners(response.data.banners || []);
     } catch (error) {
@@ -46,7 +46,7 @@ const BannerManagement = () => {
 
   const fetchCategories = async () => {
     try {
-      const { data } = await axios.get("/api/v1/category/get-category?all=true");
+      const { data } = await api.get("/api/v1/category/get-category?all=true");
       if (data?.success) {
         setCategories(data.category || []);
       } else {
@@ -61,7 +61,7 @@ const BannerManagement = () => {
 
   const fetchSubcategories = async () => {
     try {
-      const { data } = await axios.get("/api/v1/subcategory/get-subcategories?all=true");
+      const { data } = await api.get("/api/v1/subcategory/get-subcategories?all=true");
       if (data?.success) {
         setSubcategories(data.subcategories || []);
       } else {
@@ -107,13 +107,13 @@ const BannerManagement = () => {
       }
 
       if (currentBanner) {
-        const { data } = await axios.put(`/api/v1/bannerManagement/update-banner/${currentBanner._id}`, bannerData);
+        const { data } = await api.put(`/api/v1/bannerManagement/update-banner/${currentBanner._id}`, bannerData);
         if (data.success) {
           toast.dismiss();
           toast.success('Banner updated successfully');
         }
       } else {
-        const { data } = await axios.post('/api/v1/bannerManagement/create-banner', bannerData);
+        const { data } = await api.post('/api/v1/bannerManagement/create-banner', bannerData);
         if (data.success) {
           toast.dismiss();
           toast.success('Banner created successfully');
@@ -135,7 +135,7 @@ const BannerManagement = () => {
       b._id === banner._id ? { ...b, isActive: newStatus } : b
     ));
     try {
-      const { data } = await axios.put(`/api/v1/bannerManagement/toggle-banner-status/${banner._id}`);
+      const { data } = await api.put(`/api/v1/bannerManagement/toggle-banner-status/${banner._id}`);
       if (data.success) {
         toast.success(data.message || `Banner set to ${newStatus ? 'Active' : 'Inactive'}`);
       }
@@ -151,7 +151,7 @@ const BannerManagement = () => {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`/api/v1/bannerManagement/delete-banner/${id}`);
+      await api.delete(`/api/v1/bannerManagement/delete-banner/${id}`);
       fetchBanners();
       toast.success('Banner deleted successfully');
     } catch (error) {

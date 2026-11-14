@@ -9,7 +9,12 @@ echo "=========================================="
 
 echo "[1/4] Pulling latest code from GitHub..."
 # Update the branch name here if you switch branches in the future
+# Generated files (the React build and the lockfile) are rewritten on this
+# server by every deploy; discard those local edits so the pull never aborts
+# with "local changes would be overwritten". Other local edits are left alone.
+git checkout -- client/build server/package-lock.json 2>/dev/null || true
 git pull origin hostinger_vps
+echo "Deploying commit: $(git log --oneline -1)"
 
 echo "[2/4] Rebuilding the React Client..."
 cd client
@@ -22,7 +27,7 @@ cd ..
 echo "[3/4] Rebuilding Docker Images for Client and Server..."
 # Rebuild both frontend and backend images so code changes in both are deployed
 docker compose build --no-cache client
-docker compose build server
+docker compose build --no-cache server
 
 echo "[4/4] Restarting Docker Services..."
 # Recreate containers to serve the newly built images
