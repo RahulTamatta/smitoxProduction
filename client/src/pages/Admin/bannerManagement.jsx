@@ -289,8 +289,8 @@ const BannerManagement = () => {
         </Modal.Header>
         <Form onSubmit={handleSubmit}>
           <Modal.Body>
-            <Form.Group>
-              <Form.Label>Category Name</Form.Label>
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-semibold mb-1">Category Name</Form.Label>
               <Form.Control as="select" name="categoryId" value={formData.categoryId} onChange={handleInputChange} required>
                 <option value="">Select a category</option>
                 {categories.map(category => (
@@ -298,8 +298,8 @@ const BannerManagement = () => {
                 ))}
               </Form.Control>
             </Form.Group>
-            <Form.Group>
-              <Form.Label>Subcategory Name</Form.Label>
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-semibold mb-1">Subcategory Name</Form.Label>
               <Form.Control as="select" name="subcategoryId" value={formData.subcategoryId} onChange={handleInputChange} required>
                 <option value="">Select a subcategory</option>
                 {subcategories
@@ -310,15 +310,15 @@ const BannerManagement = () => {
                 ))}
               </Form.Control>
             </Form.Group>
-            <Form.Group>
-              <Form.Label>Banner Name</Form.Label>
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-semibold mb-1">Banner Name</Form.Label>
               <Form.Control type="text" name="bannerName" value={formData.bannerName} onChange={handleInputChange} placeholder="Banner Name" required />
             </Form.Group>
-            <Form.Group>
-              <Form.Label>Image</Form.Label>
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-semibold mb-1">Image</Form.Label>
               <Form.Control type="file" name="image" onChange={handleImageChange} accept="image/*" required={!currentBanner} />
             </Form.Group>
-            <Form.Group className="mt-3">
+            <Form.Group className="mb-2">
               <Form.Check
                 type="switch"
                 id="banner-active-switch"

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import AdminMenu from "../../components/Layout/AdminMenu";
 import Layout from "../../components/Layout/Layout";
+import { NOTE_CONDITIONS } from "../../hooks/useCartNotices";
 import api from "../../services/api";
 import "./AppContent.css";
 
@@ -27,17 +28,11 @@ const emptyContent = {
   returnPolicy: "",
   checkoutNote: "",
   razorpayEnabled: true,
-  minimumOrderNotice: "",
-  courierChargeNotice: "",
-  advancePaymentNotice: "",
+  cartNotes: [],
 };
 
-// Cart notices shown on web + app cart. Empty => hidden.
-const CART_NOTICES = [
-  { key: "minimumOrderNotice", label: "Below minimum order notice", hint: "Shown when cart total is below the minimum. {amount} = minimum order amount." },
-  { key: "courierChargeNotice", label: "Courier charge notice", hint: "Always shown in the cart." },
-  { key: "advancePaymentNotice", label: "Advance payment notice", hint: "Shown when advance payment is set. {percent} = advance %." },
-];
+const MAX_CART_NOTES = 20;
+const NOTE_PLACEHOLDER = "e.g. Courier charge will be added (depends on weight and COD amount).";
 
 const CHECKOUT_NOTE_MAX = 5000;
 
@@ -47,6 +42,12 @@ const normaliseContent = (raw = {}) => ({
   ...raw,
   checkoutNote: raw.checkoutNote || "",
   razorpayEnabled: raw.razorpayEnabled !== false,
+  cartNotes: Array.isArray(raw.cartNotes)
+    ? raw.cartNotes.map((n) => ({
+        text: String(n?.text ?? ""),
+        showWhen: NOTE_CONDITIONS.some((c) => c.value === n?.showWhen) ? n.showWhen : "always",
+      }))
+    : [],
 });
 
 const AppContent = () => {
@@ -78,6 +79,28 @@ const AppContent = () => {
     setContent((current) => ({ ...current, [name]: value }));
   };
 
+  const addNote = () =>
+    setContent((current) =>
+      current.cartNotes.length >= MAX_CART_NOTES
+        ? current
+        : { ...current, cartNotes: [...current.cartNotes, { text: "", showWhen: "always" }] }
+    );
+  const updateNote = (index, patch) =>
+    setContent((current) => ({
+      ...current,
+      cartNotes: current.cartNotes.map((n, i) => (i === index ? { ...n, ...patch } : n)),
+    }));
+  const removeNote = (index) =>
+    setContent((current) => ({ ...current, cartNotes: current.cartNotes.filter((_, i) => i !== index) }));
+  const moveNote = (index, direction) =>
+    setContent((current) => {
+      const target = index + direction;
+      if (target < 0 || target >= current.cartNotes.length) return current;
+      const next = [...current.cartNotes];
+      [next[index], next[target]] = [next[target], next[index]];
+      return { ...current, cartNotes: next };
+    });
+
   const handleSubmit = async (event) => {
     event.preventDefault();
 
@@ -91,7 +114,13 @@ const AppContent = () => {
     setSaving(true);
 
     try {
-      const response = await api.put("/app-content/update-content", content);
+      // Blank rows are dropped by the server; the old single-line fields are
+      // derived there from this list, so they are not sent from here.
+      const {
+        minimumOrderNotice, courierChargeNotice, advancePaymentNotice, // eslint-disable-line no-unused-vars
+        ...payload
+      } = content;
+      const response = await api.put("/app-content/update-content", payload);
       const nextContent = normaliseContent(response.data.content);
       setContent(nextContent);
       setSavedContent(nextContent);
@@ -177,31 +206,62 @@ const AppContent = () => {
               <span>The red lines under the cart total (website, app, and the customer's Orders view)</span>
             </div>
 
-            {CART_NOTICES.map((notice) => (
-              <label className="app-content-field" key={notice.key}>
-                <span>{notice.label}</span>
-                <input
-                  name={notice.key}
-                  type="text"
-                  value={content[notice.key] || ""}
-                  onChange={handleChange}
-                  maxLength={500}
-                  disabled={loading || saving}
-                />
-                <small className="app-content-hint">{notice.hint} Leave empty to hide.</small>
-              </label>
-            ))}
+            <div className="app-content-field">
+              <span>Notes</span>
+              {content.cartNotes.length === 0 && (
+                <small className="app-content-hint">No notes. Nothing is shown under the cart total. Add one below.</small>
+              )}
+              {content.cartNotes.map((note, index) => (
+                <div className="app-content-note-row" key={index}>
+                  <input
+                    type="text"
+                    value={note.text}
+                    placeholder={NOTE_PLACEHOLDER}
+                    maxLength={500}
+                    onChange={(e) => updateNote(index, { text: e.target.value })}
+                    disabled={loading || saving}
+                    aria-label={`Note ${index + 1} text`}
+                  />
+                  <select
+                    value={note.showWhen}
+                    onChange={(e) => updateNote(index, { showWhen: e.target.value })}
+                    disabled={loading || saving}
+                    aria-label={`Note ${index + 1} show when`}
+                  >
+                    {NOTE_CONDITIONS.map((c) => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                  <div className="app-content-note-actions">
+                    <button type="button" onClick={() => moveNote(index, -1)} disabled={index === 0 || loading || saving} aria-label="Move up">↑</button>
+                    <button type="button" onClick={() => moveNote(index, 1)} disabled={index === content.cartNotes.length - 1 || loading || saving} aria-label="Move down">↓</button>
+                    <button type="button" className="is-danger" onClick={() => removeNote(index)} disabled={loading || saving} aria-label="Remove note">✕</button>
+                  </div>
+                </div>
+              ))}
+              <div>
+                <button
+                  type="button"
+                  className="app-content-reset"
+                  onClick={addNote}
+                  disabled={loading || saving || content.cartNotes.length >= MAX_CART_NOTES}
+                >
+                  + Add note
+                </button>
+              </div>
+              <small className="app-content-hint">
+                Use {"{amount}"} for the minimum order amount and {"{percent}"} for the advance %. Blank notes are ignored.
+                Up to {MAX_CART_NOTES} notes.
+              </small>
+            </div>
 
             <div className="app-content-field">
-              <span>Preview (sample: minimum ₹8,000, advance 10%)</span>
+              <span>Preview (sample: minimum ₹8,000, advance 10%, cart below the minimum)</span>
               <ul style={{ color: "#c62828", margin: 0, paddingLeft: "1.2rem" }}>
-                {CART_NOTICES.map((notice) => {
-                  const text = (content[notice.key] || "")
-                    .replaceAll("{amount}", "₹8,000.00")
-                    .replaceAll("{percent}", "10")
-                    .trim();
-                  return text ? <li key={notice.key}>{text}</li> : null;
-                })}
+                {content.cartNotes
+                  .map((n) => (n.text || "").replaceAll("{amount}", "₹8,000.00").replaceAll("{percent}", "10").trim())
+                  .filter(Boolean)
+                  .map((text, i) => <li key={i}>{text}</li>)}
               </ul>
               <small className="app-content-hint">Remember to press Save at the bottom to publish changes.</small>
             </div>

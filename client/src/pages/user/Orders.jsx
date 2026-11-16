@@ -10,7 +10,7 @@ import useCartNotices from "../../hooks/useCartNotices";
 const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
   const [order, setOrder] = useState(selectedOrder);
   // Notes under the totals come from Admin > App Content
-  const { notices, minimumOrder, advancePercentage, fill } = useCartNotices();
+  const { notes, fill, visible } = useCartNotices();
 
   // Calculation functions
   const calculateSubtotal = () => {
@@ -198,14 +198,11 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
                     </tbody>
 
                   </table>
-                  {notices && (() => {
-                    const lines = [
-                      notices.courierChargeNotice,
-                      advancePercentage > 0 ? notices.advancePaymentNotice : "",
-                    ].filter((t) => t && t.trim());
-                    return lines.length > 0 ? (
+                  {notes && (() => {
+                    const shown = visible(calculateTotal());
+                    return shown.length > 0 ? (
                       <ul className="text-danger">
-                        {lines.map((t, i) => <li key={i}>{fill(t)}</li>)}
+                        {shown.map((n, i) => <li key={i}>{fill(n.text)}</li>)}
                       </ul>
                     ) : null;
                   })()}
@@ -214,13 +211,6 @@ const OrderDetailsModal = ({ selectedOrder, onUpdateOrder, onClose }) => {
               </div>
             </div>
 
-            {notices && notices.minimumOrderNotice?.trim() &&
-              minimumOrder > 0 && calculateTotal() < minimumOrder && (
-              <div className="alert alert-warning mt-3">
-                <i className="bi bi-exclamation-triangle me-2"></i>
-                {fill(notices.minimumOrderNotice)}
-              </div>
-            )}
           </div>
 
           <div className="modal-footer">

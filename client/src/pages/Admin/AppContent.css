@@ -289,3 +289,44 @@
   font-size: 12px;
   color: #64748b;
 }
+
+/* Cart page notes: editable list */
+.app-content-note-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 15rem) auto;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.app-content-note-row select {
+  min-height: 2.6rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 0 0.6rem;
+  background: #fff;
+  font: inherit;
+}
+.app-content-note-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+.app-content-note-actions button {
+  min-width: 2.2rem;
+  min-height: 2.2rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+.app-content-note-actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.app-content-note-actions button.is-danger {
+  color: #c62828;
+}
+@media (max-width: 800px) {
+  .app-content-note-row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -61,25 +61,69 @@ export const CART_NOTICE_FIELDS = {
   advancePaymentNotice: "{percent}% advance payment is available to confirm the order.",
 };
 
+export const CART_NOTE_CONDITIONS = ["always", "below_minimum", "advance_enabled"];
+const MAX_CART_NOTES = 20;
+const MAX_NOTE_LENGTH = 500;
+
 // Field never saved => default text; saved as "" => hidden.
 const noticeOrDefault = (value, key) =>
   typeof value === "string" ? value : CART_NOTICE_FIELDS[key];
+
+/**
+ * The notes to show under the cart total, as [{ text, showWhen }].
+ * - Admin configured the list (even empty): use it.
+ * - Never configured: build it from the three legacy fields, so existing
+ *   data and default wording keep working.
+ */
+export const resolveCartNotes = (content) => {
+  if (Array.isArray(content?.cartNotes)) {
+    return content.cartNotes
+      .map((n) => ({
+        text: String(n?.text ?? "").trim(),
+        showWhen: CART_NOTE_CONDITIONS.includes(n?.showWhen) ? n.showWhen : "always",
+      }))
+      .filter((n) => n.text);
+  }
+  return [
+    { text: noticeOrDefault(content?.minimumOrderNotice, "minimumOrderNotice"), showWhen: "below_minimum" },
+    { text: noticeOrDefault(content?.courierChargeNotice, "courierChargeNotice"), showWhen: "always" },
+    { text: noticeOrDefault(content?.advancePaymentNotice, "advancePaymentNotice"), showWhen: "advance_enabled" },
+  ]
+    .map((n) => ({ ...n, text: (n.text || "").trim() }))
+    .filter((n) => n.text);
+};
+
+// Old clients (already installed apps) read three single-line fields.
+const legacyNoticeFields = (notes) => {
+  const join = (when) => notes.filter((n) => n.showWhen === when).map((n) => n.text).join(" ");
+  return {
+    minimumOrderNotice: join("below_minimum"),
+    courierChargeNotice: join("always"),
+    advancePaymentNotice: join("advance_enabled"),
+  };
+};
 
 // Checkout settings used by web + app checkout and by order creation.
 // Missing document / field => Razorpay enabled (preserves pre-existing behaviour).
 export const getCheckoutSettings = async () => {
   const content = await AppContent.findOne()
-    .select(`checkoutNote razorpayEnabled ${Object.keys(CART_NOTICE_FIELDS).join(" ")}`)
+    .select(`checkoutNote razorpayEnabled cartNotes ${Object.keys(CART_NOTICE_FIELDS).join(" ")}`)
     .lean();
-  const notices = {};
-  for (const key of Object.keys(CART_NOTICE_FIELDS)) {
-    notices[key] = noticeOrDefault(content?.[key], key);
-  }
+  const cartNotes = resolveCartNotes(content);
   return {
     checkoutNote: content?.checkoutNote || "",
     razorpayEnabled: content?.razorpayEnabled !== false,
-    ...notices,
+    cartNotes,
+    ...legacyNoticeFields(cartNotes),
   };
+};
+
+// App content document as sent to the admin page / clients: the resolved
+// notes list is always present, even before the admin has saved one.
+const contentForResponse = (content) => {
+  const out = typeof content?.toObject === "function" ? content.toObject() : { ...content };
+  out.cartNotes = resolveCartNotes(content);
+  return out;
 };
 
 // Get Checkout Settings (Public, lightweight)
@@ -142,7 +186,7 @@ export const getAppContentController = async (req, res) => {
     res.status(200).send({
       success: true,
       message: "App content retrieved successfully",
-      content,
+      content: contentForResponse(content),
     });
   } catch (error) {
     console.error("Error fetching app content:", error);
@@ -171,6 +215,30 @@ export const updateAppContentController = async (req, res) => {
       checkoutNote,
       razorpayEnabled,
     } = req.body;
+
+    let cleanCartNotes;
+    if (req.body.cartNotes !== undefined) {
+      const raw = req.body.cartNotes;
+      if (!Array.isArray(raw)) {
+        return res.status(400).send({ success: false, message: "cartNotes must be a list" });
+      }
+      if (raw.length > MAX_CART_NOTES) {
+        return res.status(400).send({ success: false, message: `At most ${MAX_CART_NOTES} cart notes are allowed` });
+      }
+      cleanCartNotes = [];
+      for (const n of raw) {
+        const text = typeof n?.text === "string" ? n.text.trim() : "";
+        if (!text) continue; // blank rows are simply dropped
+        if (text.length > MAX_NOTE_LENGTH) {
+          return res.status(400).send({ success: false, message: `Each cart note must be ${MAX_NOTE_LENGTH} characters or fewer` });
+        }
+        const showWhen = n.showWhen === undefined ? "always" : n.showWhen;
+        if (!CART_NOTE_CONDITIONS.includes(showWhen)) {
+          return res.status(400).send({ success: false, message: "Invalid 'show when' option on a cart note" });
+        }
+        cleanCartNotes.push({ text, showWhen });
+      }
+    }
 
     for (const key of Object.keys(CART_NOTICE_FIELDS)) {
       const value = req.body[key];
@@ -213,13 +281,14 @@ export const updateAppContentController = async (req, res) => {
     for (const key of Object.keys(CART_NOTICE_FIELDS)) {
       if (req.body[key] !== undefined) content[key] = req.body[key];
     }
+    if (cleanCartNotes !== undefined) content.cartNotes = cleanCartNotes;
 
     await content.save();
 
     res.status(200).send({
       success: true,
       message: "App content and footer information updated successfully",
-      content,
+      content: contentForResponse(content),
     });
   } catch (error) {
     console.error("Error updating app content:", error);

@@ -75,6 +75,26 @@ const appContentSchema = new mongoose.Schema(
       trim: true,
       maxlength: 500,
     },
+    // Admin-managed list of notes shown under the cart total (web + app).
+    // Each note: text ({amount}/{percent} placeholders) + when to show it.
+    // `default: undefined` => never configured: fall back to the three legacy
+    // fields above. An empty array means "admin removed every note".
+    cartNotes: {
+      type: [
+        new mongoose.Schema(
+          {
+            text: { type: String, trim: true, maxlength: 500, required: true },
+            showWhen: {
+              type: String,
+              enum: ["always", "below_minimum", "advance_enabled"],
+              default: "always",
+            },
+          },
+          { _id: false }
+        ),
+      ],
+      default: undefined,
+    },
     // When false, checkout shows only "Place Order" and orders are created with
     // payment.paymentMethod = "Order Placed"; admin collects payment manually (GPay / COD).
     razorpayEnabled: {

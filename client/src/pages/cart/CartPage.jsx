@@ -7,7 +7,7 @@ import Layout from "../../components/Layout/Layout";
 import OptimizedImage from "../../components/OptimizedImage";
 import { useAuth } from "../../context/auth";
 import { flushPendingCartChanges, useCart } from "../../context/cart";
-import { DEFAULT_CART_NOTICES } from "../../hooks/useCartNotices";
+import { DEFAULT_CART_NOTES, fillNote, notesFromSettings, visibleNotes } from "../../hooks/useCartNotices";
 import useCartStore from "../../store/cart.store";
 import "./cartPage.css";
 import StockPopup from "./StockPopup"; // Import the StockPopup component
@@ -33,12 +33,8 @@ const CartPage = () => {
   // Admin > App Content > Checkout settings
   const [razorpayEnabled, setRazorpayEnabled] = useState(true);
   const [checkoutNote, setCheckoutNote] = useState("");
-  // Admin > App Content > cart notices ("" hides a line)
-  const [cartNotices, setCartNotices] = useState({
-    minimumOrderNotice: "",
-    courierChargeNotice: "",
-    advancePaymentNotice: "",
-  });
+  // Admin > App Content > Cart page notes (list). Empty until loaded.
+  const [cartNotes, setCartNotes] = useState([]);
 
   const navigate = useNavigate();
 
@@ -99,19 +95,13 @@ const CartPage = () => {
       if (data?.success) {
         setRazorpayEnabled(data.razorpayEnabled !== false);
         setCheckoutNote(data.checkoutNote || "");
-        setCartNotices((current) => {
-          const next = { ...current };
-          for (const key of Object.keys(current)) {
-            if (typeof data[key] === "string") next[key] = data[key];
-          }
-          return next;
-        });
+        setCartNotes(notesFromSettings(data));
       }
     } catch (error) {
       // Keep current behaviour (Razorpay enabled); the server still enforces the real setting
       console.error("Error fetching checkout settings:", error);
       // Settings unreachable: fall back to the standard wording
-      setCartNotices(DEFAULT_CART_NOTICES);
+      setCartNotes(DEFAULT_CART_NOTES);
     }
   };
 
@@ -782,29 +772,24 @@ const CartPage = () => {
               })}
             </p>
             {(() => {
-              const fill = (text) =>
-                (text || "")
-                  .replaceAll("{amount}", minimumOrder.toLocaleString("en-US", {
-                    style: "currency",
-                    currency: minimumOrderCurrency || "INR",
-                  }))
-                  .replaceAll("{percent}", String(advancePercentage));
-              const lines = [
-                cartNotices.courierChargeNotice,
-                advancePercentage > 0 ? cartNotices.advancePaymentNotice : "",
-              ].filter((t) => t && t.trim());
-              return (
-                <>
-                  {totalPrice() < minimumOrder && cartNotices.minimumOrderNotice?.trim() && (
-                    <p className="text-danger">{fill(cartNotices.minimumOrderNotice)}</p>
-                  )}
-                  {lines.length > 0 && (
-                    <ul className="text-danger">
-                      {lines.map((t, i) => <li key={i}>{fill(t)}</li>)}
-                    </ul>
-                  )}
-                </>
-              );
+              const shown = visibleNotes(cartNotes, {
+                total: totalPrice(),
+                minimumOrder,
+                advancePercentage,
+              });
+              return shown.length > 0 ? (
+                <ul className="text-danger">
+                  {shown.map((n, i) => (
+                    <li key={i}>
+                      {fillNote(n.text, {
+                        minimumOrder,
+                        advancePercentage,
+                        currency: minimumOrderCurrency || "INR",
+                      })}
+                    </li>
+                  ))}
+                </ul>
+              ) : null;
             })()}
             {razorpayEnabled && (
             <div className="mb-3">
