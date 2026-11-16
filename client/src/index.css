@@ -341,3 +341,26 @@ a,
     min-width: 44px;
   }
 }
+/*
+ * Bootstrap modals must stack ABOVE their backdrop.
+ * Global admin stylesheets leak into the whole bundle and break this:
+ *   sellerApplications.css  .modal           { z-index: 1001 }
+ *   OrderModal.css          .modal-backdrop  { z-index: 1040 !important }
+ * so every plain react-bootstrap <Modal> (Add/Edit Banner, Add/Edit
+ * Subcategory, brands, pincodes, ...) sat under its own backdrop and every click
+ * inside it hit the backdrop and closed the modal instead of reaching the form.
+ * Higher-specificity rules win regardless of stylesheet order. Modals that set
+ * their own z-index with !important (.order-modal 1050, .tracking-modal 1051,
+ * .checkout-note-modal 1060) are unaffected.
+ */
+.modal.show {
+  z-index: 1055;
+}
+.modal-backdrop.show {
+  z-index: 1045 !important;
+}
+/* Bootstrap fade modals draw their own dim via .modal-backdrop; the leaked
+   `background: rgba(0,0,0,.5)` on .modal would darken the page twice. */
+.modal.fade.show {
+  background-color: transparent;
+}
