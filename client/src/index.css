@@ -349,15 +349,16 @@ a,
  * so every plain react-bootstrap <Modal> (Add/Edit Banner, Add/Edit
  * Subcategory, brands, pincodes, ...) sat under its own backdrop and every click
  * inside it hit the backdrop and closed the modal instead of reaching the form.
- * Higher-specificity rules win regardless of stylesheet order. Modals that set
- * their own z-index with !important (.order-modal 1050, .tracking-modal 1051,
- * .checkout-note-modal 1060) are unaffected.
+ *
+ * Only raise `.modal`. Do NOT touch `.modal-backdrop`: the admin ORDER modal
+ * sets an inline `z-index: 1040` and relies on the backdrop staying at 1040
+ * (same level, modal later in the DOM). A higher backdrop covers the whole order
+ * modal and makes every button in it unclickable.
+ * Modals that set their own z-index with !important (.order-modal 1050,
+ * .tracking-modal 1051, .checkout-note-modal 1060) are unaffected.
  */
 .modal.show {
   z-index: 1055;
-}
-.modal-backdrop.show {
-  z-index: 1045 !important;
 }
 /* Bootstrap fade modals draw their own dim via .modal-backdrop; the leaked
    `background: rgba(0,0,0,.5)` on .modal would darken the page twice. */
