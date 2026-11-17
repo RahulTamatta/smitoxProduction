@@ -9,6 +9,7 @@ import {
   handleRazorpayWebhook,
 } from "../controllers/paymentWebhookController.js";
 import { requireSignIn } from "../middlewares/authMiddleware.js";
+import { requireCapability, requireSignIn as requireSignInRbac } from "../middlewares/rbacMiddleware.js";
 
 const router = express.Router();
 
@@ -23,12 +24,12 @@ router.post("/razorpay/success", handleRazorpayWebhook);
 router.post("/razorpay/customer-order", handleCustomerOrderWebhook);
 
 // Payment failure webhook
-router.post("/razorpay/failure", handlePaymentFailure);
+router.post("/razorpay/failure", requireSignInRbac, handlePaymentFailure);
 
 // Get checkout data for pending applications (authenticated)
 router.get("/checkout-data/:applicationId", requireSignIn, getCheckoutData);
 
 // Get failed payment logs for reconciliation (admin only - add auth middleware if needed)
-router.get("/failed-payments", getFailedPaymentLogs);
+router.get("/failed-payments", requireSignInRbac, requireCapability("orders:read"), getFailedPaymentLogs);
 
 export default router;

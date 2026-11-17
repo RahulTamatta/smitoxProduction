@@ -1,5 +1,5 @@
 import express from "express";
-import { isAdmin, requireSignIn } from "./../middlewares/authMiddleware.js";
+import { requireCapability, requireSignIn } from "../middlewares/rbacMiddleware.js";
 import {
   createBrandController,
   updateBrandController,
@@ -12,10 +12,10 @@ import {
 const router = express.Router();
 
 // create brand
-router.post("/create-brand", createBrandController);
+router.post("/create-brand", requireSignIn, requireCapability("products:write"), createBrandController);
 
 // update brand
-router.put("/update-brand/:id", updateBrandController);
+router.put("/update-brand/:id", requireSignIn, requireCapability("products:write"), updateBrandController);
 
 // get all brands
 router.get("/get-brands", brandControlller);
@@ -24,6 +24,6 @@ router.get("/get-brands", brandControlller);
 router.get("/get-brand/:slug", singleBrandController);
 
 // delete brand
-router.delete("/delete-brand/:id", deleteBrandController);
+router.delete("/delete-brand/:id", requireSignIn, requireCapability("products:delete"), deleteBrandController);
 
 export default router;

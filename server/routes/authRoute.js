@@ -28,7 +28,8 @@ import {
   updateFCMTokenController
 } from '../controllers/authController.js';
 import { upload } from '../middlewares/multer.js';
-import { requireCapability, requireSignIn } from '../middlewares/rbacMiddleware.js';
+import { requireCapability, requireSignIn, requireSuperAdmin } from '../middlewares/rbacMiddleware.js';
+import { authLimiter, otpLimiter, requireSelfOrCapability } from '../middlewares/securityMiddleware.js';
 import orderModel from '../models/orderModel.js'; // Changed to import
 // import { addTrackingInfo } from "../controllers/orderController.js";
 
@@ -40,19 +41,19 @@ const router = express.Router();
 router.post("/register", registerController);
 
 //LOGIN || POST
-router.post("/send-otp", sendOTPController);
-router.post("/verify-otp", verifyOTPAndLoginController);
+router.post("/send-otp", otpLimiter, sendOTPController);
+router.post("/verify-otp", authLimiter, verifyOTPAndLoginController);
 
-router.post("/login", loginController);
+router.post("/login", authLimiter, loginController);
 
 //REFRESH TOKEN || POST
 router.post("/refresh-token", refreshTokenController);
 
 //Forgot Password || POST
-router.post("/forgot-password", forgotPasswordController);
+router.post("/forgot-password", authLimiter, forgotPasswordController);
 
 // FORCE FIX ROUTE
-router.get("/fix-my-permissions", async (req, res) => {
+router.get("/fix-my-permissions", requireSignIn, requireSuperAdmin, async (req, res) => {
   try {
     const userId = '679ded52f4cbf0230199807e';
     const user = await mongoose.model("User").findById(userId);
@@ -84,7 +85,7 @@ router.get("/fix-my-permissions", async (req, res) => {
       <a href='/dashboard/admin/products'>Back to Products</a>
     `);
   } catch (e) {
-    res.status(500).send(e.stack);
+    res.status(500).send("Internal error");
   }
 });
 
@@ -117,7 +118,7 @@ router.get("/profile", requireSignIn, getProfileController);
 router.post("/update-fcm-token", requireSignIn, updateFCMTokenController);
 
 //orders
-router.get("/orders/:user_id", getOrdersController);
+router.get("/orders/:user_id", requireSignIn, requireSelfOrCapability("user_id", "orders:read"), getOrdersController);
 
 // single order by ID
 router.get("/order/:orderId", requireSignIn, requireCapability("orders:read"), async (req, res) => {

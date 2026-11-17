@@ -54,7 +54,7 @@ const singleUpload = multer({
 }).single('file');
 
 // Update the single upload route to use uploadFields from uploadMiddleware
-router.post('/upload-single', uploadMiddleware.uploadFields, handleImageUpload, (req, res) => {
+router.post('/upload-single', requireSignIn, uploadMiddleware.uploadFields, handleImageUpload, (req, res) => {
   try {
     if (!req.imageUrl) {
       return res.status(400).json({
@@ -81,7 +81,7 @@ router.post('/upload-single', uploadMiddleware.uploadFields, handleImageUpload, 
 });
 
 // Update the multiple upload route
-router.post('/upload-multiple', uploadMiddleware.uploadMultiple, handleImageUpload, (req, res) => {
+router.post('/upload-multiple', requireSignIn, uploadMiddleware.uploadMultiple, handleImageUpload, (req, res) => {
   try {
     if (!req.imageUrls || !req.imageUrls.length) {
       return res.status(400).json({
