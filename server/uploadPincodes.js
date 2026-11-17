@@ -1,8 +1,9 @@
+import "dotenv/config";
 import mongoose from "mongoose";
 import xlsx from "xlsx";
 import Pincode from "./models/pincodeModel.js";
 
-const uri = "mongodb+srv://smitox:JSbWYZGtLBJGWxjO@smitox.rlcilry.mongodb.net/?retryWrites=true&w=majority&appName=smitox";
+const uri = process.env.MONGO_URL;
 
 mongoose.set('strictQuery', false);
 

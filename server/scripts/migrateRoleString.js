@@ -17,7 +17,7 @@ async function migrateRoleString() {
     console.log('🔄 Starting roleString migration...\n');
 
     // Connect to MongoDB
-    await mongoose.connect('mongodb+srv://smitox:JSbWYZGtLBJGWxjO@smitox.rlcilry.mongodb.net/?retryWrites=true&w=majority&appName=smitox');
+    await mongoose.connect(process.env.MONGO_URL);
     console.log('✅ Connected to MongoDB\n');
 
     // Find all users

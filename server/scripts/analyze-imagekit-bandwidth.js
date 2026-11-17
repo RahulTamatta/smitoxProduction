@@ -8,7 +8,7 @@ const path = require('path');
 // Configuration
 const config = {
   mongodb: {
-    uri: process.env.MONGO_URL || 'mongodb+srv://smitox:JSbWYZGtLBJGWxjO@smitox.rlcilry.mongodb.net/?retryWrites=true&w=majority&appName=smitox',
+    uri: process.env.MONGO_URL,
     database: 'smitox',
     collection: 'images'
   },

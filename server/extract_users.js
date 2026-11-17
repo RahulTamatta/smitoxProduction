@@ -1,7 +1,8 @@
+import "dotenv/config";
 import { MongoClient } from 'mongodb';
 import * as XLSX from 'xlsx';
 
-const uri = "mongodb+srv://smitox:JSbWYZGtLBJGWxjO@smitox.rlcilry.mongodb.net/?retryWrites=true&w=majority&appName=smitox";
+const uri = process.env.MONGO_URL;
 const client = new MongoClient(uri);
 
 async function run() {

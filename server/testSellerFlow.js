@@ -2,7 +2,7 @@ import axios from 'axios';
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
 
-const JWT_SECRET = 'sdrbgkyulu';
+const JWT_SECRET = process.env.JWT_SECRET;
 const BASE_URL = 'http://localhost:8080/api/v1';
 
 const generateToken = (payload) => jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });

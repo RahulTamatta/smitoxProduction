@@ -1,3 +1,4 @@
+import "dotenv/config";
 import axios from 'axios';
 import fs from 'fs';
 import jwt from 'jsonwebtoken';
@@ -8,8 +9,8 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const MONGO_URL = 'mongodb+srv://smitox:JSbWYZGtLBJGWxjO@smitox.rlcilry.mongodb.net/?retryWrites=true&w=majority&appName=smitox';
-const JWT_SECRET = 'sdrbgkyulu';
+const MONGO_URL = process.env.MONGO_URL;
+const JWT_SECRET = process.env.JWT_SECRET;
 const BASE_URL = 'http://localhost:8080/api/v1';
 
 const generateToken = (payload) => jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });

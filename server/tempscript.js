@@ -1,7 +1,8 @@
+import "dotenv/config";
 import mongoose from "mongoose";
 import Product from "./models/productModel.js";
 
-const uri = "mongodb+srv://smitox:JSbWYZGtLBJGWxjO@smitox.rlcilry.mongodb.net/?retryWrites=true&w=majority&appName=smitox";
+const uri = process.env.MONGO_URL;
 
 // Set mongoose options to address warnings and timeout issues
 mongoose.set('strictQuery', false);

@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { v2 as cloudinary } from 'cloudinary';
 import mongoose from 'mongoose';
 
@@ -6,7 +7,7 @@ import mongoose from 'mongoose';
 //   cloud_name: 'do3y11hpa', 
 //   // Old account cloud name
 //   api_key:  '119598853346493',    // Old account API key
-//   api_secret: 'WR6abBlUvmedVLOiybbuUneX12k' // Old account API secret
+//   api_secret: process.env.OLD_CLOUDINARY_API_SECRET // Old account API secret
 // });
 
 // Gmail used:tamattarahul72@gmail.com
@@ -17,19 +18,19 @@ import mongoose from 'mongoose';
 //   cloud_name: 'dnsqrn1mr', 
 //   // Old account cloud name
 //   api_key:  '491129143355427',    // Old account API key
-//   api_secret: 'qL-f_FEhYdVQmepzRoUi6IwhDKk' // Old account API secret
+//   api_secret: process.env.OLD_CLOUDINARY_API_SECRET // Old account API secret
 // });
 //new cloud
 cloudinary.config({
   cloud_name: 'dnjtpihzs',
   // Old account cloud name
   api_key: '142139447655559',    // Old account API key
-  api_secret: 't1LmC0isn4XuWKTd_l0UDCeDv-w' // Old account API secret
+  api_secret: process.env.OLD_CLOUDINARY_API_SECRET // Old account API secret
 });
 
 // MongoDB connection
 const MONGO_URI =
-  'mongodb+srv://smitox:JSbWYZGtLBJGWxjO@smitox.rlcilry.mongodb.net/?retryWrites=true&w=majority&appName=smitox';
+  process.env.MONGO_URL;
 
 // List of collections that store Cloudinary image URLs
 const collections = [

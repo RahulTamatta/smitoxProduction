@@ -12,7 +12,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Configuration
-const MONGO_URI = process.env.MONGO_URL || 'mongodb+srv://smitox:JSbWYZGtLBJGWxjO@smitox.rlcilry.mongodb.net/?retryWrites=true&w=majority&appName=smitox';
+const MONGO_URI = process.env.MONGO_URL;
 const UPLOADS_DIR = path.join(__dirname, '../uploads');
 
 // Configure Cloudinary

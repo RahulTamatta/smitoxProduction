@@ -1,8 +1,9 @@
+import "dotenv/config";
 import mongoose from 'mongoose';
 import Cart from '../models/cartModel.js';
 import Product from '../models/productModel.js';
 
-const MONGO_URI = 'mongodb+srv://smitox:JSbWYZGtLBJGWxjO@smitox.rlcilry.mongodb.net/?retryWrites=true&w=majority&appName=smitox';
+const MONGO_URI = process.env.MONGO_URL;
 
 async function cleanupCarts() {
   try {
