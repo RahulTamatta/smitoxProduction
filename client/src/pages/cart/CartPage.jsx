@@ -19,7 +19,15 @@ const CartPage = () => {
   const [clientToken, setClientToken] = useState("");
   const [instance, setInstance] = useState("");
   const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("COD");
+  // Empty until the admin's checkout settings, the minimum order and the user's
+  // latest order type have loaded. Showing "COD" before that made the page offer
+  // COD and then place the order as something else (e.g. "Order Placed" when
+  // Razorpay is switched off in Admin > App Content).
+  const [paymentMethod, setPaymentMethod] = useState("");
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [minimumLoaded, setMinimumLoaded] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [minimumOrder, setMinimumOrder] = useState(0);
   const [advancePercentage, setAdvancePercentage] = useState(0);
   const [minimumOrderCurrency, setMinimumOrderCurrency] = useState("");
@@ -96,12 +104,16 @@ const CartPage = () => {
         setRazorpayEnabled(data.razorpayEnabled !== false);
         setCheckoutNote(data.checkoutNote || "");
         setCartNotes(notesFromSettings(data));
+        setSettingsLoaded(true);
+      } else {
+        setLoadError(true);
       }
     } catch (error) {
-      // Keep current behaviour (Razorpay enabled); the server still enforces the real setting
       console.error("Error fetching checkout settings:", error);
-      // Settings unreachable: fall back to the standard wording
-      setCartNotes(DEFAULT_CART_NOTES);
+      // Settings unreachable: fall back to the standard wording for the notes, but
+      // do NOT guess the payment options: Place Order stays off until a retry works.
+      setCartNotes((current) => (current.length ? current : DEFAULT_CART_NOTES));
+      setLoadError(true);
     }
   };
 
@@ -113,13 +125,18 @@ const CartPage = () => {
   useEffect(() => {
     // Only attempt if we have a refresh function
     if (typeof refreshToken === "function") {
-      refreshToken().catch(() => { });
+      refreshToken().catch(() => { }).finally(() => setAuthChecked(true));
+    } else {
+      setAuthChecked(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Keep payment method aligned with user's order_type and settings
+  const paymentReady = settingsLoaded && minimumLoaded && authChecked;
+
   useEffect(() => {
+    if (!paymentReady) return; // never pick a method from half-loaded data
     const ot = typeof auth?.user?.order_type === 'string' ? parseInt(auth.user.order_type) : auth?.user?.order_type;
     // Determine preferred default based on order type
     let desired = paymentMethod;
@@ -130,7 +147,7 @@ const CartPage = () => {
     else desired = "Razorpay";
 
     if (desired !== paymentMethod) setPaymentMethod(desired);
-  }, [auth?.user?.order_type, advancePercentage, razorpayEnabled]);
+  }, [paymentReady, auth?.user?.order_type, advancePercentage, razorpayEnabled]);
 
   const getCart = async () => {
     try {
@@ -157,9 +174,13 @@ const CartPage = () => {
         setMinimumOrder(data.amount);
         setAdvancePercentage(data.advancePercentage || 0);
         setMinimumOrderCurrency(data.currency === "rupees" ? "INR" : data.currency);
+        setMinimumLoaded(true);
+      } else {
+        setLoadError(true);
       }
     } catch (error) {
       console.error('Error fetching minimum order:', error);
+      setLoadError(true);
       ////toast.error("Error fetching minimum order amount");
     }
   };
@@ -287,6 +308,8 @@ const CartPage = () => {
   const canPlaceOrder = () => {
     const total = totalPrice();
     return (
+      paymentReady &&
+      !!paymentMethod &&
       !loading &&
       !orderPlacementInProgress &&
       total >= minimumOrder &&
@@ -357,6 +380,9 @@ const CartPage = () => {
 
   const handlePayment = async () => {
     const total = totalPrice();
+
+    // Payment options not resolved yet: do nothing rather than guess a method
+    if (!paymentReady || !paymentMethod) return;
 
     if (!auth?.user?._id) {
       ////toast.error("Please login to proceed with payment");
@@ -764,13 +790,15 @@ const CartPage = () => {
               </>
             )}
 
-            <p>
-              Minimum Order:{" "}
-              {minimumOrder.toLocaleString("en-US", {
-                style: "currency",
-                currency: minimumOrderCurrency || "INR",
-              })}
-            </p>
+            {minimumLoaded && (
+              <p>
+                Minimum Order:{" "}
+                {minimumOrder.toLocaleString("en-US", {
+                  style: "currency",
+                  currency: minimumOrderCurrency || "INR",
+                })}
+              </p>
+            )}
             {(() => {
               const shown = visibleNotes(cartNotes, {
                 total: totalPrice(),
@@ -791,7 +819,26 @@ const CartPage = () => {
                 </ul>
               ) : null;
             })()}
-            {razorpayEnabled && (
+            {!paymentReady && !loadError && (
+              <p className="text-muted small mb-3">Loading payment options…</p>
+            )}
+            {!paymentReady && loadError && (
+              <div className="alert alert-warning mb-3">
+                Couldn't load the payment options.{" "}
+                <button
+                  type="button"
+                  className="btn btn-link p-0 align-baseline"
+                  onClick={() => {
+                    setLoadError(false);
+                    fetchCheckoutSettings();
+                    fetchMinimumOrder();
+                  }}
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+            {paymentReady && razorpayEnabled && (
             <div className="mb-3">
               <label className="form-label">Payment Method</label>
               <select
