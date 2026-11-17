@@ -7,7 +7,7 @@ import orderModel from "../models/orderModel.js";
 import Pincode from '../models/pincodeModel.js';
 import productModel from "../models/productModel.js";
 import userModel from "../models/userModel.js";
-import { hashPassword } from "./../helpers/authHelper.js";
+import { comparePassword, hashPassword } from "./../helpers/authHelper.js";
 // send OTP
 export const sendOTPController = async (req, res) => {
   try {
@@ -303,7 +303,7 @@ export const loginController = async (req, res) => {
     }
 
     // Find user by email
-    const user = await userModel.findOne({ email_id }).maxTimeMS(5000);
+    const user = await userModel.findOne({ email_id: String(email_id) }).maxTimeMS(5000);
 
     if (!user) {
       return res.status(404).send({
@@ -319,8 +319,14 @@ export const loginController = async (req, res) => {
       });
     }
 
-    // Direct password check
-    if (password !== user.password) {
+    // Password check: bcrypt hashes (set by profile update / forgot-password) or
+    // legacy plaintext values, which are upgraded to a hash on successful login.
+    const stored = String(user.password);
+    const isHashed = /^\$2[aby]\$\d{2}\$/.test(stored);
+    const passwordOk = isHashed
+      ? await comparePassword(String(password), stored)
+      : String(password) === stored;
+    if (!passwordOk) {
       return res.status(401).send({
         success: false,
         message: "Invalid Password",
@@ -329,6 +335,7 @@ export const loginController = async (req, res) => {
 
     // Update last login timestamp
     try {
+      if (!isHashed) user.password = await hashPassword(String(password));
       user.lastLogin = new Date();
       await user.save();
     } catch (e) {
@@ -397,7 +404,7 @@ export const forgotPasswordController = async (req, res) => {
       res.status(400).send({ message: "New Password is required" });
     }
 
-    const user = await userModel.findOne({ email_id, answer });
+    const user = await userModel.findOne({ email_id: String(email_id), answer: String(answer) });
     if (!user) {
       return res.status(404).send({
         success: false,

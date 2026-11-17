@@ -94,6 +94,7 @@ export const getUsers = async (req, res) => {
 
     const users = await userModel
       .find(searchQuery)
+      .select('-password -answer')
       .skip((page - 1) * limit)
       .limit(Number(limit))
       .populate('products')
@@ -126,7 +127,14 @@ export const getUsers = async (req, res) => {
 export const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const updatedUser = await userModel.findByIdAndUpdate(id, req.body, { new: true })
+    // Never allow credential / identity fields to be changed through this endpoint,
+    // and only allow role changes by staff holding users:role:update.
+    const updates = { ...req.body };
+    for (const field of ["_id", "password", "answer", "refreshToken", "__v"]) delete updates[field];
+    if (!req.user?.capabilities?.includes("users:role:update")) {
+      for (const field of ["role", "roleString", "permissions", "capabilities"]) delete updates[field];
+    }
+    const updatedUser = await userModel.findByIdAndUpdate(id, updates, { new: true })
       .populate('products')
       .populate('wishlist')
       .populate('cart.product');

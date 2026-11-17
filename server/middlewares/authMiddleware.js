@@ -6,7 +6,6 @@ export const requireSignIn = async (req, res, next) => {
   try {
     // Check if Authorization header exists
     let authHeader = req.headers.authorization;
-    console.log("Original Auth Header:", authHeader);
 
     if (!authHeader) {
       return res.status(401).send({
@@ -20,7 +19,6 @@ export const requireSignIn = async (req, res, next) => {
       authHeader = authHeader.substring(7, authHeader.length);
     }
 
-    console.log("Processed Auth Header:", authHeader);
 
     // Check if token became empty or "null"/"undefined" string
     if (!authHeader || authHeader === "null" || authHeader === "undefined") {

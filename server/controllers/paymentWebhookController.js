@@ -24,7 +24,9 @@ export const handleRazorpayWebhook = async (req, res) => {
       .update(body)
       .digest("hex");
 
-    if (expectedSignature !== razorpay_signature) {
+    const sigBuf = Buffer.from(String(razorpay_signature || ""));
+    const expBuf = Buffer.from(expectedSignature);
+    if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
       console.error("Invalid Razorpay signature");
       return res.status(400).send({
         success: false,
@@ -146,6 +148,13 @@ export const handlePaymentFailure = async (req, res) => {
         success: false,
         message: "Application not found",
       });
+    }
+
+    // Only the applicant (or staff) may mark their own payment as failed
+    const isOwner = String(application.userId) === String(req.user?._id);
+    const isStaff = req.user?.capabilities?.includes("sellers:applications:read");
+    if (!isOwner && !isStaff) {
+      return res.status(403).send({ success: false, message: "Access denied" });
     }
 
     // Update payment status
