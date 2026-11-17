@@ -2,6 +2,8 @@ import * as Sentry from "@sentry/node";
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
+import helmet from "helmet";
+import { sanitizeMongoInput } from "./middlewares/securityMiddleware.js";
 import morgan from "morgan";
 import path from "path";
 import { fileURLToPath } from 'url'; // To convert import.meta.url to a pathname
@@ -50,6 +52,16 @@ Sentry.init({
 
 // Skip the handlers for now until we can verify the correct Sentry version
 
+// Behind Hostinger/Railway reverse proxy: needed for correct client IPs in rate limiting
+app.set("trust proxy", 1);
+
+// Security headers (CSP off: the React build and Razorpay checkout load third-party scripts)
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
@@ -59,6 +71,7 @@ app.use(cors({
   credentials: true
 })); // Enable Cross-Origin Resource Sharing
 app.use(express.json()); // Parse incoming JSON requests
+app.use(sanitizeMongoInput); // Strip $-operators from user input (NoSQL injection)
 app.use(morgan("dev")); // HTTP request logger
 
 // Plan Expiry Check Middleware - Check on every seller request
