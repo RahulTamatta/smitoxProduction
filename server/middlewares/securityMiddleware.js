@@ -50,3 +50,16 @@ const limiter = (windowMinutes, max) =>
 export const otpLimiter = limiter(15, 10);
 // Login / password reset brute force
 export const authLimiter = limiter(15, 30);
+
+/**
+ * TEMPORARY compatibility for the released mobile app, which calls some
+ * customer cart / wishlist / order routes without an Authorization header.
+ * - Token present  -> full check: signed in AND (owner OR has `capability`).
+ * - Token missing  -> allowed (pre-hardening behaviour) so old app installs keep working.
+ * Remove once the updated app (which always sends the token) is force-updated,
+ * by switching routes back to [requireSignIn, requireSelfOrCapability(...)].
+ */
+export const ownerOrStaffLegacyCompat = (requireSignIn, param, capability) => (req, res, next) => {
+  if (!req.headers.authorization) return next();
+  return requireSignIn(req, res, () => requireSelfOrCapability(param, capability)(req, res, next));
+};

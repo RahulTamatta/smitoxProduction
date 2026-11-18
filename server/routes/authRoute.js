@@ -29,7 +29,7 @@ import {
 } from '../controllers/authController.js';
 import { upload } from '../middlewares/multer.js';
 import { requireCapability, requireSignIn, requireSuperAdmin } from '../middlewares/rbacMiddleware.js';
-import { authLimiter, otpLimiter, requireSelfOrCapability } from '../middlewares/securityMiddleware.js';
+import { authLimiter, otpLimiter, ownerOrStaffLegacyCompat } from '../middlewares/securityMiddleware.js';
 import orderModel from '../models/orderModel.js'; // Changed to import
 // import { addTrackingInfo } from "../controllers/orderController.js";
 
@@ -118,7 +118,8 @@ router.get("/profile", requireSignIn, getProfileController);
 router.post("/update-fcm-token", requireSignIn, updateFCMTokenController);
 
 //orders
-router.get("/orders/:user_id", requireSignIn, requireSelfOrCapability("user_id", "orders:read"), getOrdersController);
+// TEMP: legacy mobile app fetches orders without a token; see ownerOrStaffLegacyCompat
+router.get("/orders/:user_id", ownerOrStaffLegacyCompat(requireSignIn, "user_id", "orders:read"), getOrdersController);
 
 // single order by ID
 router.get("/order/:orderId", requireSignIn, requireCapability("orders:read"), async (req, res) => {

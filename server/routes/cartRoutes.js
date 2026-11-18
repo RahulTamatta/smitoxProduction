@@ -18,7 +18,7 @@ import {
   getProductQuantity // New controller function
 } from '../controllers/userController.js';
 import { requireCapability, requireSignIn } from '../middlewares/rbacMiddleware.js';
-import { requireSelfOrCapability } from '../middlewares/securityMiddleware.js';
+import { ownerOrStaffLegacyCompat } from '../middlewares/securityMiddleware.js';
 
 const router = express.Router();
 
@@ -31,7 +31,8 @@ router.put('/users/:id/live-product', requireSignIn, requireCapability('users:wr
 router.put('/users/:id/order-type', requireSignIn, requireCapability('users:write'), updateOrderType);
 
 // Owner or staff with users:write may access a user's wishlist / cart
-const ownerOrStaff = [requireSignIn, requireSelfOrCapability('userId', 'users:write')];
+// TEMP: legacy mobile app sends no token on some of these calls; see ownerOrStaffLegacyCompat
+const ownerOrStaff = [ownerOrStaffLegacyCompat(requireSignIn, 'userId', 'users:write')];
 
 // Wishlist routes
 router.get("/users/:userId/wishlist", ...ownerOrStaff, getWishlist);
