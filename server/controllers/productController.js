@@ -732,28 +732,64 @@ export const searchProductController = async (req, res) => {
 export const realtedProductController = async (req, res) => {
   try {
     const { pid, cid } = req.params;
+    // Optional ?limit= (default 3 keeps the original response size), capped at 24
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 3, 1), 24);
+    const baseFilter = { _id: { $ne: pid }, stock: { $gt: 0 }, isActive: "1" };
 
-    const products = await productModel
-      .find({
-        category: cid,
-        _id: { $ne: pid },
-        stock: { $gt: 0 }, // Only products with stock > 0
-        isActive: "1", // Only active products
-      })
-      .limit(3)
-      .populate("category");
+    const current = await productModel
+      .findById(pid)
+      .select("fk_tags subcategory")
+      .lean();
+    const fkTags = (current?.fk_tags || []).filter(Boolean);
 
-    const productsWithPhotos = products.map((product) => {
+    // 1) Linked products: admin-assigned FK tags shared with this product
+    const linked = fkTags.length
+      ? await productModel
+          .find({ ...baseFilter, fk_tags: { $in: fkTags } })
+          .limit(limit)
+          .populate("category")
+      : [];
+
+    // 2) Similar products: same subcategory first, then same category
+    const excludeIds = [pid, ...linked.map((p) => p._id)];
+    const similar = [];
+    if (current?.subcategory) {
+      similar.push(
+        ...(await productModel
+          .find({ ...baseFilter, _id: { $nin: excludeIds }, subcategory: current.subcategory })
+          .limit(limit)
+          .populate("category"))
+      );
+    }
+    if (similar.length < limit) {
+      similar.push(
+        ...(await productModel
+          .find({
+            ...baseFilter,
+            _id: { $nin: [...excludeIds, ...similar.map((p) => p._id)] },
+            category: cid,
+          })
+          .limit(limit - similar.length)
+          .populate("category"))
+      );
+    }
+
+    const withPhotoUrl = (product) => {
       const productObj = product.toObject();
       if (productObj.photos) {
         productObj.photoUrl = productObj.photos;
       }
       return productObj;
-    });
+    };
+    const linkedProducts = linked.map(withPhotoUrl);
+    const similarProducts = similar.map(withPhotoUrl);
 
     res.status(200).send({
       success: true,
-      products: productsWithPhotos,
+      // Combined list (linked first) kept for backward compatibility
+      products: [...linkedProducts, ...similarProducts].slice(0, Math.max(limit, linkedProducts.length)),
+      linkedProducts,
+      similarProducts,
     });
   } catch (error) {
     console.log(error);
@@ -1920,15 +1956,42 @@ export const productSubcategoryController = async (req, res) => {
 // productFiltersController
 export const productFiltersController = async (req, res) => {
   try {
-    const { checked, radio } = req.body;
+    // checked = category ids, radio = [min, max] price.
+    // Optional: subcategories, brands (id arrays), keyword, sort.
+    const {
+      checked = [],
+      radio = [],
+      subcategories = [],
+      brands = [],
+      keyword = "",
+      sort = "",
+    } = req.body || {};
+    const toIdList = (v) => (Array.isArray(v) ? v : []).map(String).filter(Boolean);
+    const categoryIds = toIdList(checked);
+    const subcategoryIds = toIdList(subcategories);
+    const brandIds = toIdList(brands);
+    const priceRange = Array.isArray(radio) ? radio.map(Number) : [];
+    const hasPrice = priceRange.length === 2 && priceRange.every((n) => Number.isFinite(n));
+    const search = String(keyword || "").trim();
+    const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
     let args = {
-      ...(checked.length > 0 && { category: checked }),
-      ...(radio.length && { price: { $gte: radio[0], $lte: radio[1] } }),
+      ...(categoryIds.length > 0 && { category: { $in: categoryIds } }),
+      ...(subcategoryIds.length > 0 && { subcategory: { $in: subcategoryIds } }),
+      ...(brandIds.length > 0 && { brand: { $in: brandIds } }),
+      ...(hasPrice && { price: { $gte: priceRange[0], $lte: priceRange[1] } }),
+      ...(search && { name: { $regex: escapeRegex(search), $options: "i" } }),
       stock: { $gt: 0 }, // Only products with stock > 0
       isActive: "1",    // Only active products
     };
 
-    const products = await productModel.find(args);
+    const SORTS = {
+      price_asc: { price: 1 },
+      price_desc: { price: -1 },
+      newest: { createdAt: -1 },
+    };
+
+    const products = await productModel.find(args).sort(SORTS[sort] || {});
     res.status(200).send({
       success: true,
       products,

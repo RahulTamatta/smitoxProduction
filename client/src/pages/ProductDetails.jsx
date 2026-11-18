@@ -8,6 +8,7 @@ import BulkPricingTable from '../components/ProductDetails/BulkPricingTable';
 import ProductImageGallery from '../components/ProductDetails/ProductImageGallery';
 import ProductInfo from '../components/ProductDetails/ProductInfo';
 import ProductsForYou from '../components/ProductDetails/ProductsForYou';
+import RelatedProductsRail from '../components/ProductDetails/RelatedProductsRail';
 // QuantitySelector is now rendered inside ProductInfo
 import ImageZoomModal from '../components/ProductDetails/modals/ImageZoomModal';
 import LoginPromptModal from '../components/ProductDetails/modals/LoginPromptModal';
@@ -21,7 +22,7 @@ import { useUIState } from '../components/ProductDetails/hooks/useUIState';
 
 const ProductDetails = () => {
   // Use custom hooks for state management
-  const { product, productsForYou, isNetworkError, isLoading, normalizeProductForCard } = useProductData();
+  const { product, productsForYou, linkedProducts, similarProducts, isNetworkError, isLoading, normalizeProductForCard } = useProductData();
   const {
     selectedBulk,
     totalPrice,
@@ -176,6 +177,18 @@ const ProductDetails = () => {
         </div>
         */}
       </main>
+
+      {/* Linked products (shared FK tags) first, then similar products */}
+      <RelatedProductsRail
+        title="Linked Products"
+        products={linkedProducts}
+        onProductClick={handleProductNavigation}
+      />
+      <RelatedProductsRail
+        title="Similar Products"
+        products={similarProducts}
+        onProductClick={handleProductNavigation}
+      />
 
       {/* Products For You Section */}
       <ProductsForYou
