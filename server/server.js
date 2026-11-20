@@ -35,6 +35,8 @@ import sellerApplicationRoutes from "./routes/sellerApplicationRoutes.js";
 import sellerApplicationRoutesV2 from "./routes/sellerApplicationRoutesV2.js";
 import subCategoryRoutes from "./routes/subCategoryRoutes.js";
 import subscriptionPlanRoutes from "./routes/subscriptionPlanRoutes.js";
+import sellerPortalRoutes from "./routes/sellerPortalRoutes.js";
+import vendorAdminRoutes from "./routes/vendorAdminRoutes.js";
 
 // Configure environment variables
 dotenv.config();
@@ -107,6 +109,8 @@ app.use('/api/v1/app-content', appContentRoutes);
 // RBAC - Seller Applications & Subscription Plans (V1 - Legacy)
 app.use('/api/v1/sellers/applications', sellerApplicationRoutes);
 app.use('/api/v1/subscription-plans', subscriptionPlanRoutes);
+app.use('/api/v1/seller-portal', sellerPortalRoutes);
+app.use('/api/v1/admin/vendors', vendorAdminRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 
 // Seller Onboarding V2 - New Flow
