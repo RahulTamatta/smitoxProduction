@@ -5,12 +5,13 @@ import { useLocation } from "react-router-dom";
 import Footer from "./Footer";
 import Header from "./Header";
 import "./Layout.css";
+import { isPortalPath } from "../../utils/portalRoutes";
 
 const Layout = ({ children, title, description, keywords, author }) => {
   const [headerHeight, setHeaderHeight] = useState(80);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const location = useLocation();
-  const isAdminRoute = location.pathname.toLowerCase().startsWith("/dashboard/admin");
+  const isAdminRoute = isPortalPath(location.pathname); // admin panel and vendor portal
   const headerRef = useRef(null);
 
   useEffect(() => {

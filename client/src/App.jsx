@@ -42,9 +42,14 @@ import WishlistPage from "./pages/wishlists.jsx";
 
 // Seller Onboarding V2 Components
 import SellerApplications from "./pages/Admin/SellerApplications";
+import Vendors from "./pages/Admin/Vendors";
 import ApplicationStatus from "./pages/Seller/ApplicationStatus";
 import SellerDashboard from "./pages/Seller/SellerDashboard";
-import SellerWizardV2 from "./pages/Seller/SellerWizardV2";
+import SellerRoute from "./components/Routes/SellerRoute";
+import SellerListings from "./pages/Seller/portal/SellerListings";
+import SellerOrders from "./pages/Seller/portal/SellerOrders";
+import SellerStore from "./pages/Seller/portal/SellerStore";
+import SellerQuickApply from "./pages/Seller/SellerQuickApply";
 
 // Checkout Component
 import CheckoutPage from "./pages/Checkout/CheckoutPage";
@@ -120,6 +125,7 @@ function App() {
             <Route path="admin/subscription-management" element={<SubscriptionManagement />} />
             <Route path="admin/analytics" element={<SellerAnalytics />} />
             <Route path="admin/sellers/applications" element={<SellerApplications />} />
+            <Route path="admin/vendors" element={<Vendors />} />
           </Route>
 
           <Route path="/register" element={<Register />} />
@@ -128,7 +134,7 @@ function App() {
           <Route path="/adminlogin" element={<AdminLogin />} />
           <Route path="/become-seller" element={<SellerPlanSelection />} />
           <Route path="/seller-wizard" element={<PrivateRoute />}>
-            <Route index element={<SellerWizardV2 />} />
+            <Route index element={<SellerQuickApply />} />
           </Route>
 
           {/* Checkout Route */}
@@ -136,13 +142,21 @@ function App() {
 
           {/* Seller Onboarding V2 Routes */}
           <Route path="/seller/apply" element={<PrivateRoute />}>
-            <Route index element={<SellerWizardV2 />} />
+            <Route index element={<SellerQuickApply />} />
           </Route>
           <Route path="/seller/status" element={<PrivateRoute />}>
             <Route index element={<ApplicationStatus />} />
           </Route>
-          <Route path="/seller/dashboard" element={<PrivateRoute />}>
-            <Route index element={<SellerDashboard />} />
+
+
+          {/* Vendor portal: own listings, orders (read-only) and store profile */}
+          <Route path="/seller" element={<SellerRoute />}>
+            <Route path="dashboard" element={<SellerDashboard />} />
+            <Route path="listings" element={<SellerListings />} />
+            <Route path="listings/new" element={<CreateProduct portal="seller" />} />
+            <Route path="listings/:slug" element={<UpdateProduct portal="seller" />} />
+            <Route path="orders" element={<SellerOrders />} />
+            <Route path="store" element={<SellerStore />} />
           </Route>
 
           <Route path="/about" element={<About />} />

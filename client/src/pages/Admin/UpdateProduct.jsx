@@ -6,11 +6,14 @@ import { useNavigate, useParams } from "react-router-dom";
 import OptimizedImage from "../../components/OptimizedImage";
 import { useAuth } from "../../context/auth"; // <-- Add this import
 import AdminMenu from "./../../components/Layout/AdminMenu";
+import SellerMenu from "./../../components/Layout/SellerMenu";
 import Layout from "./../../components/Layout/Layout";
 
 const { Option } = Select;
 
-const UpdateProduct = () => {
+const UpdateProduct = ({ portal = "admin" }) => {
+  const isSeller = portal === "seller"; // vendor portal: own listings only
+  const listPath = isSeller ? "/seller/listings" : "/dashboard/admin/products";
   const navigate = useNavigate();
   const params = useParams();
   const [auth] = useAuth(); // <-- Add this line
@@ -138,7 +141,7 @@ const UpdateProduct = () => {
       if (data?.success) {
         toast.dismiss();
         toast.success("Product Updated Successfully");
-        navigate('/dashboard/admin/products');
+        navigate(listPath);
       } else {
         toast.dismiss();
         toast.error(data?.message || "Error updating product");
@@ -386,7 +389,7 @@ const UpdateProduct = () => {
         },
       });
       //toast.success("Product Deleted Successfully");
-      navigate("/dashboard/admin/products");
+      navigate(listPath);
     } catch (error) {
       console.log(error);
       ////toast.error("Something went wrong");
@@ -395,13 +398,13 @@ const UpdateProduct = () => {
 
   return (
     <Layout title={"Dashboard - Update Product"}>
-      <AdminMenu />
+      {isSeller ? <SellerMenu /> : <AdminMenu />}
       <div className="container-fluid dashboard">
         <div className="row">
           <div className="col-md-12">
             <h1>Update Product</h1>
             <div className="m-1 w-75">
-              <div className="col-md-4">
+              {!isSeller && (<div className="col-md-4">
                 <label htmlFor="customOrder" className="form-label">
                   Custom Order
                 </label>
@@ -415,6 +418,7 @@ const UpdateProduct = () => {
                   onChange={(e) => setCustomOrder(e.target.value)}
                 />
               </div>
+              )}
               {/* Category dropdown */}
               <div className="mb-3">
                 <label htmlFor="categorySelect" className="form-label">

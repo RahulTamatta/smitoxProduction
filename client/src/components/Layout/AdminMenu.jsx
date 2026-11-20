@@ -214,7 +214,12 @@ const AdminMenu = () => {
           {caps.includes("products:write") && <TreeItem to="/dashboard/admin/create-product" icon="➕" label="Create Product" />}
           {caps.includes("products:read") && <TreeItem to="/dashboard/admin/products" icon="📦" label="Products" />}
 
-          <TreeItem to="/dashboard/admin/seller-products" icon="🏪" label="Sellers Products" />
+          {caps.includes("sellers:applications:read") && (
+            <TreeItem id="vendors" icon="🏪" label="Vendors" isLeaf={false}>
+              <SubTreeItem to="/dashboard/admin/vendors" label="All Vendors" />
+              <SubTreeItem to="/dashboard/admin/sellers/applications" label="Applications" />
+            </TreeItem>
+          )}
           <TreeItem to="/dashboard/admin/delivery-charges" icon="🚚" label="Delivery Charge" />
 
           {caps.includes("users:read") && (

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { getMyApplication } from "../../services/sellerApi";
 import "./sellerDashboard.css";
+import SellerMenu from "../../components/Layout/SellerMenu";
 
 const SellerDashboard = () => {
   const navigate = useNavigate();
@@ -189,6 +190,7 @@ const SellerDashboard = () => {
   if (loading) {
     return (
       <Layout>
+        <SellerMenu />
         <div className="container mt-5">
           <div className="text-center">
             <Loader className="spinner" />
@@ -199,7 +201,7 @@ const SellerDashboard = () => {
     );
   }
 
-  if (!application || application.status !== "active") {
+  if (!application || !["active", "approved"].includes(application.status)) {
     return (
       <Layout>
         <div className="container mt-5">
@@ -223,6 +225,7 @@ const SellerDashboard = () => {
 
   return (
     <Layout>
+      <SellerMenu />
       <div className="container-fluid mt-4 mb-5">
         <div className="page-header mb-4">
           <h1>Seller Dashboard</h1>

@@ -2,12 +2,13 @@ import React, { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { FaFacebook, FaInstagram, FaLinkedin, FaYoutube } from "react-icons/fa";
 import api from "../../services/api";
+import { isPortalPath } from "../../utils/portalRoutes";
 
 const Footer = () => {
   const [content, setContent] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const location = useLocation();
-  const isAdminRoute = location.pathname.toLowerCase().startsWith("/dashboard/admin");
+  const isAdminRoute = isPortalPath(location.pathname); // admin panel and vendor portal
   const adminContentOffset = isAdminRoute && !isMobile
     ? "var(--admin-sidebar-width, 250px)"
     : "0";
@@ -140,7 +141,15 @@ const Footer = () => {
             Contact
           </NavLink>
           <span style={dividerStyle}>|</span>
-          
+
+          <NavLink
+            to="/seller-wizard"
+            style={({ isActive }) => ({ ...linkStyle, ...(isActive ? activeStyle : {}) })}
+          >
+            Sell on Smitox
+          </NavLink>
+          <span style={dividerStyle}>|</span>
+
           <NavLink 
             to="/policy"
             style={({ isActive }) => ({ ...linkStyle, ...(isActive ? activeStyle : {}) })}

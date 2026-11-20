@@ -6,11 +6,14 @@ import { useNavigate } from "react-router-dom";
 import OptimizedImage from "../../components/OptimizedImage";
 import { useAuth } from "../../context/auth"; // <-- Add this import
 import AdminMenu from "./../../components/Layout/AdminMenu";
+import SellerMenu from "./../../components/Layout/SellerMenu";
 import Layout from "./../../components/Layout/Layout";
 
 const { Option } = Select;
 
-const CreateProduct = () => {
+const CreateProduct = ({ portal = "admin" }) => {
+  const isSeller = portal === "seller"; // vendor portal: own listings only
+  const listPath = isSeller ? "/seller/listings" : "/dashboard/admin/products";
   const navigate = useNavigate();
   const [auth] = useAuth(); // <-- Add this line
   const [categories, setCategories] = useState([]);
@@ -233,7 +236,7 @@ const CreateProduct = () => {
       if (data?.success) {
         toast.dismiss();
         toast.success("Product Created Successfully");
-        navigate("/dashboard/admin/products");
+        navigate(listPath);
       } else {
         toast.dismiss();
         toast.error(data?.message || "Error creating product");
@@ -281,7 +284,7 @@ const CreateProduct = () => {
 
   return (
     <Layout title={"Dashboard - Create Product"}>
-      <AdminMenu />
+      {isSeller ? <SellerMenu /> : <AdminMenu />}
       <div className="container-fluid dashboard">
         <div className="row">
           <div className="col-md-12">
@@ -508,7 +511,7 @@ const CreateProduct = () => {
                 )}
               </div>
 
-              {/* Custom Order */}
+              {!isSeller && (
               <div className="mb-3">
                 <label htmlFor="customOrder" className="form-label">
                   Custom Order
@@ -528,6 +531,7 @@ const CreateProduct = () => {
                   assigned the next available position.
                 </small>
               </div>
+              )}
 
               <div className="mb-3">
                 <label htmlFor="productName" className="form-label">

@@ -41,6 +41,7 @@ const SubscriptionManagement = () => {
     billingCycle: "monthly",
     includedCapabilities: [],
     excludedCapabilities: [],
+    maxProducts: "",
     isActive: true,
     isFree: false,
   });
@@ -252,7 +253,16 @@ const SubscriptionManagement = () => {
 
       const method = editingId ? "put" : "post";
 
-      const response = await axios[method](url, formData, {
+      // Blank listing limit = unlimited (null)
+      const payload = {
+        ...formData,
+        maxProducts:
+          formData.maxProducts === "" || formData.maxProducts === null
+            ? null
+            : Math.max(0, parseInt(formData.maxProducts, 10) || 0),
+      };
+
+      const response = await axios[method](url, payload, {
         headers: {
           Authorization: auth?.token,
         },
@@ -269,6 +279,7 @@ const SubscriptionManagement = () => {
           billingCycle: "monthly",
           includedCapabilities: [],
           excludedCapabilities: [],
+          maxProducts: "",
           isActive: true,
           isFree: false,
         });
@@ -293,6 +304,7 @@ const SubscriptionManagement = () => {
       excludedCapabilities: plan.excludedCapabilities || [],
       isActive: plan.isActive,
       isFree: plan.isFree,
+      maxProducts: plan.maxProducts ?? "",
     });
     setEditingId(plan._id);
     setShowForm(true);
@@ -443,6 +455,7 @@ const SubscriptionManagement = () => {
                       billingCycle: "monthly",
                       includedCapabilities: [],
                       excludedCapabilities: [],
+                      maxProducts: "",
                       isActive: true,
                       isFree: false,
                     });
@@ -514,6 +527,20 @@ const SubscriptionManagement = () => {
                           value={formData.price}
                           onChange={handleInputChange}
                           placeholder="0"
+                          min="0"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Max listings per vendor</label>
+                        <input
+                          type="number"
+                          name="maxProducts"
+                          value={formData.maxProducts}
+                          onChange={handleInputChange}
+                          placeholder="Leave empty for unlimited"
                           min="0"
                         />
                       </div>
