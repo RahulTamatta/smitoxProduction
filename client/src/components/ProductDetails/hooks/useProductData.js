@@ -9,6 +9,8 @@ export const useProductData = () => {
   const [auth] = useAuth();
   const [product, setProduct] = useState({});
   const [productsForYou, setProductsForYou] = useState([]);
+  const [linkedProducts, setLinkedProducts] = useState([]);
+  const [similarProducts, setSimilarProducts] = useState([]);
   const [isNetworkError, setIsNetworkError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [retryAttempts, setRetryAttempts] = useState(0);
@@ -30,6 +32,8 @@ export const useProductData = () => {
       // We no longer setProduct({}) here so the old product stays visible 
       // under the loading overlay until the new one arrives.
       setProductsForYou([]);
+      setLinkedProducts([]);
+      setSimilarProducts([]);
       prevSlugRef.current = params?.slug;
     }
 
@@ -46,8 +50,9 @@ export const useProductData = () => {
     // Subcategory is optional but category is required
     if (categoryId) {
       getProductsForYou(categoryId, subcategoryId);
+      if (product._id) getRelatedProducts(product._id, categoryId);
     }
-  }, [product.category, product.subcategory]);
+  }, [product._id, product.category, product.subcategory]);
 
   // Handle network status
   useEffect(() => {
@@ -170,6 +175,22 @@ export const useProductData = () => {
     }
   };
 
+  // Linked (shared FK tags) + similar (same subcategory/category) products
+  const getRelatedProducts = async (productId, categoryId) => {
+    try {
+      const { data } = await axios.get(
+        `/api/v1/product/related-product/${productId}/${categoryId}?limit=8`
+      );
+      if (data?.success) {
+        setLinkedProducts((data.linkedProducts || []).map(normalizeProductForCard));
+        setSimilarProducts((data.similarProducts || []).map(normalizeProductForCard));
+      }
+    } catch (error) {
+      setLinkedProducts([]);
+      setSimilarProducts([]);
+    }
+  };
+
   const checkPincode = async (pincode) => {
     try {
       const { data } = await axios.get("/api/v1/pincodes/get-pincodes");
@@ -213,6 +234,8 @@ export const useProductData = () => {
   return {
     product,
     productsForYou,
+    linkedProducts,
+    similarProducts,
     isNetworkError,
     isLoading,
     normalizeProductForCard
