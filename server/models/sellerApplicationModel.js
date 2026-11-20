@@ -62,6 +62,13 @@ const sellerApplicationSchema = new mongoose.Schema(
         default: null,
       },
       createdAt: Date,
+      razorpayPaymentId: String,
+      // Plan being bought by an upgrade; applied only once the payment is verified
+      pendingPlanId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "SubscriptionPlan",
+        default: null,
+      },
     },
     selectedPlanId: {
       type: mongoose.Schema.Types.ObjectId,

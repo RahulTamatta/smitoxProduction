@@ -23,9 +23,63 @@ const getRazorpayInstance = () => {
 /**
  * Save draft application
  */
+// ---------------------------------------------------------------------------
+// Simple KYC: identity document (Aadhaar or PAN) + address + basic business info.
+// Bank/GST details are no longer mandatory to apply.
+// ---------------------------------------------------------------------------
+const SERVER_OWNED_FIELDS = [
+  "_id", "userId", "status", "submittedAt", "reviewedBy", "reviewedAt", "reviewNotes", "lockPlan",
+  "payment", "selectedPlanSnapshot", "planStartDate", "planExpiryDate", "planStatus",
+  "gracePeriodEndDate", "renewalHistory", "createdAt", "updatedAt", "__v",
+  // Document paths may only come from real uploads, never from request text
+  "identityProofImage", "addressProofImage", "gstImage", "panImage", "cancelledCheckImage",
+];
+
+// Applicant-supplied fields only: drops server-owned keys and dotted / $ operator keys.
+const applicantFields = (body = {}) => {
+  const out = { ...body };
+  for (const key of Object.keys(out)) {
+    if (SERVER_OWNED_FIELDS.includes(key) || key.includes(".") || key.startsWith("$")) delete out[key];
+  }
+  return out;
+};
+
+const MIN_KYC_FIELDS = [
+  "firstName", "lastName", "email", "phone",
+  "addressLine1", "city", "state", "pincode",
+  "identityProofType", "identityProofNumber", "identityProofImage",
+  "businessName",
+  "termsAccepted", "privacyAccepted",
+];
+
+const missingKycFields = (application) =>
+  MIN_KYC_FIELDS.filter((field) => {
+    const value = application[field];
+    if (field.endsWith("Accepted")) return value !== true;
+    if (typeof value === "string") return value.trim() === "";
+    return !value;
+  });
+
+// Validates the ID number format; Aadhaar is stored masked (last 4 digits only).
+// Returns an error message, or null when fine / not provided.
+const normalizeIdentity = (data) => {
+  if (typeof data.identityProofNumber !== "string") return null;
+  const type = data.identityProofType || "aadhar";
+  const num = data.identityProofNumber.replace(/[\s-]/g, "").toUpperCase();
+  if (!num) return null;
+  if (type === "aadhar") {
+    if (/^\d{12}$/.test(num)) data.identityProofNumber = `XXXXXXXX${num.slice(-4)}`;
+    else if (!/^X{8}\d{4}$/.test(num)) return "Enter a valid 12-digit Aadhaar number";
+  } else if (type === "pan") {
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(num)) return "Enter a valid PAN (for example ABCDE1234F)";
+    data.identityProofNumber = num;
+  }
+  return null;
+};
+
 export const saveDraftApplication = async (req, res) => {
   try {
-    const { selectedPlanId: bodyPlanId, ...applicationData } = req.body;
+    const { selectedPlanId: bodyPlanId, ...applicationData } = applicantFields(req.body);
     const selectedPlanId = bodyPlanId || req.query?.selectedPlanId;
     const userId = req.user._id;
 
@@ -86,6 +140,9 @@ export const saveDraftApplication = async (req, res) => {
       selectedPlanId,
       selectedPlanSnapshot: planSnapshot,
     };
+
+    const identityError = normalizeIdentity(updateData);
+    if (identityError) return res.status(400).send({ success: false, message: identityError });
 
     // Add file paths if uploaded
     if (identityProofImage) updateData.identityProofImage = getLocalPath(identityProofImage);
@@ -177,16 +234,7 @@ export const submitApplication = async (req, res) => {
     }
 
     // Validate essential fields are filled before submission
-    // NOTE: For testing, identityProofImage and cancelledCheckImage are not treated as mandatory.
-    const requiredFields = [
-      "firstName", "lastName", "email", "phone",
-      "addressLine1", "city", "state", "pincode",
-      "identityProofNumber",
-      "addressProofImage",
-      "businessName",
-      "accountHolderName", "accountNumber", "ifscCode", "bankName",
-      "termsAccepted", "privacyAccepted"
-    ];
+    const requiredFields = MIN_KYC_FIELDS;
 
     const missingFields = [];
     for (const field of requiredFields) {
@@ -873,7 +921,7 @@ export const renewPlan = async (req, res) => {
 
     // Get current application
     const application = await sellerApplicationModel
-      .findOne({ userId, status: "active" })
+      .findOne({ userId, status: { $in: ["active", "approved"] } })
       .populate("selectedPlanId");
 
     if (!application) {
@@ -999,7 +1047,7 @@ export const upgradePlan = async (req, res) => {
 
     // Get current application
     const application = await sellerApplicationModel
-      .findOne({ userId, status: "active" })
+      .findOne({ userId, status: { $in: ["active", "approved"] } })
       .populate("selectedPlanId");
 
     if (!application) {
@@ -1103,9 +1151,8 @@ export const upgradePlan = async (req, res) => {
       currency: "INR",
       status: "pending",
       createdAt: new Date(),
+      pendingPlanId: newPlan._id, // applied by verifyPayment once paid
     };
-    // Temporarily store new plan ID for upgrade
-    application._pendingUpgradePlanId = newPlan._id;
     await application.save();
 
     res.status(200).send({
@@ -1191,12 +1238,57 @@ export const verifyPayment = async (req, res) => {
       });
     }
 
-    const plan = application.selectedPlanId;
+    // Only the applicant can confirm their own payment, and each payment only once.
+    // (Stops a stored checkout response being replayed, e.g. to undo a suspension.)
+    if (String(application.userId) !== String(userId)) {
+      return res.status(403).send({
+        success: false,
+        message: "This payment does not belong to your account",
+      });
+    }
+    if (application.payment?.status === "paid") {
+      return res.status(200).send({
+        success: true,
+        message: "Payment already verified",
+        alreadyProcessed: true,
+      });
+    }
+    if (application.status === "suspended") {
+      return res.status(403).send({
+        success: false,
+        message: "This seller account is suspended. Please contact support.",
+      });
+    }
+
+    let plan = application.selectedPlanId;
+
+    // Upgrade: switch to the plan that was actually paid for
+    if (application.payment?.pendingPlanId) {
+      const newPlan = await subscriptionPlanModel.findById(application.payment.pendingPlanId);
+      if (newPlan) {
+        application.selectedPlanId = newPlan._id;
+        application.selectedPlanSnapshot = {
+          _id: newPlan._id,
+          name: newPlan.name,
+          price: newPlan.price,
+          currency: newPlan.currency || "INR",
+          billingCycle: newPlan.billingCycle,
+          isFree: newPlan.isFree,
+          includedCapabilities: newPlan.includedCapabilities || [],
+          excludedCapabilities: newPlan.excludedCapabilities || [],
+          version: newPlan.version || 1,
+          capturedAt: new Date(),
+        };
+        plan = newPlan;
+      }
+      application.payment.pendingPlanId = null;
+    }
 
     // Update Application
+    const CYCLE_DAYS = { monthly: 30, quarterly: 90, yearly: 365 };
     const planStartDate = new Date();
     const planExpiryDate = new Date();
-    planExpiryDate.setDate(planExpiryDate.getDate() + 30); // Monthly default, should use plan cycle
+    planExpiryDate.setDate(planExpiryDate.getDate() + (CYCLE_DAYS[plan?.billingCycle] || 30));
     const gracePeriodEndDate = new Date(planExpiryDate);
     gracePeriodEndDate.setDate(gracePeriodEndDate.getDate() + 30);
 
@@ -1436,7 +1528,7 @@ export const requestReupload = async (req, res) => {
  */
 export const submitApplicationDirect = async (req, res) => {
   try {
-    const { selectedPlanId: bodyPlanId, ...applicationData } = req.body;
+    const { selectedPlanId: bodyPlanId, ...applicationData } = applicantFields(req.body);
     const selectedPlanId = bodyPlanId || req.query?.selectedPlanId;
     const userId = req.user._id;
 
@@ -1502,6 +1594,9 @@ export const submitApplicationDirect = async (req, res) => {
       gstExemptionDeclared: parseBool(applicationData.gstExemptionDeclared),
     };
 
+    const identityError = normalizeIdentity(updateData);
+    if (identityError) return res.status(400).send({ success: false, message: identityError });
+
     // Add file paths (VPS disk storage, relative paths like products)
     if (identityProofImage) updateData.identityProofImage = getLocalPath(identityProofImage);
     if (addressProofImage) updateData.addressProofImage = getLocalPath(addressProofImage);
@@ -1519,6 +1614,15 @@ export const submitApplicationDirect = async (req, res) => {
         lockPlan: false,
         email: req.user.email,
         phone: req.user.mobile_no,
+      });
+    }
+
+    const missingKyc = missingKycFields(application);
+    if (missingKyc.length > 0) {
+      return res.status(400).send({
+        success: false,
+        message: "Please complete the required details",
+        missingFields: missingKyc,
       });
     }
 
