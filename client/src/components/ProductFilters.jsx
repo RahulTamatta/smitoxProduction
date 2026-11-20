@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import axios from 'axios';
+import { useEffect, useState } from 'react';
 import { FiFilter, FiX } from 'react-icons/fi';
 
 /**
@@ -19,6 +20,26 @@ const ProductFilters = ({
         min: currentFilters.minPrice || '',
         max: currentFilters.maxPrice || '',
     });
+    const [brand, setBrand] = useState(currentFilters.brand || '');
+    const [minDiscount, setMinDiscount] = useState(currentFilters.minDiscount || '');
+    const [brands, setBrands] = useState([]);
+
+    // Brand list for the brand filter (public endpoint already used by the catalogue)
+    useEffect(() => {
+        let cancelled = false;
+        axios.get('/api/v1/brand/get-brands')
+            .then(({ data }) => { if (!cancelled && data?.success) setBrands(data.brands || []); })
+            .catch(() => {});
+        return () => { cancelled = true; };
+    }, []);
+
+    const discountOptions = [
+        { value: '', label: 'Any discount' },
+        { value: '10', label: '10% or more' },
+        { value: '25', label: '25% or more' },
+        { value: '40', label: '40% or more' },
+        { value: '50', label: '50% or more' },
+    ];
 
     const sortOptions = [
         { value: '', label: 'Default Sort' },
@@ -33,6 +54,8 @@ const ProductFilters = ({
             category: selectedCategory,
             minPrice: priceRange.min,
             maxPrice: priceRange.max,
+            brand,
+            minDiscount,
         };
         onFilterChange(filters);
         setIsOpen(false);
@@ -41,11 +64,13 @@ const ProductFilters = ({
     const handleClearFilters = () => {
         setSelectedCategory('');
         setPriceRange({ min: '', max: '' });
+        setBrand('');
+        setMinDiscount('');
         onFilterChange({});
         onSortChange('');
     };
 
-    const hasActiveFilters = selectedCategory || priceRange.min || priceRange.max || currentSort;
+    const hasActiveFilters = selectedCategory || priceRange.min || priceRange.max || brand || minDiscount || currentSort;
 
     return (
         <div className="filters-container mb-4">
@@ -168,6 +193,41 @@ const ProductFilters = ({
                                     />
                                 </div>
                             </div>
+
+                            {/* Brand */}
+                            {brands.length > 0 && (
+                                <div className="filter-group mb-4">
+                                    <label className="filter-label">Brand</label>
+                                    <select
+                                        className="form-select custom-input"
+                                        value={brand}
+                                        onChange={(e) => setBrand(e.target.value)}
+                                    >
+                                        <option value="">All Brands</option>
+                                        {brands.map(b => (
+                                            <option key={b._id} value={b._id}>{b.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {/* Discount */}
+                            <div className="filter-group mb-4">
+                                <label className="filter-label">Discount</label>
+                                <div className="d-grid gap-2">
+                                    {discountOptions.map(opt => (
+                                        <button
+                                            key={opt.value || 'any'}
+                                            type="button"
+                                            onClick={() => setMinDiscount(opt.value)}
+                                            className={`sort-option-btn ${minDiscount === opt.value ? 'active' : ''}`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
                         </div>
 
                         <div className="filter-actions d-flex gap-2 pt-4 border-top">

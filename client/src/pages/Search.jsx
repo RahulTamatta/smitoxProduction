@@ -51,7 +51,8 @@ const Search = () => {
   const hasMore = productsData?.hasNextPage || false;
 
   const handleFilterChange = (newFilters) => {
-    setFilters(newFilters);
+    // Keep the search keyword when filters are applied or cleared
+    setFilters({ ...newFilters, search: values.keyword });
     setPage(1);
   };
 

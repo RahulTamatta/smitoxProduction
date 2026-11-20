@@ -24,6 +24,8 @@ export const fetchProducts = async ({ page = 1, limit = 12, filters = {}, sortBy
     if (filters.minPrice) params.append('minPrice', filters.minPrice);
     if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
     if (filters.search) params.append('search', filters.search);
+    if (filters.brand) params.append('brand', filters.brand);
+    if (filters.minDiscount) params.append('minDiscount', filters.minDiscount);
 
     const { data } = await api.get(`/product/product-list/${page}?${params.toString()}`);
     return data;

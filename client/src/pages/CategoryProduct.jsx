@@ -82,7 +82,17 @@ const CategoryProduct = () => {
     : [];
 
   const handleFilterChange = (newFilters) => {
-    setFilters(newFilters);
+    setFilters((prev) => {
+      // No category picked in the drawer: keep this page's category/subcategory context
+      if (!newFilters.category) {
+        return { ...newFilters, category: prev.category, subcategory: prev.subcategory };
+      }
+      // Switched to a different category: the old subcategory no longer applies
+      if (newFilters.category !== prev.category) {
+        return { ...newFilters, subcategory: undefined };
+      }
+      return newFilters;
+    });
   };
 
   const handleSortChange = (newSort) => {
