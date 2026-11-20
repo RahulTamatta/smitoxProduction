@@ -20,6 +20,7 @@ import {
 import { requireSignIn } from "../middlewares/authMiddleware.js";
 import { upload } from "../middlewares/multer.js";
 import { auditLog, requireCapability } from "../middlewares/rbacMiddleware.js";
+import { scopeSellerProducts } from "../middlewares/sellerScope.js";
 // import formidable from "express-formidable";
 import Cart from "../models/cartModel.js";
 import productModel from "../models/productModel.js";
@@ -33,6 +34,7 @@ router.post(
   requireSignIn,
   requireCapability("products:write"),
   upload.fields([{ name: 'photo', maxCount: 1 }, { name: 'images', maxCount: 10 }]),
+  scopeSellerProducts("create"),
   createProductController
 );
 // router.post('/generate-sku', generateSKU);
@@ -43,6 +45,7 @@ router.put(
   requireSignIn,
   requireCapability("products:write"),
   upload.fields([{ name: 'photo', maxCount: 1 }, { name: 'images', maxCount: 10 }]),
+  scopeSellerProducts("existing"),
   updateProductController
 );
 
@@ -51,6 +54,7 @@ router.put(
   "/updateStatus/products/:id",
   requireSignIn,
   requireCapability("products:write"),
+  scopeSellerProducts("existing"),
   async (req, res) => {
     try {
       // Ensure `isActive` is provided in the request body (can be "0" or "1")
@@ -117,12 +121,13 @@ router.put(
 
 
 router.get("/get-product/:slug", getSingleProductController);
-router.get("/admin/get-product/:slug", requireSignIn, requireCapability("products:read"), getAdminSingleProductController);
+router.get("/admin/get-product/:slug", requireSignIn, requireCapability("products:read"), scopeSellerProducts("slug"), getAdminSingleProductController);
 router.get("/product-photo/:pid", productPhotoController);
 router.delete(
   "/delete-product/:pid",
   requireSignIn,
   requireCapability("products:delete"),
+  scopeSellerProducts("existing"),
   auditLog("delete", "product", "high"),
   deleteProductController
 );

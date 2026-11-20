@@ -12,6 +12,12 @@ const productSchema = new Schema(
       required: true,
     },
     custom_order: { type: Number, default: 0 },
+    // Admin-controlled vendor placement. Higher boost sorts first on the default
+    // storefront ordering; 0 (default) leaves the existing custom_order ranking untouched.
+    boost: { type: Number, default: 0 },
+    // True when the product was deactivated by an admin hiding its vendor, so it can
+    // be restored without re-activating listings the vendor turned off themselves.
+    adminHold: { type: Boolean, default: false },
     description: {
       type: String,
       required: true,
@@ -135,6 +141,23 @@ const productSchema = new Schema(
   },
   { timestamps: true }
 );
+
+// New vendor listings inherit the vendor's admin-set placement boost.
+productSchema.pre('save', async function (next) {
+  try {
+    if (this.isNew && this.userId && !this.boost) {
+      const profile = await mongoose
+        .model('SellerProfile')
+        .findOne({ userId: this.userId })
+        .select('displayPriority')
+        .lean();
+      if (profile?.displayPriority) this.boost = profile.displayPriority;
+    }
+    next();
+  } catch (e) {
+    next();
+  }
+});
 
 // Index for faster queries
 productSchema.index({ name: 'text' });

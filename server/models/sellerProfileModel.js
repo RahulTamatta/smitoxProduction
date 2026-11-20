@@ -38,6 +38,11 @@ const sellerProfileSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    // Admin-controlled storefront placement for this vendor's listings (higher = earlier)
+    displayPriority: {
+      type: Number,
+      default: 0,
+    },
     // Profile Status
     status: {
       type: String,

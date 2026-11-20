@@ -88,6 +88,23 @@ export const SELLER_DENY_LIST = [
   'settings:write',
   'orders:delete',
   'orders:refund', // Can be granted via feature flag
+  // Vendors manage only their own listings/orders through the seller portal
+  // (server/routes/sellerPortalRoutes.js). They must not hold platform-wide
+  // staff powers.
+  'users:read',
+  'users:write',
+  'orders:read',
+  'orders:write',
+  'orders:status',
+  'categories:write',
+  'categories:delete',
+  'banners:write',
+  'banners:delete',
+  'productforyou:write',
+  'productforyou:delete',
+  'analytics:read',
+  'analytics:export',
+  'products:bulk',
 ];
 
 // Role to capabilities mapping
