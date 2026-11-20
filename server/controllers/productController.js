@@ -468,7 +468,7 @@ export const productListController = async (req, res) => {
   try {
     const perPage = parseInt(req.query.limit) || 12;
     const page = parseInt(req.params.page) || 1;
-    const { category, subcategory, minPrice, maxPrice, sortBy, search } = req.query;
+    const { category, subcategory, minPrice, maxPrice, sortBy, search, brand, cod, minDiscount } = req.query;
     const skip = (page - 1) * perPage;
 
     // Build the filter query
@@ -548,8 +548,27 @@ export const productListController = async (req, res) => {
       if (maxPrice) filterQuery.perPiecePrice.$lte = parseFloat(maxPrice);
     }
 
-    // Sorting logic
-    let sortQuery = { custom_order: 1, createdAt: -1 }; // Default: Popular
+    // Optional storefront filters (all backward compatible; absent = unchanged results)
+    if (brand && mongoose.Types.ObjectId.isValid(String(brand))) {
+      filterQuery.brand = new mongoose.Types.ObjectId(String(brand));
+    }
+    if (cod === "true" || cod === "1") {
+      filterQuery.allowCOD = true;
+    }
+    const minDisc = parseFloat(minDiscount);
+    if (Number.isFinite(minDisc) && minDisc > 0 && minDisc < 100) {
+      // discount % = (mrp - price) / mrp * 100
+      filterQuery.$expr = {
+        $and: [
+          { $gt: ["$mrp", 0] },
+          { $gte: [{ $multiply: [{ $divide: [{ $subtract: ["$mrp", "$perPiecePrice"] }, "$mrp"] }, 100] }, minDisc] },
+        ],
+      };
+    }
+
+    // Sorting logic. `boost` is the admin-controlled vendor placement (default 0 on every
+    // product, so ordering is unchanged until an admin boosts a vendor).
+    let sortQuery = { boost: -1, custom_order: 1, createdAt: -1 }; // Default: Popular
     if (sortBy) {
       switch (sortBy) {
         case 'price_asc':
@@ -562,7 +581,7 @@ export const productListController = async (req, res) => {
           sortQuery = { createdAt: -1 };
           break;
         case 'popular':
-          sortQuery = { custom_order: 1, createdAt: -1 };
+          sortQuery = { boost: -1, custom_order: 1, createdAt: -1 };
           break;
       }
     }
