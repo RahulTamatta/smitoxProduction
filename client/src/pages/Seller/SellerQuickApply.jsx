@@ -11,7 +11,7 @@ import {
 import states from "../../utils/states";
 
 // Short "Become a Seller" flow with minimal KYC: plan, business basics, address,
-// one identity document (Aadhaar or PAN), review. Admin review and (for paid
+// Aadhaar + PAN (number and photo of each), review. Admin review and (for paid
 // plans) payment continue on the existing /seller/status page.
 
 const STEPS = ["Plan", "Business", "Address", "KYC", "Review"];
@@ -42,16 +42,17 @@ const EMPTY = {
   city: "",
   state: "",
   pincode: "",
-  identityProofType: "aadhar",
-  identityProofNumber: "",
+  aadhaarNumber: "",
+  panNumber: "",
   termsAccepted: false,
   privacyAccepted: false,
 };
 
-const cleanIdNumber = (type, value) =>
-  type === "aadhar" ? value.replace(/\D/g, "") : value.replace(/\s/g, "").toUpperCase();
+const cleanAadhaar = (v) => v.replace(/\D/g, "");
+const cleanPan = (v) => v.replace(/\s/g, "").toUpperCase();
 
-const validateStep = (step, form, file) => {
+// files: { aadhaar: File|null, pan: File|null }; existing: paths already on the server
+const validateStep = (step, form, files, existing = {}) => {
   const e = {};
   if (step === 0 && !form.selectedPlanId) e.selectedPlanId = "Choose a plan to continue";
   if (step === 1) {
@@ -70,14 +71,16 @@ const validateStep = (step, form, file) => {
     if (!/^\d{6}$/.test(form.pincode.trim())) e.pincode = "Enter a 6-digit pincode";
   }
   if (step === 3) {
-    const num = cleanIdNumber(form.identityProofType, form.identityProofNumber);
-    if (form.identityProofType === "aadhar" && !/^\d{12}$/.test(num)) {
-      e.identityProofNumber = "Aadhaar number must be 12 digits";
+    const aadhaar = cleanAadhaar(form.aadhaarNumber);
+    // A resubmission may keep the masked Aadhaar already on file
+    if (!/^\d{12}$/.test(aadhaar) && !(existing.aadhaarMasked && form.aadhaarNumber === existing.aadhaarMasked)) {
+      e.aadhaarNumber = "Aadhaar number must be 12 digits";
     }
-    if (form.identityProofType === "pan" && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(num)) {
-      e.identityProofNumber = "Enter a valid PAN, e.g. ABCDE1234F";
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(cleanPan(form.panNumber))) {
+      e.panNumber = "Enter a valid PAN, e.g. ABCDE1234F";
     }
-    if (!file) e.identityProofImage = "Upload a photo or scan of the card";
+    if (!files.aadhaar && !existing.aadhaarImage) e.aadhaarImage = "Upload a photo or scan of your Aadhaar card";
+    if (!files.pan && !existing.panImage) e.panImage = "Upload a photo or scan of your PAN card";
   }
   if (step === 4) {
     if (!form.termsAccepted) e.termsAccepted = "Please accept the Terms of Use";
@@ -103,7 +106,9 @@ const SellerQuickApply = () => {
 
   const [plans, setPlans] = useState([]);
   const [form, setForm] = useState(EMPTY);
-  const [file, setFile] = useState(null);
+  // Separate slots so choosing one document never clears the other
+  const [files, setFiles] = useState({ aadhaar: null, pan: null });
+  const [existing, setExisting] = useState({});
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
@@ -149,16 +154,26 @@ const SellerQuickApply = () => {
           for (const key of [
             "firstName", "lastName", "email", "phone", "storeName", "businessType",
             "businessCategory", "businessDescription", "addressLine1", "addressLine2",
-            "city", "state", "pincode", "identityProofType",
+            "city", "state", "pincode", "panNumber",
           ]) {
             if (app[key]) next[key] = String(app[key]);
           }
           next.selectedPlanId = app.selectedPlan?._id || app.selectedPlanId || "";
           if (!next.storeName && app.businessName) next.storeName = app.businessName;
+          if (app.identityProofType === "aadhar" && app.identityProofNumber) {
+            next.aadhaarNumber = app.identityProofNumber;
+          }
         }
         return next;
       });
       if (app?.reviewNotes && app.status !== "draft") setReviewNote(app.reviewNotes);
+      if (app) {
+        setExisting({
+          aadhaarImage: app.identityProofType === "aadhar" ? app.identityProofImage : null,
+          aadhaarMasked: app.identityProofType === "aadhar" ? app.identityProofNumber : "",
+          panImage: app.panImage || null,
+        });
+      }
       setLoading(false);
     })();
     return () => {
@@ -177,20 +192,21 @@ const SellerQuickApply = () => {
     setErrors((prev) => ({ ...prev, [key]: undefined }));
   };
 
-  const onFile = (e) => {
+  const onFile = (slot) => (e) => {
+    const errKey = `${slot}Image`;
     const f = e.target.files?.[0];
     if (!f) return;
     if (f.size > MAX_FILE_BYTES) {
-      setErrors((prev) => ({ ...prev, identityProofImage: "File must be 5 MB or smaller" }));
+      setErrors((prev) => ({ ...prev, [errKey]: "File must be 5 MB or smaller" }));
       e.target.value = "";
       return;
     }
-    setFile(f);
-    setErrors((prev) => ({ ...prev, identityProofImage: undefined }));
+    setFiles((prev) => ({ ...prev, [slot]: f }));
+    setErrors((prev) => ({ ...prev, [errKey]: undefined }));
   };
 
   const next = () => {
-    const e = validateStep(step, form, file);
+    const e = validateStep(step, form, files, existing);
     setErrors(e);
     if (Object.keys(e).length === 0) {
       setStep((s) => Math.min(s + 1, STEPS.length - 1));
@@ -202,7 +218,7 @@ const SellerQuickApply = () => {
   const submit = async () => {
     // Re-validate everything so an edited earlier step can't slip through
     for (let i = 0; i < STEPS.length; i += 1) {
-      const e = validateStep(i, form, file);
+      const e = validateStep(i, form, files, existing);
       if (Object.keys(e).length) {
         setErrors(e);
         setStep(i);
@@ -213,7 +229,7 @@ const SellerQuickApply = () => {
     setSubmitError("");
     try {
       const fd = new FormData();
-      const idNumber = cleanIdNumber(form.identityProofType, form.identityProofNumber);
+      const aadhaar = cleanAadhaar(form.aadhaarNumber);
       const payload = {
         selectedPlanId: form.selectedPlanId,
         storeName: form.storeName.trim(),
@@ -230,13 +246,16 @@ const SellerQuickApply = () => {
         city: form.city.trim(),
         state: form.state,
         pincode: form.pincode.trim(),
-        identityProofType: form.identityProofType,
-        identityProofNumber: idNumber,
+        identityProofType: "aadhar",
+        // Unchanged masked value on resubmit is accepted by the server as-is
+        identityProofNumber: aadhaar.length === 12 ? aadhaar : form.aadhaarNumber,
+        panNumber: cleanPan(form.panNumber),
         termsAccepted: "true",
         privacyAccepted: "true",
       };
       Object.entries(payload).forEach(([k, v]) => fd.append(k, v));
-      fd.append("identityProofImage", file);
+      if (files.aadhaar) fd.append("identityProofImage", files.aadhaar);
+      if (files.pan) fd.append("panImage", files.pan);
 
       const res = await submitApplicationDirect(fd, auth.token);
       if (!res?.success) throw res || new Error("Submission failed");
@@ -252,10 +271,7 @@ const SellerQuickApply = () => {
     }
   };
 
-  const maskedId =
-    form.identityProofType === "aadhar"
-      ? `XXXX XXXX ${cleanIdNumber("aadhar", form.identityProofNumber).slice(-4)}`
-      : cleanIdNumber("pan", form.identityProofNumber);
+  const maskedAadhaar = `XXXX XXXX ${cleanAadhaar(form.aadhaarNumber).slice(-4)}`;
 
   const priceLabel = (p) => (p.isFree || !p.price ? "Free" : `₹${Number(p.price).toLocaleString("en-IN")} / ${p.billingCycle}`);
 
@@ -418,49 +434,62 @@ const SellerQuickApply = () => {
 
               {step === 3 && (
                 <>
-                  <h2 className="h5 mb-3">Identity (KYC)</h2>
-                  <Field label="Document">
-                    <div className="d-flex gap-4">
-                      {[["aadhar", "Aadhaar card"], ["pan", "PAN card"]].map(([v, l]) => (
-                        <label key={v} className="form-check">
-                          <input
-                            type="radio"
-                            className="form-check-input"
-                            name="identityProofType"
-                            value={v}
-                            checked={form.identityProofType === v}
-                            onChange={() => {
-                              setForm((prev) => ({ ...prev, identityProofType: v, identityProofNumber: "" }));
-                              setErrors((prev) => ({ ...prev, identityProofNumber: undefined }));
-                            }}
-                          />
-                          <span className="form-check-label">{l}</span>
-                        </label>
-                      ))}
+                  <h2 className="h5 mb-1">Identity (KYC)</h2>
+                  <p className="text-muted small mb-3">Both Aadhaar and PAN are required.</p>
+                  {[
+                    {
+                      slot: "aadhaar",
+                      title: "Aadhaar card",
+                      numKey: "aadhaarNumber",
+                      numLabel: "Aadhaar number",
+                      placeholder: "1234 5678 9012",
+                      maxLength: 14,
+                      hint: "We only keep the last 4 digits of your Aadhaar number.",
+                      existingFile: existing.aadhaarImage,
+                    },
+                    {
+                      slot: "pan",
+                      title: "PAN card",
+                      numKey: "panNumber",
+                      numLabel: "PAN number",
+                      placeholder: "ABCDE1234F",
+                      maxLength: 10,
+                      existingFile: existing.panImage,
+                    },
+                  ].map((d) => (
+                    <div key={d.slot} className="border rounded-3 p-3 mb-3">
+                      <h3 className="h6 mb-3">{d.title}</h3>
+                      <Field label={d.numLabel} error={errors[d.numKey]} hint={d.hint}>
+                        <input
+                          className="form-control"
+                          value={form[d.numKey]}
+                          onChange={set(d.numKey)}
+                          placeholder={d.placeholder}
+                          maxLength={d.maxLength}
+                          autoComplete="off"
+                          style={d.slot === "pan" ? { textTransform: "uppercase" } : undefined}
+                        />
+                      </Field>
+                      <Field
+                        label={`Upload ${d.title}`}
+                        error={errors[`${d.slot}Image`]}
+                        hint="A clear photo or scan (JPG, PNG or PDF, up to 5 MB)."
+                      >
+                        <input
+                          id={`kyc-${d.slot}`}
+                          type="file"
+                          className="form-control"
+                          accept="image/*,application/pdf"
+                          onChange={onFile(d.slot)}
+                        />
+                        {files[d.slot] ? (
+                          <div className="small mt-1 text-success">✓ {files[d.slot].name}</div>
+                        ) : d.existingFile ? (
+                          <div className="small mt-1 text-muted">Previously uploaded. Choose a file only to replace it.</div>
+                        ) : null}
+                      </Field>
                     </div>
-                  </Field>
-                  <Field
-                    label={form.identityProofType === "aadhar" ? "Aadhaar number" : "PAN number"}
-                    error={errors.identityProofNumber}
-                    hint={form.identityProofType === "aadhar" ? "We only keep the last 4 digits of your Aadhaar number." : undefined}
-                  >
-                    <input
-                      className="form-control"
-                      value={form.identityProofNumber}
-                      onChange={set("identityProofNumber")}
-                      placeholder={form.identityProofType === "aadhar" ? "1234 5678 9012" : "ABCDE1234F"}
-                      maxLength={form.identityProofType === "aadhar" ? 14 : 10}
-                      autoComplete="off"
-                    />
-                  </Field>
-                  <Field
-                    label="Upload the card"
-                    error={errors.identityProofImage}
-                    hint="A clear photo or scan (JPG, PNG or PDF, up to 5 MB)."
-                  >
-                    <input type="file" className="form-control" accept="image/*,application/pdf" onChange={onFile} />
-                    {file && <div className="small mt-1">Selected: {file.name}</div>}
-                  </Field>
+                  ))}
                 </>
               )}
 
@@ -476,8 +505,10 @@ const SellerQuickApply = () => {
                       ["Mobile", form.phone],
                       ["Business type", (BUSINESS_TYPES.find(([v]) => v === form.businessType) || [])[1]],
                       ["Address", [form.addressLine1, form.addressLine2, form.city, form.state, form.pincode].filter(Boolean).join(", ")],
-                      ["ID", `${form.identityProofType === "aadhar" ? "Aadhaar" : "PAN"} ${maskedId}`],
-                      ["Document", file?.name || "-"],
+                      ["Aadhaar", maskedAadhaar],
+                      ["Aadhaar card", files.aadhaar?.name || (existing.aadhaarImage ? "Previously uploaded" : "-")],
+                      ["PAN", cleanPan(form.panNumber)],
+                      ["PAN card", files.pan?.name || (existing.panImage ? "Previously uploaded" : "-")],
                     ].map(([k, v]) => (
                       <Fragment key={k}>
                         <dt className="col-4 text-muted fw-normal">{k}</dt>

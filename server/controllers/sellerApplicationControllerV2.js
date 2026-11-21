@@ -48,6 +48,7 @@ const MIN_KYC_FIELDS = [
   "firstName", "lastName", "email", "phone",
   "addressLine1", "city", "state", "pincode",
   "identityProofType", "identityProofNumber", "identityProofImage",
+  "panNumber", "panImage",
   "businessName",
   "termsAccepted", "privacyAccepted",
 ];
@@ -76,6 +77,23 @@ const normalizeIdentity = (data) => {
   }
   return null;
 };
+
+// PAN is collected alongside Aadhaar (both are required); validates and uppercases it.
+const normalizePan = (data) => {
+  if (typeof data.panNumber !== "string") return null;
+  const pan = data.panNumber.replace(/\s/g, "").toUpperCase();
+  if (!pan) return null;
+  if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) return "Enter a valid PAN (for example ABCDE1234F)";
+  data.panNumber = pan;
+  return null;
+};
+
+const SORTABLE_FIELDS = ["createdAt", "submittedAt", "reviewedAt", "firstName", "businessName", "status"];
+const safeSort = (sort) => {
+  const field = String(sort || "").replace(/^-/, "");
+  return SORTABLE_FIELDS.includes(field) ? String(sort) : "-createdAt";
+};
+const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export const saveDraftApplication = async (req, res) => {
   try {
@@ -141,7 +159,9 @@ export const saveDraftApplication = async (req, res) => {
       selectedPlanSnapshot: planSnapshot,
     };
 
-    const identityError = normalizeIdentity(updateData);
+    // Simple KYC collects both: Aadhaar as the identity proof, plus PAN
+    if (updateData.panNumber !== undefined) updateData.identityProofType = "aadhar";
+    const identityError = normalizeIdentity(updateData) || normalizePan(updateData);
     if (identityError) return res.status(400).send({ success: false, message: identityError });
 
     // Add file paths if uploaded
@@ -400,12 +420,15 @@ export const getSellerApplications = async (req, res) => {
       query.status = status;
     }
 
-    if (search) {
+    if (search && String(search).trim()) {
+      const rx = { $regex: escapeRegex(String(search).trim()), $options: "i" };
       query.$or = [
-        { firstName: { $regex: search, $options: "i" } },
-        { lastName: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-        { businessName: { $regex: search, $options: "i" } },
+        { firstName: rx },
+        { lastName: rx },
+        { email: rx },
+        { phone: rx },
+        { businessName: rx },
+        { storeName: rx },
       ];
     }
 
@@ -417,7 +440,7 @@ export const getSellerApplications = async (req, res) => {
       .populate("userId", "email_id user_fullname mobile_no")
       .populate("selectedPlanId", "name price billingCycle isFree")
       .populate("reviewedBy", "user_fullname email_id")
-      .sort(sort)
+      .sort(safeSort(sort))
       .skip(skip)
       .limit(pageLimit);
 
@@ -508,8 +531,30 @@ export const approveApplication = async (req, res) => {
       });
     }
 
+    // Approvable: pending review, or previously rejected / sent back for re-upload
+    // (lets admins reverse a rejection). Never re-approve an approved seller.
+    const APPROVABLE = ["submitted", "under_review", "rejected", "reupload_requested"];
+    if (!APPROVABLE.includes(application.status)) {
+      return res.status(400).send({
+        success: false,
+        message: `Cannot approve an application with status "${application.status.replace(/_/g, " ")}"`,
+      });
+    }
+
     const plan = application.selectedPlanId;
     const user = application.userId;
+    if (!plan) {
+      return res.status(400).send({
+        success: false,
+        message: "The plan chosen by this applicant no longer exists. Ask them to pick a plan again (Request Re-upload) before approving.",
+      });
+    }
+    if (!user) {
+      return res.status(400).send({
+        success: false,
+        message: "The user account for this application no longer exists",
+      });
+    }
 
     // Update application review info
     application.reviewedBy = adminId;
@@ -775,6 +820,14 @@ export const rejectApplication = async (req, res) => {
       });
     }
 
+    const REJECTABLE = ["submitted", "under_review", "reupload_requested", "approved_pending_payment", "approved_payment_failed"];
+    if (!REJECTABLE.includes(application.status)) {
+      return res.status(400).send({
+        success: false,
+        message: `Cannot reject an application with status "${application.status.replace(/_/g, " ")}"${application.status === "approved" ? ". Use Suspend for an active seller." : ""}`,
+      });
+    }
+
     // Update application
     application.status = "rejected";
     application.reviewedBy = adminId;
@@ -783,7 +836,7 @@ export const rejectApplication = async (req, res) => {
     application.lockPlan = false; // Allow reapply
     application.payment = null; // Clear payment info
 
-    await application.save();
+    await application.save({ validateBeforeSave: false });
 
     // Log audit
     await logAuditEvent({
@@ -1662,7 +1715,43 @@ export const submitApplicationDirect = async (req, res) => {
   }
 };
 
+/**
+ * Delete application (Super Admin). Live sellers must be suspended first so
+ * their seller role and profile are revoked before the record disappears.
+ */
+export const deleteApplication = async (req, res) => {
+  try {
+    const application = await sellerApplicationModel.findById(req.params.id);
+    if (!application) {
+      return res.status(404).send({ success: false, message: "Application not found" });
+    }
+    if (["approved", "approved_pending_payment", "active"].includes(application.status)) {
+      return res.status(400).send({
+        success: false,
+        message: "This seller is approved. Suspend or reject them first, then delete.",
+      });
+    }
+    await sellerApplicationModel.deleteOne({ _id: application._id });
+    await logAuditEvent({
+      actor: req.user._id,
+      actorRole: ROLES.SUPER_ADMIN,
+      action: "delete_application",
+      resourceType: "seller_application",
+      resourceId: application._id,
+      severity: "high",
+      description: `Seller application deleted (status: ${application.status})`,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+    });
+    res.status(200).send({ success: true, message: "Application deleted" });
+  } catch (error) {
+    console.error("Error deleting application:", error);
+    res.status(500).send({ success: false, message: "Error deleting application", error: error.message });
+  }
+};
+
 export default {
+  deleteApplication,
   saveDraftApplication,
   submitApplication,
   submitApplicationDirect,

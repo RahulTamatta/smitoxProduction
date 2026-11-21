@@ -257,7 +257,22 @@ export const requestReupload = async (applicationId, { reason, fields }, token) 
   }
 };
 
+/**
+ * Admin: Delete application
+ */
+export const deleteApplication = async (applicationId, token) => {
+  try {
+    const response = await axios.delete(`${API_BASE}/sellers/${applicationId}`, {
+      headers: { Authorization: token },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
 export default {
+  deleteApplication,
   saveDraftApplication,
   submitApplication,
   submitApplicationDirect,

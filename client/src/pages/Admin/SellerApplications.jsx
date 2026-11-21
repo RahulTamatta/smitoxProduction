@@ -13,6 +13,7 @@ import {
   Phone,
   RotateCcw,
   Search,
+  Trash2,
   X
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -20,6 +21,7 @@ import Layout from "../../components/Layout/Layout";
 import { useAuth } from "../../context/auth";
 import {
   approveApplication,
+  deleteApplication,
   getApplicationById,
   getSellerApplications,
   rejectApplication,
@@ -27,6 +29,23 @@ import {
   suspendSeller,
 } from "../../services/sellerApi";
 import "./sellerApplications.css";
+
+// Stored upload paths are relative ("uploads/sellers/x.jpg"); make them root-absolute
+// so they don't resolve against the admin page URL.
+const docUrl = (p) => (!p ? null : /^(https?:)?\/\//.test(p) || p.startsWith("/") ? p : `/${p}`);
+const APPROVABLE = ["submitted", "under_review", "rejected", "reupload_requested"];
+const REJECTABLE = ["submitted", "under_review", "reupload_requested", "approved_pending_payment", "approved_payment_failed"];
+const UNDELETABLE = ["approved", "approved_pending_payment", "active"];
+const SORT_OPTIONS = [
+  ["-createdAt", "Newest first"],
+  ["createdAt", "Oldest first"],
+  ["-submittedAt", "Recently submitted"],
+  ["-reviewedAt", "Recently reviewed"],
+  ["firstName", "Name (A-Z)"],
+  ["-firstName", "Name (Z-A)"],
+  ["businessName", "Business (A-Z)"],
+  ["status", "Status"],
+];
 
 const SellerApplications = () => {
   const [auth] = useAuth();
@@ -57,6 +76,7 @@ const SellerApplications = () => {
   const [reuploadFields, setReuploadFields] = useState([]);
   const [actionLoading, setActionLoading] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Fetch applications
   useEffect(() => {
@@ -89,7 +109,41 @@ const SellerApplications = () => {
     if (auth?.token) {
       fetchApplications();
     }
-  }, [filters, pagination.page, auth?.token]);
+  }, [filters, pagination.page, auth?.token, reloadKey]);
+
+  const errorText = (err, fallback) => err?.message || err?.error || fallback;
+
+  // Sort by clicking a column header: toggles asc/desc on that field
+  const toggleSort = (field) => {
+    setFilters((prev) => ({ ...prev, sort: prev.sort === `-${field}` ? field : `-${field}` }));
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
+  const sortIcon = (field) =>
+    filters.sort === field ? " ▲" : filters.sort === `-${field}` ? " ▼" : "";
+
+  const handleDelete = async (app) => {
+    if (UNDELETABLE.includes(app.status)) {
+      setError("Approved sellers can't be deleted. Suspend them first.");
+      return;
+    }
+    const name = `${app.firstName || ""} ${app.lastName || ""}`.trim() || app.email || "this applicant";
+    if (!window.confirm(`Delete the application from ${name}? This cannot be undone.`)) return;
+    try {
+      setActionLoading(true);
+      setError("");
+      const response = await deleteApplication(app._id, auth?.token);
+      if (response.success) {
+        if (selectedApp?._id === app._id) setShowDrawer(false);
+        setReloadKey((k) => k + 1);
+      } else {
+        setError(response.message || "Failed to delete application");
+      }
+    } catch (err) {
+      setError(errorText(err, "Failed to delete application"));
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   // Handle view application
   const handleViewApplication = async (appId) => {
@@ -142,7 +196,7 @@ const SellerApplications = () => {
       setActionLoading(false);
     } catch (err) {
       console.error("Approve error:", err);
-      setError(err.message || err.toString() || "Failed to approve application");
+      setError(errorText(err, "Failed to approve application"));
       setActionLoading(false);
     }
   };
@@ -185,7 +239,7 @@ const SellerApplications = () => {
       setActionLoading(false);
     } catch (err) {
       console.error("Reject error:", err);
-      setError(err.message || err.toString() || "Failed to reject application");
+      setError(errorText(err, "Failed to reject application"));
       setActionLoading(false);
     }
   };
@@ -274,10 +328,11 @@ const SellerApplications = () => {
       <table className="table table-hover">
         <thead>
           <tr>
-            <th>Applicant</th>
+            <th role="button" onClick={() => toggleSort("firstName")}>Applicant{sortIcon("firstName")}</th>
+            <th role="button" onClick={() => toggleSort("businessName")}>Business{sortIcon("businessName")}</th>
             <th>Plan</th>
-            <th>Submitted</th>
-            <th>Status</th>
+            <th role="button" onClick={() => toggleSort("createdAt")}>Submitted{sortIcon("createdAt")}</th>
+            <th role="button" onClick={() => toggleSort("status")}>Status{sortIcon("status")}</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -292,6 +347,7 @@ const SellerApplications = () => {
                   <div className="applicant-email">{app.email}</div>
                 </div>
               </td>
+              <td>{app.storeName || app.businessName || "-"}</td>
               <td>
                 <strong>
                   {app.selectedPlanSnapshot?.name ||
@@ -300,7 +356,7 @@ const SellerApplications = () => {
                 </strong>
               </td>
               <td>
-                {new Date(app.createdAt).toLocaleDateString()}
+                {new Date(app.submittedAt || app.createdAt).toLocaleDateString("en-IN")}
               </td>
               <td>{getStatusBadge(app.status)}</td>
               <td>
@@ -311,6 +367,17 @@ const SellerApplications = () => {
                   <Eye size={16} />
                   View
                 </button>
+                {!UNDELETABLE.includes(app.status) && (
+                  <button
+                    className="btn btn-sm btn-outline ms-2 text-danger"
+                    onClick={() => handleDelete(app)}
+                    disabled={actionLoading}
+                    title="Delete application"
+                  >
+                    <Trash2 size={16} />
+                    Delete
+                  </button>
+                )}
               </td>
             </tr>
           ))}
@@ -417,6 +484,12 @@ const SellerApplications = () => {
                 <label>PAN Number</label>
                 <p>{selectedApp.panNumber || "Not Provided"}</p>
               </div>
+              {selectedApp.identityProofType === "aadhar" && (
+                <div className="info-item">
+                  <label>Aadhaar Number</label>
+                  <p>{selectedApp.identityProofNumber || "Not Provided"}</p>
+                </div>
+              )}
             </div>
             {selectedApp.businessDescription && (
               <div className="info-item">
@@ -489,7 +562,7 @@ const SellerApplications = () => {
             <h3>Uploaded Documents</h3>
             <div className="documents-grid">
               {[
-                { label: "Identity Proof", type: selectedApp.identityProofType, file: selectedApp.identityProofImage },
+                { label: selectedApp.identityProofType === "aadhar" ? "Aadhaar Card" : "Identity Proof", type: selectedApp.identityProofType, file: selectedApp.identityProofImage },
                 { label: "Address Proof", type: selectedApp.addressProofType, file: selectedApp.addressProofImage },
                 { label: "GST Certificate", file: selectedApp.gstImage },
                 { label: "PAN Card", file: selectedApp.panImage },
@@ -498,9 +571,9 @@ const SellerApplications = () => {
                 (doc, idx) =>
                   doc.file && (
                     <div key={idx} className="document-card">
-                      <div className="document-preview" onClick={() => setPreviewImage(doc.file)}>
+                      <div className="document-preview" onClick={() => setPreviewImage(docUrl(doc.file))}>
                         {doc.file.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                          <img src={doc.file} alt={doc.label} />
+                          <img src={docUrl(doc.file)} alt={doc.label} />
                         ) : (
                           <div className="doc-icon"><FileText size={32} /></div>
                         )}
@@ -509,7 +582,7 @@ const SellerApplications = () => {
                         <span className="doc-label">{doc.label}</span>
                         {doc.type && <span className="doc-type">{doc.type.replace(/_/g, " ")}</span>}
                       </div>
-                      <a href={doc.file} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline">
+                      <a href={docUrl(doc.file)} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline">
                         <Eye size={14} /> Open
                       </a>
                     </div>
@@ -531,35 +604,54 @@ const SellerApplications = () => {
       )}
 
       <div className="drawer-footer">
-        {(selectedApp?.status === "submitted" || selectedApp?.status === "under_review") && (
-          <>
-            <button
-              className="btn btn-warning btn-sm"
-              onClick={() => {
-                setShowReuploadModal(true);
-              }}
-              disabled={actionLoading}
-            >
-              <RotateCcw size={16} />
-              Request Re-upload
-            </button>
-            <button
-              className="btn btn-danger"
-              onClick={() => setShowRejectModal(true)}
-              disabled={actionLoading}
-            >
-              <X size={18} />
-              Reject
-            </button>
-            <button
-              className="btn btn-success"
-              onClick={() => setShowApproveModal(true)}
-              disabled={actionLoading}
-            >
-              <Check size={18} />
-              Approve
-            </button>
-          </>
+        {selectedApp?.status === "rejected" && (
+          <div className="alert alert-warning w-100 mb-2">
+            <AlertCircle size={16} />
+            <span>
+              Rejected{selectedApp.reviewNotes ? `: ${selectedApp.reviewNotes}` : ""}. The applicant can fix and
+              resubmit, or you can approve it now if the rejection was a mistake.
+            </span>
+          </div>
+        )}
+        {["submitted", "under_review"].includes(selectedApp?.status) && (
+          <button
+            className="btn btn-warning btn-sm"
+            onClick={() => setShowReuploadModal(true)}
+            disabled={actionLoading}
+          >
+            <RotateCcw size={16} />
+            Request Re-upload
+          </button>
+        )}
+        {REJECTABLE.includes(selectedApp?.status) && (
+          <button
+            className="btn btn-danger"
+            onClick={() => setShowRejectModal(true)}
+            disabled={actionLoading}
+          >
+            <X size={18} />
+            Reject
+          </button>
+        )}
+        {APPROVABLE.includes(selectedApp?.status) && (
+          <button
+            className="btn btn-success"
+            onClick={() => setShowApproveModal(true)}
+            disabled={actionLoading}
+          >
+            <Check size={18} />
+            Approve
+          </button>
+        )}
+        {selectedApp && !UNDELETABLE.includes(selectedApp.status) && (
+          <button
+            className="btn btn-outline text-danger"
+            onClick={() => handleDelete(selectedApp)}
+            disabled={actionLoading}
+          >
+            <Trash2 size={18} />
+            Delete
+          </button>
         )}
         {(selectedApp?.status === "approved" || selectedApp?.status === "active") && (
           <button
@@ -571,7 +663,7 @@ const SellerApplications = () => {
             Suspend Seller
           </button>
         )}
-        {selectedApp && !["submitted", "under_review", "approved", "active"].includes(selectedApp.status) && (
+        {selectedApp && !["submitted", "under_review", "approved", "active", "rejected", "reupload_requested"].includes(selectedApp.status) && (
           <div className="alert alert-info">
             <AlertCircle size={16} />
             <span>This application status is: {selectedApp.status.replace(/_/g, " ")}</span>
@@ -607,7 +699,7 @@ const SellerApplications = () => {
             />
           </div>
 
-          {selectedApp?.selectedPlanId?.isFree ? (
+          {(selectedApp?.selectedPlanId?.isFree ?? selectedApp?.selectedPlanSnapshot?.isFree) ? (
             <div className="alert alert-info">
               <AlertCircle size={20} />
               <span>
@@ -752,11 +844,29 @@ const SellerApplications = () => {
               <option value="all">All</option>
               <option value="submitted">Submitted</option>
               <option value="under_review">Under Review</option>
+              <option value="approved_pending_payment">Approved (Payment Pending)</option>
+              <option value="approved_payment_failed">Approved (Payment Failed)</option>
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
               <option value="active">Active</option>
               <option value="suspended">Suspended</option>
               <option value="reupload_requested">Re-upload Requested</option>
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>Sort by</label>
+            <select
+              value={filters.sort}
+              onChange={(e) => {
+                setFilters({ ...filters, sort: e.target.value });
+                setPagination({ ...pagination, page: 1 });
+              }}
+              className="form-control"
+            >
+              {SORT_OPTIONS.map(([v, l]) => (
+                <option key={v} value={v}>{l}</option>
+              ))}
             </select>
           </div>
 

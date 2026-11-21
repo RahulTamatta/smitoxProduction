@@ -1,6 +1,7 @@
 import express from "express";
 import {
   approveApplication,
+  deleteApplication,
   getApplicationById,
   getAvailablePlans,
   getMyApplication,
@@ -140,6 +141,14 @@ router.post(
   requireCapability("sellers:applications:reject"),
   auditLog("request_reupload", "seller_application", "medium"),
   requestReupload
+);
+
+router.delete(
+  "/:id",
+  requireSignIn,
+  requireCapability("sellers:applications:reject"),
+  auditLog("delete_application", "seller_application", "high"),
+  deleteApplication
 );
 
 export default router;
