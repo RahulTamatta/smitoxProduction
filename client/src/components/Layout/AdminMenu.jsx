@@ -218,6 +218,7 @@ const AdminMenu = () => {
             <TreeItem id="vendors" icon="🏪" label="Vendors" isLeaf={false}>
               <SubTreeItem to="/dashboard/admin/vendors" label="All Vendors" />
               <SubTreeItem to="/dashboard/admin/sellers/applications" label="Applications" />
+              <SubTreeItem to="/dashboard/admin/vendors/report" label="Subscription Report" />
             </TreeItem>
           )}
           <TreeItem to="/dashboard/admin/delivery-charges" icon="🚚" label="Delivery Charge" />

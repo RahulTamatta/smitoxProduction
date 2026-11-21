@@ -16,6 +16,12 @@ const STATUS_BADGE = {
   suspended: "bg-danger",
   expired_payment_failed: "bg-warning text-dark",
 };
+const PLAN_STATUS_BADGE = {
+  active: "bg-success",
+  expiring_soon: "bg-warning text-dark",
+  grace_period: "bg-warning text-dark",
+  expired: "bg-danger",
+};
 const errMsg = (e, fallback) => e?.response?.data?.message || fallback;
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("en-IN") : "No expiry");
 const money = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
@@ -109,6 +115,8 @@ const VendorDetail = ({ vendorId, plans, onClose, onChanged }) => {
   const [profile, setProfile] = useState({});
   const [priority, setPriority] = useState(0);
   const [grant, setGrant] = useState({ planId: COMPLIMENTARY, days: "" });
+  const [slug, setSlug] = useState("");
+  const [creds, setCreds] = useState({ email: "", mobile: "", password: "" });
   const [listings, setListings] = useState({ products: [], page: 1, pages: 1, total: 0 });
   const [listingQuery, setListingQuery] = useState({ page: 1, search: "", status: "" });
   const [busy, setBusy] = useState("");
@@ -133,6 +141,7 @@ const VendorDetail = ({ vendorId, plans, onClose, onChanged }) => {
       });
       setPriority(v.displayPriority || 0);
       setGrant({ planId: v.currentPlanId?._id || COMPLIMENTARY, days: "" });
+      setSlug(v.storeSlug || "");
     } catch (err) {
       toast.error(errMsg(err, "Could not load vendor"));
     }
@@ -169,6 +178,28 @@ const VendorDetail = ({ vendorId, plans, onClose, onChanged }) => {
     }
   };
 
+  const updateCredentials = async () => {
+    const payload = {};
+    if (creds.email.trim()) payload.email = creds.email.trim();
+    if (creds.mobile.trim()) payload.mobile = creds.mobile.trim();
+    if (creds.password) payload.password = creds.password;
+    if (Object.keys(payload).length === 0) return toast.error("Enter a new email, mobile or password");
+    if (payload.password && payload.password.length < 8) return toast.error("Password must be at least 8 characters");
+    if (!window.confirm("Change this vendor's login details?")) return;
+    setBusy("creds");
+    try {
+      const { data: res } = await axios.put(`${API}/${vendorId}/credentials`, payload);
+      toast.success(`Updated: ${(res.changed || []).join(", ")}`);
+      setCreds({ email: "", mobile: "", password: "" });
+      await load();
+      onChanged();
+    } catch (err) {
+      toast.error(errMsg(err, "Could not update login details"));
+    } finally {
+      setBusy("");
+    }
+  };
+
   if (!data) {
     return (
       <Overlay title="Vendor" onClose={onClose} wide>
@@ -179,6 +210,7 @@ const VendorDetail = ({ vendorId, plans, onClose, onChanged }) => {
 
   const { vendor, application, listings: counts } = data;
   const visible = vendor.isActive && vendor.status === "active";
+  const showOnHome = vendor.showOnHome !== false;
   const idDoc = docHref(application?.identityProofImage);
   const addrDoc = docHref(application?.addressProofImage);
 
@@ -198,6 +230,14 @@ const VendorDetail = ({ vendorId, plans, onClose, onChanged }) => {
         <div className="col-lg-5">
           <section className="border rounded-3 p-3 mb-3">
             <h3 className="h6">Storefront</h3>
+            {vendor.storeSlug ? (
+              <p className="small mb-2">
+                Public store:{" "}
+                <a href={`/seller/${vendor.storeSlug}`} target="_blank" rel="noopener noreferrer">/seller/{vendor.storeSlug}</a>
+              </p>
+            ) : (
+              <p className="small text-muted mb-2">No store URL yet.</p>
+            )}
             <div className="d-flex justify-content-between align-items-center mb-3">
               <span className="small">{visible ? "Store and listings are visible" : "Store and listings are hidden"}</span>
               <button
@@ -221,6 +261,35 @@ const VendorDetail = ({ vendorId, plans, onClose, onChanged }) => {
                 Save
               </button>
             </div>
+            <label className="form-label small mb-1 mt-3">Store URL</label>
+            <div className="input-group input-group-sm">
+              <span className="input-group-text">/seller/</span>
+              <input className="form-control" placeholder="store-url" value={slug} onChange={(e) => setSlug(e.target.value)} />
+              <button
+                type="button"
+                className="btn btn-outline-primary"
+                disabled={busy === "slug"}
+                onClick={() => run("slug", () => axios.put(`${API}/${vendorId}`, { storeSlug: slug.trim() }), "Store URL saved")}
+              >
+                Save
+              </button>
+            </div>
+            <label className="form-check small mt-3">
+              <input
+                type="checkbox"
+                className="form-check-input"
+                checked={showOnHome}
+                disabled={busy === "home"}
+                onChange={(e) =>
+                  run(
+                    "home",
+                    () => axios.put(`${API}/${vendorId}`, { showOnHome: e.target.checked }),
+                    e.target.checked ? "Shown on home page" : "Hidden from home page"
+                  )
+                }
+              />
+              <span className="form-check-label">Show in Shop by seller on home page</span>
+            </label>
           </section>
 
           <section className="border rounded-3 p-3 mb-3">
@@ -244,6 +313,59 @@ const VendorDetail = ({ vendorId, plans, onClose, onChanged }) => {
               }
             >
               Apply subscription
+            </button>
+            {application && (
+              <div className="small mt-3">
+                <div className="d-flex flex-wrap gap-2 align-items-center">
+                  <span className="text-muted">Plan status:</span>
+                  {application.planStatus ? (
+                    <span className={`badge ${PLAN_STATUS_BADGE[application.planStatus] || "bg-secondary"}`}>
+                      {application.planStatus.replace(/_/g, " ")}
+                    </span>
+                  ) : (
+                    <span className="text-muted">-</span>
+                  )}
+                </div>
+                <div>Plan expiry: {fmtDate(application.planExpiryDate)}</div>
+                <div>Grace ends: {fmtDate(application.gracePeriodEndDate)}</div>
+              </div>
+            )}
+          </section>
+
+          <section className="border rounded-3 p-3 mb-3">
+            <h3 className="h6">Login credentials</h3>
+            <p className="small text-muted mb-2">
+              Current login: {vendor.userId?.email_id || "-"} · {vendor.userId?.mobile_no || "-"}
+            </p>
+            <label className="form-label small mb-0">New email</label>
+            <input
+              type="email"
+              className="form-control form-control-sm mb-2"
+              value={creds.email}
+              onChange={(e) => setCreds({ ...creds, email: e.target.value })}
+            />
+            <label className="form-label small mb-0">New mobile</label>
+            <input
+              type="tel"
+              className="form-control form-control-sm mb-2"
+              value={creds.mobile}
+              onChange={(e) => setCreds({ ...creds, mobile: e.target.value })}
+            />
+            <label className="form-label small mb-0">New password</label>
+            <input
+              type="password"
+              minLength={8}
+              className="form-control form-control-sm"
+              value={creds.password}
+              onChange={(e) => setCreds({ ...creds, password: e.target.value })}
+            />
+            <button
+              type="button"
+              className="btn btn-sm btn-primary mt-2"
+              disabled={busy === "creds"}
+              onClick={updateCredentials}
+            >
+              Update login
             </button>
           </section>
 
@@ -469,7 +591,10 @@ const Vendors = () => {
             <h1 className="h4 mb-0">Vendors</h1>
             <small className="text-muted">{meta.total} vendors · new applications are reviewed in <Link to="/dashboard/admin/sellers/applications">Seller Applications</Link></small>
           </div>
-          <button type="button" className="btn btn-primary" onClick={() => setAdding(true)}>+ Add vendor</button>
+          <div className="d-flex gap-2">
+            <Link className="btn btn-outline-primary" to="/dashboard/admin/vendors/report">Subscription report</Link>
+            <button type="button" className="btn btn-primary" onClick={() => setAdding(true)}>+ Add vendor</button>
+          </div>
         </div>
 
         <div className="row g-2 mb-3">
@@ -510,6 +635,11 @@ const Vendors = () => {
                   <td>
                     <div className="fw-semibold">{v.storeName || v.businessName || "-"} {v.isVerified && <span className="badge bg-primary ms-1">Verified</span>}</div>
                     <div className="small text-muted">{v.businessCategory || ""}</div>
+                    {v.storeSlug && (
+                      <div className="small">
+                        <a href={`/seller/${v.storeSlug}`} target="_blank" rel="noopener noreferrer">/seller/{v.storeSlug}</a>
+                      </div>
+                    )}
                   </td>
                   <td className="small">
                     <div>{v.userId?.user_fullname || v.primaryContactName || "-"}</div>

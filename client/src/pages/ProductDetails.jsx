@@ -1,5 +1,7 @@
 import React from 'react';
 import { AiFillWarning } from 'react-icons/ai';
+import { BadgeCheck, Store } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import Layout from "./../components/Layout/Layout";
 import StockPopup from "./cart/StockPopup";
 
@@ -119,6 +121,22 @@ const ProductDetails = () => {
 
           <div className="lg:col-span-5 lg:sticky lg:top-24 self-start flex flex-col min-w-0 w-full">
             <div className="bg-white rounded-xl border border-outline-variant/40 p-4 md:p-6 shadow-sm">
+              {product?.seller?.storeSlug && (
+                <div className="flex items-center flex-wrap gap-1.5 mb-3 text-body-md text-on-surface-variant">
+                  <Store size={16} className="text-primary" aria-hidden="true" />
+                  <span>Sold by</span>
+                  <Link
+                    to={`/seller/${product.seller.storeSlug}`}
+                    className="text-primary font-semibold hover:underline"
+                  >
+                    {product.seller.storeName}
+                  </Link>
+                  {product.seller.isVerified && (
+                    <BadgeCheck size={14} className="text-primary" aria-label="Verified seller" />
+                  )}
+                </div>
+              )}
+
               <ProductInfo
                 product={product}
                 totalPrice={totalPrice}

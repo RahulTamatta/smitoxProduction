@@ -1,0 +1,387 @@
+/* Public vendor store page and "Shop by seller" rail */
+
+/* ---------- Store header ---------- */
+.sx-store-page {
+  padding-top: 1.5rem;
+  padding-bottom: 2.5rem;
+}
+
+.sx-store-header {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.sx-store-banner {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  background: var(--sx-surface);
+}
+
+.sx-store-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  min-width: 0;
+}
+
+.sx-store-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.sx-store-logo--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  border: none;
+}
+
+.sx-store-headinfo {
+  min-width: 0;
+}
+
+.sx-store-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.sx-store-name {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--sx-ink);
+}
+
+.sx-store-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fef2f2;
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.sx-store-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin-top: 6px;
+  font-size: 0.875rem;
+  color: var(--sx-muted);
+}
+
+.sx-store-desc {
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--sx-muted);
+}
+
+/* ---------- Toolbar ---------- */
+.sx-store-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.sx-store-search {
+  position: relative;
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.sx-store-search-icon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  color: var(--sx-muted);
+  pointer-events: none;
+}
+
+.sx-store-search input {
+  width: 100%;
+  padding: 10px 12px 10px 36px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: var(--sx-ink);
+  background: #fff;
+  outline: none;
+}
+
+.sx-store-search input:focus {
+  border-color: var(--primary);
+}
+
+.sx-store-sort select {
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: var(--sx-ink);
+  background: #fff;
+  outline: none;
+}
+
+.sx-store-sort select:focus {
+  border-color: var(--primary);
+}
+
+/* ---------- States ---------- */
+.sx-store-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 64px 16px;
+  text-align: center;
+}
+
+.sx-store-state-icon {
+  color: var(--primary);
+}
+
+.sx-store-state-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--sx-ink);
+}
+
+.sx-store-state-text {
+  margin: 0;
+  max-width: 420px;
+  font-size: 0.9rem;
+  color: var(--sx-muted);
+}
+
+.sx-store-inline-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.875rem;
+}
+
+.sx-store-grid-loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+.sx-store-empty {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--sx-muted);
+}
+
+/* ---------- Pagination ---------- */
+.sx-store-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin: 24px 0 8px;
+}
+
+.sx-store-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 18px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--sx-ink);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.sx-store-page-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.sx-store-page-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sx-store-page-info {
+  font-size: 0.875rem;
+  color: var(--sx-muted);
+}
+
+/* ---------- Shop by seller rail ---------- */
+.sx-sellers-rail {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 16px 0 8px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.sx-sellers-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.sx-seller-card {
+  flex: 0 0 240px;
+  width: 240px;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.sx-seller-card:hover {
+  color: inherit;
+  text-decoration: none;
+  box-shadow: var(--sx-shadow-card-hover);
+  transform: translateY(-2px);
+}
+
+.sx-seller-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.sx-seller-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.sx-seller-logo--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border: none;
+}
+
+.sx-seller-card-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sx-seller-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--sx-ink);
+  overflow: hidden;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* long store names wrap instead of "Shree Ganesh…" */
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+}
+
+.sx-seller-cat {
+  font-size: 0.8rem;
+  color: var(--sx-muted);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+.sx-seller-photos {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.sx-seller-photo {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--sx-surface);
+}
+
+.sx-seller-count {
+  margin-top: 10px;
+  font-size: 0.8rem;
+  color: var(--sx-muted);
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 768px) {
+  .sx-store-header {
+    padding: 16px;
+  }
+
+  .sx-store-head {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .sx-store-search,
+  .sx-store-sort {
+    flex: 1 1 100%;
+  }
+
+  .sx-store-search input,
+  .sx-store-sort select {
+    width: 100%;
+  }
+
+  .sx-seller-card {
+    flex: 0 0 min(70vw, 260px);
+    width: min(70vw, 260px);
+  }
+}

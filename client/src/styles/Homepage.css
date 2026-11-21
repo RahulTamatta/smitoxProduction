@@ -208,7 +208,17 @@ BDX-inspired home sections
     grid-template-columns: repeat(4, 1fr);
     gap: 24px;
   }
+}
 
+/* ProductCard uses its wide (row) layout up to 768px, so the 3-column grid
+   starts at 769px; small tablets get 2 row cards side by side. */
+@media (min-width: 600px) and (max-width: 768px) {
+  .sx-home-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 769px) {
   .sx-home-grid {
     grid-template-columns: repeat(3, 1fr);
   }

@@ -43,6 +43,7 @@ import WishlistPage from "./pages/wishlists.jsx";
 // Seller Onboarding V2 Components
 import SellerApplications from "./pages/Admin/SellerApplications";
 import Vendors from "./pages/Admin/Vendors";
+import VendorSubscriptionReport from "./pages/Admin/VendorSubscriptionReport";
 import ApplicationStatus from "./pages/Seller/ApplicationStatus";
 import SellerDashboard from "./pages/Seller/SellerDashboard";
 import SellerRoute from "./components/Routes/SellerRoute";
@@ -50,6 +51,7 @@ import SellerListings from "./pages/Seller/portal/SellerListings";
 import SellerOrders from "./pages/Seller/portal/SellerOrders";
 import SellerStore from "./pages/Seller/portal/SellerStore";
 import SellerQuickApply from "./pages/Seller/SellerQuickApply";
+import StorePage from "./pages/Store/StorePage";
 
 // Checkout Component
 import CheckoutPage from "./pages/Checkout/CheckoutPage";
@@ -126,6 +128,7 @@ function App() {
             <Route path="admin/analytics" element={<SellerAnalytics />} />
             <Route path="admin/sellers/applications" element={<SellerApplications />} />
             <Route path="admin/vendors" element={<Vendors />} />
+            <Route path="admin/vendors/report" element={<VendorSubscriptionReport />} />
           </Route>
 
           <Route path="/register" element={<Register />} />
@@ -158,6 +161,9 @@ function App() {
             <Route path="orders" element={<SellerOrders />} />
             <Route path="store" element={<SellerStore />} />
           </Route>
+
+          {/* Public vendor store page */}
+          <Route path="/seller/:storeSlug" element={<StorePage />} />
 
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />

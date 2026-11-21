@@ -15,6 +15,12 @@ const SellerStore = () => {
     primaryContactEmail: '',
     primaryContactPhone: ''
   });
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordSaving, setPasswordSaving] = useState(false);
 
   // Fetch vendor info
   const getVendorInfo = async () => {
@@ -93,6 +99,45 @@ const SellerStore = () => {
     }
   };
 
+  // Copy the public store link to the clipboard
+  const copyStoreLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/seller/${vendor.storeSlug}`);
+      toast.success('Store link copied');
+    } catch (error) {
+      toast.error('Could not copy the store link');
+    }
+  };
+
+  // Password change handler
+  const handlePasswordChange = async () => {
+    if (!passwordForm.currentPassword) {
+      toast.error('Current password is required');
+      return;
+    }
+    if (passwordForm.newPassword.length < 8) {
+      toast.error('New password must be at least 8 characters');
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error('New password and confirmation do not match');
+      return;
+    }
+    try {
+      setPasswordSaving(true);
+      const { data } = await axios.put('/api/v1/seller-portal/me/password', {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword
+      });
+      toast.success(data.message || 'Password changed successfully');
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to change password');
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
   // Calculate days until expiry
   const getDaysUntilExpiry = () => {
     if (!vendor?.planExpiresAt) return null;
@@ -116,6 +161,32 @@ const SellerStore = () => {
               Manage your store details and plan information.
             </p>
           </div>
+
+          {/* Public store link */}
+          {vendor?.storeSlug && (
+            <div style={{ backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e4e7eb', boxShadow: '0 1px 2px rgba(15, 23, 42, 0.05)', padding: '24px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px', color: '#0f172a' }}>Your public store</h2>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
+                <a
+                  href={`/seller/${vendor.storeSlug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: '14px', color: '#3b82f6', wordBreak: 'break-all' }}
+                >
+                  {`${window.location.origin}/seller/${vendor.storeSlug}`}
+                </a>
+                <button
+                  onClick={copyStoreLink}
+                  style={{ backgroundColor: '#f1f5f9', color: '#334155', padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}
+                >
+                  Copy link
+                </button>
+              </div>
+              <p style={{ fontSize: '12px', color: '#6b7280', margin: '8px 0 0' }}>
+                Your store URL is fixed; contact Smitox support to change it.
+              </p>
+            </div>
+          )}
 
           {/* Loading State */}
           {loading && !vendor && (
@@ -323,6 +394,58 @@ const SellerStore = () => {
                     ✏️ Edit Store Details
                   </button>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Change password */}
+          {vendor && (
+            <div style={{ backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e4e7eb', boxShadow: '0 1px 2px rgba(15, 23, 42, 0.05)', padding: '24px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#0f172a' }}>Change password</h2>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>Current password</label>
+                  <input
+                    type="password"
+                    value={passwordForm.currentPassword}
+                    onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>New password</label>
+                  <input
+                    type="password"
+                    value={passwordForm.newPassword}
+                    onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                    minLength={8}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px' }}
+                  />
+                  <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>At least 8 characters</div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>Confirm password</label>
+                  <input
+                    type="password"
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                    minLength={8}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginTop: '24px' }}>
+                <button
+                  onClick={handlePasswordChange}
+                  disabled={passwordSaving}
+                  style={{ backgroundColor: '#3b82f6', color: 'white', padding: '10px 20px', borderRadius: '6px', border: 'none', cursor: passwordSaving ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: '500', opacity: passwordSaving ? 0.7 : 1 }}
+                >
+                  {passwordSaving ? 'Updating...' : 'Update password'}
+                </button>
               </div>
             </div>
           )}
