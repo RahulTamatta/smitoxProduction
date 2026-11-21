@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { Badge } from "antd";
-import { Heart, ShoppingCart, User, LogIn, LogOut, LayoutDashboard, Store, Package } from "lucide-react";
+import { Heart, ShoppingCart, User, LogIn, LogOut, LayoutDashboard } from "lucide-react";
 import logo from "../../../src/assets/images/logo.png";
 import { useAuth } from "../../context/auth";
 import useCartStore from "../../store/cart.store";
@@ -70,11 +70,6 @@ const Header = () => {
             <Link to="/seller-wizard" className="sx-hdr-top-link">
               Sell on Smitox
             </Link>
-            {auth?.user && (
-              <Link to={dashboardPath} className="sx-hdr-top-link">
-                Dashboard
-              </Link>
-            )}
           </div>
         </div>
       </div>
@@ -140,45 +135,19 @@ const Header = () => {
                         Dashboard
                       </NavLink>
                     </li>
-                    <li>
-                      <NavLink
-                        to="/seller-wizard"
-                        className="dropdown-item sx-hdr-dropdown-item"
-                        onClick={() => setShowAccountMenu(false)}
-                      >
-                        <Store size={16} className="sx-hdr-dropdown-icon" />
-                        Become a Seller
-                      </NavLink>
-                    </li>
-                    <li>
-                      <NavLink
-                        to="/account/orders"
-                        className="dropdown-item sx-hdr-dropdown-item"
-                        onClick={() => setShowAccountMenu(false)}
-                      >
-                        <Package size={16} className="sx-hdr-dropdown-icon" />
-                        My Orders
-                      </NavLink>
-                    </li>
-                    <li>
-                      <NavLink
-                        to="/wishlist"
-                        className="dropdown-item sx-hdr-dropdown-item"
-                        onClick={() => setShowAccountMenu(false)}
-                      >
-                        <Heart size={16} className="sx-hdr-dropdown-icon" />
-                        Wishlist
-                      </NavLink>
-                    </li>
                     <li><hr className="dropdown-divider" /></li>
                     <li>
-                      <button
+                      <NavLink
+                        to="/login"
                         className="dropdown-item sx-hdr-dropdown-item sx-hdr-logout"
-                        onClick={handleLogout}
+                        onClick={() => {
+                          setShowAccountMenu(false);
+                          handleLogout();
+                        }}
                       >
                         <LogOut size={16} className="sx-hdr-dropdown-icon" />
                         Logout
-                      </button>
+                      </NavLink>
                     </li>
                   </ul>
                 </div>

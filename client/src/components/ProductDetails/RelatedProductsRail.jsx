@@ -34,7 +34,7 @@ const RelatedProductsRail = ({ title, subtitle, products, onProductClick }) => {
   if (!products || products.length === 0) return null;
 
   return (
-    <section className="max-w-container-max mx-auto px-4 md:px-margin-desktop mt-stack-md">
+    <section className="w-full max-w-container-max mx-auto px-4 md:px-margin-desktop mt-stack-md">
       <div className="flex items-start justify-between gap-3 mb-stack-sm">
         <div>
           <h2 className="font-headline-md text-headline-md font-semibold text-on-surface">{title}</h2>

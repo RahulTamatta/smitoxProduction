@@ -91,7 +91,7 @@ const ProductDetails = () => {
           Some features may not work properly.
         </div>
       )}
-      <main className="max-w-container-max mx-auto px-4 md:px-margin-desktop py-stack-lg font-body-md text-on-surface bg-background overflow-x-hidden">
+      <main className="w-full max-w-container-max mx-auto px-4 md:px-margin-desktop py-stack-lg font-body-md text-on-surface bg-background overflow-x-hidden">
         <nav className="flex flex-wrap items-center gap-x-2 gap-y-1 text-on-surface-variant font-body-md text-body-md mb-6 md:mb-8 min-w-0">
           <a href="/" className="hover:text-primary transition-colors flex-shrink-0">Home</a>
           <span className="material-symbols-outlined text-sm flex-shrink-0">chevron_right</span>
