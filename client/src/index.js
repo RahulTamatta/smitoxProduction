@@ -2,6 +2,7 @@ import React from "react";
 import axios from "axios";
 import ReactDOM from "react-dom/client";
 import "./index.css";
+import "./styles/bdx-theme.css";
 import App from "./App";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./context/auth";

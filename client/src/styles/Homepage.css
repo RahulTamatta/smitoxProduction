@@ -79,3 +79,144 @@ filters
   font-weight: bold;
   font-size: 14px !important;
 }
+
+/* ==================
+BDX-inspired home sections
+============== */
+.sx-home-banner {
+  margin-top: 1rem;
+}
+
+.sx-home-banner-frame {
+  position: relative;
+  overflow: hidden;
+  background-color: #fff;
+  border-radius: var(--sx-radius-xl);
+  box-shadow: var(--sx-shadow-card);
+}
+
+/* Shop by category */
+.sx-home-cats {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  padding: 4px 2px 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sx-home-cats::-webkit-scrollbar {
+  display: none;
+}
+
+.sx-home-cat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  width: 84px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.sx-home-cat-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  overflow: hidden;
+  background: #f3f4f6;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+}
+
+.sx-home-cat:hover .sx-home-cat-tile {
+  transform: scale(1.05);
+}
+
+.sx-home-cat-letter {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.sx-home-cat-name {
+  max-width: 84px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #374151;
+  text-align: center;
+}
+
+/* Store features */
+.sx-home-features {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  padding: 20px 16px;
+  background: #fff;
+  border: 1px solid var(--sx-border);
+  border-radius: var(--sx-radius-xl);
+  box-shadow: var(--sx-shadow-card);
+}
+
+.sx-home-feature {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sx-home-feature-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  color: var(--primary);
+  background: #fef2f2;
+  border-radius: 50%;
+}
+
+.sx-home-feature-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sx-ink);
+}
+
+/* Product grid */
+.sx-home-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.sx-home-filters {
+  margin-top: 16px;
+}
+
+@media (min-width: 768px) {
+  .sx-home-features {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+  }
+
+  .sx-home-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1200px) {
+  .sx-home-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+

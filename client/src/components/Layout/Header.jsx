@@ -1,40 +1,40 @@
-import { HeartOutlined, HomeOutlined, LoginOutlined, ShoppingCartOutlined, UserOutlined } from '@ant-design/icons';
-import { Badge } from "antd";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link, NavLink } from "react-router-dom";
+import { Badge } from "antd";
+import { Heart, ShoppingCart, User, LogIn, LogOut, LayoutDashboard, Store, Package } from "lucide-react";
 import logo from "../../../src/assets/images/logo.png";
 import { useAuth } from "../../context/auth";
 import useCartStore from "../../store/cart.store";
 import useWishlistStore from "../../store/wishlist.store";
 import SearchInput from "../Form/SearchInput";
+import "./Header.css";
 
 const Header = () => {
   const [auth, setAuth] = useAuth();
-  const cartCount = useCartStore(state => state.cart.length);
-  const wishlistCount = useWishlistStore(state => state.wishlist.length);
-  const syncCart = useCartStore(state => state.syncCart);
-  const syncWishlist = useWishlistStore(state => state.syncWishlist);
+  const cartCount = useCartStore((state) => state.cart.length);
+  const wishlistCount = useWishlistStore((state) => state.wishlist.length);
+  const syncCart = useCartStore((state) => state.syncCart);
+  const syncWishlist = useWishlistStore((state) => state.syncWishlist);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const accountRef = useRef(null);
 
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth <= 768);
+      setShowAccountMenu(false);
     };
-
     window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
+  // Sync once on mount / auth change (not on every breakpoint crossing)
+  useEffect(() => {
     if (auth?.user?._id) {
-      // Periodic sync can be handled by stores if needed, 
-      // but manual intervals in components are usually bad.
-      // We sync once on mount/auth change.
       syncCart();
       syncWishlist();
     }
-
-    return () => window.removeEventListener("resize", handleResize);
   }, [auth?.user?._id, syncCart, syncWishlist]);
-
-
 
   const handleLogout = () => {
     setAuth({
@@ -43,13 +43,13 @@ const Header = () => {
       token: "",
     });
     localStorage.removeItem("auth");
-    // Clear local cart state on logout (never deletes the user's server cart)
     useCartStore.getState().resetLocal();
     useWishlistStore.getState().clearWishlist();
+    setShowAccountMenu(false);
   };
 
   const handleHomeClick = () => {
-    sessionStorage.removeItem('homepageScrollPosition');
+    sessionStorage.removeItem("homepageScrollPosition");
   };
 
   const isAdminLike =
@@ -58,275 +58,151 @@ const Header = () => {
     auth?.user?.roleString === "admin" ||
     auth?.user?.roleString === "super_admin";
 
-  // Styles
-  const logoStyles = {
-    height: isMobile ? "40px" : "50px",
-    maxWidth: "100%",
-    objectFit: "contain",
-    transition: "height 0.3s ease"
-  };
-
-  const mainNavStyles = {
-    backgroundColor: "var(--primary)",
-    borderBottom: "none",
-    boxShadow: "var(--shadow-md)",
-    height: isMobile ? "60px" : "80px",
-    padding: isMobile ? "0.5rem 1rem" : "0 2rem",
-    display: "flex",
-    alignItems: "center",
-    position: "sticky",
-    top: 0,
-    zIndex: 1000
-  };
-
-  const containerStyles = {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-    maxWidth: "1400px",
-    margin: "0 auto",
-    padding: "0"
-  };
-
-  const logoContainerStyles = {
-    display: "flex",
-    alignItems: "center",
-    flexShrink: 0,
-    marginRight: isMobile ? "0.5rem" : "2rem"
-  };
-
-  const desktopSearchStyles = {
-    flex: "1",
-    display: isMobile ? "none" : "flex",
-    maxWidth: "700px",
-    margin: "0 2rem"
-  };
-
-  const navItemsStyles = {
-    display: "flex",
-    alignItems: "center",
-    gap: "1.5rem",
-    margin: "0",
-    padding: "0",
-    listStyle: "none"
-  };
-
-  const mobileNavStyles = {
-    display: isMobile ? "flex" : "none",
-    alignItems: "center",
-    gap: "1rem",
-    flexShrink: 0
-  };
-
-  const desktopNavStyles = {
-    display: isMobile ? "none" : "flex",
-    alignItems: "center",
-    gap: "1.5rem"
-  };
-
-  const mobileSearchBarStyles = {
-    backgroundColor: "var(--primary)",
-    padding: "0.5rem 1rem 1rem 1rem",
-    display: isMobile ? "block" : "none",
-  };
+  const dashboardPath = isAdminLike ? "/dashboard/admin" : "/dashboard/user";
 
   return (
     <>
-      {/* Main Navigation Bar */}
-      <nav className="navbar navbar-expand" style={mainNavStyles}>
-        <div className="container-fluid" style={containerStyles}>
-          {/* Logo */}
-          <div style={logoContainerStyles}>
-            <Link to="/" className="navbar-brand" onClick={handleHomeClick} style={{ margin: 0, padding: 0 }}>
-              <img
-                src={logo}
-                alt="Smitox B2B"
-                style={logoStyles}
-              />
+      {/* Top Strip - Desktop only */}
+      <div className="sx-hdr-top-strip" aria-hidden="true">
+        <div className="sx-container">
+          <span className="sx-hdr-top-text">India's B2B wholesale marketplace</span>
+          <div className="sx-hdr-top-links">
+            <Link to="/seller-wizard" className="sx-hdr-top-link">
+              Sell on Smitox
             </Link>
+            {auth?.user && (
+              <Link to={dashboardPath} className="sx-hdr-top-link">
+                Dashboard
+              </Link>
+            )}
           </div>
+        </div>
+      </div>
 
-          {/* Desktop Search - Only visible on desktop */}
-          <div style={desktopSearchStyles}>
+      {/* Main Header Bar */}
+      <header className="sx-hdr-main" role="banner">
+        <div className="sx-container sx-hdr-main-inner">
+          {/* Logo */}
+          <Link to="/" className="sx-hdr-logo" onClick={handleHomeClick} aria-label="Smitox Home">
+            <img src={logo} alt="Smitox B2B" />
+          </Link>
+
+          {/* Search Input - centered, flex:1, max-width 640px */}
+          <div className="sx-hdr-search">
             <SearchInput />
           </div>
 
-          {/* Desktop Navigation */}
-          <div style={desktopNavStyles}>
-            <ul className="navbar-nav" style={navItemsStyles}>
-              <li className="nav-item">
-                <NavLink to="/" className="nav-link d-flex align-items-center" onClick={handleHomeClick} style={{ color: "white" }}>
-                  <HomeOutlined style={{ marginRight: "5px", color: "white" }} />
-                  Home
-                </NavLink>
-              </li>
+          {/* Right-side actions */}
+          <div className="sx-hdr-actions">
+            {auth?.user ? (
+              <>
+                {/* Wishlist */}
+                <Link to="/wishlist" className="sx-hdr-action-btn" aria-label="Wishlist">
+                  <div className="sx-hdr-action-icon">
+                    <Heart size={20} />
+                    <Badge count={wishlistCount} showZero className="sx-hdr-badge" />
+                  </div>
+                  <span className="sx-hdr-action-label">Wishlist</span>
+                </Link>
 
-              <li className="nav-item">
-                <NavLink to="/seller-wizard" className="nav-link d-flex align-items-center" style={{ color: "white" }}>
-                  <span style={{ marginRight: "5px", color: "white" }}>📦</span>
-                  Become a Seller
-                </NavLink>
-              </li>
+                {/* Cart */}
+                <Link to="/cart" className="sx-hdr-action-btn" aria-label="Cart">
+                  <div className="sx-hdr-action-icon">
+                    <ShoppingCart size={20} />
+                    <Badge count={cartCount} showZero className="sx-hdr-badge" />
+                  </div>
+                  <span className="sx-hdr-action-label">Cart</span>
+                </Link>
 
-              {!auth?.user ? (
-                <li className="nav-item">
-                  <NavLink to="/login" className="nav-link d-flex align-items-center" style={{ color: "white" }}>
-                    <LoginOutlined style={{ marginRight: "5px", color: "white" }} />
-                    Login
-                  </NavLink>
-                </li>
-              ) : (
-                <>
-                  <li className="nav-item dropdown">
-                    <NavLink
-                      className="nav-link dropdown-toggle"
-                      href="#"
-                      role="button"
-                      data-bs-toggle="dropdown"
-                      style={{ border: "none", color: "white" }}
-                    >
-                      <UserOutlined style={{ marginRight: "5px", color: "white" }} />
-                      {auth?.user?.user_fullname}
-                    </NavLink>
-                    <ul className="dropdown-menu" style={{ zIndex: 1050 }}>
-                      <li>
-                        <NavLink
-                          to={`/dashboard/${isAdminLike ? "admin" : "user"}`}
-                          className="dropdown-item"
-                        >
-                          Dashboard
-                        </NavLink>
-                      </li>
-                      <li>
-                        <NavLink
-                          onClick={handleLogout}
-                          to="/login"
-                          className="dropdown-item"
-                        >
-                          Logout
-                        </NavLink>
-                      </li>
-                    </ul>
-                  </li>
-                </>
-              )}
-              {auth?.user && (
-                <>
-                  <li className="nav-item">
-                    <NavLink to="/wishlist" className="nav-link d-flex align-items-center" style={{ color: "white" }}>
-                      <Badge count={wishlistCount} showZero offset={[10, -5]}>
-                        <HeartOutlined style={{ marginRight: "5px", color: "white", fontSize: "15px" }} />
-                      </Badge>
-                      Wishlist
-                    </NavLink>
-                  </li>
-                  <li className="nav-item">
-                    <NavLink to="/cart" className="nav-link d-flex align-items-center" style={{ color: "white" }}>
-                      <Badge count={cartCount} showZero offset={[10, -5]}>
-                        <ShoppingCartOutlined style={{ marginRight: "5px", color: "white", fontSize: "15px" }} />
-                      </Badge>
-                      Cart
-                    </NavLink>
-                  </li>
-                </>
-              )}
-            </ul>
-          </div>
-
-          {/* Mobile Navigation Icons */}
-          <div style={mobileNavStyles}>
-            <ul className="navbar-nav" style={{
-              display: "flex",
-              flexDirection: "row",
-              alignItems: "center",
-              gap: "0.5rem",
-              margin: 0,
-              padding: 0,
-              listStyle: "none",
-              fontSize: "0.75rem"
-            }}>
-              <li className="nav-item">
-                <NavLink to="/" className="nav-link p-1" onClick={handleHomeClick} style={{ color: "white", padding: "0.25rem 0.5rem" }}>
-                  <HomeOutlined style={{ color: "white", fontSize: "16px" }} />
-                </NavLink>
-              </li>
-
-              <li className="nav-item">
-                <NavLink to="/seller-wizard" className="nav-link p-1" style={{ color: "white", padding: "0.25rem 0.5rem" }}>
-                  <span style={{ color: "white", fontSize: "16px" }}>📦</span>
-                </NavLink>
-              </li>
-
-              {!auth?.user ? (
-                <li className="nav-item">
-                  <NavLink to="/login" className="nav-link p-1" style={{ color: "white", padding: "0.25rem 0.5rem" }}>
-                    <LoginOutlined style={{ color: "white", fontSize: "16px" }} />
-                  </NavLink>
-                </li>
-              ) : (
-                <>
-                  <li className="nav-item dropdown">
-                    <NavLink
-                      className="nav-link dropdown-toggle p-1"
-                      href="#"
-                      role="button"
-                      data-bs-toggle="dropdown"
-                      style={{ border: "none", color: "white", padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
-                    >
-                      <UserOutlined style={{ color: "white", fontSize: "16px" }} />
-                    </NavLink>
-                    <ul className="dropdown-menu" style={{ zIndex: 1050 }}>
-                      <li>
-                        <NavLink
-                          to={`/dashboard/${isAdminLike ? "admin" : "user"}`}
-                          className="dropdown-item"
-                          style={{ fontSize: "0.8rem" }}
-                        >
-                          Dashboard
-                        </NavLink>
-                      </li>
-                      <li>
-                        <NavLink
-                          onClick={handleLogout}
-                          to="/login"
-                          className="dropdown-item"
-                          style={{ fontSize: "0.8rem" }}
-                        >
-                          Logout
-                        </NavLink>
-                      </li>
-                    </ul>
-                  </li>
-                </>
-              )}
-
-              {auth?.user && (
-                <>
-                  <li className="nav-item">
-                    <NavLink to="/wishlist" className="nav-link p-1" style={{ color: "white", padding: "0.25rem 0.5rem" }}>
-                      <Badge count={wishlistCount} showZero offset={[8, -3]} size="small">
-                        <HeartOutlined style={{ color: "white", fontSize: "16px" }} />
-                      </Badge>
-                    </NavLink>
-                  </li>
-                  <li className="nav-item">
-                    <NavLink to="/cart" className="nav-link p-1" style={{ color: "white", padding: "0.25rem 0.5rem" }}>
-                      <Badge count={cartCount} showZero offset={[8, -3]} size="small">
-                        <ShoppingCartOutlined style={{ color: "white", fontSize: "16px" }} />
-                      </Badge>
-                    </NavLink>
-                  </li>
-                </>
-              )}
-            </ul>
+                {/* Account Dropdown */}
+                <div className="sx-hdr-account" ref={accountRef}>
+                  <button
+                    type="button"
+                    className="sx-hdr-action-btn sx-hdr-account-trigger"
+                    data-bs-toggle="dropdown"
+                    aria-expanded={showAccountMenu}
+                    aria-haspopup="true"
+                    onClick={() => setShowAccountMenu(!showAccountMenu)}
+                  >
+                    <div className="sx-hdr-action-icon">
+                      <User size={20} />
+                    </div>
+                    <span className="sx-hdr-action-label">Account</span>
+                  </button>
+                  <ul className="dropdown-menu sx-hdr-dropdown" role="menu">
+                    <li>
+                      <NavLink
+                        to={dashboardPath}
+                        className="dropdown-item sx-hdr-dropdown-item"
+                        onClick={() => setShowAccountMenu(false)}
+                      >
+                        <LayoutDashboard size={16} className="sx-hdr-dropdown-icon" />
+                        Dashboard
+                      </NavLink>
+                    </li>
+                    <li>
+                      <NavLink
+                        to="/seller-wizard"
+                        className="dropdown-item sx-hdr-dropdown-item"
+                        onClick={() => setShowAccountMenu(false)}
+                      >
+                        <Store size={16} className="sx-hdr-dropdown-icon" />
+                        Become a Seller
+                      </NavLink>
+                    </li>
+                    <li>
+                      <NavLink
+                        to="/account/orders"
+                        className="dropdown-item sx-hdr-dropdown-item"
+                        onClick={() => setShowAccountMenu(false)}
+                      >
+                        <Package size={16} className="sx-hdr-dropdown-icon" />
+                        My Orders
+                      </NavLink>
+                    </li>
+                    <li>
+                      <NavLink
+                        to="/wishlist"
+                        className="dropdown-item sx-hdr-dropdown-item"
+                        onClick={() => setShowAccountMenu(false)}
+                      >
+                        <Heart size={16} className="sx-hdr-dropdown-icon" />
+                        Wishlist
+                      </NavLink>
+                    </li>
+                    <li><hr className="dropdown-divider" /></li>
+                    <li>
+                      <button
+                        className="dropdown-item sx-hdr-dropdown-item sx-hdr-logout"
+                        onClick={handleLogout}
+                      >
+                        <LogOut size={16} className="sx-hdr-dropdown-icon" />
+                        Logout
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Logged out - Login link with icon */}
+                <Link to="/login" className="sx-hdr-action-btn sx-hdr-login" aria-label="Login">
+                  <div className="sx-hdr-action-icon">
+                    <LogIn size={20} />
+                  </div>
+                  <span className="sx-hdr-action-label">Login</span>
+                </Link>
+              </>
+            )}
           </div>
         </div>
-      </nav>
+      </header>
 
-      {/* Mobile Search Bar - Separate row below main nav */}
-      <div style={mobileSearchBarStyles}>
-        <SearchInput />
+      {/* Mobile Search Bar - Separate row below main header */}
+      <div className="sx-hdr-mobile-search" aria-hidden={!isMobile}>
+        <div className="sx-container">
+          <SearchInput />
+        </div>
       </div>
     </>
   );

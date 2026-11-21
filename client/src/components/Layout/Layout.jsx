@@ -4,6 +4,7 @@ import { Toaster } from "react-hot-toast";
 import { useLocation } from "react-router-dom";
 import Footer from "./Footer";
 import Header from "./Header";
+import BottomNav from "./BottomNav";
 import "./Layout.css";
 import { isPortalPath } from "../../utils/portalRoutes";
 
@@ -83,10 +84,13 @@ const Layout = ({ children, title, description, keywords, author }) => {
     ? "var(--admin-sidebar-width, 250px)"
     : "0";
 
+  const showBottomNav = !isAdminRoute && isMobile;
+
   const mainContentStyles = {
     flex: 1,
     marginTop: `${effectiveHeaderHeight}px`, // Dynamic margin based on header height (0 on admin routes)
     padding: isAdminRoute ? "0" : (isMobile ? "0" : "0.5rem 1rem"), // Reduced top padding so product starts near header
+    ...(showBottomNav ? { paddingBottom: "64px" } : {}), // Space for bottom nav on mobile
     display: "flex",
     flexDirection: "column",
     width: isAdminRoute ? `calc(100% - ${adminContentOffset})` : "100%",
@@ -179,6 +183,9 @@ const Layout = ({ children, title, description, keywords, author }) => {
           {children}
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      {!isAdminRoute && isMobile && <BottomNav />}
 
       {/* Footer */}
       <Footer />

@@ -18,7 +18,7 @@ const ProductImageGallery = ({
       {/* Main large image display */}
       <div 
         onClick={() => setShowImageZoom(true)}
-        className="w-full aspect-square md:aspect-video lg:aspect-[4/3] bg-surface-container-lowest rounded-[16px] md:rounded-[24px] overflow-hidden ambient-shadow border border-surface-container flex items-center justify-center p-4 md:p-8 relative group cursor-zoom-in"
+        className="w-full aspect-square bg-white rounded-xl border border-outline-variant/40 overflow-hidden flex items-center justify-center p-4 md:p-8 relative group cursor-zoom-in"
       >
         <span className="absolute top-4 left-4 bg-tertiary-container text-on-tertiary-container font-label-sm text-label-sm px-3 py-1 rounded-lg z-10">Premium</span>
         <div
@@ -31,7 +31,7 @@ const ProductImageGallery = ({
                 (product.multipleimages && Array.isArray(product.multipleimages) && product.multipleimages.length > 0 && selectedImage <= product.multipleimages.length) ? 
                 product.multipleimages[selectedImage - 1] : product.photos}
           alt={product.name}
-          className="w-full h-full object-contain mix-blend-multiply hover:scale-105 transition-transform duration-500"
+          className="w-full h-full object-contain hover:scale-105 transition-transform duration-500"
           style={{ width: "100%", height: "100%" }}
           width={isMobile ? 300 : 500}
           height={isMobile ? 300 : 500}
@@ -48,7 +48,7 @@ const ProductImageGallery = ({
           {/* Main product image thumbnail */}
           <button 
             onClick={() => setSelectedImage(0)}
-            className={`w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-[16px] bg-surface-container-lowest overflow-hidden p-2 transition-colors ${selectedImage === 0 ? 'border-2 border-primary' : 'border border-surface-container hover:border-outline-variant'}`}
+            className={`w-16 h-16 shrink-0 rounded-lg bg-white overflow-hidden p-1.5 transition-colors ${selectedImage === 0 ? 'ring-2 ring-primary' : 'border border-outline-variant/40 hover:border-outline-variant'}`}
           >
             <OptimizedImage
               src={product.photos}
@@ -76,7 +76,7 @@ const ProductImageGallery = ({
                 key={key}
                 data-thumbnail="true"
                 onClick={() => setSelectedImage(index + 1)}
-                className={`w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-[16px] bg-surface-container-lowest overflow-hidden p-2 transition-colors ${selectedImage === index + 1 ? 'border-2 border-primary' : 'border border-surface-container hover:border-outline-variant'}`}
+                className={`w-16 h-16 shrink-0 rounded-lg bg-white overflow-hidden p-1.5 transition-colors ${selectedImage === index + 1 ? 'ring-2 ring-primary' : 'border border-outline-variant/40 hover:border-outline-variant'}`}
               >
                 <OptimizedImage
                   src={imgUrl}

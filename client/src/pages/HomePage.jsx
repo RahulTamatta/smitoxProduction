@@ -1,3 +1,4 @@
+import { BadgePercent, Headphones, ShieldCheck, Truck } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import 'react-lazy-load-image-component/src/effects/blur.css';
 import { useLocation, useNavigate } from "react-router-dom";
@@ -52,6 +53,13 @@ const sliderSettings = {
     },
   ],
 };
+
+const storeFeatures = [
+  { icon: Truck, label: "Delivery across India" },
+  { icon: ShieldCheck, label: "Verified sellers" },
+  { icon: BadgePercent, label: "Bulk / wholesale prices" },
+  { icon: Headphones, label: "WhatsApp support" },
+];
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -233,7 +241,7 @@ const HomePage = () => {
   if (productsLoading && !productsData) {
     return (
       <Layout title="All Products - Best offers">
-        <div className="container mt-4" style={{ paddingTop: "100px" }}>
+        <div className="sx-container mt-4">
           <div className="text-center">
             <div className="spinner-border text-primary" role="status">
               <span className="visually-hidden">Loading...</span>
@@ -267,16 +275,8 @@ const HomePage = () => {
       )} */}
 
       {/* Banner Section */}
-      <div
-        className="banner-container container-fluid px-2 px-md-4 mt-3"
-      >
-        <div style={{
-          borderRadius: 'var(--radius-xl)',
-          overflow: 'hidden',
-          boxShadow: 'var(--shadow-md)',
-          position: 'relative',
-          backgroundColor: '#fff',
-        }}>
+      <section className="sx-container sx-home-banner">
+        <div className="sx-home-banner-frame">
           <Slider {...{
             ...bannerSettings,
             // Update banner settings for better responsiveness
@@ -318,128 +318,93 @@ const HomePage = () => {
             ))}
           </Slider>
         </div>
-      </div>
+      </section>
 
-      {/* Categories Section */}
-      <div style={{ padding: '40px 0', backgroundColor: "var(--surface)", marginTop: '20px' }}>
-        <h2 style={{
-          textAlign: 'center',
-          marginBottom: '32px',
-          fontSize: isMobile ? '1.5rem' : '2.25rem',
-          color: "var(--text-primary)"
-        }}>
-          Explore Categories
-        </h2>
-        <div style={{
-          overflowX: 'auto',
-          WebkitOverflowScrolling: 'touch',
-          padding: '0 16px',
-          msOverflowStyle: 'none',
-          scrollbarWidth: 'none'
-        }}>
-          <div style={{
-            display: 'flex',
-            gap: isMobile ? '16px' : '32px',
-            padding: '10px',
-            minWidth: 'fit-content',
-            justifyContent: 'center'
-          }}>
-            {categories.map((c, index) => {
-              // Soft pastel backgrounds for category circles
-              const bgColors = ['#f8d7da', '#d1ecf1', '#d4edda', '#fff3cd', '#e2e3e5', '#cce5ff'];
-              const bgColor = bgColors[index % bgColors.length];
+      {/* Shop by Category */}
+      <section className="sx-container sx-section">
+        <h2 className="sx-section-title">Shop by Category</h2>
+        <div className="sx-home-cats">
+          {categories.map((c) => (
+            <button
+              type="button"
+              key={c._id}
+              className="sx-home-cat"
+              onClick={() => navigate(`/category/${c.slug}`)}
+            >
+              <div className="sx-home-cat-tile">
+                {c.photos ? (
+                  <OptimizedImage
+                    src={c.photos}
+                    alt={c.name}
+                    className="sx-home-cat-img"
+                    objectFit="contain"
+                    style={{ width: "100%", height: "100%", padding: "10px" }}
+                  />
+                ) : (
+                  <span className="sx-home-cat-letter">
+                    {c.name?.charAt(0)?.toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <span className="sx-home-cat-name">{c.name}</span>
+            </button>
+          ))}
+        </div>
+      </section>
 
-              return (
-                <div
-                  key={c._id}
-                  onClick={() => navigate(`/category/${c.slug}`)}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    minWidth: isMobile ? '80px' : '120px',
-                    cursor: 'pointer',
-                    transition: 'transform 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                >
-                  <div style={{
-                    width: isMobile ? '80px' : '120px',
-                    height: isMobile ? '80px' : '120px',
-                    borderRadius: '50%',
-                    backgroundColor: bgColor,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: "var(--shadow-sm)",
-                    border: `1px solid rgba(0,0,0,0.05)`,
-                    overflow: 'hidden',
-                    marginBottom: '12px',
-                    padding: '16px'
-                  }}>
-                    <OptimizedImage
-                      src={c.photos}
-                      alt={c.name}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'contain',
-                        mixBlendMode: 'multiply'
-                      }}
-                    />
-                  </div>
-                  <h6 style={{
-                    fontSize: isMobile ? '12px' : '14px',
-                    textAlign: 'center',
-                    fontWeight: '700',
-                    color: "var(--text-primary)"
-                  }}>
-                    {c.name}
-                  </h6>
-                </div>
-              );
-            })}
-          </div>
+      {/* Store Features */}
+      <div className="sx-container sx-section">
+        <div className="sx-home-features">
+          {storeFeatures.map(({ icon: Icon, label }) => (
+            <div key={label} className="sx-home-feature">
+              <span className="sx-home-feature-icon">
+                <Icon size={20} aria-hidden="true" />
+              </span>
+              <span className="sx-home-feature-text">{label}</span>
+            </div>
+          ))}
         </div>
       </div>
+
+      {/* Products For You Section */}
+      {productsForYou.length > 0 && (
+        <section className="sx-container sx-section">
+          <h2 className="sx-section-title">Recommended for You</h2>
+          <div className="sx-home-grid">
+            {productsForYou.map((item, index) => (
+              <ProductCard
+                key={item.productId?._id || index}
+                product={item.productId}
+                photoUrl={item.productId?.photoUrl}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* All Products Section */}
-      <div className="container mt-4">
-        <div className="row mb-4">
-          <div className="col-12">
-            <h2 className="text-center mb-4" style={{ fontSize: isMobile ? '1.5rem' : '2rem' }}>
-              Trending Products
-            </h2>
-          </div>
-        </div>
+      <section className="sx-container sx-section">
+        <h2 className="sx-section-title">Trending Products</h2>
 
         {/* Filters */}
-        <div className="row mb-4">
-          <div className="col-12">
-            <ProductFilters
-              categories={categories}
-              onFilterChange={handleFilterChange}
-              currentFilters={filters}
-              currentSort={sortBy}
-              onSortChange={handleSortChange}
-            />
-          </div>
+        <div className="sx-home-filters">
+          <ProductFilters
+            categories={categories}
+            onFilterChange={handleFilterChange}
+            currentFilters={filters}
+            currentSort={sortBy}
+            onSortChange={handleSortChange}
+          />
         </div>
 
         {/* Products Grid */}
-        <div className={isMobile ? "" : "row g-1"}>
+        <div className="sx-home-grid">
           {products.map((p) => (
-            <div
+            <ProductCard
               key={p._id}
-              className={isMobile ? "" : "col-sm-6 col-md-4 col-lg-3 col-xl-3"}
-              style={{ padding: isMobile ? '0 4px' : '2px' }}
-            >
-              <ProductCard
-                product={p}
-                photoUrl={p.photoUrl}
-              />
-            </div>
+              product={p}
+              photoUrl={p.photoUrl}
+            />
           ))}
         </div>
 
@@ -484,30 +449,7 @@ const HomePage = () => {
             <p className="text-muted">No more products to show</p>
           )}
         </div>
-      </div>
-
-      {/* Products For You Section */}
-      {productsForYou.length > 0 && (
-        <div className="container mt-5">
-          <h2 className="text-center mb-4" style={{ fontSize: isMobile ? '1.5rem' : '2rem' }}>
-            Recommended for You
-          </h2>
-          <div className={isMobile ? "" : "row g-3"}>
-            {productsForYou.map((item, index) => (
-              <div
-                key={item.productId?._id || index}
-                className={isMobile ? "" : "col-sm-6 col-md-4 col-lg-3 col-xl-2"}
-                style={{ padding: isMobile ? '0 4px' : '8px' }}
-              >
-                <ProductCard
-                  product={item.productId}
-                  photoUrl={item.productId?.photoUrl}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      </section>
 
       <Suspense fallback={null}>
         <WhatsAppButton

@@ -13,6 +13,11 @@ const ProductInfo = ({
   addToCart,
   isAddingToCartRef
 }) => {
+  const mrp = Number(product.mrp);
+  const perPiecePrice = Number(product.perPiecePrice);
+  const hasDiscount = mrp > perPiecePrice && perPiecePrice > 0;
+  const discountPct = hasDiscount ? Math.round(((mrp - perPiecePrice) / mrp) * 100) : 0;
+
   return (
     <div className="mb-6">
       <div className="flex gap-2 mb-3">
@@ -24,13 +29,19 @@ const ProductInfo = ({
         </span>
       </div>
       
-      <h1 className="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-2">
+      <h1 className="font-headline-md text-headline-md md:font-headline-lg md:text-headline-lg font-bold text-on-surface leading-tight mb-2">
         {product.name}
       </h1>
       
-      <p className="font-body-md text-body-md text-on-surface-variant mb-4">
-        MRP: <span className="line-through mr-2">₹{product.mrp}</span>
-        <span className="text-primary font-bold text-xl">₹{product.perPiecePrice}</span> / piece
+      <p className="flex flex-wrap items-baseline gap-2 mb-4">
+        <span className="text-primary font-bold text-2xl md:text-3xl">₹{product.perPiecePrice}</span>
+        <span className="font-body-md text-body-md text-on-surface-variant">/ pc</span>
+        <span className="font-body-md text-body-md text-on-surface-variant line-through">MRP: ₹{product.mrp}</span>
+        {discountPct > 0 && (
+          <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 font-label-sm text-label-sm">
+            {discountPct}% OFF
+          </span>
+        )}
       </p>
 
       <QuantitySelector

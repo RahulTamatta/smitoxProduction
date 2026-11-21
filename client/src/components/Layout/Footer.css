@@ -1,0 +1,238 @@
+/* ========================================
+   Smitox Footer Styles (BDX-Inspired)
+   Prefix: sx-footer-*
+   ======================================== */
+
+.sx-footer {
+  background-color: var(--sx-ink);
+  color: #fff;
+  margin-top: auto;
+}
+
+/* Main Links Section */
+.sx-footer-main {
+  padding: 4rem 0 3rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sx-footer-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+@media (min-width: 640px) {
+  .sx-footer-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .sx-footer-grid {
+    grid-template-columns: 2fr repeat(3, 1fr);
+    gap: 3rem;
+  }
+}
+
+.sx-footer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Brand Column */
+.sx-footer-brand {
+  max-width: 320px;
+}
+
+.sx-footer-logo {
+  margin-bottom: 0.5rem;
+}
+
+.sx-footer-logo img {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+}
+
+.sx-footer-tagline {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+}
+
+.sx-footer-social {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.sx-footer-social-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--sx-radius-md);
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.sx-footer-social-link:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  color: #fff;
+}
+
+.sx-footer-social-link svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Social brand colors on hover */
+.sx-footer-social--facebook:hover {
+  background-color: #1877f2;
+}
+.sx-footer-social--instagram:hover {
+  background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+}
+.sx-footer-social--linkedin:hover {
+  background-color: #0a66c2;
+}
+.sx-footer-social--youtube:hover {
+  background-color: #ff0000;
+}
+
+/* Headings */
+.sx-footer-heading {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #fff;
+  margin: 0 0 0.5rem;
+}
+
+/* Links */
+.sx-footer-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sx-footer-link {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.sx-footer-link:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.sx-footer-link.active {
+  color: #fff;
+  font-weight: 500;
+}
+
+/* Business Details Section */
+.sx-footer-business {
+  padding: 2rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sx-footer-business-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .sx-footer-business-grid {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
+.sx-footer-business-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.sx-footer-business-info strong {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.sx-footer-business-link {
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.sx-footer-business-link:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+/* Bottom Bar */
+.sx-footer-bottom {
+  padding: 1.5rem 0;
+}
+
+.sx-footer-copyright {
+  margin: 0;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .sx-footer-copyright {
+    text-align: left;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .sx-footer-main {
+    padding: 3rem 0 2rem;
+  }
+  
+  .sx-footer-tagline {
+    font-size: 0.8125rem;
+  }
+  
+  .sx-footer-heading {
+    font-size: 0.8125rem;
+  }
+  
+  .sx-footer-link {
+    font-size: 0.8125rem;
+  }
+  
+  .sx-footer-business-info {
+    font-size: 0.8125rem;
+  }
+  
+  .sx-footer-copyright {
+    font-size: 0.8125rem;
+  }
+}
+/* ── Smitox original theme: red footer (#d32f2f) with white text ── */
+.sx-footer { background-color: var(--primary); border-top: 1px solid var(--primary-hover, #b71c1c); }
+.sx-footer-bottom { border-top-color: rgba(255, 255, 255, 0.2); }

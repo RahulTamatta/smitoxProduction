@@ -757,16 +757,35 @@ export const realtedProductController = async (req, res) => {
 
     const current = await productModel
       .findById(pid)
-      .select("fk_tags subcategory")
+      .select("fk_tags subcategory category brand perPiecePrice price")
       .lean();
     const fkTags = (current?.fk_tags || []).filter(Boolean);
 
+    // Rank candidates so the most relevant come first instead of insertion order:
+    // same brand, then closest per-piece price, then newest.
+    const refPrice = Number(current?.perPiecePrice || current?.price) || 0;
+    const brandId = current?.brand ? String(current.brand) : null;
+    const rank = (list) =>
+      list
+        .map((p) => {
+          const price = Number(p.perPiecePrice || p.price) || 0;
+          const priceGap = refPrice > 0 && price > 0 ? Math.abs(price - refPrice) / refPrice : 1;
+          const sameBrand = brandId && p.brand && String(p.brand) === brandId ? 1 : 0;
+          return { p, score: sameBrand * 2 - Math.min(priceGap, 2), t: new Date(p.createdAt || 0).getTime() };
+        })
+        .sort((a, b) => b.score - a.score || b.t - a.t)
+        .map((x) => x.p);
+    const POOL = limit * 3; // fetch a wider pool, keep the best `limit`
+
     // 1) Linked products: admin-assigned FK tags shared with this product
     const linked = fkTags.length
-      ? await productModel
-          .find({ ...baseFilter, fk_tags: { $in: fkTags } })
-          .limit(limit)
-          .populate("category")
+      ? rank(
+          await productModel
+            .find({ ...baseFilter, fk_tags: { $in: fkTags } })
+            .sort({ createdAt: -1 })
+            .limit(POOL)
+            .populate("category")
+        ).slice(0, limit)
       : [];
 
     // 2) Similar products: same subcategory first, then same category
@@ -774,22 +793,28 @@ export const realtedProductController = async (req, res) => {
     const similar = [];
     if (current?.subcategory) {
       similar.push(
-        ...(await productModel
-          .find({ ...baseFilter, _id: { $nin: excludeIds }, subcategory: current.subcategory })
-          .limit(limit)
-          .populate("category"))
+        ...rank(
+          await productModel
+            .find({ ...baseFilter, _id: { $nin: excludeIds }, subcategory: current.subcategory })
+            .sort({ createdAt: -1 })
+            .limit(POOL)
+            .populate("category")
+        ).slice(0, limit)
       );
     }
     if (similar.length < limit) {
       similar.push(
-        ...(await productModel
-          .find({
-            ...baseFilter,
-            _id: { $nin: [...excludeIds, ...similar.map((p) => p._id)] },
-            category: cid,
-          })
-          .limit(limit - similar.length)
-          .populate("category"))
+        ...rank(
+          await productModel
+            .find({
+              ...baseFilter,
+              _id: { $nin: [...excludeIds, ...similar.map((p) => p._id)] },
+              category: current?.category || cid,
+            })
+            .sort({ createdAt: -1 })
+            .limit(POOL)
+            .populate("category")
+        ).slice(0, limit - similar.length)
       );
     }
 

@@ -92,16 +92,20 @@ const ProductDetails = () => {
         </div>
       )}
       <main className="max-w-container-max mx-auto px-4 md:px-margin-desktop py-stack-lg font-body-md text-on-surface bg-background overflow-x-hidden">
-        <div className="flex items-center gap-2 text-on-surface-variant font-body-md text-body-md mb-8">
-          <a href="/" className="hover:text-primary transition-colors">Home</a>
-          <span className="material-symbols-outlined text-sm">chevron_right</span>
-          <a href="#" className="hover:text-primary transition-colors">{product.category?.name || "Category"}</a>
-          <span className="material-symbols-outlined text-sm">chevron_right</span>
-          <span className="text-primary font-medium">{product.name}</span>
-        </div>
+        <nav className="flex flex-wrap items-center gap-x-2 gap-y-1 text-on-surface-variant font-body-md text-body-md mb-6 md:mb-8 min-w-0">
+          <a href="/" className="hover:text-primary transition-colors flex-shrink-0">Home</a>
+          <span className="material-symbols-outlined text-sm flex-shrink-0">chevron_right</span>
+          {product.category?.slug ? (
+            <a href={`/category/${product.category.slug}`} className="hover:text-primary transition-colors truncate">{product.category.name}</a>
+          ) : (
+            <span className="truncate">{product.category?.name || "Category"}</span>
+          )}
+          <span className="material-symbols-outlined text-sm flex-shrink-0">chevron_right</span>
+          <span className="text-on-surface font-medium truncate">{product.name}</span>
+        </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter mb-stack-lg">
-          <div className="lg:col-span-7 flex flex-col gap-4">
+          <div className="lg:col-span-7 flex flex-col gap-4 min-w-0">
             <ProductImageGallery
               product={product}
               selectedImage={selectedImage}
@@ -113,26 +117,28 @@ const ProductDetails = () => {
             />
           </div>
 
-          <div className="lg:col-span-5 flex flex-col pt-4">
-            <ProductInfo
-              product={product}
-              totalPrice={totalPrice}
-              setShowYoutubePopup={setShowYoutubePopup}
-              isMobile={isMobile}
-              isTablet={isTablet}
-              displayQuantity={displayQuantity}
-              handleQuantityChange={handleQuantityChange}
-              addToCart={addToCart}
-              isAddingToCartRef={isAddingToCartRef}
-            />
+          <div className="lg:col-span-5 lg:sticky lg:top-24 self-start flex flex-col min-w-0 w-full">
+            <div className="bg-white rounded-xl border border-outline-variant/40 p-4 md:p-6 shadow-sm">
+              <ProductInfo
+                product={product}
+                totalPrice={totalPrice}
+                setShowYoutubePopup={setShowYoutubePopup}
+                isMobile={isMobile}
+                isTablet={isTablet}
+                displayQuantity={displayQuantity}
+                handleQuantityChange={handleQuantityChange}
+                addToCart={addToCart}
+                isAddingToCartRef={isAddingToCartRef}
+              />
 
-            <BulkPricingTable
-              product={product}
-              unitSet={unitSet}
-              selectedBulk={selectedBulk}
-              totalPrice={totalPrice}
-              isMobile={isMobile}
-            />
+              <BulkPricingTable
+                product={product}
+                unitSet={unitSet}
+                selectedBulk={selectedBulk}
+                totalPrice={totalPrice}
+                isMobile={isMobile}
+              />
+            </div>
           </div>
         </div>
         
@@ -180,12 +186,12 @@ const ProductDetails = () => {
 
       {/* Linked products (shared FK tags) first, then similar products */}
       <RelatedProductsRail
-        title="Linked Products"
+        title="Frequently bought together"
         products={linkedProducts}
         onProductClick={handleProductNavigation}
       />
       <RelatedProductsRail
-        title="Similar Products"
+        title="Similar products"
         products={similarProducts}
         onProductClick={handleProductNavigation}
       />
@@ -196,6 +202,9 @@ const ProductDetails = () => {
         normalizeProductForCard={normalizeProductForCard}
         onProductClick={handleProductNavigation}
         isMobile={isMobile}
+        excludeIds={[product._id, ...linkedProducts.map(p => p._id), ...similarProducts.map(p => p._id)]
+          .filter(Boolean)
+          .map(String)}
       />
 
       {/* Stock Popup Modal */}
