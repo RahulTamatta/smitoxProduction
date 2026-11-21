@@ -4,7 +4,7 @@
  */
 
 import cron from "node-cron";
-import { runDailyPlanExpiryCheck } from "./planExpiryCheckJob.js";
+import { runSubscriptionSweep } from "../helpers/subscriptionLifecycle.js";
 
 let scheduledJob = null;
 
@@ -12,17 +12,22 @@ let scheduledJob = null;
  * Start the plan expiry check CRON job
  * Runs daily at 00:00 (midnight)
  */
+const sweep = async (label) => {
+  try {
+    const counts = await runSubscriptionSweep();
+    console.log(`[subscriptions] ${label} sweep:`, JSON.stringify(counts));
+  } catch (error) {
+    console.error("[subscriptions] sweep failed:", error.message);
+  }
+};
+
 export const startPlanExpiryJob = () => {
   try {
-    // Schedule to run daily at midnight
-    scheduledJob = cron.schedule("0 0 * * *", async () => {
-      console.log(
-        `[${new Date().toISOString()}] Running scheduled plan expiry check...`
-      );
-      await runDailyPlanExpiryCheck();
-    });
-
-    console.log("✅ Plan Expiry CRON Job scheduled (runs daily at 00:00)");
+    // Hourly: grace period, Free-plan fallback and "expiring soon" flags
+    scheduledJob = cron.schedule("15 * * * *", () => sweep("hourly"));
+    // Catch up immediately after a restart/deploy
+    setTimeout(() => sweep("startup"), 10000);
+    console.log("✅ Subscription expiry sweep scheduled (hourly)");
     return true;
   } catch (error) {
     console.error("❌ Error scheduling plan expiry job:", error);

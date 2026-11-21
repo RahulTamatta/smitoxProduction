@@ -54,6 +54,17 @@ const sellerProfileSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    // Public store URL: /seller/<storeSlug>. Unique; duplicates get -2, -3 ...
+    storeSlug: {
+      type: String,
+      lowercase: true,
+      trim: true,
+    },
+    // Super admin switch for the "Shop by seller" storefront sections (store page stays reachable)
+    showOnHome: {
+      type: Boolean,
+      default: true,
+    },
     businessName: {
       type: String,
       default: "",
@@ -225,6 +236,12 @@ const sellerProfileSchema = new mongoose.Schema(
     },
   },
   { timestamps: true }
+);
+
+// Unique only among profiles that have a slug (older profiles are backfilled at startup)
+sellerProfileSchema.index(
+  { storeSlug: 1 },
+  { unique: true, partialFilterExpression: { storeSlug: { $type: "string" } } }
 );
 
 export default mongoose.model("SellerProfile", sellerProfileSchema);

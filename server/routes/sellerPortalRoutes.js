@@ -2,6 +2,7 @@ import express from "express";
 import {
   getMyOrders,
   getMyProducts,
+  changeMyPassword,
   getMyVendor,
   updateMyVendor,
 } from "../controllers/sellerPortalController.js";
@@ -17,6 +18,7 @@ router.use(requireSignIn, requireSeller);
 
 router.get("/me", getMyVendor);
 router.put("/me", updateMyVendor);
+router.put("/me/password", changeMyPassword);
 router.get("/products", getMyProducts);
 router.get("/orders", getMyOrders);
 

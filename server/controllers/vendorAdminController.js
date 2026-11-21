@@ -7,6 +7,10 @@ import sellerApplicationModel from "../models/sellerApplicationModel.js";
 import sellerProfileModel from "../models/sellerProfileModel.js";
 import subscriptionPlanModel from "../models/subscriptionPlanModel.js";
 import userModel from "../models/userModel.js";
+import subscriptionHistoryModel from "../models/subscriptionHistoryModel.js";
+import { hashPassword } from "../helpers/authHelper.js";
+import { GRACE_DAYS, recordSubscriptionEvent } from "../helpers/subscriptionLifecycle.js";
+import { ensureStoreSlug, isValidStoreSlug, slugifyStoreName } from "../helpers/storeSlug.js";
 import { escapeRegex, queryVendorProducts } from "./sellerPortalController.js";
 
 const COMPLIMENTARY_PLAN_NAME = "Admin Complimentary";
@@ -95,6 +99,7 @@ const activateVendor = async ({ user, plan, expiresInDays, storeName }) => {
   application.planStatus = "active";
   application.planStartDate = now;
   application.planExpiryDate = expiresAt;
+  application.gracePeriodEndDate = expiresAt ? new Date(expiresAt.getTime() + GRACE_DAYS * 86400000) : null;
   await application.save({ validateBeforeSave: false });
 
   const profile = await sellerProfileModel.findOneAndUpdate(
@@ -109,6 +114,7 @@ const activateVendor = async ({ user, plan, expiresInDays, storeName }) => {
         subscriptionStatus: "active",
         planActivatedAt: now,
         planExpiresAt: expiresAt,
+        gracePeriodEndDate: application.gracePeriodEndDate,
         lastStatusChange: now,
         "permissions.grantedCapabilities": plan.includedCapabilities || [],
         "permissions.deniedCapabilities": plan.excludedCapabilities || [],
@@ -138,6 +144,11 @@ const activateVendor = async ({ user, plan, expiresInDays, storeName }) => {
     { userId: String(user._id), adminHold: true },
     { $set: { isActive: "1", adminHold: false } }
   );
+  await ensureStoreSlug(profile);
+  await recordSubscriptionEvent({
+    userId: user._id, profileId: profile._id, newPlanId: plan._id, actionType: "initial_activation",
+    triggeredBy: "admin", metadata: { complimentary: true, expiresAt },
+  });
   return profile;
 };
 
@@ -204,7 +215,8 @@ export const getVendor = async (req, res) => {
       .findById(vendor.applicationId)
       .select(
         "status firstName lastName email phone addressLine1 addressLine2 area city state pincode landmark " +
-          "identityProofType identityProofNumber identityProofImage addressProofImage businessType businessCategory reviewNotes submittedAt reviewedAt"
+          "identityProofType identityProofNumber identityProofImage addressProofImage panNumber panImage businessType businessCategory reviewNotes submittedAt reviewedAt " +
+          "selectedPlanSnapshot planStatus planStartDate planExpiryDate gracePeriodEndDate payment renewalHistory"
       )
       .lean();
     const counts = await productCounts([vendor.userId?._id].filter(Boolean));
@@ -247,6 +259,15 @@ export const updateVendor = async (req, res) => {
       if (!Number.isFinite(c) || c < 0 || c > 100) return fail(res, 400, "Commission must be between 0 and 100");
       updates.commissionRate = c;
     }
+    if (b.storeSlug !== undefined) {
+      const slug = slugifyStoreName(b.storeSlug);
+      if (!isValidStoreSlug(slug)) return fail(res, 400, "Store URL can use letters, numbers and dashes, and can't be a reserved word");
+      if (await sellerProfileModel.exists({ storeSlug: slug, _id: { $ne: req.params.id } })) {
+        return fail(res, 409, `The store URL "${slug}" is already taken`);
+      }
+      updates.storeSlug = slug;
+    }
+    if (b.showOnHome !== undefined) updates.showOnHome = Boolean(b.showOnHome);
     if (b.isVerified !== undefined) {
       updates.isVerified = Boolean(b.isVerified);
       updates.verificationDate = updates.isVerified ? new Date() : null;
@@ -385,5 +406,155 @@ export const removeVendor = async (req, res) => {
   } catch (error) {
     console.error("removeVendor error:", error.message);
     fail(res, 500, "Could not remove vendor");
+  }
+};
+
+// PUT /api/v1/admin/vendors/:id/credentials   { email?, mobile?, password? }
+// Changes the vendor's login. Note: existing tokens stay valid until they expire (tokenVersion is not checked by requireSignIn).
+export const updateVendorCredentials = async (req, res) => {
+  try {
+    if (!isId(req.params.id)) return fail(res, 400, "Invalid vendor id");
+    const vendor = await sellerProfileModel.findById(req.params.id).select("userId");
+    if (!vendor) return fail(res, 404, "Vendor not found");
+    const user = await userModel.findById(vendor.userId);
+    if (!user) return fail(res, 404, "Vendor login account not found");
+
+    const set = {};
+    const changed = [];
+    const email = text(req.body?.email, 120)?.toLowerCase();
+    if (email !== undefined && email !== user.email_id) {
+      if (!/^\S+@\S+\.\S+$/.test(email)) return fail(res, 400, "Enter a valid email");
+      if (await userModel.exists({ email_id: email, _id: { $ne: user._id } })) return fail(res, 409, "That email is used by another account");
+      set.email_id = email;
+      changed.push("email");
+    }
+    if (req.body?.mobile !== undefined && String(req.body.mobile).trim() !== "") {
+      const digits = String(req.body.mobile).replace(/\D/g, "");
+      if (!/^\d{10}$/.test(digits)) return fail(res, 400, "Enter a 10-digit mobile number");
+      if (Number(digits) !== Number(user.mobile_no)) {
+        if (await userModel.exists({ mobile_no: Number(digits), _id: { $ne: user._id } })) return fail(res, 409, "That mobile number is used by another account");
+        set.mobile_no = Number(digits);
+        changed.push("mobile");
+      }
+    }
+    if (req.body?.password !== undefined && req.body.password !== "") {
+      const pw = String(req.body.password);
+      if (pw.length < 8) return fail(res, 400, "Password must be at least 8 characters");
+      set.password = await hashPassword(pw);
+      changed.push("password");
+    }
+    if (!changed.length) return fail(res, 400, "Nothing to change");
+
+    await userModel.updateOne({ _id: user._id }, { $set: set, $inc: { tokenVersion: 1 } });
+    const contact = {};
+    if (set.email_id) contact.primaryContactEmail = set.email_id;
+    if (set.mobile_no) contact.primaryContactPhone = String(set.mobile_no);
+    if (Object.keys(contact).length) await sellerProfileModel.updateOne({ _id: vendor._id }, { $set: contact });
+    audit(req, "update_vendor_credentials", vendor._id, `Changed vendor login (${changed.join(", ")})`);
+    res.send({ success: true, changed });
+  } catch (error) {
+    console.error("updateVendorCredentials error:", error.message);
+    fail(res, 500, "Could not update vendor login");
+  }
+};
+
+// GET /api/v1/admin/vendors/subscriptions/report?from=&to=
+// Every vendor's plan state plus the subscription money received.
+export const getSubscriptionReport = async (req, res) => {
+  try {
+    const now = new Date();
+    const from = req.query.from ? new Date(req.query.from) : null;
+    const to = req.query.to ? new Date(req.query.to) : null;
+    const dateFilter = {};
+    if (from && !Number.isNaN(from.getTime())) dateFilter.$gte = from;
+    if (to && !Number.isNaN(to.getTime())) dateFilter.$lte = to;
+
+    const [vendors, apps, events] = await Promise.all([
+      sellerProfileModel
+        .find({})
+        .select("userId storeName storeSlug businessName status isActive showOnHome currentPlanId planActivatedAt planExpiresAt gracePeriodEndDate subscriptionStatus createdAt")
+        .populate("userId", "user_fullname email_id mobile_no")
+        .populate("currentPlanId", "name price billingCycle isFree")
+        .lean(),
+      sellerApplicationModel
+        .find({ status: { $in: ["approved", "approved_pending_payment", "approved_payment_failed", "suspended"] } })
+        .select("userId status planStatus planExpiryDate gracePeriodEndDate payment")
+        .lean(),
+      subscriptionHistoryModel
+        .find(Object.keys(dateFilter).length ? { createdAt: dateFilter } : {})
+        .sort({ createdAt: -1 })
+        .populate("newPlanId", "name price billingCycle")
+        .populate("previousPlanId", "name")
+        .lean(),
+    ]);
+    const appByUser = Object.fromEntries(apps.map((a) => [String(a.userId), a]));
+    const paidByUser = {};
+    for (const e of events) {
+      if (e.paymentStatus !== "success") continue;
+      const k = String(e.sellerId);
+      paidByUser[k] = paidByUser[k] || { total: 0, count: 0, last: null };
+      paidByUser[k].total += Number(e.paymentAmount) || 0;
+      paidByUser[k].count += 1;
+      if (!paidByUser[k].last) paidByUser[k].last = e.createdAt;
+    }
+    const counts = await productCounts(vendors.map((v) => v.userId?._id).filter(Boolean));
+    const DAY = 86400000;
+    const rows = vendors.map((v) => {
+      const uid = String(v.userId?._id || v.userId);
+      const app = appByUser[uid] || {};
+      const expiry = app.planExpiryDate || v.planExpiresAt || null;
+      const daysLeft = expiry ? Math.ceil((new Date(expiry) - now) / DAY) : null;
+      return {
+        vendorId: v._id,
+        storeName: v.storeName || v.businessName || "",
+        storeSlug: v.storeSlug || null,
+        owner: v.userId?.user_fullname || "",
+        email: v.userId?.email_id || "",
+        mobile: v.userId?.mobile_no ? String(v.userId.mobile_no) : "",
+        plan: v.currentPlanId ? { name: v.currentPlanId.name, price: v.currentPlanId.price, billingCycle: v.currentPlanId.billingCycle, isFree: v.currentPlanId.isFree } : null,
+        applicationStatus: app.status || null,
+        planStatus: app.planStatus || v.subscriptionStatus || null,
+        storeStatus: v.isActive ? v.status : "inactive",
+        showOnHome: v.showOnHome !== false,
+        activatedAt: v.planActivatedAt || null,
+        expiresAt: expiry,
+        graceEndsAt: app.gracePeriodEndDate || v.gracePeriodEndDate || null,
+        daysLeft,
+        pendingPayment: app.payment?.status === "pending" ? { amount: app.payment.amount, orderId: app.payment.orderId } : null,
+        totalPaid: paidByUser[uid]?.total || 0,
+        paymentsCount: paidByUser[uid]?.count || 0,
+        lastPaymentAt: paidByUser[uid]?.last || null,
+        listings: counts[uid] || { total: 0, active: 0 },
+      };
+    });
+    const payments = events
+      .filter((e) => e.paymentStatus === "success")
+      .map((e) => {
+        const v = vendors.find((x) => String(x.userId?._id || x.userId) === String(e.sellerId));
+        return {
+          at: e.createdAt,
+          storeName: v?.storeName || v?.businessName || "",
+          vendorId: v?._id || null,
+          type: e.actionType,
+          plan: e.newPlanId?.name || "",
+          amount: Number(e.paymentAmount) || 0,
+          paymentId: e.paymentId || "",
+        };
+      });
+    const summary = {
+      vendors: rows.length,
+      active: rows.filter((r) => r.storeStatus === "active").length,
+      paidPlans: rows.filter((r) => r.plan && !r.plan.isFree).length,
+      expiringIn7Days: rows.filter((r) => r.daysLeft !== null && r.daysLeft >= 0 && r.daysLeft <= 7).length,
+      inGracePeriod: rows.filter((r) => r.planStatus === "grace_period").length,
+      expired: rows.filter((r) => r.planStatus === "expired").length,
+      pendingPayments: rows.filter((r) => r.pendingPayment).length,
+      revenue: payments.reduce((sum, p) => sum + p.amount, 0),
+      paymentsCount: payments.length,
+    };
+    res.send({ success: true, summary, vendors: rows, payments, events: events.slice(0, 200) });
+  } catch (error) {
+    console.error("getSubscriptionReport error:", error.message);
+    fail(res, 500, "Could not build the subscription report");
   }
 };

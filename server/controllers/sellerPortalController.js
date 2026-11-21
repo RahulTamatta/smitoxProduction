@@ -1,3 +1,5 @@
+import { comparePassword, hashPassword } from "../helpers/authHelper.js";
+import userModel from "../models/userModel.js";
 import orderModel from "../models/orderModel.js";
 import productModel from "../models/productModel.js";
 import sellerProfileModel from "../models/sellerProfileModel.js";
@@ -159,5 +161,33 @@ export const getMyOrders = async (req, res) => {
   } catch (error) {
     console.error("getMyOrders error:", error.message);
     res.status(500).send({ success: false, message: "Could not load your orders" });
+  }
+};
+
+// PUT /api/v1/seller-portal/me/password   { currentPassword, newPassword }
+export const changeMyPassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (typeof newPassword !== "string" || newPassword.length < 8) {
+      return res.status(400).send({ success: false, message: "New password must be at least 8 characters" });
+    }
+    const user = await userModel.findById(req.user._id);
+    if (!user) return res.status(404).send({ success: false, message: "Account not found" });
+    // Accounts created by OTP may have no password yet; then the current one isn't required
+    if (user.password) {
+      const stored = String(user.password);
+      const isHashed = /^\$2[aby]\$\d{2}\$/.test(stored); // same rule as the login controller
+      const ok =
+        typeof currentPassword === "string" &&
+        (isHashed ? await comparePassword(currentPassword, stored) : currentPassword === stored);
+      if (!ok) return res.status(400).send({ success: false, message: "Current password is incorrect" });
+    }
+    user.password = await hashPassword(newPassword);
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    await user.save();
+    res.send({ success: true, message: "Password changed" });
+  } catch (error) {
+    console.error("changeMyPassword error:", error.message);
+    res.status(500).send({ success: false, message: "Could not change password" });
   }
 };

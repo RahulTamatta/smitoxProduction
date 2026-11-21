@@ -11,6 +11,7 @@ import categoryModel from "../models/categoryModel.js";
 import orderModel from "../models/orderModel.js";
 import productForYouModel from "../models/productForYouModel.js";
 import productModel from "../models/productModel.js";
+import sellerProfileModel from "../models/sellerProfileModel.js";
 import subcategoryModel from "../models/subcategoryModel.js";
 import wishlistModel from "../models/wishlistModel.js";
 import { deleteProductIndex, indexProduct, updateProductIndex } from "../services/syncService.js";
@@ -891,6 +892,22 @@ export const getSingleProductController = async (req, res) => {
     const productObj = product.toObject();
     if (productObj.photos) {
       productObj.photoUrl = productObj.photos;
+    }
+    // "Sold by" — only for an active vendor with a public store page
+    productObj.seller = null;
+    if (productObj.userId) {
+      const vendor = await sellerProfileModel
+        .findOne({ userId: productObj.userId, isActive: true, status: "active", storeSlug: { $type: "string" } })
+        .select("storeName businessName storeSlug businessLogo isVerified")
+        .lean();
+      if (vendor) {
+        productObj.seller = {
+          storeName: vendor.storeName || vendor.businessName || "",
+          storeSlug: vendor.storeSlug,
+          logo: vendor.businessLogo || null,
+          isVerified: Boolean(vendor.isVerified),
+        };
+      }
     }
 
     res.status(200).send({

@@ -12,8 +12,8 @@ import { checkConnection as checkElasticsearch, initializeIndex } from "./config
 import { initializeFirebase } from "./utils/firebaseService.js";
 import { initializeRedis } from "./config/redis.js";
 import { checkPlanExpiry } from "./jobs/planExpiryCheckJob.js";
-import { startPlanExpiryJob } from "./jobs/planExpiryJob.js";
 import { startPlanExpiryJob as startScheduledPlanExpiryJob } from "./jobs/schedulePlanExpiryJob.js";
+import { backfillStoreSlugs } from "./helpers/storeSlug.js";
 import adminAnalyticsRoutes from "./routes/adminAnalyticsRoutes.js";
 import appContentRoutes from "./routes/appContentRoutes.js";
 import adsbannerRoutes from "./routes/adsRoutes.js";
@@ -36,6 +36,7 @@ import sellerApplicationRoutesV2 from "./routes/sellerApplicationRoutesV2.js";
 import subCategoryRoutes from "./routes/subCategoryRoutes.js";
 import subscriptionPlanRoutes from "./routes/subscriptionPlanRoutes.js";
 import sellerPortalRoutes from "./routes/sellerPortalRoutes.js";
+import storefrontRoutes from "./routes/storefrontRoutes.js";
 import vendorAdminRoutes from "./routes/vendorAdminRoutes.js";
 
 // Configure environment variables
@@ -111,6 +112,7 @@ app.use('/api/v1/sellers/applications', sellerApplicationRoutes);
 app.use('/api/v1/subscription-plans', subscriptionPlanRoutes);
 app.use('/api/v1/seller-portal', sellerPortalRoutes);
 app.use('/api/v1/admin/vendors', vendorAdminRoutes);
+app.use('/api/v1/stores', storefrontRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 
 // Seller Onboarding V2 - New Flow
@@ -173,10 +175,15 @@ const server = app.listen(PORT, "0.0.0.0", () => {
 
   // Start Plan Expiry CRON Jobs
   try {
-    startPlanExpiryJob();
-    console.log("✅ Plan Expiry CRON Job started successfully".green);
-
+    // The old profile-based expiry cron (jobs/planExpiryJob.js) is replaced by the
+    // single subscription sweep below (helpers/subscriptionLifecycle.js).
     startScheduledPlanExpiryJob();
+    // Give older vendors a public store URL (/seller/<slug>)
+    setTimeout(() => {
+      backfillStoreSlugs()
+        .then((n) => n && console.log(`✅ Store URLs created for ${n} vendors`))
+        .catch((e) => console.error("Store slug backfill failed:", e.message));
+    }, 5000);
     console.log("✅ Scheduled Plan Expiry CRON Job started successfully".green);
   } catch (error) {
     console.error("❌ Failed to start Plan Expiry CRON Job:", error.message);

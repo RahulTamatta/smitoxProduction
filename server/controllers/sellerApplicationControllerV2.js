@@ -5,9 +5,12 @@ import { computeCapabilities, ROLES } from "../config/rbac-policy.js";
 import { generateToken } from "../helpers/tokenHelper.js";
 import { logAuditEvent } from "../middlewares/rbacMiddleware.js";
 import sellerApplicationModel from "../models/sellerApplicationModel.js";
+import productModel from "../models/productModel.js";
 import sellerProfileModel from "../models/sellerProfileModel.js";
 import subscriptionPlanModel from "../models/subscriptionPlanModel.js";
 import userModel from "../models/userModel.js";
+import { computePlanDates, recordSubscriptionEvent, syncProfileDates } from "../helpers/subscriptionLifecycle.js";
+import { ensureStoreSlug } from "../helpers/storeSlug.js";
 
 // Get Razorpay instance
 const getRazorpayInstance = () => {
@@ -147,6 +150,19 @@ export const saveDraftApplication = async (req, res) => {
       capturedAt: new Date(),
     };
 
+    // One live application per user: block a second one while another is pending or approved
+    const activeApplication = await sellerApplicationModel
+      .findOne({ userId, status: { $nin: ["draft", "rejected", "reupload_requested"] } })
+      .select("status")
+      .lean();
+    if (activeApplication) {
+      return res.status(409).send({
+        success: false,
+        message: `You already have a seller application (${activeApplication.status.replace(/_/g, " ")}). Check its status instead of applying again.`,
+        status: activeApplication.status,
+      });
+    }
+
     // Check if draft exists
     let application = await sellerApplicationModel.findOne({
       userId,
@@ -181,14 +197,13 @@ export const saveDraftApplication = async (req, res) => {
         userId,
         status: "draft",
         lockPlan: false,
-        email: req.user.email_id,
-        phone: req.user.mobile_no,
       });
     }
 
-    // Always ensure email and phone match the user
-    application.email = req.user.email_id;
-    application.phone = req.user.mobile_no;
+    // The JWT has no email_id / mobile_no: keep what the applicant entered,
+    // falling back to the token's email
+    application.email = updateData.email || application.email || req.user.email || "";
+    application.phone = updateData.phone || application.phone || "";
 
     // Save draft without validation
     await application.save({ validateBeforeSave: false });
@@ -579,12 +594,8 @@ export const approveApplication = async (req, res) => {
 
     // FREE PLAN - Immediate activation
     if (plan.isFree) {
-      // Set plan dates
-      const planStartDate = new Date();
-      const planExpiryDate = new Date();
-      planExpiryDate.setDate(planExpiryDate.getDate() + 30);
-      const gracePeriodEndDate = new Date(planExpiryDate);
-      gracePeriodEndDate.setDate(gracePeriodEndDate.getDate() + 30);
+      // Free plans never expire (see helpers/subscriptionLifecycle.js)
+      const { planStartDate, planExpiryDate, gracePeriodEndDate } = computePlanDates(plan);
 
       application.status = "approved";
       application.planStartDate = planStartDate;
@@ -612,6 +623,10 @@ export const approveApplication = async (req, res) => {
           isActive: true,
           planActivatedAt: new Date(),
           planExpiresAt: null,
+          gracePeriodEndDate: null,
+          status: "active",
+          subscriptionStatus: "active",
+          storeName: application.storeName || application.businessName || "",
           // Business info from application
           businessName: application.businessName || application.storeName || "",
           businessType: application.businessType || "sole_proprietor",
@@ -634,6 +649,12 @@ export const approveApplication = async (req, res) => {
         },
         { new: true, upsert: true, setDefaultsOnInsert: true }
       );
+
+      await ensureStoreSlug(sellerProfile);
+      await recordSubscriptionEvent({
+        userId: user._id, profileId: sellerProfile._id, newPlanId: plan._id,
+        actionType: "initial_activation", triggeredBy: "admin",
+      });
 
       // Update user role and permissions
       user.roleString = "seller";
@@ -692,19 +713,8 @@ export const approveApplication = async (req, res) => {
 
     const razorpayOrder = await razorpay.orders.create(orderOptions);
 
-    // Set plan dates (will be activated after payment)
-    const planStartDate = new Date();
-    const planExpiryDate = new Date();
-    planExpiryDate.setDate(planExpiryDate.getDate() + 30);
-    const gracePeriodEndDate = new Date(planExpiryDate);
-    gracePeriodEndDate.setDate(gracePeriodEndDate.getDate() + 30);
-
-    // Update application
+    // Plan dates are set when the payment is verified (the paid period starts then)
     application.status = "approved_pending_payment";
-    application.planStartDate = planStartDate;
-    application.planExpiryDate = planExpiryDate;
-    application.gracePeriodEndDate = gracePeriodEndDate;
-    application.planStatus = "active";
     application.payment = {
       provider: "razorpay",
       orderId: razorpayOrder.id,
@@ -713,14 +723,6 @@ export const approveApplication = async (req, res) => {
       status: "pending",
       createdAt: new Date(),
     };
-
-    // Log initial plan in renewal history
-    application.renewalHistory.push({
-      renewalDate: planStartDate,
-      previousPlanId: null,
-      newPlanId: plan._id,
-      renewalType: "initial",
-    });
 
     await application.save({ validateBeforeSave: false });
 
@@ -732,6 +734,7 @@ export const approveApplication = async (req, res) => {
         applicationId: application._id,
         currentPlanId: plan._id,
         isActive: false, // Remains inactive until payment
+        storeName: application.storeName || application.businessName || "",
         // Business info from application
         businessName: application.businessName || application.storeName || "",
         businessType: application.businessType || "sole_proprietor",
@@ -754,6 +757,8 @@ export const approveApplication = async (req, res) => {
       },
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
+
+    await ensureStoreSlug(sellerProfile);
 
     // Log audit
     await logAuditEvent({
@@ -995,10 +1000,9 @@ export const renewPlan = async (req, res) => {
 
     // If free plan, just extend expiry
     if (plan.isFree) {
-      const newExpiryDate = new Date();
-      newExpiryDate.setDate(newExpiryDate.getDate() + 30);
-
-      application.planExpiryDate = newExpiryDate;
+      // Free plans never expire; renewing just clears any expiry state
+      application.planExpiryDate = null;
+      application.gracePeriodEndDate = null;
       application.planStatus = "active";
       application.renewalHistory.push({
         renewalDate: new Date(),
@@ -1007,7 +1011,8 @@ export const renewPlan = async (req, res) => {
         renewalType: "renewal",
       });
 
-      await application.save();
+      await application.save({ validateBeforeSave: false });
+      await syncProfileDates(application);
 
       // Log audit
       await logAuditEvent({
@@ -1314,6 +1319,9 @@ export const verifyPayment = async (req, res) => {
     }
 
     let plan = application.selectedPlanId;
+    // Captured before an upgrade rewrites the snapshot
+    const wasLive = application.status === "approved";
+    const previousPlanId = application.selectedPlanSnapshot?._id || application.selectedPlanId?._id || null;
 
     // Upgrade: switch to the plan that was actually paid for
     if (application.payment?.pendingPlanId) {
@@ -1337,27 +1345,12 @@ export const verifyPayment = async (req, res) => {
       application.payment.pendingPlanId = null;
     }
 
-    // Update Application
-    const CYCLE_DAYS = { monthly: 30, quarterly: 90, yearly: 365 };
-    const planStartDate = new Date();
-    const planExpiryDate = new Date();
-    planExpiryDate.setDate(planExpiryDate.getDate() + (CYCLE_DAYS[plan?.billingCycle] || 30));
-    const gracePeriodEndDate = new Date(planExpiryDate);
-    gracePeriodEndDate.setDate(gracePeriodEndDate.getDate() + 30);
-
-    application.status = "approved"; // or active? Model Enum has 'active'. Let's use 'active' to signify Paid & Active.
-    // L20 in model is 'active'. But approveApplication uses 'approved' for free plans.
-    // Let's stick to 'approved' or 'active'. If 'active' implies immutable, use 'active'.
-    // approveApplication (Free) uses "approved" status but "planStatus" active.
-    // Let's use "active" status for consistency with "approved" being intermediate? 
-    // Wait, free plan sets status="approved".
-    // Paid plan sets status="approved_pending_payment".
-    // After payment, it should probably match Free plan or go to "active". 
-    // existing Enum: "approved", "active". 
-    // Let's use "active" for fully active sellers. (Or "approved" if that's the convention).
-    // Free plan sets status="approved". So I will use "approved" to match Free plan logic.
+    // Paid period: extends an unexpired period on renewal so no paid days are lost
+    const { planStartDate, planExpiryDate, gracePeriodEndDate } = computePlanDates(
+      plan,
+      wasLive && String(previousPlanId) === String(plan._id) ? application.planExpiryDate : null
+    );
     application.status = "approved";
-
     application.planStartDate = planStartDate;
     application.planExpiryDate = planExpiryDate;
     application.gracePeriodEndDate = gracePeriodEndDate;
@@ -1377,8 +1370,11 @@ export const verifyPayment = async (req, res) => {
         applicationId: application._id,
         currentPlanId: plan._id,
         isActive: true, // Now active
+        status: "active",
+        subscriptionStatus: "active",
         planActivatedAt: new Date(),
-        planExpiresAt: null, // or periodic? Free plan set null.
+        planExpiresAt: planExpiryDate,
+        gracePeriodEndDate,
         permissions: {
           grantedCapabilities: plan.includedCapabilities || [],
           deniedCapabilities: plan.excludedCapabilities || [],
@@ -1395,6 +1391,26 @@ export const verifyPayment = async (req, res) => {
         deniedCapabilities: plan.excludedCapabilities || [],
       },
       $inc: { tokenVersion: 1 } // Invalidate old tokens to force refresh if needed (optional)
+    });
+
+    const paidProfile = await sellerProfileModel.findOne({ userId: application.userId });
+    if (paidProfile) await ensureStoreSlug(paidProfile);
+    // Held listings (e.g. after an expiry deactivation) come back once paid
+    await productModel.updateMany(
+      { userId: String(application.userId), adminHold: true },
+      { $set: { isActive: "1", adminHold: false } }
+    );
+    await recordSubscriptionEvent({
+      userId: application.userId,
+      profileId: paidProfile?._id,
+      previousPlanId: wasLive ? previousPlanId : null,
+      newPlanId: plan._id,
+      actionType: !wasLive ? "initial_activation" : String(previousPlanId) === String(plan._id) ? "manual_renewal" : "upgrade",
+      triggeredBy: "user",
+      paymentId: razorpay_payment_id,
+      paymentAmount: Number(plan.price) || 0,
+      paymentStatus: "success",
+      metadata: { orderId: application.payment?.orderId, planName: plan.name, expiresAt: planExpiryDate },
     });
 
     res.status(200).send({
@@ -1632,6 +1648,19 @@ export const submitApplicationDirect = async (req, res) => {
     // Parse booleans from form-data
     const parseBool = (val) => val === "true" || val === true;
 
+    // One live application per user: block a second one while another is pending or approved
+    const activeApplication = await sellerApplicationModel
+      .findOne({ userId, status: { $nin: ["draft", "rejected", "reupload_requested"] } })
+      .select("status")
+      .lean();
+    if (activeApplication) {
+      return res.status(409).send({
+        success: false,
+        message: `You already have a seller application (${activeApplication.status.replace(/_/g, " ")}). Check its status instead of applying again.`,
+        status: activeApplication.status,
+      });
+    }
+
     // Find existing draft or create new
     let application = await sellerApplicationModel.findOne({
       userId,
@@ -1647,7 +1676,9 @@ export const submitApplicationDirect = async (req, res) => {
       gstExemptionDeclared: parseBool(applicationData.gstExemptionDeclared),
     };
 
-    const identityError = normalizeIdentity(updateData);
+    // Simple KYC collects both: Aadhaar as the identity proof, plus PAN
+    if (updateData.panNumber !== undefined) updateData.identityProofType = "aadhar";
+    const identityError = normalizeIdentity(updateData) || normalizePan(updateData);
     if (identityError) return res.status(400).send({ success: false, message: identityError });
 
     // Add file paths (VPS disk storage, relative paths like products)
@@ -1665,8 +1696,9 @@ export const submitApplicationDirect = async (req, res) => {
         userId,
         status: "draft",
         lockPlan: false,
-        email: req.user.email,
-        phone: req.user.mobile_no,
+        // The JWT carries no mobile_no, so prefer what the applicant entered
+        email: updateData.email || req.user.email || "",
+        phone: updateData.phone || (req.user.mobile_no ? String(req.user.mobile_no) : ""),
       });
     }
 
